@@ -28,6 +28,7 @@ export class GetNoteSettingsTab extends PluginSettingTab {
         openNotePicker={() => this.plugin.openNotePicker()}
         startAutoSync={() => this.plugin.startAutoSync()}
         stopAutoSync={() => this.plugin.stopAutoSync()}
+        vaultFolders={this.plugin.getVaultFolders()}
       />,
       this.containerEl
     );
