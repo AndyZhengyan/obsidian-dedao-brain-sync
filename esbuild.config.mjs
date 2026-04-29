@@ -7,7 +7,7 @@ await esbuild.build({
   bundle: true,
   platform: 'browser',
   target: 'es2022',
-  output: 'main.js',
+  outfile: 'main.js',
   sourcemap: isDev ? 'inline' : false,
   minify: !isDev,
   format: 'cjs',
