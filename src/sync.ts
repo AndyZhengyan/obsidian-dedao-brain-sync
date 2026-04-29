@@ -132,4 +132,36 @@ export class SyncEngine {
 
     return result;
   }
+
+  /**
+   * 只同步指定 note_id 列表（用于选择性同步）
+   */
+  async syncNoteIds(
+    noteIds: string[],
+    modal?: SyncModal
+  ): Promise<SyncResult> {
+    const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, total: 0 };
+    const idSet = new Set(noteIds);
+    let fetchedCount = 0;
+
+    for await (const batch of fetchAllNotes(this.settings.apiToken, this.settings.clientId)) {
+      const matched = batch.filter(n => idSet.has(n.note_id));
+
+      for (const note of matched) {
+        fetchedCount++;
+        modal?.setProgress(`处理中... ${fetchedCount}/${noteIds.length}`);
+        const status = await this.writeNote(note);
+        switch (status) {
+          case 'created': result.created++; break;
+          case 'updated': result.updated++; break;
+          case 'skipped': result.skipped++; break;
+          case 'failed': result.failed++; break;
+        }
+      }
+
+      if (fetchedCount >= noteIds.length) break;
+    }
+
+    return result;
+  }
 }
