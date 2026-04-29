@@ -92,7 +92,7 @@ export async function* fetchAllNotes(
 
     yield notes;
 
-    if (!hasMore || !nextCursor || nextCursor === '0') break;
+    if (!hasMore || !nextCursor || notes.length === 0) break;
     cursor = nextCursor;
   }
 }
