@@ -38,12 +38,19 @@ export interface ListResponse {
 
 export type SyncMode = 'incremental' | 'full';
 
+export interface ScheduledSyncSettings {
+  enabled: boolean;
+  intervalMinutes: number;
+  syncOnStart: boolean;
+}
+
 export interface Settings {
   apiToken: string;
   clientId: string;
   folderName: string;
   syncMode: SyncMode;
   maxDays: number;
+  scheduledSync: ScheduledSyncSettings;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -52,6 +59,11 @@ export const DEFAULT_SETTINGS: Settings = {
   folderName: 'Get笔记',
   syncMode: 'incremental',
   maxDays: 30,
+  scheduledSync: {
+    enabled: false,
+    intervalMinutes: 30,
+    syncOnStart: true,
+  },
 };
 
 export interface SyncResult {
