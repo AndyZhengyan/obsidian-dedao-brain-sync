@@ -3,7 +3,7 @@ import * as esbuild from 'esbuild';
 const isDev = process.argv.includes('--dev');
 
 await esbuild.build({
-  entryPoints: ['src/main.ts'],
+  entryPoints: ['src/main.tsx'],
   bundle: true,
   platform: 'browser',
   target: 'es2022',
