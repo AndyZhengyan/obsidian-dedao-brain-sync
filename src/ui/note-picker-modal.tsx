@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useCallback } from 'preact/hooks';
 import type { GetNoteNote } from '../types';
 import { fetchNotes } from '../api';
 
@@ -63,11 +63,15 @@ export function NotePickerModal({ token, clientId, onConfirm, onCancel }: NotePi
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadNotes = useCallback(() => {
+    setLoading(true);
+    setError(null);
     fetchNotes({ token, clientId, sinceId: '0', limit: 50 })
       .then(({ notes }) => { setNotes(notes); setLoading(false); })
       .catch((err) => { setError(err instanceof Error ? err.message : '加载失败'); setLoading(false); });
-  }, []);
+  }, [token, clientId]);
+
+  useEffect(() => { loadNotes(); }, [loadNotes]);
 
   const handleCheck = (noteId: string, checked: boolean) => {
     setSelected(prev => {
@@ -96,7 +100,7 @@ export function NotePickerModal({ token, clientId, onConfirm, onCancel }: NotePi
       </div>
       <div className="getnote-picker-body">
         {loading && <div className="getnote-picker-loading">正在获取笔记列表...</div>}
-        {error && <div className="getnote-picker-error">{error} <button onClick={() => window.location.reload()}>重试</button></div>}
+        {error && <div className="getnote-picker-error">{error} <button onClick={loadNotes}>重试</button></div>}
         {!loading && !error && notes.map(note => (
           <NoteRow key={note.note_id} note={note} checked={selected.has(note.note_id)} onChange={handleCheck} />
         ))}

@@ -4,7 +4,7 @@ import type { GetNoteNote } from './types';
  * 解析 ISO 时间字符串为 Obsidian 格式
  * "2026-04-27T22:26:17+08:00" → "2026-04-27 22:26:17"
  */
-function formatDateTime(iso: string): string {
+export function formatDateTime(iso: string): string {
   const match = iso.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})/);
   if (match) {
     return `${match[1]} ${match[2]}`;

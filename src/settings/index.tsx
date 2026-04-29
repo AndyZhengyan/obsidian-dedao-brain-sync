@@ -9,6 +9,8 @@ interface SettingsComponentProps {
   startSync: () => void;
   isSyncing: boolean;
   openNotePicker: () => void;
+  startAutoSync: () => void;
+  stopAutoSync: () => void;
 }
 
 export function SettingsComponent({
@@ -17,11 +19,12 @@ export function SettingsComponent({
   startSync,
   isSyncing,
   openNotePicker,
+  startAutoSync,
+  stopAutoSync,
 }: SettingsComponentProps) {
   const [apiToken, setApiToken] = useState(settings.apiToken);
   const [clientId, setClientId] = useState(settings.clientId);
   const [folderName, setFolderName] = useState(settings.folderName);
-  const [syncMode, setSyncMode] = useState(settings.syncMode);
   const [maxDays, setMaxDays] = useState(String(settings.maxDays));
 
   const handleApiTokenChange = useCallback(
@@ -49,15 +52,6 @@ export function SettingsComponent({
     [updateSetting]
   );
 
-  const handleSyncModeChange = useCallback(
-    (value: string) => {
-      const mode = value as 'incremental' | 'full';
-      setSyncMode(mode);
-      updateSetting('syncMode', mode);
-    },
-    [updateSetting]
-  );
-
   const handleMaxDaysChange = useCallback(
     (value: string) => {
       setMaxDays(value);
@@ -69,6 +63,11 @@ export function SettingsComponent({
 
   const handleScheduledEnabled = (checked: boolean) => {
     updateSetting('scheduledSync', { ...settings.scheduledSync, enabled: checked });
+    if (checked) {
+      startAutoSync();
+    } else {
+      stopAutoSync();
+    }
   };
 
   const handleScheduledInterval = (value: string) => {
@@ -132,20 +131,6 @@ export function SettingsComponent({
           value={folderName}
           onInput={(e) => handleFolderChange((e.target as HTMLInputElement).value)}
         />
-      </SettingItem>
-
-      <SettingItem
-        name="同步模式"
-        description="增量同步只拉取新增/改动，全量同步从第一页开始"
-      >
-        <select
-          className="dropdown"
-          value={syncMode}
-          onChange={(e) => handleSyncModeChange((e.target as HTMLSelectElement).value)}
-        >
-          <option value="incremental">增量同步（推荐）</option>
-          <option value="full">全量同步</option>
-        </select>
       </SettingItem>
 
       <SettingItem

@@ -10,5 +10,5 @@
   "isDesktopOnly": false,
   "minAppVersion": "1.5.0",
   "js": "main.js",
-  "styles": []
+  "styles": ["styles.css"]
 }

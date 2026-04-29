@@ -1,7 +1,6 @@
 import { App, Modal, Plugin } from 'obsidian';
-// @ts-expect-error - ReactDOM available via Preact compat layer
 import ReactDOM from 'react-dom';
-import { DEFAULT_SETTINGS, type Settings } from './settings';
+import { DEFAULT_SETTINGS, type Settings } from './types';
 import { GetNoteSettingsTab } from './settings-tab';
 import { SyncEngine } from './sync';
 import { LoadingModal } from './ui/loading-modal';
@@ -72,7 +71,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   private async doAutoSync(): Promise<void> {
     try {
       const engine = new SyncEngine(this.app, this.settings);
-      const result = await engine.sync(new SyncModal(this.app));
+      const result = await engine.sync();
       if (result.created > 0 || result.updated > 0) {
         showNotice(`[Get笔记] 自动同步：新增 ${result.created}，更新 ${result.updated}`);
       }

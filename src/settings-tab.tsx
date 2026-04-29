@@ -1,5 +1,4 @@
 import { App, debounce, PluginSettingTab } from 'obsidian';
-// @ts-expect-error - ReactDOM available via Preact compat layer
 import ReactDOM from 'react-dom';
 import { SettingsComponent } from './settings/index';
 import type { Settings } from './types';
@@ -27,6 +26,8 @@ export class GetNoteSettingsTab extends PluginSettingTab {
         startSync={() => this.plugin.startSync()}
         isSyncing={this.plugin.isSyncing}
         openNotePicker={() => this.plugin.openNotePicker()}
+        startAutoSync={() => this.plugin.startAutoSync()}
+        stopAutoSync={() => this.plugin.stopAutoSync()}
       />,
       this.containerEl
     );

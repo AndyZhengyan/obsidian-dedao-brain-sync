@@ -27,6 +27,10 @@ async function apiRequest<T>(
     },
   });
 
+  if (res.status === 401) {
+    throw new Error('API Token 或 Client ID 无效，请检查设置');
+  }
+
   if (res.status === 429 && retries > 0) {
     // 429: 指数退避重试
     const delay = Math.pow(2, 3 - retries) * 1000;

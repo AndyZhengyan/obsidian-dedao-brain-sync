@@ -1,0 +1,158 @@
+/* Get笔记 Importer — Plugin Styles */
+
+/* === Settings Panel === */
+.getnote-settings-react {
+  padding: 0;
+}
+
+.getnote-settings-header h2 {
+  margin: 0 0 4px;
+}
+
+.getnote-settings-desc {
+  color: var(--text-muted);
+  margin: 0 0 16px;
+  font-size: 13px;
+}
+
+.getnote-settings-divider {
+  margin: 16px 0;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.getnote-input {
+  width: 100%;
+  max-width: 320px;
+}
+
+/* === Scheduled Sync === */
+.getnote-scheduled-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  gap: 12px;
+}
+
+.getnote-scheduled-row input[type="number"] {
+  width: 80px;
+}
+
+/* === Note Picker Modal === */
+.getnote-picker {
+  display: flex;
+  flex-direction: column;
+  max-height: 60vh;
+}
+
+.getnote-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-weight: 600;
+}
+
+.getnote-picker-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.getnote-picker-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 120px;
+  padding: 8px 0;
+}
+
+.getnote-picker-loading,
+.getnote-picker-error,
+.getnote-picker-empty {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-muted);
+}
+
+.getnote-picker-error {
+  color: var(--text-error);
+}
+
+/* === Note Row === */
+.getnote-picker-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.getnote-picker-row:last-child {
+  border-bottom: none;
+}
+
+.getnote-picker-row input[type="checkbox"] {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.getnote-picker-row-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.getnote-picker-title {
+  font-size: 14px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.getnote-picker-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.getnote-picker-type {
+  background: var(--background-modifier-hover);
+  padding: 0 6px;
+  border-radius: 3px;
+}
+
+/* === Footer === */
+.getnote-picker-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.getnote-picker-count {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.getnote-picker-btns {
+  display: flex;
+  gap: 8px;
+}
+
+/* === Loading Modal === */
+.getnote-loading-spinner {
+  animation: getnote-spin 1s linear infinite;
+}
+
+@keyframes getnote-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* === Sync Modal === */
+.getnote-sync-title {
+  margin-bottom: 4px;
+}

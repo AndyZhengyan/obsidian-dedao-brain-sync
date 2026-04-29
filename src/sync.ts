@@ -1,6 +1,6 @@
 import { App, TFile } from 'obsidian';
 import { fetchAllNotes } from './api';
-import { renderNote } from './note-parser';
+import { renderNote, formatDateTime } from './note-parser';
 import { getCategoryDir } from './types';
 import type { GetNoteNote, Settings, SyncResult } from './types';
 import type { SyncModal } from './ui/sync-modal';
@@ -44,17 +44,11 @@ export class SyncEngine {
       if (!cached?.frontmatter) return true;
       const modified = cached.frontmatter['modified'] as string | undefined;
       if (!modified) return true;
-      const noteModified = this.formatObsidianDate(note.updated_at);
+      const noteModified = formatDateTime(note.updated_at);
       return modified !== noteModified;
     } catch {
       return true;
     }
-  }
-
-  private formatObsidianDate(iso: string): string {
-    const match = iso.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})/);
-    if (match) return `${match[1]} ${match[2]}`;
-    return iso;
   }
 
   /**
@@ -99,15 +93,15 @@ export class SyncEngine {
   /**
    * 执行同步
    */
-  async sync(modal: SyncModal): Promise<SyncResult> {
+  async sync(modal?: SyncModal): Promise<SyncResult> {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, total: 0 };
 
     let pageCount = 0;
 
     for await (const notes of fetchAllNotes(this.settings.apiToken, this.settings.clientId)) {
       pageCount++;
-      modal.setProgress(`正在获取笔记... 第 ${pageCount} 页`);
-      modal.setCount(`已获取 ${result.total} 条笔记`);
+      modal?.setProgress(`正在获取笔记... 第 ${pageCount} 页`);
+      modal?.setCount(`已获取 ${result.total} 条笔记`);
 
       const filtered = this.filterRecentNotes(notes);
 
@@ -123,7 +117,7 @@ export class SyncEngine {
         }
 
         if (result.total % 10 === 0) {
-          modal.setCount(
+          modal?.setCount(
             `处理中：新增 ${result.created} · 更新 ${result.updated} · 跳过 ${result.skipped} · 失败 ${result.failed}`
           );
         }
@@ -149,7 +143,9 @@ export class SyncEngine {
 
       for (const note of matched) {
         fetchedCount++;
-        modal?.setProgress(`处理中... ${fetchedCount}/${noteIds.length}`);
+        if (fetchedCount % 10 === 0 || fetchedCount === noteIds.length) {
+          modal?.setProgress(`处理中... ${fetchedCount}/${noteIds.length}`);
+        }
         const status = await this.writeNote(note);
         switch (status) {
           case 'created': result.created++; break;
