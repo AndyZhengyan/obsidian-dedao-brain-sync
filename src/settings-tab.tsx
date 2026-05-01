@@ -23,12 +23,19 @@ export class GetNoteSettingsTab extends PluginSettingTab {
       <SettingsComponent
         settings={this.plugin.settings}
         updateSetting={this.updateSetting}
+        updateCredentials={(apiToken, clientId) => {
+          this.plugin.settings.apiToken = apiToken;
+          this.plugin.settings.clientId = clientId;
+          void this.plugin.saveSettings();
+        }}
         startSync={() => this.plugin.startSync()}
         isSyncing={this.plugin.isSyncing}
+        syncProgress={this.plugin.syncProgress}
         openNotePicker={() => this.plugin.openNotePicker()}
         startAutoSync={() => this.plugin.startAutoSync()}
         stopAutoSync={() => this.plugin.stopAutoSync()}
-        vaultFolders={this.plugin.getVaultFolders()}
+        cancelSync={() => this.plugin.cancelSync()}
+        app={this.app}
       />,
       this.containerEl
     );

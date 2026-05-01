@@ -21,8 +21,55 @@
 }
 
 .getnote-input {
-  width: 100%;
-  max-width: 320px;
+  width: 280px;
+}
+
+.getnote-input-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.getnote-onboarding {
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  background: var(--background-modifier-hover);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  border-left: 3px solid var(--interactive-accent);
+}
+
+.getnote-test-connection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.getnote-connection-success {
+  font-size: 12px;
+  color: var(--color-green);
+}
+
+.getnote-connection-error {
+  font-size: 12px;
+  color: var(--text-error);
+}
+
+.getnote-sync-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--background-modifier-hover);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.getnote-sync-status span {
+  color: var(--text-muted);
 }
 
 /* === Scheduled Sync === */
@@ -59,11 +106,61 @@
   gap: 8px;
 }
 
+.getnote-picker-search {
+  padding: 0 0 8px;
+}
+
+.getnote-picker-search input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .getnote-picker-body {
   flex: 1;
   overflow-y: auto;
   min-height: 120px;
   padding: 8px 0;
+}
+
+/* === Skeleton Loading === */
+.getnote-picker-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.getnote-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+}
+
+.getnote-skeleton-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+.getnote-skeleton-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.getnote-skeleton-line {
+  height: 12px;
+  border-radius: 3px;
+  background: var(--background-modifier-border);
+  animation: getnote-skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes getnote-skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 .getnote-picker-loading,
@@ -123,6 +220,16 @@
   border-radius: 3px;
 }
 
+/* === Load More === */
+.getnote-picker-loadmore {
+  text-align: center;
+  padding: 12px;
+}
+
+.getnote-picker-loadmore button {
+  font-size: 13px;
+}
+
 /* === Footer === */
 .getnote-picker-footer {
   display: flex;
@@ -152,7 +259,106 @@
   to { transform: rotate(360deg); }
 }
 
+/* === Auth Section (OAuth / Manual toggle) === */
+.getnote-auth-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.getnote-auth-toggle {
+  display: flex;
+  gap: 6px;
+}
+
+.getnote-auth-toggle button {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.getnote-manual-credentials {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* === OAuth Section === */
+.getnote-oauth-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.getnote-oauth-loading {
+  padding: 8px 12px;
+  background: var(--background-modifier-hover);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.getnote-oauth-code-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.getnote-oauth-code-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--background-modifier-hover);
+  border-radius: 4px;
+}
+
+.getnote-oauth-code-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.getnote-oauth-code-value {
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--text-accent);
+}
+
+.getnote-oauth-copy-btn {
+  font-size: 12px;
+  padding: 2px 8px;
+  margin-left: auto;
+}
+
+.getnote-oauth-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.getnote-oauth-success {
+  font-size: 13px;
+}
+
+.getnote-oauth-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
 /* === Sync Modal === */
 .getnote-sync-title {
   margin-bottom: 4px;
+}
+
+.getnote-progress-bar {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.getnote-progress-fill {
+  height: 100%;
+  background: var(--interactive-accent);
+  transition: width 0.3s ease;
 }

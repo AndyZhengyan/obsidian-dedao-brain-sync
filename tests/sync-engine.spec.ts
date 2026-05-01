@@ -1,0 +1,228 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SyncEngine } from '../src/sync';
+import type { Settings, GetNoteNote } from '../src/types';
+
+// Minimal mock app for SyncEngine tests
+function makeMockApp() {
+  const files: Map<string, { path: string; content: string; frontmatter: Record<string, string> }> = new Map();
+  const folders = new Set<string>();
+
+  return {
+    vault: {
+      getAllFolders: () =>
+        [...folders].map((path) => ({ path })),
+      getAbstractFileByPath: (path: string) => files.get(path) || null,
+      getMarkdownFiles: () =>
+        [...files.values()]
+          .filter((f) => f.path.endsWith('.md'))
+          .map((f) => ({ path: f.path })),
+      createFolder: vi.fn().mockResolvedValue(undefined),
+      create: vi.fn().mockImplementation((path: string, data: string) => {
+        files.set(path, { path, content: data, frontmatter: {} });
+        return { path };
+      }),
+      modify: vi.fn().mockImplementation((file: { path: string }, data: string) => {
+        const existing = files.get(file.path);
+        if (existing) {
+          files.set(file.path, { ...existing, content: data });
+        }
+        return Promise.resolve();
+      }),
+      rename: vi.fn().mockImplementation((file: { path: string }, newPath: string) => {
+        const existing = files.get(file.path);
+        if (existing) {
+          files.delete(file.path);
+          files.set(newPath, existing);
+        }
+        return Promise.resolve();
+      }),
+      createFolderSync: (path: string) => { folders.add(path); },
+      _addFile: (path: string, content: string, frontmatter: Record<string, string> = {}) => {
+        files.set(path, { path, content, frontmatter });
+      },
+      _addFolder: (path: string) => { folders.add(path); },
+    },
+    metadataCache: {
+      getFileCache: (file: { path: string }) => {
+        const f = files.get(file.path);
+        return f ? { frontmatter: f.frontmatter } : null;
+      },
+    },
+  };
+}
+
+function makeSettings(overrides: Partial<Settings> = {}): Settings {
+  return {
+    apiToken: 'test-token',
+    clientId: 'test-client',
+    folderName: 'Get笔记',
+    maxDays: 30,
+    filenamePrefix: '',
+    scheduledSync: { enabled: false, intervalMinutes: 30, syncOnStart: false },
+    ...overrides,
+  };
+}
+
+function makeNote(overrides: Partial<GetNoteNote> = {}): GetNoteNote {
+  return {
+    id: 1,
+    note_id: 'note_001',
+    title: '测试笔记',
+    content: '正文内容',
+    note_type: 'plain_text',
+    source: 'app',
+    tags: [],
+    created_at: '2026-04-27T22:26:17+08:00',
+    updated_at: '2026-04-28T10:00:00+08:00',
+    ...overrides,
+  };
+}
+
+// Mock fetchAllNotes generator
+function mockFetchAllNotes(notes: GetNoteNote[] = []) {
+  const gen = (async function* () {
+    yield notes;
+  })();
+  return gen as unknown as ReturnType<typeof import('../src/api').fetchAllNotes>;
+}
+
+describe('SyncEngine — filterRecentNotes', () => {
+  it('返回所有笔记当 maxDays <= 0', () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
+    const notes = [makeNote({ note_id: '1' }), makeNote({ note_id: '2' })];
+    // @ts-ignore accessing private via any
+    expect(engine['filterRecentNotes'](notes)).toHaveLength(2);
+  });
+
+  it('过滤掉超过 maxDays 的笔记', () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({ maxDays: 7 }));
+    const now = new Date();
+    const oldNote = makeNote({
+      note_id: 'old',
+      updated_at: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+    const recentNote = makeNote({
+      note_id: 'recent',
+      updated_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+    // @ts-ignore
+    const result = engine['filterRecentNotes']([oldNote, recentNote]);
+    expect(result).toHaveLength(1);
+    expect(result[0].note_id).toBe('recent');
+  });
+
+  it('边界：刚好 maxDays 当天的笔记保留', () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({ maxDays: 5 }));
+    const now = new Date();
+    const at5days = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000 + 1000).toISOString();
+    const note = makeNote({ note_id: 'boundary', updated_at: at5days });
+    // @ts-ignore
+    expect(engine['filterRecentNotes']([note])).toHaveLength(1);
+  });
+});
+
+describe('SyncEngine — buildUidIndex', () => {
+  it('返回空 Map 当 vault 没有 md 文件', () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings());
+    // @ts-ignore
+    const index = engine['buildUidIndex']();
+    expect(index.size).toBe(0);
+  });
+
+  it('索引带 uid frontmatter 的文件', () => {
+    const app = makeMockApp();
+    app.vault._addFile('Get笔记/纯文本/test.md', 'content', { uid: 'note_abc' });
+    app.vault._addFolder('Get笔记/纯文本');
+    const engine = new SyncEngine(app as any, makeSettings());
+    // @ts-ignore
+    const index = engine['buildUidIndex']();
+    expect(index.size).toBe(1);
+    expect(index.get('note_abc')?.path).toBe('Get笔记/纯文本/test.md');
+  });
+
+  it('忽略不带 uid frontmatter 的文件', () => {
+    const app = makeMockApp();
+    app.vault._addFile('Get笔记/纯文本/test.md', 'content', {});
+    app.vault._addFolder('Get笔记/纯文本');
+    const engine = new SyncEngine(app as any, makeSettings());
+    // @ts-ignore
+    const index = engine['buildUidIndex']();
+    expect(index.size).toBe(0);
+  });
+
+  it('只索引 folderName 前缀下的文件', () => {
+    const app = makeMockApp();
+    app.vault._addFile('Get笔记/纯文本/test.md', 'content', { uid: 'note_001' });
+    app.vault._addFile('其他/纯文本/other.md', 'content', { uid: 'note_002' });
+    app.vault._addFolder('Get笔记/纯文本');
+    app.vault._addFolder('其他/纯文本');
+    const engine = new SyncEngine(app as any, makeSettings());
+    // @ts-ignore
+    const index = engine['buildUidIndex']();
+    expect(index.size).toBe(1);
+    expect(index.has('note_001')).toBe(true);
+    expect(index.has('note_002')).toBe(false);
+  });
+});
+
+describe('SyncEngine — writeNote', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('新建笔记返回 created', async () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings());
+    const note = makeNote({ note_id: 'new_001', title: '新笔记' });
+    const index = new Map<string, any>();
+    // @ts-ignore
+    const result = await engine['writeNote'](note, index);
+    expect(result).toBe('created');
+  });
+
+  it('有相同 uid 的笔记无变化返回 skipped', async () => {
+    const app = makeMockApp();
+    app.vault._addFile(
+      'Get笔记/纯文本/新笔记.md',
+      '---\nuid: "new_001"\ntitle: "新笔记"\ncreated: 2026-04-27 22:26:17\nmodified: 2026-04-28 10:00:00\n---\n正文',
+      { uid: 'new_001', modified: '2026-04-28 10:00:00' }
+    );
+    app.vault._addFolder('Get笔记/纯文本');
+    const engine = new SyncEngine(app as any, makeSettings());
+    const note = makeNote({ note_id: 'new_001', title: '新笔记' });
+    const index = new Map<string, any>([['new_001', { path: 'Get笔记/纯文本/新笔记.md' }]]);
+    // @ts-ignore
+    const result = await engine['writeNote'](note, index);
+    expect(result).toBe('skipped');
+  });
+});
+
+describe('SyncEngine — getFileName', () => {
+  it('无前缀时返回标题', () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({ filenamePrefix: '' }));
+    const note = makeNote({ title: '我的笔记' });
+    // @ts-ignore
+    expect(engine['getFileName'](note)).toBe('我的笔记');
+  });
+
+  it('有前缀时返回 prefix_title', () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({ filenamePrefix: 'YYYY-MM-DD' }));
+    const note = makeNote({ title: '我的笔记' });
+    // @ts-ignore
+    expect(engine['getFileName'](note)).toBe('2026-04-27_我的笔记');
+  });
+
+  it('无效日期前缀返回标题（无前缀）', () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({ filenamePrefix: 'YYYY-MM-DD' }));
+    const note = makeNote({ title: '我的笔记', created_at: 'invalid' });
+    // @ts-ignore
+    expect(engine['getFileName'](note)).toBe('我的笔记');
+  });
+});

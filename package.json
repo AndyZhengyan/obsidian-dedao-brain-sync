@@ -1,7 +1,7 @@
 {
   "name": "obsidian-getnote-importer",
   "version": "0.1.0",
-  "description": "Get笔记 Importer for Obsidian",
+  "description": "GetNote Importer for Obsidian",
   "main": "main.js",
   "scripts": {
     "build": "node esbuild.config.mjs",

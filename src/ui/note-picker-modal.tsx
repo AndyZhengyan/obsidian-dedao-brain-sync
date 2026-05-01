@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import type { GetNoteNote } from '../types';
 import { fetchNotes } from '../api';
+import { generateDisplayTitle } from '../note-parser';
+import { t } from '../i18n';
 
 interface NotePickerModalProps {
   onConfirm: (selectedNoteIds: string[]) => void;
   onCancel: () => void;
   token: string;
   clientId: string;
+  abortSignal?: AbortSignal;
 }
 
 function formatRelativeTime(iso: string): string {
@@ -17,28 +20,20 @@ function formatRelativeTime(iso: string): string {
   if (diffDays === 0) {
     return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
   } else if (diffDays === 1) {
-    return '昨天';
+    return t('picker.yesterday');
   } else {
-    return `${diffDays}天前`;
+    return `${diffDays}${t('picker.daysAgo')}`;
   }
 }
 
 function getTypeLabel(noteType: string): string {
-  const map: Record<string, string> = {
-    plain_text: '纯文本',
-    link: '链接笔记',
-    recorder_audio: '录音长录',
-    recorder_flash_audio: '录音长录',
-    immediate_audio: '即时录音',
-    audio_long: '录音长录',
-    local_audio: '本地音频',
-  };
-  return map[noteType] || noteType;
+  const key = `picker.type.${noteType}` as const;
+  return t(key);
 }
 
 function NoteRow({ note, checked, onChange }: { note: GetNoteNote; checked: boolean; onChange: (id: string, v: boolean) => void }) {
-  const title = note.title?.trim() ||
-    note.content.slice(0, 20).replace(/\n/g, ' ') + (note.content.length > 20 ? '...' : '');
+  const title = generateDisplayTitle(note);
+  const displayTitle = title || t('picker.noTitle');
   return (
     <div className="getnote-picker-row">
       <input
@@ -47,7 +42,7 @@ function NoteRow({ note, checked, onChange }: { note: GetNoteNote; checked: bool
         onChange={(e) => onChange(note.note_id, (e.target as HTMLInputElement).checked)}
       />
       <div className="getnote-picker-row-info">
-        <div className="getnote-picker-title">{title}</div>
+        <div className="getnote-picker-title">{displayTitle}</div>
         <div className="getnote-picker-meta">
           <span className="getnote-picker-type">{getTypeLabel(note.note_type)}</span>
           <span className="getnote-picker-time">{formatRelativeTime(note.updated_at)}</span>
@@ -57,21 +52,52 @@ function NoteRow({ note, checked, onChange }: { note: GetNoteNote; checked: bool
   );
 }
 
-export function NotePickerModal({ token, clientId, onConfirm, onCancel }: NotePickerModalProps) {
+export function NotePickerModal({ token, clientId, onConfirm, onCancel, abortSignal }: NotePickerModalProps) {
   const [notes, setNotes] = useState<GetNoteNote[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cursor, setCursor] = useState('0');
+  const [hasMore, setHasMore] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const loadNotes = useCallback(() => {
+  const loadFirstPage = useCallback(() => {
     setLoading(true);
     setError(null);
-    fetchNotes({ token, clientId, sinceId: '0', limit: 50 })
-      .then(({ notes }) => { setNotes(notes); setLoading(false); })
-      .catch((err) => { setError(err instanceof Error ? err.message : '加载失败'); setLoading(false); });
-  }, [token, clientId]);
+    setCursor('0');
+    setHasMore(true);
+    setNotes([]);
+    (async () => {
+      try {
+        const result = await fetchNotes({ token, clientId, sinceId: '0', limit: 50, signal: abortSignal });
+        setNotes(result.notes);
+        setHasMore(result.hasMore);
+        if (result.nextCursor) setCursor(result.nextCursor);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        setError(err instanceof Error ? err.message : t('picker.error'));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token, clientId, abortSignal]);
 
-  useEffect(() => { loadNotes(); }, [loadNotes]);
+  useEffect(() => { loadFirstPage(); }, [loadFirstPage]);
+
+  const loadNextPage = async () => {
+    setLoadingMore(true);
+    try {
+      const result = await fetchNotes({ token, clientId, sinceId: cursor, limit: 50, signal: abortSignal });
+      setNotes(prev => [...prev, ...result.notes]);
+      setHasMore(result.hasMore);
+      if (result.nextCursor) setCursor(result.nextCursor);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('picker.error'));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const handleCheck = (noteId: string, checked: boolean) => {
     setSelected(prev => {
@@ -85,32 +111,68 @@ export function NotePickerModal({ token, clientId, onConfirm, onCancel }: NotePi
     });
   };
 
-  const handleSelectAll = () => setSelected(new Set(notes.map(n => n.note_id)));
+  const handleSelectAll = () => setSelected(new Set(filteredNotes.map(n => n.note_id)));
   const handleSelectNone = () => setSelected(new Set());
   const handleConfirm = () => onConfirm(Array.from(selected));
+
+  const filteredNotes = searchQuery
+    ? notes.filter(n => generateDisplayTitle(n).toLowerCase().includes(searchQuery.toLowerCase()))
+    : notes;
 
   return (
     <div className="getnote-picker">
       <div className="getnote-picker-header">
-        <span>选择要同步的笔记</span>
+        <span>{t('picker.title')}</span>
         <div className="getnote-picker-actions">
-          <button onClick={handleSelectAll}>全选</button>
-          <button onClick={handleSelectNone}>全不选</button>
+          <button onClick={handleSelectAll}>{t('picker.selectAll')}</button>
+          <button onClick={handleSelectNone}>{t('picker.selectNone')}</button>
         </div>
       </div>
       <div className="getnote-picker-body">
-        {loading && <div className="getnote-picker-loading">正在获取笔记列表...</div>}
-        {error && <div className="getnote-picker-error">{error} <button onClick={loadNotes}>重试</button></div>}
-        {!loading && !error && notes.map(note => (
+        {!loading && notes.length > 0 && (
+          <div className="getnote-picker-search">
+            <input
+              type="text"
+              className="getnote-input"
+              placeholder={t('picker.search')}
+              value={searchQuery}
+              onInput={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
+            />
+          </div>
+        )}
+        {loading && (
+          <div className="getnote-picker-skeleton">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="getnote-skeleton-row">
+                <div className="getnote-skeleton-checkbox" />
+                <div className="getnote-skeleton-lines">
+                  <div className="getnote-skeleton-line" style="width:60%" />
+                  <div className="getnote-skeleton-line" style="width:40%" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {error && !loading && <div className="getnote-picker-error">{error} <button onClick={loadFirstPage}>{t('picker.retry')}</button></div>}
+        {!loading && !error && filteredNotes.map(note => (
           <NoteRow key={note.note_id} note={note} checked={selected.has(note.note_id)} onChange={handleCheck} />
         ))}
-        {!loading && !error && notes.length === 0 && <div className="getnote-picker-empty">暂无笔记</div>}
+        {!loading && !error && !loadingMore && hasMore && notes.length > 0 && (
+          <div className="getnote-picker-loadmore">
+            <button className="mod-secondary" onClick={loadNextPage}>{t('picker.loadMore', { count: notes.length })}</button>
+          </div>
+        )}
+        {!loading && loadingMore && <div className="getnote-picker-loading">{t('picker.loadingMore')}</div>}
+        {!loading && !error && filteredNotes.length === 0 && notes.length > 0 && (
+          <div className="getnote-picker-empty">{t('picker.noMatch')}</div>
+        )}
+        {!loading && !error && notes.length === 0 && <div className="getnote-picker-empty">{t('picker.empty')}</div>}
       </div>
       <div className="getnote-picker-footer">
-        <span className="getnote-picker-count">已选 {selected.size} 条</span>
+        <span className="getnote-picker-count">{t('picker.selected', { count: selected.size })}</span>
         <div className="getnote-picker-btns">
-          <button className="mod-cancel" onClick={onCancel}>取消</button>
-          <button className="mod-cta" disabled={selected.size === 0} onClick={handleConfirm}>同步</button>
+          <button className="mod-cancel" onClick={onCancel}>{t('picker.cancel')}</button>
+          <button className="mod-cta" disabled={selected.size === 0} onClick={handleConfirm}>{t('picker.confirm')}</button>
         </div>
       </div>
     </div>

@@ -1,11 +1,8 @@
 import type { ListResponse, GetNoteNote } from './types';
+import { t } from './i18n';
 
 const BASE_URL = 'https://openapi.biji.com/open/api/v1';
 
-/**
- * Get笔记 API 返回的 id 字段是 64 位整数，直接 JSON.parse 会丢失精度。
- * 在解析前将所有 id 相关字段从数字转为字符串。
- */
 function safeJsonParse(text: string): unknown {
   const safe = text.replace(
     /"(id|note_id|parent_id|follow_id|live_id)"\s*:\s*(\d+)/g,
@@ -17,10 +14,12 @@ function safeJsonParse(text: string): unknown {
 async function apiRequest<T>(
   url: string,
   options: RequestInit,
-  retries = 3
+  retries = 3,
+  signal?: AbortSignal
 ): Promise<T> {
   const res = await fetch(url, {
     ...options,
+    signal,
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -28,19 +27,23 @@ async function apiRequest<T>(
   });
 
   if (res.status === 401) {
-    throw new Error('API Token 或 Client ID 无效，请检查设置');
+    throw new Error(t('error.invalidCredentials'));
   }
 
   if (res.status === 429 && retries > 0) {
-    // 429: 指数退避重试
-    const delay = Math.pow(2, 3 - retries) * 1000;
-    await new Promise(r => setTimeout(r, delay));
-    return apiRequest(url, options, retries - 1);
+    const retryAfter = parseInt(res.headers.get('Retry-After') ?? '', 10);
+    const delay = (retryAfter > 0 ? retryAfter : 5 * Math.pow(2, 3 - retries)) * 1000;
+    await new Promise((r, reject) => {
+      const t = setTimeout(() => r(undefined), delay);
+      signal?.addEventListener('abort', () => { clearTimeout(t); reject(new DOMException('Aborted', 'AbortError')); });
+    });
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    return apiRequest(url, options, retries - 1, signal);
   }
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`API 错误 ${res.status}: ${text}`);
+    throw new Error(t('error.apiFailed', { status: res.status, msg: text }));
   }
 
   const text = await res.text();
@@ -52,6 +55,7 @@ export interface FetchNotesOptions {
   clientId: string;
   sinceId?: string;
   limit?: number;
+  signal?: AbortSignal;
 }
 
 export async function fetchNotes(options: FetchNotesOptions): Promise<{
@@ -59,8 +63,7 @@ export async function fetchNotes(options: FetchNotesOptions): Promise<{
   hasMore: boolean;
   nextCursor: string;
 }> {
-  const { token, clientId, sinceId = '0', limit = 50 } = options;
-
+  const { token, clientId, sinceId = '0', limit = 50, signal } = options;
   const url = `${BASE_URL}/resource/note/list?since_id=${sinceId}&limit=${limit}`;
 
   const data = await apiRequest<ListResponse>(url, {
@@ -69,7 +72,7 @@ export async function fetchNotes(options: FetchNotesOptions): Promise<{
       Authorization: `Bearer ${token}`,
       'X-Client-ID': clientId,
     },
-  });
+  }, 3, signal);
 
   return {
     notes: data.data.notes,
@@ -78,23 +81,159 @@ export async function fetchNotes(options: FetchNotesOptions): Promise<{
   };
 }
 
-/**
- * 分页获取所有笔记（generator 形式）
- */
+export interface OAuthDeviceCodeResponse {
+  verification_uri: string;
+  user_code: string;
+  code: string;
+  interval: number;
+}
+
+export interface OAuthTokenResponse {
+  api_key: string;
+  client_id: string;
+}
+
+interface OAuthApiWrapper<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+}
+
+export async function fetchOAuthDeviceCode(
+  signal?: AbortSignal
+): Promise<OAuthDeviceCodeResponse> {
+  const res = await fetch(`${BASE_URL}/oauth/device/code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ client_id: 'cli_a1b2c3d4e5f6789012345678abcdef90' }),
+    signal,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(t('error.oauthDeviceCodeFailed', { status: res.status, msg: text }));
+  }
+
+  const json = await res.json() as Record<string, unknown>;
+
+  // Support both { success, data } wrapper and flat response
+  const source = (json.data ?? json) as Record<string, unknown>;
+
+  if (json.success === false) {
+    throw new Error(t('error.oauthDeviceCodeFailed', { status: res.status, msg: (json.message as string) ?? 'unknown' }));
+  }
+
+  if (!source.code && !source.verification_uri) {
+    throw new Error(t('error.oauthDeviceCodeFailed', { status: res.status, msg: (json.message as string) ?? 'unknown' }));
+  }
+
+  return {
+    verification_uri: source.verification_uri as string,
+    user_code: source.user_code as string,
+    code: (source.code as string) ?? (source.device_code as string),
+    interval: (source.interval as number) ?? 5,
+  };
+}
+
+function parseOAuthTokenResponse(json: Record<string, unknown>): { status: number; message: string; apiKey: string; clientId: string; isSuccess: boolean } {
+  // The API returns { success: true, data: { ... }, error, meta, request_id }
+  const inner = (json.data ?? json) as Record<string, unknown>;
+
+  // Check for pending/expired messages in data.msg
+  const dataMsg = inner.msg as string | undefined;
+
+  if (dataMsg === 'authorization_pending') {
+    return { status: 10012, message: '', apiKey: '', clientId: '', isSuccess: false };
+  }
+
+  if (dataMsg === 'expired_token') {
+    return { status: 10013, message: t('error.oauthExpired'), apiKey: '', clientId: '', isSuccess: false };
+  }
+
+  // Check for credentials in either inner (from data: { ... }) or flat
+  const apiKey = (inner.api_key as string) ?? (inner.apiKey as string) ?? (json.api_key as string) ?? '';
+  const clientId = (inner.client_id as string) ?? (inner.clientId as string) ?? (json.client_id as string) ?? '';
+  const message = (json.message as string) ?? (inner.message as string) ?? '';
+
+  if (apiKey && clientId) {
+    return { status: 0, message: '', apiKey, clientId, isSuccess: true };
+  }
+
+  // Unknown state
+  const status = json.status as number | undefined ?? -1;
+  return { status, message, apiKey: '', clientId: '', isSuccess: false };
+}
+
+export async function pollOAuthToken(
+  code: string,
+  interval: number,
+  signal?: AbortSignal
+): Promise<OAuthTokenResponse> {
+  const maxAttempts = 60;
+  for (let i = 0; i < maxAttempts; i++) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+
+    const res = await fetch(`${BASE_URL}/oauth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'device_code',
+        client_id: 'cli_a1b2c3d4e5f6789012345678abcdef90',
+        code,
+      }),
+      signal,
+    });
+
+    if (!res.ok) {
+      throw new Error(t('error.apiFailed', { status: res.status, msg: await res.text().catch(() => '') }));
+    }
+    const json = await res.json() as Record<string, unknown>;
+    const parsed = parseOAuthTokenResponse(json);
+
+    if (parsed.isSuccess) {
+      return { api_key: parsed.apiKey, client_id: parsed.clientId };
+    }
+
+    if (parsed.status === 10012) {
+      // still pending, wait interval seconds
+      await new Promise<void>((resolve, reject) => {
+        const t = setTimeout(() => resolve(), interval * 1000);
+        signal?.addEventListener('abort', () => { clearTimeout(t); reject(new DOMException('Aborted', 'AbortError')); });
+      });
+      continue;
+    }
+
+    if (parsed.status === 10013) {
+      throw new Error(t('error.oauthExpired'));
+    }
+
+    throw new Error(parsed.message || t('error.oauthUnknown', { status: parsed.status }));
+  }
+
+  throw new Error(t('error.oauthTimeout'));
+}
+
 export async function* fetchAllNotes(
   token: string,
-  clientId: string
+  clientId: string,
+  signal?: AbortSignal
 ): AsyncGenerator<GetNoteNote[]> {
   let cursor = '0';
+  let page = 0;
 
   while (true) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    page++;
     const { notes, hasMore, nextCursor } = await fetchNotes({
       token,
       clientId,
       sinceId: cursor,
+      signal,
     });
 
-    yield notes;
+    if (notes && notes.length > 0) {
+      yield notes;
+    }
 
     if (!hasMore || !nextCursor || notes.length === 0) break;
     cursor = nextCursor;

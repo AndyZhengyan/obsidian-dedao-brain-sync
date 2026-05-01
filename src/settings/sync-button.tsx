@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { t } from '../i18n';
 
 interface SyncButtonProps {
   hasCredentials: boolean;
@@ -12,7 +13,7 @@ export function SyncButton({ hasCredentials, isSyncing, onClick }: SyncButtonPro
   if (isSyncing) {
     return (
       <button className="mod-cta" disabled>
-        🔄 同步中...
+        {t('sync.syncing')}
       </button>
     );
   }
@@ -20,7 +21,7 @@ export function SyncButton({ hasCredentials, isSyncing, onClick }: SyncButtonPro
   if (!hasCredentials) {
     return (
       <button className="mod-warning" disabled>
-        请先填写 API Token 和 Client ID
+        {t('sync.noCredentials')}
       </button>
     );
   }
@@ -32,7 +33,7 @@ export function SyncButton({ hasCredentials, isSyncing, onClick }: SyncButtonPro
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      ▶ 立即同步
+      {t('sync.start')}
     </button>
   );
 }

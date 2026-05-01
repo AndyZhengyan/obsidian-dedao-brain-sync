@@ -2,7 +2,7 @@
 
 export interface GetNoteNote {
   id: number;            // 64位整数，JSON 解析前需预处理
-  note_id: string;       // 字符串版本，用于文件名
+  note_id: string;
   title: string;
   content: string;       // 正文（markdown），录音笔记为 AI 摘要
   note_type: NoteType;
@@ -47,6 +47,7 @@ export interface Settings {
   clientId: string;
   folderName: string;
   maxDays: number;
+  filenamePrefix: string;
   scheduledSync: ScheduledSyncSettings;
 }
 
@@ -55,12 +56,25 @@ export const DEFAULT_SETTINGS: Settings = {
   clientId: '',
   folderName: 'Get笔记',
   maxDays: 30,
+  filenamePrefix: '',
   scheduledSync: {
     enabled: false,
     intervalMinutes: 30,
     syncOnStart: true,
   },
 };
+
+export interface SyncHistoryEntry {
+  timestamp: number;
+  result: SyncResult;
+  type: 'full' | 'selective' | 'auto';
+}
+
+export interface SyncProgressDetail {
+  message: string;
+  count: string;
+  percent: number;
+}
 
 export interface SyncResult {
   created: number;

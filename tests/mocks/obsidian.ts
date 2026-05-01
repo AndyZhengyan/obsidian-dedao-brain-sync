@@ -165,3 +165,19 @@ export class PluginSettingTab {
 export function normalizePath(path: string): string {
   return path.replace(/\/+/g, '/');
 }
+
+export function getLanguage(): string {
+  return 'zh-CN';
+}
+
+// ---- AbstractInputSuggest (minimal stub for FolderSuggest tests) ----
+export abstract class AbstractInputSuggest<T> {
+  constructor(_app: unknown, _inputEl: HTMLElement) {}
+  abstract getSuggestions(_query: string): T[];
+  abstract renderSuggestion(_value: T, _el: HTMLElement): void;
+  selectSuggestion(_value: T, _evt: MouseEvent | KeyboardEvent): void {}
+  close(): void {}
+  setValue(_value: string): void {}
+  getValue(): string { return ''; }
+  onSelect(_cb: (value: T, evt: MouseEvent | KeyboardEvent) => void): this { return this; }
+}

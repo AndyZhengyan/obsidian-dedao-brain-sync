@@ -1,4 +1,5 @@
 import { App, Modal } from 'obsidian';
+import { t } from '../i18n';
 
 export class LoadingModal extends Modal {
   private messageEl!: HTMLElement;
@@ -18,7 +19,7 @@ export class LoadingModal extends Modal {
     }).style.fontSize = '32px';
 
     this.messageEl = content.createDiv({
-      text: '正在获取笔记列表...',
+      text: t('loading'),
       cls: 'getnote-loading-message',
     });
     this.messageEl.style.marginTop = '12px';

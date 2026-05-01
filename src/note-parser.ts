@@ -21,6 +21,49 @@ function sanitizeTitle(title: string): string {
 }
 
 /**
+ * 从笔记内容生成回退标题（取第一个标点前的文字，不超过20字）
+ */
+function fallbackTitle(content: string): string {
+  const cleaned = content.replace(/\n/g, ' ').trim();
+  if (!cleaned) return '';
+
+  const punctMatch = cleaned.match(/[。，！？；：、,.!?;:]/);
+  if (punctMatch && punctMatch.index !== undefined && punctMatch.index > 0 && punctMatch.index <= 20) {
+    return cleaned.slice(0, punctMatch.index).trim();
+  }
+  return cleaned.slice(0, 20).trim();
+}
+
+/**
+ * 从笔记生成 Obsidian 文件名安全的标题
+ * 优先用 note.title，无标题则用正文内容生成
+ */
+export function generateDisplayTitle(note: GetNoteNote): string {
+  if (note.title && note.title.trim()) {
+    return sanitizeTitle(note.title);
+  }
+  return sanitizeTitle(fallbackTitle(note.content));
+}
+
+/**
+ * 将时间戳格式字符串替换为实际日期值
+ * 支持：YYYY, MM, DD, HH, mm, ss
+ */
+export function formatTimestampPrefix(format: string, isoDate: string): string {
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return '';
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return format
+    .replace(/YYYY/g, String(d.getFullYear()))
+    .replace(/MM/g, pad(d.getMonth() + 1))
+    .replace(/DD/g, pad(d.getDate()))
+    .replace(/HH/g, pad(d.getHours()))
+    .replace(/mm/g, pad(d.getMinutes()))
+    .replace(/ss/g, pad(d.getSeconds()));
+}
+
+/**
  * 生成 frontmatter
  */
 function buildFrontmatter(note: GetNoteNote): string {
