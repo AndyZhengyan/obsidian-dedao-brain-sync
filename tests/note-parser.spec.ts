@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderNote, getNoteTitle } from '../src/note-parser';
+import { renderNote, getNoteTitle, generateDisplayTitle, formatTimestampPrefix } from '../src/note-parser';
 import type { GetNoteNote } from '../src/types';
 
 function makeNote(overrides: Partial<GetNoteNote> = {}): GetNoteNote {
@@ -103,5 +103,68 @@ describe('sanitizeTitle (via renderNote)', () => {
   it('正常中文标题原样保留', () => {
     const result = renderNote(makeNote({ title: '2026年度总结', content: '' }));
     expect(result).not.toContain('title: ""');
+  });
+});
+
+// ---- generateDisplayTitle ----
+describe('generateDisplayTitle', () => {
+  it('有标题时返回清洗后的标题', () => {
+    expect(generateDisplayTitle(makeNote({ title: '我的笔记' }))).toBe('我的笔记');
+  });
+
+  it('标题含首尾空格时去除空格', () => {
+    expect(generateDisplayTitle(makeNote({ title: '  标题  ' }))).toBe('标题');
+  });
+
+  it('标题含非法文件名字符时过滤掉', () => {
+    expect(generateDisplayTitle(makeNote({ title: 'a:b/c?d*e"f<g>h|i', content: 'body' }))).toBe('abcdefghi');
+  });
+
+  it('标题含双引号时被删除', () => {
+    expect(generateDisplayTitle(makeNote({ title: '他说"你好"世界', content: 'body' }))).toBe('他说你好世界');
+  });
+
+  it('空标题时用正文第一个标点前的文字', () => {
+    expect(generateDisplayTitle(makeNote({ title: '', content: '这是第一段。这是第二段内容。' }))).toBe('这是第一段');
+  });
+
+  it('空标题时标点在20字之后则取前20字', () => {
+    expect(generateDisplayTitle(makeNote({ title: '', content: '这是很长的第一段文字超过二十个字了。这里是第二段。' }))).toBe('这是很长的第一段文字超过二十个字了');
+  });
+
+  it('空标题无标点时取前20字', () => {
+    expect(generateDisplayTitle(makeNote({ title: '', content: '没有标点的很长的内容' }))).toBe('没有标点的很长的内容');
+  });
+
+  it('标题和正文都为空时返回空字符串', () => {
+    expect(generateDisplayTitle(makeNote({ title: '', content: '' }))).toBe('');
+  });
+
+  it('正文有换行符时被替换为空格', () => {
+    const note = makeNote({ title: '', content: '第一行\n第二行有标点。第一段结束。' });
+    expect(generateDisplayTitle(note)).toBe('第一行 第二行有标点');
+  });
+});
+
+// ---- formatTimestampPrefix ----
+describe('formatTimestampPrefix', () => {
+  it('YYYY-MM-DD 格式', () => {
+    expect(formatTimestampPrefix('YYYY-MM-DD', '2026-04-27T22:26:17+08:00')).toBe('2026-04-27');
+  });
+
+  it('YYYYMMDD_HHmm 格式', () => {
+    expect(formatTimestampPrefix('YYYYMMDD_HHmm', '2026-04-27T22:26:17+08:00')).toBe('20260427_2226');
+  });
+
+  it('HH:mm:ss 格式', () => {
+    expect(formatTimestampPrefix('HH:mm:ss', '2026-04-27T22:26:17+08:00')).toBe('22:26:17');
+  });
+
+  it('带其他字符的格式', () => {
+    expect(formatTimestampPrefix('[YYYY年MM月DD日]', '2026-04-27T22:26:17+08:00')).toBe('[2026年04月27日]');
+  });
+
+  it('无效 ISO 日期返回空字符串', () => {
+    expect(formatTimestampPrefix('YYYY-MM-DD', 'invalid')).toBe('');
   });
 });
