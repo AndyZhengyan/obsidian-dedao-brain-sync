@@ -293,20 +293,9 @@ export function SettingsComponent({
         <div className="getnote-input-hint">{t('settings.prefix.hint')}</div>
       </SettingItem>
 
-      <SettingItem
-        name={t('settings.maxDays.label')}
-        description={t('settings.maxDays.desc')}
-      >
-        <input
-          type="number"
-          className="getnote-input"
-          placeholder={t('settings.maxDays.placeholder')}
-          value={maxDays}
-          min="0"
-          onInput={(e) => handleMaxDaysChange((e.target as HTMLInputElement).value)}
-        />
-        <div className="getnote-input-hint">{t('settings.maxDays.hint')}</div>
-      </SettingItem>
+      <div className="getnote-section-header">
+        <span>{t('settings.scheduled.section')}</span>
+      </div>
 
       <SettingItem
         name={t('settings.scheduled.label')}
@@ -346,6 +335,10 @@ export function SettingsComponent({
       </SettingItem>
 
       <div className="getnote-settings-divider" />
+
+      <div className="getnote-section-header">
+        <span>{t('settings.manualSync.section')}</span>
+      </div>
 
       <SettingItem name={t('settings.sync.label')} description={t('settings.sync.desc')}>
         <SyncButton

@@ -152,6 +152,18 @@ describe('pollOAuthToken', () => {
     await expect(pollOAuthToken('dev_abc', 5)).rejects.toThrow('OAuth 授权已过期，请重试');
   });
 
+  it('throws with raw JSON on unknown status', async () => {
+    const mockFetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ status: 999, message: 'weird response' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const err = await pollOAuthToken('dev_abc', 5).catch(e => e.message);
+    expect(err).toContain('999');
+    expect(err).toContain('weird response');
+  });
+
   it('throws on timeout after max attempts', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,

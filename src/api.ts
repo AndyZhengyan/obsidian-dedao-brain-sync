@@ -14,7 +14,7 @@ function safeJsonParse(text: string): unknown {
 async function apiRequest<T>(
   url: string,
   options: RequestInit,
-  retries = 3,
+  retries = 1,
   signal?: AbortSignal
 ): Promise<T> {
   const res = await fetch(url, {
@@ -32,7 +32,8 @@ async function apiRequest<T>(
 
   if (res.status === 429 && retries > 0) {
     const retryAfter = parseInt(res.headers.get('Retry-After') ?? '', 10);
-    const delay = (retryAfter > 0 ? retryAfter : 5 * Math.pow(2, 3 - retries)) * 1000;
+    const baseDelay = retryAfter > 0 ? retryAfter : 5;
+    const delay = Math.min(baseDelay, 30) * 1000; // cap at 30s, single retry only
     await new Promise((r, reject) => {
       const t = setTimeout(() => r(undefined), delay);
       signal?.addEventListener('abort', () => { clearTimeout(t); reject(new DOMException('Aborted', 'AbortError')); });
@@ -185,7 +186,8 @@ export async function pollOAuthToken(
     });
 
     if (!res.ok) {
-      throw new Error(t('error.apiFailed', { status: res.status, msg: await res.text().catch(() => '') }));
+      const text = await res.text();
+      throw new Error(t('error.apiFailed', { status: res.status, msg: text }));
     }
     const json = await res.json() as Record<string, unknown>;
     const parsed = parseOAuthTokenResponse(json);
@@ -207,7 +209,10 @@ export async function pollOAuthToken(
       throw new Error(t('error.oauthExpired'));
     }
 
-    throw new Error(parsed.message || t('error.oauthUnknown', { status: parsed.status }));
+    const rawMsg = JSON.stringify(json).slice(0, 200);
+    throw new Error(
+      (parsed.message ? parsed.message + ' ' : '') + t('error.oauthUnknown', { status: parsed.status }) + ` (${rawMsg})`
+    );
   }
 
   throw new Error(t('error.oauthTimeout'));

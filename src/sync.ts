@@ -174,6 +174,16 @@ export class SyncEngine {
 
         const filtered = this.filterRecentNotes(notes);
 
+        // Stop early if maxDays is set and entire page is older than cutoff
+        if (this.settings.maxDays > 0 && filtered.length === 0 && notes.length > 0) {
+          const oldestNote = notes[notes.length - 1];
+          const cutoff = Date.now() - this.settings.maxDays * 24 * 60 * 60 * 1000;
+          const oldestTime = new Date(oldestNote.updated_at).getTime();
+          if (oldestTime < cutoff) {
+            break;
+          }
+        }
+
         for (const note of filtered) {
           if (modal?.isCancelled()) throw new SyncCancelledError();
 
