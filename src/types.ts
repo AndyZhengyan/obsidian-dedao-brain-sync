@@ -10,6 +10,8 @@ export interface GetNoteNote {
   tags: Tag[];
   created_at: string;    // "2026-04-27T22:26:17+08:00"
   updated_at: string;
+  attachments?: Attachment[];  // 详情接口返回的附件列表
+  audio?: string;             // 详情接口返回的原始转写文本
 }
 
 export interface Tag {
@@ -46,28 +48,45 @@ export interface Settings {
   apiToken: string;
   clientId: string;
   folderName: string;
-  maxDays: number;
   filenamePrefix: string;
+  maxDays: number;
+  syncStartDate: string;  // ISO date string, empty means no limit
+  lastSyncEndTimestamp: string;  // ISO datetime of last synced note's updated_at
   scheduledSync: ScheduledSyncSettings;
+  syncHistory: SyncHistoryEntry[];
+}
+
+export interface SyncScopeOptions {
+  maxDays: number;
+  syncStartDate: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   apiToken: '',
   clientId: '',
   folderName: 'Get笔记',
-  maxDays: 30,
   filenamePrefix: '',
+  maxDays: 30,
+  syncStartDate: '',
+  lastSyncEndTimestamp: '',
   scheduledSync: {
     enabled: false,
     intervalMinutes: 30,
     syncOnStart: true,
   },
+  syncHistory: [],
 };
 
 export interface SyncHistoryEntry {
+  id: string;
+  startedAt: number;
+  finishedAt: number;
+  durationMs: number;
   timestamp: number;
   result: SyncResult;
   type: 'full' | 'selective' | 'auto';
+  status: 'success' | 'failed' | 'cancelled';
+  error?: string;
 }
 
 export interface SyncProgressDetail {
@@ -82,6 +101,7 @@ export interface SyncResult {
   skipped: number;
   failed: number;
   total: number;
+  lastNoteTimestamp?: string;  // updated_at of the last processed note
 }
 
 export interface NoteCategory {
@@ -103,4 +123,11 @@ export const NOTE_CATEGORIES: NoteCategory[] = [
 export function getCategoryDir(noteType: string): string {
   const found = NOTE_CATEGORIES.find(c => c.noteType === noteType);
   return found ? found.dirName : '其他';
+}
+
+export interface Attachment {
+  type: 'audio' | string;
+  url: string;
+  title: string;
+  duration: number;  // 毫秒
 }
