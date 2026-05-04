@@ -21,6 +21,10 @@ function makeMockApp() {
         files.set(path, { path, content: data, frontmatter: {} });
         return { path };
       }),
+      createBinary: vi.fn().mockImplementation(async (path: string, data: Uint8Array) => {
+        files.set(path, { path, content: `[binary:${data.byteLength}]`, frontmatter: {} });
+        return { path };
+      }),
       modify: vi.fn().mockImplementation((file: { path: string }, data: string) => {
         const existing = files.get(file.path);
         if (existing) {
@@ -224,5 +228,76 @@ describe('SyncEngine — getFileName', () => {
     const note = makeNote({ title: '我的笔记', created_at: 'invalid' });
     // @ts-ignore
     expect(engine['getFileName'](note)).toBe('我的笔记');
+  });
+});
+
+describe('SyncEngine — audio note sync', () => {
+  const audioNote: GetNoteNote = {
+    id: '1908723638246504120',
+    note_id: '1908723638246504120',
+    title: '我的录音笔记',
+    content: '### 📑 智能总结\n摘要',
+    note_type: 'recorder_audio',
+    source: 'app',
+    tags: [],
+    created_at: '2026-04-30T12:45:24+08:00',
+    updated_at: '2026-04-30T13:00:07+08:00',
+  };
+
+  it('音频笔记下载附件到 asset 目录，md 内嵌音频链接', async () => {
+    const createdFiles: string[] = [];
+    const originalFetch = global.fetch;
+    let callCount = 0;
+
+    global.fetch = vi.fn().mockImplementation((url: string | URL) => {
+      const urlStr = url instanceof URL ? url.toString() : String(url);
+      if (urlStr.includes('/resource/note/list')) {
+        return Promise.resolve({
+          ok: true,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          text: () => Promise.resolve(JSON.stringify({
+            data: { notes: [audioNote], has_more: false, next_cursor: '' },
+          })),
+        } as unknown as Response);
+      }
+      if (urlStr.includes('/resource/note/detail')) {
+        return Promise.resolve({
+          ok: true,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          text: () => Promise.resolve(JSON.stringify({
+            success: true,
+            data: {
+              ...audioNote,
+              attachments: [{ type: 'audio', url: 'https://cdn.example.com/test.mp3', title: '', duration: 883920 }],
+              audio: '🟢 说话人1 [00:00:01]\n转写内容',
+            },
+          })),
+        } as unknown as Response);
+      }
+      if (urlStr.includes('cdn.example.com')) {
+        return Promise.resolve(new Response(new ArrayBuffer(1024)));
+      }
+      return originalFetch(url);
+    }) as any;
+
+    const mockApp = makeMockApp();
+    mockApp.vault.create = vi.fn().mockImplementation(async (path: string) => {
+      createdFiles.push(path);
+      return { path };
+    });
+    mockApp.vault.createBinary = vi.fn().mockImplementation(async (path: string) => {
+      createdFiles.push(path);
+      return { path };
+    });
+
+    const engine = new SyncEngine(mockApp as any, makeSettings());
+    await engine.sync();
+
+    // 验证 asset 目录被创建/写入
+    expect(createdFiles.some(f => f.includes('/asset/'))).toBe(true);
+    // 验证 md 文件被创建
+    expect(createdFiles.some(f => f.endsWith('.md'))).toBe(true);
+
+    global.fetch = originalFetch;
   });
 });
