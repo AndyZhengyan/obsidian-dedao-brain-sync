@@ -94,8 +94,16 @@ function buildFrontmatter(note: GetNoteNote): string {
  */
 export function renderNote(note: GetNoteNote): string {
   const frontmatter = buildFrontmatter(note);
-  const content = note.content || '';
-  return frontmatter + content;
+  let body = note.content || '';
+
+  if (note.attachments?.some(a => a.type === 'audio') && note.audio) {
+    const filename = generateDisplayTitle(note) + '.mp3';
+    const audioLink = `[🔊 录音](asset/${filename})\n`;
+    const transcriptHeader = '\n\n---\n\n### 原始录音转写\n\n';
+    body = audioLink + body + transcriptHeader + note.audio;
+  }
+
+  return frontmatter + body;
 }
 
 /**
