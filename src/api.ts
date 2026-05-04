@@ -30,16 +30,29 @@ async function apiRequest<T>(
     throw new Error(t('error.invalidCredentials'));
   }
 
-  if (res.status === 429 && retries > 0) {
-    const retryAfter = parseInt(res.headers.get('Retry-After') ?? '', 10);
-    const baseDelay = retryAfter > 0 ? retryAfter : 5;
-    const delay = Math.min(baseDelay, 30) * 1000; // cap at 30s, single retry only
-    await new Promise((r, reject) => {
-      const t = setTimeout(() => r(undefined), delay);
-      signal?.addEventListener('abort', () => { clearTimeout(t); reject(new DOMException('Aborted', 'AbortError')); });
-    });
-    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-    return apiRequest(url, options, retries - 1, signal);
+  if (res.status === 429) {
+    // Check for Retry-After header or rate limit info
+    const retryAfter = res.headers.get('Retry-After');
+    const limitRemaining = res.headers.get('X-RateLimit-Remaining');
+    const rateLimitReset = res.headers.get('X-RateLimit-Reset');
+
+    // If we got a "quota exhausted" signal (remaining: 0 or no retry-after), stop immediately
+    if ((limitRemaining === '0' || !retryAfter) && retries > 0) {
+      throw new Error(t('error.quotaExceeded'));
+    }
+
+    if (retryAfter) {
+      const baseDelay = parseInt(retryAfter, 10);
+      const delay = Math.min(baseDelay, 60) * 1000; // cap at 60s
+      await new Promise((r, reject) => {
+        const timer = setTimeout(() => r(undefined), delay);
+        signal?.addEventListener('abort', () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); });
+      });
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+      return apiRequest(url, options, retries - 1, signal);
+    }
+
+    throw new Error(t('error.apiFailed', { status: 429, msg: 'Rate limit exceeded' }));
   }
 
   if (!res.ok) {
@@ -80,6 +93,32 @@ export async function fetchNotes(options: FetchNotesOptions): Promise<{
     hasMore: data.data.has_more,
     nextCursor: data.data.next_cursor,
   };
+}
+
+export async function fetchNoteDetail(
+  id: string,
+  token: string,
+  clientId: string,
+  signal?: AbortSignal
+): Promise<GetNoteNote> {
+  const url = `${BASE_URL}/resource/note/detail?id=${id}`;
+  const data = await apiRequest<{
+    success: boolean;
+    data?: GetNoteNote;
+    error?: { message: string };
+  }>(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Client-ID': clientId,
+    },
+  }, 2, signal);
+
+  if (!data.success || !data.data) {
+    throw new Error(data.error?.message ?? 'Failed to fetch note detail');
+  }
+
+  return data.data;
 }
 
 export interface OAuthDeviceCodeResponse {
@@ -221,9 +260,10 @@ export async function pollOAuthToken(
 export async function* fetchAllNotes(
   token: string,
   clientId: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  startCursor?: string | null
 ): AsyncGenerator<GetNoteNote[]> {
-  let cursor = '0';
+  let cursor = startCursor && startCursor !== '0' ? startCursor : '0';
   let page = 0;
 
   while (true) {
