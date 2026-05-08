@@ -50,17 +50,18 @@ export function generateDisplayTitle(note: GetNoteNote): string {
  * 支持：YYYY, MM, DD, HH, mm, ss
  */
 export function formatTimestampPrefix(format: string, isoDate: string): string {
-  const d = new Date(isoDate);
-  if (isNaN(d.getTime())) return '';
+  const match = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);
+  if (!match) return '';
 
-  const pad = (n: number) => String(n).padStart(2, '0');
+  const [, year, month, day, hour, minute, second] = match;
+
   return format
-    .replace(/YYYY/g, String(d.getFullYear()))
-    .replace(/MM/g, pad(d.getMonth() + 1))
-    .replace(/DD/g, pad(d.getDate()))
-    .replace(/HH/g, pad(d.getHours()))
-    .replace(/mm/g, pad(d.getMinutes()))
-    .replace(/ss/g, pad(d.getSeconds()));
+    .replace(/YYYY/g, year)
+    .replace(/MM/g, month)
+    .replace(/DD/g, day)
+    .replace(/HH/g, hour)
+    .replace(/mm/g, minute)
+    .replace(/ss/g, second);
 }
 
 /**
