@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fetchNotes, fetchNoteDetail } from '../src/api';
+import { fetchNotes, fetchNoteDetail, GETNOTE_LIST_LIMIT } from '../src/api';
 import type { ListResponse } from '../src/types';
 
 // Extract the internal safeJsonParse for direct testing
@@ -111,5 +111,39 @@ describe('fetchNoteDetail', () => {
     }) as any;
 
     await expect(fetchNoteDetail('not-exist', 'test-token', 'test-client')).rejects.toThrow('笔记不存在');
+  });
+});
+
+describe('fetchNotes limit', () => {
+  function mockListResponse() {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      text: () => Promise.resolve(JSON.stringify({
+        data: { notes: [], has_more: false, next_cursor: '' },
+      } satisfies ListResponse)),
+    }) as any;
+  }
+
+  it('默认按 GetNote list API 最大 20 条请求', async () => {
+    mockListResponse();
+
+    await fetchNotes({ token: 'test-token', clientId: 'test-client' });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining(`limit=${GETNOTE_LIST_LIMIT}`),
+      expect.any(Object)
+    );
+  });
+
+  it('外部误传超过 20 的 limit 时会压到 20', async () => {
+    mockListResponse();
+
+    await fetchNotes({ token: 'test-token', clientId: 'test-client', limit: 50 });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining(`limit=${GETNOTE_LIST_LIMIT}`),
+      expect.any(Object)
+    );
   });
 });

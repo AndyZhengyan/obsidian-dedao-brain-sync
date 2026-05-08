@@ -51,7 +51,11 @@ describe('t() - Chinese translations', () => {
   });
 
   it('returns Chinese for sync.start', () => {
-    expect(i18n.t('sync.start')).toBe('立即同步');
+    expect(i18n.t('sync.start')).toBe('按时间同步');
+  });
+
+  it('returns Chinese for manualSync.title', () => {
+    expect(i18n.t('manualSync.title')).toBe('按时间同步');
   });
 
   it('returns Chinese for sync.syncing', () => {
@@ -89,7 +93,11 @@ describe('t() - English translations', () => {
   });
 
   it('returns English for sync.start', () => {
-    expect(i18n.t('sync.start')).toBe('Sync Now');
+    expect(i18n.t('sync.start')).toBe('Sync by Time');
+  });
+
+  it('returns English for manualSync.title', () => {
+    expect(i18n.t('manualSync.title')).toBe('Sync by Time');
   });
 
   it('returns English for sync.syncing', () => {

@@ -185,7 +185,7 @@ describe('SyncEngine — writeNote', () => {
     const index = new Map<string, any>();
     // @ts-ignore
     const result = await engine['writeNote'](note, index);
-    expect(result).toBe('created');
+    expect(result.status).toBe('created');
   });
 
   it('有相同 uid 的笔记无变化返回 skipped', async () => {
@@ -201,7 +201,7 @@ describe('SyncEngine — writeNote', () => {
     const index = new Map<string, any>([['new_001', { path: 'Get笔记/纯文本/新笔记.md' }]]);
     // @ts-ignore
     const result = await engine['writeNote'](note, index);
-    expect(result).toBe('skipped');
+    expect(result.status).toBe('skipped');
   });
 });
 
@@ -247,6 +247,7 @@ describe('SyncEngine — audio note sync', () => {
   it('音频笔记下载附件到 asset 目录，md 内嵌音频链接', async () => {
     const createdFiles: string[] = [];
     const originalFetch = global.fetch;
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     let callCount = 0;
 
     global.fetch = vi.fn().mockImplementation((url: string | URL) => {
@@ -291,12 +292,78 @@ describe('SyncEngine — audio note sync', () => {
     });
 
     const engine = new SyncEngine(mockApp as any, makeSettings());
-    await engine.sync();
+    const result = await engine.sync();
 
     // 验证 asset 目录被创建/写入
     expect(createdFiles.some(f => f.includes('/asset/'))).toBe(true);
     // 验证 md 文件被创建
     expect(createdFiles.some(f => f.endsWith('.md'))).toBe(true);
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        noteId: audioNote.note_id,
+        title: audioNote.title,
+        noteType: audioNote.note_type,
+        updatedAt: audioNote.updated_at,
+        status: 'created',
+      }),
+    ]);
+    expect(logSpy.mock.calls.flat().join(' ')).not.toContain('https://cdn.example.com/test.mp3');
+
+    logSpy.mockRestore();
+    global.fetch = originalFetch;
+  });
+
+  it('拒绝下载非 HTTPS 音频附件', async () => {
+    const originalFetch = global.fetch;
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    global.fetch = vi.fn().mockResolvedValue(new Response(new ArrayBuffer(1024))) as any;
+
+    const mockApp = makeMockApp();
+    const engine = new SyncEngine(mockApp as any, makeSettings());
+
+    // @ts-ignore accessing private method for security regression coverage
+    const result = await engine['downloadAudioAsset'](audioNote, {
+      type: 'audio',
+      url: 'http://127.0.0.1/private.mp3',
+      title: '',
+      duration: 1000,
+    });
+
+    expect(result).toBeNull();
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(mockApp.vault.createBinary).not.toHaveBeenCalled();
+    expect(warnSpy.mock.calls.flat().join(' ')).not.toContain('http://127.0.0.1/private.mp3');
+
+    warnSpy.mockRestore();
+    global.fetch = originalFetch;
+  });
+});
+
+describe('SyncEngine — selective sync cancellation', () => {
+  it('engine.cancel 会停止选择同步的后续笔记处理', async () => {
+    const notes = [
+      makeNote({ note_id: 'select_1', title: '选择 1' }),
+      makeNote({ note_id: 'select_2', title: '选择 2' }),
+    ];
+
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      text: () => Promise.resolve(JSON.stringify({
+        data: { notes, has_more: false, next_cursor: '' },
+      })),
+    }) as any;
+
+    const mockApp = makeMockApp();
+    const engine = new SyncEngine(mockApp as any, makeSettings(), (info) => {
+      if (info.processed === 1) {
+        engine.cancel();
+      }
+    });
+
+    await expect(engine.syncNoteIds(['select_1', 'select_2'])).rejects.toThrow('Sync cancelled');
+    expect(mockApp.vault.create).toHaveBeenCalledTimes(1);
 
     global.fetch = originalFetch;
   });

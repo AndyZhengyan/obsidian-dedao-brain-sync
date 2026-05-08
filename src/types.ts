@@ -61,6 +61,13 @@ export interface SyncScopeOptions {
   syncStartDate: string;
 }
 
+export interface SyncHistoryScope {
+  maxDays: number;
+  syncStartDate: string;
+  selectedCount?: number;
+  selectedIds?: string[];
+}
+
 export const DEFAULT_SETTINGS: Settings = {
   apiToken: '',
   clientId: '',
@@ -85,6 +92,8 @@ export interface SyncHistoryEntry {
   timestamp: number;
   result: SyncResult;
   type: 'full' | 'selective' | 'auto';
+  mode?: 'time' | 'selected' | 'auto';
+  scope?: SyncHistoryScope;
   status: 'success' | 'failed' | 'cancelled';
   error?: string;
 }
@@ -101,7 +110,17 @@ export interface SyncResult {
   skipped: number;
   failed: number;
   total: number;
+  items?: SyncResultItem[];
   lastNoteTimestamp?: string;  // updated_at of the last processed note
+}
+
+export interface SyncResultItem {
+  noteId: string;
+  title: string;
+  noteType: string;
+  updatedAt: string;
+  status: 'created' | 'updated' | 'skipped' | 'failed';
+  error?: string;
 }
 
 export interface NoteCategory {

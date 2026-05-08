@@ -2,6 +2,7 @@ import type { ListResponse, GetNoteNote } from './types';
 import { t } from './i18n';
 
 const BASE_URL = 'https://openapi.biji.com/open/api/v1';
+export const GETNOTE_LIST_LIMIT = 20;
 
 function safeJsonParse(text: string): unknown {
   const safe = text.replace(
@@ -34,7 +35,6 @@ async function apiRequest<T>(
     // Check for Retry-After header or rate limit info
     const retryAfter = res.headers.get('Retry-After');
     const limitRemaining = res.headers.get('X-RateLimit-Remaining');
-    const rateLimitReset = res.headers.get('X-RateLimit-Reset');
 
     // If we got a "quota exhausted" signal (remaining: 0 or no retry-after), stop immediately
     if ((limitRemaining === '0' || !retryAfter) && retries > 0) {
@@ -77,7 +77,9 @@ export async function fetchNotes(options: FetchNotesOptions): Promise<{
   hasMore: boolean;
   nextCursor: string;
 }> {
-  const { token, clientId, sinceId = '0', limit = 50, signal } = options;
+  const { token, clientId, sinceId = '0', signal } = options;
+  const requestedLimit = options.limit ?? GETNOTE_LIST_LIMIT;
+  const limit = Math.max(1, Math.min(requestedLimit, GETNOTE_LIST_LIMIT));
   const url = `${BASE_URL}/resource/note/list?since_id=${sinceId}&limit=${limit}`;
 
   const data = await apiRequest<ListResponse>(url, {
@@ -131,12 +133,6 @@ export interface OAuthDeviceCodeResponse {
 export interface OAuthTokenResponse {
   api_key: string;
   client_id: string;
-}
-
-interface OAuthApiWrapper<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
 }
 
 export async function fetchOAuthDeviceCode(
@@ -264,11 +260,9 @@ export async function* fetchAllNotes(
   startCursor?: string | null
 ): AsyncGenerator<GetNoteNote[]> {
   let cursor = startCursor && startCursor !== '0' ? startCursor : '0';
-  let page = 0;
 
   while (true) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-    page++;
     const { notes, hasMore, nextCursor } = await fetchNotes({
       token,
       clientId,
