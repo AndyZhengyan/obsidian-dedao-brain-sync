@@ -21,9 +21,16 @@ jobs:
       !contains(github.event.issue.body || '', '[skip ai]')
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
     steps:
+      - name: Skip OpenCode when Anthropic API key is not configured
+        if: env.ANTHROPIC_API_KEY == ''
+        run: echo "ANTHROPIC_API_KEY is not configured; skipping OpenCode triage."
+
       - name: Check account age
+        if: env.ANTHROPIC_API_KEY != ''
         id: account
         uses: actions/github-script@v7
         with:
@@ -37,15 +44,14 @@ jobs:
           result-encoding: string
 
       - uses: actions/checkout@v4
-        if: steps.account.outputs.result == 'true'
+        if: env.ANTHROPIC_API_KEY != '' && steps.account.outputs.result == 'true'
         with:
           fetch-depth: 1
           persist-credentials: false
 
       - uses: anomalyco/opencode/github@latest
-        if: steps.account.outputs.result == 'true'
+        if: env.ANTHROPIC_API_KEY != '' && steps.account.outputs.result == 'true'
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: anthropic/claude-sonnet-4-20250514

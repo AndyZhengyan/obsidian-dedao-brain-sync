@@ -19,16 +19,23 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
     steps:
+      - name: Skip OpenCode when Anthropic API key is not configured
+        if: env.ANTHROPIC_API_KEY == ''
+        run: echo "ANTHROPIC_API_KEY is not configured; skipping OpenCode review."
+
       - uses: actions/checkout@v4
+        if: env.ANTHROPIC_API_KEY != ''
         with:
           fetch-depth: 1
           persist-credentials: false
 
       - uses: anomalyco/opencode/github@latest
+        if: env.ANTHROPIC_API_KEY != ''
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: anthropic/claude-sonnet-4-20250514
