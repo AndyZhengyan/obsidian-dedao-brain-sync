@@ -7,7 +7,6 @@ on:
       - package.json
       - package-lock.json
       - .github/workflows/**
-  workflow_dispatch:
 
 permissions:
   contents: read
