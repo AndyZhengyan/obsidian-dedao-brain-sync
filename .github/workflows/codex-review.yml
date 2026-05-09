@@ -57,6 +57,15 @@ jobs:
 
             This repository is a TypeScript Obsidian plugin that syncs GetNote notes into a local Obsidian vault.
 
+            Start your final response with exactly one of these lines:
+            - VERDICT: APPROVE
+            - VERDICT: REQUEST_CHANGES
+            - VERDICT: COMMENT
+
+            Choose APPROVE only when there are no blocking correctness, security, test, CI, or release concerns.
+            Choose REQUEST_CHANGES when there are actionable blocking issues.
+            Choose COMMENT for non-blocking feedback, uncertainty, or when GitHub is unlikely to accept an automation approval.
+
             Review only the changes introduced by this pull request:
             git log --oneline ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}
 
@@ -66,7 +75,7 @@ jobs:
             - CI/release breakage or missing release assets.
 
             Keep the review concise. Do not request broad refactors unless they block correctness.
-            Mention if no blocking issues were found.
+            Mention if no blocking issues were found. Do not modify code from this review workflow.
 
             Pull request title and body:
             ----
@@ -82,16 +91,39 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - name: Report Codex feedback
+      - name: Submit Codex pull request review
         uses: actions/github-script@v7
         env:
           CODEX_FINAL_MESSAGE: ${{ needs.codex.outputs.final_message }}
         with:
           github-token: ${{ github.token }}
           script: |
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: process.env.CODEX_FINAL_MESSAGE,
-            });
+            const finalMessage = (process.env.CODEX_FINAL_MESSAGE || '').trim();
+            const verdictMatch = finalMessage.match(/^\s*VERDICT:\s*(APPROVE|REQUEST_CHANGES|COMMENT)\b/i);
+            const event = verdictMatch ? verdictMatch[1].toUpperCase() : 'COMMENT';
+            const body = finalMessage
+              .replace(/^\s*VERDICT:\s*(APPROVE|REQUEST_CHANGES|COMMENT)\b\s*/i, '')
+              .trim() || finalMessage;
+
+            try {
+              await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                event,
+                body,
+              });
+            } catch (error) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: [
+                  `Codex review verdict: ${event}`,
+                  '',
+                  body,
+                  '',
+                  `Could not submit a formal PR review: ${error.message}`,
+                ].join('\n'),
+              });
+            }
