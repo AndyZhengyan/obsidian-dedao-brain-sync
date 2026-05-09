@@ -1,0 +1,41 @@
+name: Bug report
+description: Report a reproducible problem with GetNote Importer.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest steps that trigger the problem.
+      placeholder: |
+        1. Open Obsidian...
+        2. Click...
+        3. See...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste relevant Obsidian developer console logs if available.
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Obsidian version, plugin version, OS.
+      placeholder: Obsidian 1.x, GetNote Importer 0.x, macOS/Windows/Linux

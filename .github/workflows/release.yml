@@ -3,6 +3,14 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -18,9 +26,16 @@ jobs:
 
       - run: npm ci
 
+      - run: npm run typecheck
+
+      - run: npm run lint
+
+      - run: npm test
+
       - run: npm run build
 
       - name: Verify version matches tag
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           MANIFEST_VERSION=$(node -e "console.log(require('./manifest.json').version)")
           TAG_VERSION="${GITHUB_REF_NAME#v}"
@@ -31,9 +46,11 @@ jobs:
           echo "Version $MANIFEST_VERSION OK"
 
       - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
             main.js
             manifest.json
+            styles.css
           generate_release_notes: true
