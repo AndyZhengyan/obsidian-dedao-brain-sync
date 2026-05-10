@@ -309,8 +309,8 @@ describe('SyncEngine — audio note sync', () => {
 
     // 验证 asset 目录被创建/写入
     expect(createdFiles.some(f => f.includes('/asset/'))).toBe(true);
-    expect(createdFiles).toContain('Get笔记/录音长录/asset/我的录音笔记.mp3');
-    expect(createdFiles).toContain('Get笔记/录音长录/asset/我的录音笔记.md');
+    expect(createdFiles).toContain('Get笔记/录音长录/asset/我的录音笔记_audio.mp3');
+    expect(createdFiles).toContain('Get笔记/录音长录/asset/我的录音笔记_transcript.md');
     expect(requestSpy).toHaveBeenCalledWith(expect.objectContaining({
       url: 'https://cdn.example.com/test.mp3',
       throw: false,
@@ -360,6 +360,98 @@ describe('SyncEngine — audio note sync', () => {
     expect(warnSpy.mock.calls.flat().join(' ')).not.toContain('http://127.0.0.1/private.mp3');
 
     warnSpy.mockRestore();
+  });
+
+  it('音频下载失败日志不泄露附件 URL', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
+      status: 403,
+      headers: {},
+      text: 'forbidden',
+      json: null,
+      arrayBuffer: new ArrayBuffer(0),
+    });
+
+    const mockApp = makeMockApp();
+    const engine = new SyncEngine(mockApp as any, makeSettings());
+    const signedUrl = 'https://cdn.example.com/test.mp3?Expires=1778291785&Signature=secret';
+
+    // @ts-ignore accessing private method for security regression coverage
+    const result = await engine['downloadAudioAsset'](audioNote, {
+      type: 'audio',
+      url: signedUrl,
+      title: '',
+      duration: 1000,
+    });
+
+    expect(result).toBeNull();
+    expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(signedUrl);
+
+    errorSpy.mockRestore();
+  });
+
+  it('详情接口缺少核心笔记字段时使用列表笔记兜底', async () => {
+    const createdFiles: string[] = [];
+
+    vi.spyOn(obsidian, 'requestUrl').mockImplementation((request: any) => {
+      const urlStr = typeof request === 'string' ? request : request.url;
+      if (urlStr.includes('/resource/note/list')) {
+        return Promise.resolve({
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+          text: JSON.stringify({
+            data: { notes: [audioNote], has_more: false, next_cursor: '' },
+          }),
+          json: null,
+          arrayBuffer: new ArrayBuffer(0),
+        });
+      }
+      if (urlStr.includes('/resource/note/detail')) {
+        return Promise.resolve({
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+          text: JSON.stringify({
+            success: true,
+            data: {
+              attachments: [{ type: 'audio', url: 'https://cdn.example.com/test.mp3', title: '', duration: 883920 }],
+              audio: { original: '🟢 说话人1 [00:00:01]\n转写内容' },
+            },
+          }),
+          json: null,
+          arrayBuffer: new ArrayBuffer(0),
+        });
+      }
+      if (urlStr.includes('cdn.example.com')) {
+        return Promise.resolve({
+          status: 200,
+          headers: {},
+          text: '',
+          json: null,
+          arrayBuffer: new ArrayBuffer(1024),
+        });
+      }
+      throw new Error(`Unexpected request: ${urlStr}`);
+    }) as any;
+
+    const mockApp = makeMockApp();
+    mockApp.vault.create = vi.fn().mockImplementation(async (path: string, content?: string) => {
+      createdFiles.push(path);
+      if (content) createdFiles.push(content);
+      return { path };
+    });
+    mockApp.vault.createBinary = vi.fn().mockImplementation(async (path: string) => {
+      createdFiles.push(path);
+      return { path };
+    });
+
+    const engine = new SyncEngine(mockApp as any, makeSettings());
+    const result = await engine.sync();
+
+    expect(result.failed).toBe(0);
+    expect(createdFiles).toContain('Get笔记/录音长录/asset/我的录音笔记_audio.mp3');
+    expect(createdFiles).toContain('Get笔记/录音长录/asset/我的录音笔记_transcript.md');
+    expect(createdFiles).toContain('Get笔记/录音长录/我的录音笔记.md');
+    expect(createdFiles.join('\n')).toContain('created: 2026-04-30 12:45:24');
   });
 });
 

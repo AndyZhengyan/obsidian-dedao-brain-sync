@@ -12,6 +12,7 @@ export interface GetNoteNote {
   updated_at: string;
   attachments?: Attachment[];  // 详情接口返回的附件列表
   audio?: string;             // 详情接口返回的原始转写文本
+  assetFileName?: string;     // 内部使用：音频/转写文件的文件名（含前缀）
 }
 
 export interface Tag {

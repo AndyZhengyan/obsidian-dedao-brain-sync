@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { SyncHistoryEntry, SyncResult } from '../src/types';
+import { initI18n } from '../src/i18n';
+import { formatHistoryNoteType } from '../src/ui/sync-history-modal';
 
 function makeResult(overrides: Partial<SyncResult> = {}): SyncResult {
   return { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, ...overrides };
@@ -148,5 +150,14 @@ describe('consecutive auto-sync failure counter', () => {
 
     failCount = 2;
     expect(failCount >= 3).toBe(false);
+  });
+});
+
+describe('sync history note type display', () => {
+  it('localizes note type labels in the detail list', () => {
+    initI18n('zh-CN');
+
+    expect(formatHistoryNoteType('recorder_audio')).toBe('录音长录');
+    expect(formatHistoryNoteType('unknown_remote_type')).toBe('其他');
   });
 });

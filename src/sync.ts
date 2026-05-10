@@ -130,7 +130,7 @@ export class SyncEngine {
         await this.app.vault.createFolder(assetDir);
       }
 
-      const filename = `${this.getFileName(note)}.mp3`;
+      const filename = `${this.getFileName(note)}_audio.mp3`;
       const targetPath = `${assetDir}/${filename}`;
 
       // Skip already-existing files
@@ -138,7 +138,7 @@ export class SyncEngine {
 
       const res = await requestUrl({ url: attachment.url, throw: false });
       if (res.status < 200 || res.status >= 300) {
-        console.error(`[GetNote] Audio download failed: ${res.status} ${attachment.url}`);
+        console.error(`[GetNote] Audio download failed: ${res.status}`);
         return null;
       }
       await this.app.vault.createBinary(targetPath, res.arrayBuffer);
@@ -159,7 +159,7 @@ export class SyncEngine {
         await this.app.vault.createFolder(assetDir);
       }
 
-      const targetPath = `${assetDir}/${this.getFileName(note)}.md`;
+      const targetPath = `${assetDir}/${this.getFileName(note)}_transcript.md`;
       const content = `# ${generateDisplayTitle(note) || t('picker.noTitle')}\n\n${note.audio}`;
       const existing = this.app.vault.getAbstractFileByPath(targetPath);
       if (existing instanceof TFile) {
@@ -229,7 +229,7 @@ export class SyncEngine {
 
         if (!contentChanged && !pathChanged) return { status: 'skipped' };
 
-        const content = renderNote(note);
+        const content = renderNote(note, note.assetFileName);
         if (pathChanged) {
           await this.app.vault.rename(existingByUid, targetPath);
         }
@@ -238,12 +238,12 @@ export class SyncEngine {
       } else if (existingAtTarget instanceof TFile) {
         // File exists at target path but wasn't in uidIndex - check content
         const contentChanged = await this.isContentChanged(existingAtTarget, note);
-        const content = renderNote(note);
+        const content = renderNote(note, note.assetFileName);
         await this.app.vault.modify(existingAtTarget, content);
         uidIndex.set(note.note_id, existingAtTarget);
         return { status: contentChanged ? 'updated' : 'skipped' };
       } else {
-        const content = renderNote(note);
+        const content = renderNote(note, note.assetFileName);
         try {
           await this.app.vault.create(targetPath, content);
           const created = this.app.vault.getAbstractFileByPath(targetPath);
@@ -295,14 +295,28 @@ export class SyncEngine {
         this.settings.clientId,
         signal
       );
-      const attachment = noteDetail.attachments?.find(a => a.type === 'audio');
+      const enrichedNote: GetNoteNote = {
+        ...note,
+        ...noteDetail,
+        id: noteDetail.id ?? note.id,
+        note_id: noteDetail.note_id ?? note.note_id,
+        title: noteDetail.title ?? note.title,
+        content: noteDetail.content ?? note.content,
+        note_type: noteDetail.note_type ?? note.note_type,
+        source: noteDetail.source ?? note.source,
+        tags: noteDetail.tags ?? note.tags,
+        created_at: noteDetail.created_at ?? note.created_at,
+        updated_at: noteDetail.updated_at ?? note.updated_at,
+      };
+      const attachment = enrichedNote.attachments?.find(a => a.type === 'audio');
       if (attachment) {
-        await this.downloadAudioAsset(noteDetail, attachment);
+        await this.downloadAudioAsset(enrichedNote, attachment);
       } else {
         console.warn(`[GetNote] No audio attachment found in note detail [${note.note_id}]`);
       }
-      await this.writeAudioTranscriptAsset(noteDetail);
-      return noteDetail;
+      await this.writeAudioTranscriptAsset(enrichedNote);
+      enrichedNote.assetFileName = this.getFileName(enrichedNote);
+      return enrichedNote;
     } catch (err) {
       console.warn(`[GetNote] Failed to enrich audio note ${note.note_id}:`, err);
       return note;

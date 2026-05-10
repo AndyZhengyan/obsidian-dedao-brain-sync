@@ -1,5 +1,5 @@
 import { requestUrl } from 'obsidian';
-import type { ListResponse, GetNoteNote } from './types';
+import type { ListResponse, GetNoteNote, Attachment } from './types';
 import { t } from './i18n';
 
 const BASE_URL = 'https://openapi.biji.com/open/api/v1';
@@ -17,6 +17,38 @@ function getHeader(headers: Record<string, string>, name: string): string | unde
   const lowerName = name.toLowerCase();
   const entry = Object.entries(headers).find(([key]) => key.toLowerCase() === lowerName);
   return entry?.[1];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeAudio(value: unknown): string | undefined {
+  if (typeof value === 'string') return value;
+  if (!isRecord(value)) return undefined;
+
+  const original = value.original;
+  if (typeof original === 'string') return original;
+
+  const firstTextValue = Object.values(value).find((item): item is string => typeof item === 'string');
+  return firstTextValue;
+}
+
+function normalizeNoteDetailData(value: unknown): Partial<GetNoteNote> | null {
+  if (!isRecord(value)) return null;
+
+  const nestedNote = isRecord(value.note) ? value.note : null;
+  const source = nestedNote ?? value;
+  const detail = { ...source } as Partial<GetNoteNote>;
+
+  const attachments = (value.attachments ?? source.attachments) as Attachment[] | undefined;
+  const audio = normalizeAudio(value.audio ?? source.audio);
+
+  return {
+    ...detail,
+    attachments,
+    audio,
+  };
 }
 
 async function apiRequest<T>(
@@ -115,11 +147,11 @@ export async function fetchNoteDetail(
   token: string,
   clientId: string,
   signal?: AbortSignal
-): Promise<GetNoteNote> {
+): Promise<Partial<GetNoteNote>> {
   const url = `${BASE_URL}/resource/note/detail?id=${id}`;
   const data = await apiRequest<{
     success: boolean;
-    data?: GetNoteNote;
+    data?: unknown;
     error?: { message: string };
   }>(url, {
     method: 'GET',
@@ -133,7 +165,12 @@ export async function fetchNoteDetail(
     throw new Error(data.error?.message ?? 'Failed to fetch note detail');
   }
 
-  return data.data;
+  const noteDetail = normalizeNoteDetailData(data.data);
+  if (!noteDetail) {
+    throw new Error('Failed to parse note detail');
+  }
+
+  return noteDetail;
 }
 
 export interface OAuthDeviceCodeResponse {

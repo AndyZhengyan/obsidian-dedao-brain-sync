@@ -93,15 +93,21 @@ function buildFrontmatter(note: GetNoteNote): string {
 /**
  * 将 GetNoteNote 渲染为完整的 Markdown 字符串
  */
-export function renderNote(note: GetNoteNote): string {
+export function renderNote(note: GetNoteNote, assetFileName?: string): string {
   const frontmatter = buildFrontmatter(note);
   let body = note.content || '';
 
   if (note.attachments?.some(a => a.type === 'audio') && note.audio) {
-    const filename = generateDisplayTitle(note);
-    const audioLink = `[🔊 录音](asset/${filename}.mp3)\n[📝 转写](asset/${filename}.md)\n`;
-    const transcriptHeader = '\n\n---\n\n### 原始录音转写\n\n';
-    body = audioLink + body + transcriptHeader + note.audio;
+    const filename = assetFileName ?? generateDisplayTitle(note);
+    const audioBlock =
+      `---\n` +
+      `> 🔊 录音\n` +
+      `> ![[${filename}_audio.mp3]]\n` +
+      `> 📝 转写\n` +
+      `> [[${filename}_transcript]]\n` +
+      `---\n`;
+    const transcriptHeader = '\n### 原始录音转写\n\n';
+    body = audioBlock + body + transcriptHeader + note.audio;
   }
 
   return frontmatter + body;

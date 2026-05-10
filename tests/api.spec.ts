@@ -107,6 +107,45 @@ describe('fetchNoteDetail', () => {
     expect(result.audio).toContain('说话人1');
   });
 
+  it('兼容详情接口 data.note + data.audio.original 的嵌套结构', async () => {
+    const mockResponse = {
+      success: true,
+      data: {
+        note: {
+          id: '1909428570156704824',
+          note_id: '1909428570156704824',
+          title: '嵌套录音',
+          content: 'AI 摘要',
+          note_type: 'recorder_audio',
+          source: 'app',
+          tags: [],
+          created_at: '2026-05-09 10:00:00',
+          updated_at: '2026-05-09 10:05:00',
+        },
+        attachments: [
+          { type: 'audio', url: 'https://cdn.example.com/audio.mp3', title: '', duration: 300000 },
+        ],
+        audio: {
+          original: '🟢 说话人1 [00:00:01]\n嵌套转写',
+        },
+      },
+    };
+
+    vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+      text: JSON.stringify(mockResponse),
+      json: mockResponse,
+      arrayBuffer: new ArrayBuffer(0),
+    });
+
+    const result = await fetchNoteDetail('1909428570156704824', 'test-token', 'test-client');
+
+    expect(result.title).toBe('嵌套录音');
+    expect(result.attachments).toHaveLength(1);
+    expect(result.audio).toBe('🟢 说话人1 [00:00:01]\n嵌套转写');
+  });
+
   it('笔记不存在时抛出错误', async () => {
     vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
       status: 200,
