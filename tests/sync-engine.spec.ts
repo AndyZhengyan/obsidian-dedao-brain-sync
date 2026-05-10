@@ -279,7 +279,7 @@ describe('SyncEngine — audio note sync', () => {
           arrayBuffer: new ArrayBuffer(0),
         });
       }
-      if (urlStr.includes('cdn.example.com')) {
+      if (new URL(urlStr).hostname === 'cdn.example.com') {
         return Promise.resolve({
           status: 200,
           headers: {},
@@ -421,7 +421,7 @@ describe('SyncEngine — audio note sync', () => {
           arrayBuffer: new ArrayBuffer(0),
         });
       }
-      if (urlStr.includes('cdn.example.com')) {
+      if (new URL(urlStr).hostname === 'cdn.example.com') {
         return Promise.resolve({
           status: 200,
           headers: {},

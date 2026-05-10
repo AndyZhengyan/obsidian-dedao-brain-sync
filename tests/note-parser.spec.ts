@@ -38,6 +38,11 @@ describe('renderNote', () => {
     expect(result).toContain('title: "一段比较长的正文开头"');
   });
 
+  it('正文回退 title 会转义反斜杠和双引号', () => {
+    const result = renderNote(makeNote({ title: '', content: 'a\\b"c\ndefghijkl' }));
+    expect(result).toContain('title: "a\\\\b\\"c defg"');
+  });
+
   it('标题含双引号时被过滤（双引号是非法文件名字符）', () => {
     const result = renderNote(makeNote({ title: '他说"你好"世界' }));
     // sanitizeTitle 直接删除双引号，不是转义

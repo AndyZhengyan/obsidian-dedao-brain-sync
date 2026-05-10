@@ -20,6 +20,10 @@ function sanitizeTitle(title: string | undefined | null): string {
   return title.replace(/[\\/:*?"<>|]/g, '').trim();
 }
 
+function escapeYamlDoubleQuoted(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ');
+}
+
 /**
  * 从笔记内容生成回退标题（取第一个标点前的文字，不超过20字）
  */
@@ -72,7 +76,7 @@ function buildFrontmatter(note: GetNoteNote): string {
   const tagBlock = tags ? `[${tags}]` : '[]';
 
   const title = sanitizeTitle(note.title) ||
-    (note.content || '').slice(0, 10).replace(/"/g, '\\"').replace(/\n/g, ' ');
+    escapeYamlDoubleQuoted((note.content || '').slice(0, 10));
 
   const lines = [
     '---',
