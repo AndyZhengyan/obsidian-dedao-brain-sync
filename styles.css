@@ -40,10 +40,16 @@
   justify-content: flex-end;
   flex: 1;
   min-width: 0;
+  overflow: visible;
 }
 
 .getnote-settings-header h2 {
   margin: 0 0 4px;
+}
+
+.getnote-settings-author {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .getnote-settings-desc {
@@ -218,7 +224,7 @@
   /* size follows text */
 }
 
-.getnote-sync-status {
+.getnote-settings-sync-status {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -230,8 +236,53 @@
   font-size: 13px;
 }
 
-.getnote-sync-status span {
+.getnote-settings-sync-status span {
   color: var(--text-muted);
+}
+
+.getnote-settings-sync-status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.getnote-settings-cancel-button {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.getnote-settings-progress-line {
+  font-family: monospace;
+  font-size: 14px;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.getnote-settings-progress-percent {
+  margin-left: 8px;
+  font-weight: bold;
+}
+
+.getnote-settings-progress-count {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.getnote-mono-text {
+  font-family: monospace;
+}
+
+.getnote-muted-text {
+  color: var(--text-muted);
+}
+
+.getnote-accent-text {
+  color: var(--interactive-accent);
+}
+
+.getnote-input-hint-error {
+  color: var(--text-error);
 }
 
 /* === Scheduled Sync === */
@@ -488,6 +539,14 @@
   animation: getnote-skeleton-pulse 1.5s ease-in-out infinite;
 }
 
+.getnote-skeleton-line-primary {
+  width: 60%;
+}
+
+.getnote-skeleton-line-secondary {
+  width: 40%;
+}
+
 @keyframes getnote-skeleton-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
@@ -580,8 +639,19 @@
 }
 
 /* === Loading Modal === */
+.getnote-loading-modal {
+  text-align: center;
+  padding: 24px;
+}
+
 .getnote-loading-spinner {
   animation: getnote-spin 1s linear infinite;
+  font-size: 32px;
+}
+
+.getnote-loading-message {
+  margin-top: 12px;
+  color: var(--text-muted);
 }
 
 @keyframes getnote-spin {
@@ -686,12 +756,37 @@
 }
 
 /* === Sync Modal === */
+.getnote-sync-modal {
+  padding: 24px;
+}
+
 .getnote-sync-title {
   margin-bottom: 4px;
+  font-size: 16px;
+}
+
+.getnote-sync-spacer {
+  margin-bottom: 12px;
+}
+
+.getnote-sync-count,
+.getnote-sync-modal-status {
+  color: var(--text-muted);
+}
+
+.getnote-sync-count {
+  margin-top: 4px;
+}
+
+.getnote-sync-modal-status {
+  margin-top: 8px;
 }
 
 .getnote-progress-bar {
   position: relative;
+  margin-top: 8px;
+  height: 4px;
+  background: var(--background-modifier-border);
   overflow: hidden;
   border-radius: 2px;
 }
@@ -700,6 +795,21 @@
   height: 100%;
   background: var(--interactive-accent);
   transition: width 0.3s ease;
+  width: var(--getnote-progress-width, 0%);
+}
+
+.getnote-sync-modal-footer {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.getnote-sync-modal-footer .mod-warning {
+  cursor: pointer;
+}
+
+.getnote-hidden {
+  display: none;
 }
 
 

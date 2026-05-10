@@ -14,7 +14,7 @@ export function SettingItem({ name, description, heading, children }: SettingIte
         <div className="setting-item-name">{name}</div>
         {description && <div className="setting-item-description">{description}</div>}
       </div>
-      <div className="setting-item-control" style={{ overflow: 'visible' }}>{children}</div>
+      <div className="setting-item-control">{children}</div>
     </div>
   );
 }

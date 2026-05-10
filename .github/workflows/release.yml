@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    tags: ['v*', '[0-9]*']
   workflow_dispatch:
 
 permissions:
@@ -36,6 +36,7 @@ jobs:
       - run: npm run build
 
       - name: Verify version matches tag
+        id: version
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           MANIFEST_VERSION=$(node -e "console.log(require('./manifest.json').version)")
@@ -44,12 +45,14 @@ jobs:
             echo "manifest.json version ($MANIFEST_VERSION) != tag version ($TAG_VERSION)"
             exit 1
           fi
+          echo "version=$TAG_VERSION" >> "$GITHUB_OUTPUT"
           echo "Version $MANIFEST_VERSION OK"
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          name: ${{ steps.version.outputs.version }}
           files: |
             main.js
             manifest.json

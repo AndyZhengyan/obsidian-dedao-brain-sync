@@ -174,7 +174,7 @@ export class SyncEngine {
     }
   }
 
-  private async isContentChanged(file: TFile, note: GetNoteNote): Promise<boolean> {
+  private isContentChanged(file: TFile, note: GetNoteNote): boolean {
     try {
       const cached = this.app.metadataCache.getFileCache(file);
       if (!cached?.frontmatter) return true;
@@ -224,7 +224,7 @@ export class SyncEngine {
       }
 
       if (existingByUid) {
-        const contentChanged = await this.isContentChanged(existingByUid, note);
+        const contentChanged = this.isContentChanged(existingByUid, note);
         const pathChanged = existingByUid.path !== targetPath;
 
         if (!contentChanged && !pathChanged) return { status: 'skipped' };
@@ -237,7 +237,7 @@ export class SyncEngine {
         return { status: 'updated' };
       } else if (existingAtTarget instanceof TFile) {
         // File exists at target path but wasn't in uidIndex - check content
-        const contentChanged = await this.isContentChanged(existingAtTarget, note);
+        const contentChanged = this.isContentChanged(existingAtTarget, note);
         const content = renderNote(note, note.assetFileName);
         await this.app.vault.modify(existingAtTarget, content);
         uidIndex.set(note.note_id, existingAtTarget);
@@ -255,7 +255,7 @@ export class SyncEngine {
           // File was created by another process between check and create
           const existing = this.app.vault.getAbstractFileByPath(targetPath);
           if (existing instanceof TFile) {
-            const contentChanged = await this.isContentChanged(existing, note);
+            const contentChanged = this.isContentChanged(existing, note);
             await this.app.vault.modify(existing, content);
             uidIndex.set(note.note_id, existing);
             return { status: contentChanged ? 'updated' : 'skipped' };
