@@ -150,7 +150,7 @@ export function SettingsComponent({
         ...settings.scheduledSync,
         intervalMinutes: 5,
       });
-      setTimeout(() => setIntervalWarning(false), 3000);
+      activeWindow.setTimeout(() => setIntervalWarning(false), 3000);
     } else {
       updateSetting('scheduledSync', {
         ...settings.scheduledSync,
@@ -170,11 +170,11 @@ export function SettingsComponent({
     try {
       await fetchNotes({ token: apiToken.trim(), clientId: clientId.trim(), sinceId: '0', limit: 1 });
       setConnectionStatus('success');
-      setTimeout(() => setConnectionStatus('idle'), 3000);
+      activeWindow.setTimeout(() => setConnectionStatus('idle'), 3000);
     } catch (err) {
       setConnectionStatus('error');
       setConnectionErrorMsg(err instanceof Error ? err.message : String(err));
-      setTimeout(() => {
+      activeWindow.setTimeout(() => {
         setConnectionStatus('idle');
         setConnectionErrorMsg('');
       }, 3000);
@@ -209,7 +209,7 @@ export function SettingsComponent({
   return (
     <div className="getnote-settings-react">
       <div className="getnote-settings-header">
-        <h2>{t('settings.title')} <span style="font-size:12px;color:var(--text-muted)">by 关山的月儿</span></h2>
+        <h2>{t('settings.title')} <span className="getnote-settings-author">by 关山的月儿</span></h2>
         <p className="getnote-settings-desc">
           {t('settings.desc')} <a href={GITHUB_URL} target="_blank" rel="noopener">{t('settings.community')}</a>
         </p>
@@ -263,7 +263,9 @@ export function SettingsComponent({
             <button
               className="mod-secondary getnote-credential-action-button"
               disabled={testingConnection}
-              onClick={handleTestConnection}
+              onClick={() => {
+                void handleTestConnection();
+              }}
             >
               {testingConnection ? t('settings.testingConnection') : t('settings.testConnection')}
             </button>
@@ -324,8 +326,7 @@ export function SettingsComponent({
             />
           </div>
           <div
-            className="getnote-scheduled-rows"
-            style={{ display: scheduledEnabled ? undefined : 'none' }}
+            className={`getnote-scheduled-rows${scheduledEnabled ? '' : ' getnote-hidden'}`}
           >
             <div className="getnote-scheduled-row">
               <span className="getnote-scheduled-row-label">{t('settings.scheduled.interval')}</span>
@@ -339,7 +340,7 @@ export function SettingsComponent({
               </span>
             </div>
             {intervalWarning && (
-              <div className="getnote-input-hint" style={{ color: 'var(--text-error)' }}>
+              <div className="getnote-input-hint getnote-input-hint-error">
                 {t('settings.interval.minWarning')}
               </div>
             )}
@@ -391,13 +392,13 @@ export function SettingsComponent({
         <div className="getnote-sync-log-section">
           <div className="getnote-scheduled-row">
             <span className="getnote-scheduled-row-label">{t('settings.lastSync')}</span>
-            <span className="getnote-scheduled-row-control" style={{ color: 'var(--text-muted)' }}>
+            <span className="getnote-scheduled-row-control getnote-muted-text">
               {formatLastSync(lastSyncTime)}
             </span>
           </div>
           <div className="getnote-scheduled-row">
             <span className="getnote-scheduled-row-label">{t('settings.syncStatus')}</span>
-            <span className="getnote-scheduled-row-control" style={{ color: isSyncing ? 'var(--interactive-accent)' : 'var(--text-muted)' }}>
+            <span className={`getnote-scheduled-row-control${isSyncing ? ' getnote-accent-text' : ' getnote-muted-text'}`}>
               {isSyncing ? t('syncHistory.status.syncing') : t('syncHistory.status.idle')}
             </span>
           </div>
@@ -412,19 +413,19 @@ export function SettingsComponent({
 
       {/* 同步进度条 */}
       {isSyncing && (
-        <div className="getnote-sync-status">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontFamily: 'monospace' }}>{syncProgress?.message || t('sync.syncing')}</span>
-            <button className="mod-warning" onClick={cancelSync} style={{ fontSize: '12px', padding: '4px 10px' }}>
+        <div className="getnote-settings-sync-status">
+          <div className="getnote-settings-sync-status-header">
+            <span className="getnote-mono-text">{syncProgress?.message || t('sync.syncing')}</span>
+            <button className="mod-warning getnote-settings-cancel-button" onClick={cancelSync}>
               {t('modal.cancel')}
             </button>
           </div>
-          <div style={{ fontFamily: 'monospace', fontSize: '14px', letterSpacing: '1px', marginBottom: '6px' }}>
-            <span style={{ color: 'var(--interactive-accent)' }}>{renderProgressBar(syncProgress?.percent ?? 0)}</span>
-            <span style={{ marginLeft: '8px', fontWeight: 'bold' }}>{syncProgress?.percent ?? 0}%</span>
+          <div className="getnote-settings-progress-line">
+            <span className="getnote-accent-text">{renderProgressBar(syncProgress?.percent ?? 0)}</span>
+            <span className="getnote-settings-progress-percent">{syncProgress?.percent ?? 0}%</span>
           </div>
           {syncProgress?.count && (
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{syncProgress.count}</div>
+            <div className="getnote-settings-progress-count">{syncProgress.count}</div>
           )}
         </div>
       )}

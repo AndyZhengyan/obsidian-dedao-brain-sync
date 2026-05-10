@@ -84,7 +84,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   async onload(): Promise<void> {
     initI18n(getLanguage());
 
-    const loaded = await this.loadData();
+    const loaded = (await this.loadData()) as Partial<Settings> | null;
     this.settings = {
       ...DEFAULT_SETTINGS,
       ...loaded,
@@ -243,7 +243,7 @@ export default class GetNoteSyncPlugin extends Plugin {
         };
         this.refreshSettingsTab();
         showNotice(t('notice.syncComplete', { created: result.created, updated: result.updated, skipped: result.skipped, failed: result.failed > 0 ? ` · ${t('modal.failed', { failed: result.failed })}` : '' }), 8000);
-        setTimeout(() => {
+        activeWindow.setTimeout(() => {
           this.syncProgress = { message: '', count: '', percent: 0 };
           this.isSyncing = false;
           this.currentSyncEngine = null;
@@ -347,9 +347,9 @@ class ManualSyncModalWrapper extends Modal {
     ReactDOM.render(
       <ManualSyncModal
         initialOptions={{ syncStartDate: '', maxDays: 0 }}
-        onConfirm={async (options) => {
+        onConfirm={(options) => {
           this.close();
-          await this.plugin.startSync(options);
+          this.plugin.startSync(options);
         }}
         onCancel={() => this.close()}
       />,
@@ -376,10 +376,10 @@ class NotePickerModalWrapper extends Modal {
         token={this.plugin.settings.apiToken}
         clientId={this.plugin.settings.clientId}
         abortSignal={this.abortController.signal}
-        onConfirm={async (noteIds) => {
+        onConfirm={(noteIds) => {
           this.abortController.abort();
           this.close();
-          await this.plugin.syncSelectedNotes(noteIds);
+          this.plugin.syncSelectedNotes(noteIds);
         }}
         onCancel={() => {
           this.abortController.abort();

@@ -19,15 +19,16 @@ export interface Tag {
   name: string;
 }
 
-export type NoteType =
+export type KnownNoteType =
   | 'plain_text'
   | 'link'
   | 'recorder_audio'
   | 'recorder_flash_audio'
   | 'immediate_audio'
   | 'audio_long'
-  | 'local_audio'
-  | string;
+  | 'local_audio';
+
+export type NoteType = KnownNoteType | (string & {});
 
 export interface ListResponse {
   data: {
@@ -146,7 +147,7 @@ export function getCategoryDir(noteType: string): string {
 }
 
 export interface Attachment {
-  type: 'audio' | string;
+  type: 'audio' | (string & {});
   url: string;
   title: string;
   duration: number;  // 毫秒

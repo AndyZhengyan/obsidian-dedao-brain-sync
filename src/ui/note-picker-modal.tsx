@@ -68,7 +68,7 @@ export function NotePickerModal({ token, clientId, onConfirm, onCancel, abortSig
     setCursor('0');
     setHasMore(true);
     setNotes([]);
-    (async () => {
+    void (async () => {
       try {
         const result = await fetchNotes({ token, clientId, sinceId: '0', limit: GETNOTE_LIST_LIMIT, signal: abortSignal });
         setNotes(result.notes);
@@ -145,8 +145,8 @@ export function NotePickerModal({ token, clientId, onConfirm, onCancel, abortSig
               <div key={i} className="getnote-skeleton-row">
                 <div className="getnote-skeleton-checkbox" />
                 <div className="getnote-skeleton-lines">
-                  <div className="getnote-skeleton-line" style="width:60%" />
-                  <div className="getnote-skeleton-line" style="width:40%" />
+                  <div className="getnote-skeleton-line getnote-skeleton-line-primary" />
+                  <div className="getnote-skeleton-line getnote-skeleton-line-secondary" />
                 </div>
               </div>
             ))}
@@ -158,7 +158,14 @@ export function NotePickerModal({ token, clientId, onConfirm, onCancel, abortSig
         ))}
         {!loading && !error && !loadingMore && hasMore && notes.length > 0 && (
           <div className="getnote-picker-loadmore">
-            <button className="mod-secondary" onClick={loadNextPage}>{t('picker.loadMore', { count: notes.length })}</button>
+            <button
+              className="mod-secondary"
+              onClick={() => {
+                void loadNextPage();
+              }}
+            >
+              {t('picker.loadMore', { count: notes.length })}
+            </button>
           </div>
         )}
         {!loading && loadingMore && <div className="getnote-picker-loading">{t('picker.loadingMore')}</div>}

@@ -5,7 +5,6 @@ import type { Settings } from './types';
 import type GetNoteSyncPlugin from './main';
 
 export class GetNoteSettingsTab extends PluginSettingTab {
-  private debounceTimer: number | undefined;
   private plugin: GetNoteSyncPlugin;
 
   constructor(app: App, plugin: GetNoteSyncPlugin) {
@@ -40,9 +39,6 @@ export class GetNoteSettingsTab extends PluginSettingTab {
 
   hide(): void {
     ReactDOM.unmountComponentAtNode(this.containerEl);
-    if (this.debounceTimer) {
-      clearTimeout(this.debounceTimer);
-    }
   }
 
   private debouncedSave: () => void;
