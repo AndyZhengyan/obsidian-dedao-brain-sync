@@ -38,6 +38,11 @@ describe('renderNote', () => {
     expect(result).toContain('title: "一段比较长的正文开头"');
   });
 
+  it('正文回退 title 会转义反斜杠和双引号', () => {
+    const result = renderNote(makeNote({ title: '', content: 'a\\b"c\ndefghijkl' }));
+    expect(result).toContain('title: "a\\\\b\\"c defg"');
+  });
+
   it('标题含双引号时被过滤（双引号是非法文件名字符）', () => {
     const result = renderNote(makeNote({ title: '他说"你好"世界' }));
     // sanitizeTitle 直接删除双引号，不是转义
@@ -171,13 +176,12 @@ describe('renderNote — audio note', () => {
     expect(result).toMatch(/^---\n/);
     expect(result).toContain('note_type: recorder_audio');
 
-    // frontmatter 之后、正文之前有音频链接
-    const audioLinkLine = '[🔊 录音](asset/我的录音.mp3)';
-    const summaryLine = '### 📑 智能总结';
-    const audioIdx = result.indexOf(audioLinkLine);
-    const summaryIdx = result.indexOf(summaryLine);
-    expect(audioIdx).toBeGreaterThan(0);
-    expect(audioIdx).toBeLessThan(summaryIdx);
+    // frontmatter 之后、正文之前有音频链接（blockquote + 分割线格式）
+    expect(result).toContain('---\n> 🔊 录音');
+    expect(result).toContain('> ![[我的录音_audio.mp3]]');
+    expect(result).toContain('> 📝 转写');
+    expect(result).toContain('> [[我的录音_transcript]]');
+    expect(result).toContain('### 原始录音转写');
 
     // 转写文本在正文之后
     expect(result).toContain('### 原始录音转写');

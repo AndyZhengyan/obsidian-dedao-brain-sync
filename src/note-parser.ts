@@ -15,9 +15,13 @@ export function formatDateTime(iso: string): string {
 /**
  * 过滤内容中的非法文件名字符
  */
-function sanitizeTitle(title: string): string {
+function sanitizeTitle(title: string | undefined | null): string {
   if (!title || !title.trim()) return '';
   return title.replace(/[\\/:*?"<>|]/g, '').trim();
+}
+
+function escapeYamlDoubleQuoted(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ');
 }
 
 /**
@@ -42,7 +46,7 @@ export function generateDisplayTitle(note: GetNoteNote): string {
   if (note.title && note.title.trim()) {
     return sanitizeTitle(note.title);
   }
-  return sanitizeTitle(fallbackTitle(note.content));
+  return sanitizeTitle(fallbackTitle(note.content || ''));
 }
 
 /**
@@ -72,7 +76,7 @@ function buildFrontmatter(note: GetNoteNote): string {
   const tagBlock = tags ? `[${tags}]` : '[]';
 
   const title = sanitizeTitle(note.title) ||
-    note.content.slice(0, 10).replace(/"/g, '\\"').replace(/\n/g, ' ');
+    escapeYamlDoubleQuoted((note.content || '').slice(0, 10));
 
   const lines = [
     '---',
@@ -93,15 +97,21 @@ function buildFrontmatter(note: GetNoteNote): string {
 /**
  * 将 GetNoteNote 渲染为完整的 Markdown 字符串
  */
-export function renderNote(note: GetNoteNote): string {
+export function renderNote(note: GetNoteNote, assetFileName?: string): string {
   const frontmatter = buildFrontmatter(note);
   let body = note.content || '';
 
   if (note.attachments?.some(a => a.type === 'audio') && note.audio) {
-    const filename = generateDisplayTitle(note) + '.mp3';
-    const audioLink = `[🔊 录音](asset/${filename})\n`;
-    const transcriptHeader = '\n\n---\n\n### 原始录音转写\n\n';
-    body = audioLink + body + transcriptHeader + note.audio;
+    const filename = assetFileName ?? generateDisplayTitle(note);
+    const audioBlock =
+      `---\n` +
+      `> 🔊 录音\n` +
+      `> ![[${filename}_audio.mp3]]\n` +
+      `> 📝 转写\n` +
+      `> [[${filename}_transcript]]\n` +
+      `---\n`;
+    const transcriptHeader = '\n### 原始录音转写\n\n';
+    body = audioBlock + body + transcriptHeader + note.audio;
   }
 
   return frontmatter + body;
@@ -114,6 +124,7 @@ export function getNoteTitle(note: GetNoteNote): string {
   if (note.title && note.title.trim()) {
     return note.title.trim();
   }
-  const preview = note.content.slice(0, 10).replace(/\n/g, ' ');
-  return preview + (note.content.length > 10 ? '...' : '');
+  const content = note.content || '';
+  const preview = content.slice(0, 10).replace(/\n/g, ' ');
+  return preview + (content.length > 10 ? '...' : '');
 }

@@ -2,6 +2,12 @@ import { App, Modal } from 'obsidian';
 import type { SyncHistoryEntry, SyncResultItem } from '../types';
 import { t } from '../i18n';
 
+export function formatHistoryNoteType(noteType: string): string {
+  const key = `picker.type.${noteType}`;
+  const label = t(key);
+  return label === key ? t('picker.type.unknown') : label;
+}
+
 export function openSyncHistoryModal(app: App, history: SyncHistoryEntry[]) {
   const modal = new SyncHistoryModal(app, history);
   modal.open();
@@ -107,7 +113,7 @@ class SyncHistoryModal extends Modal {
           });
           const body = row.createDiv('getnote-history-write-body');
           body.createDiv('getnote-history-note-title').setText(item.title);
-          body.createDiv('getnote-history-note-meta').setText(`${item.noteType} · ${formatTime(new Date(item.updatedAt).getTime())}`);
+          body.createDiv('getnote-history-note-meta').setText(`${formatHistoryNoteType(item.noteType)} · ${formatTime(new Date(item.updatedAt).getTime())}`);
         });
       };
 
@@ -130,7 +136,7 @@ class SyncHistoryModal extends Modal {
         items.forEach((item) => {
           const row = list.createEl('li', { cls: 'getnote-history-note-row' });
           row.createSpan({ cls: 'getnote-history-note-title', text: item.title });
-          row.createSpan({ cls: 'getnote-history-note-meta', text: `${item.noteType} · ${formatTime(new Date(item.updatedAt).getTime())}` });
+          row.createSpan({ cls: 'getnote-history-note-meta', text: `${formatHistoryNoteType(item.noteType)} · ${formatTime(new Date(item.updatedAt).getTime())}` });
           if (item.error) {
             row.createDiv('getnote-history-error').setText(item.error);
           }

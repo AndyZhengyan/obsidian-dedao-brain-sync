@@ -254,7 +254,7 @@ describe('t() - New settings keys', () => {
   });
 
   it('settings.prefix.hint', () => {
-    expect(i18n.t('settings.prefix.hint')).toBe('例：YYYY-MM-DD 或 YYYYMMDD_HHmm');
+    expect(i18n.t('settings.prefix.hint')).toBe('时间格式：YYYY / MM / DD / HH / mm / ss');
   });
 
   it('settings.lastSync', () => {
