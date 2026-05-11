@@ -148,9 +148,10 @@ describe('SyncEngine — page cutoff', () => {
       undefined,
       { syncStartDate: '2026-05-09', maxDays: 0 }
     );
+    const localMidnight = new Date(2026, 4, 9, 0, 30, 0);
     const justAfterLocalMidnight = makeNote({
       note_id: 'local_midnight',
-      updated_at: '2026-05-09T00:30:00+08:00',
+      updated_at: localMidnight.toISOString(),
     });
 
     // @ts-ignore accessing private method for boundary regression coverage
