@@ -347,7 +347,7 @@ export function SettingsComponent({
               </span>
             </div>
                         <div className="getnote-scheduled-row getnote-scheduled-date-row">
-              <span className="getnote-scheduled-row-label">{t('settings.syncStartDate.label')}</span>
+              <span className="getnote-scheduled-row-label">{t('settings.syncStartDate.lastSyncedTo')}</span>
               <span className="getnote-scheduled-row-control getnote-muted-text">
                 {lastSyncedTo || '-'}
               </span>
