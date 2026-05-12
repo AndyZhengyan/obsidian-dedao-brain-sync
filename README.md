@@ -15,6 +15,7 @@ GetNote Importer is an Obsidian plugin for people who capture in GetNote but thi
 
 - **Readable files, not dumped data**: notes are named from their titles and organized by note type.
 - **Incremental by default**: unchanged notes are skipped; updated notes are refreshed.
+- **Checkpoint continuity**: scheduled sync resumes from where it left off, without re-processing the last note.
 - **Selective when you need control**: pick exactly which notes to bring into Obsidian.
 - **Scheduled when you want peace of mind**: keep the vault fresh in the background.
 - **Audio-aware**: recording notes can include downloaded audio assets and transcript content when the GetNote API provides them.
@@ -51,12 +52,13 @@ Synced recording note — includes audio file, transcript text, and AI summary, 
 | Date prefixes | Supports patterns like `YYYY-MM-DD` and `YYYYMMDD_HHmm` |
 | Conflict protection | Avoids overwriting different notes with the same title |
 | Sync history | Shows per-note created, updated, skipped, and failed results |
+| Auto checkpoint | Tracks last synced timestamp to avoid re-processing the same note |
 
 ## Installation
 
 ### From Obsidian Community Plugins
 
-GetNote Importer is being prepared for Obsidian's official community plugin directory. After it is listed:
+> ⚠️ The plugin is under review by Obsidian. Once approved, it will be available here.
 
 1. Open `Settings -> Community plugins -> Browse`.
 2. Search for `GetNote Importer`.
@@ -100,15 +102,15 @@ You can also use the OAuth button in the plugin settings when available.
 
 ### Sync Everything
 
-Open the plugin settings and click `Sync now`, or run this command from the command palette:
+Open the plugin settings and click `Sync by Time`, or run this command from the command palette:
 
 ```text
-Get笔记: 同步笔记
+GetNote Importer: Sync Notes
 ```
 
 ### Pick Notes to Sync
 
-Click `Selective sync`, choose the notes you want, then start syncing. This is useful for project cleanup, topic-based imports, and one-off migrations.
+Click `Sync by Notes`, choose the notes you want, then start syncing. This is useful for project cleanup, topic-based imports, and one-off migrations.
 
 ### Keep It Fresh
 
@@ -116,22 +118,22 @@ Enable scheduled sync, choose an interval, and optionally sync once when Obsidia
 
 ## Output Structure
 
-By default, notes are written under `Get笔记/`.
+By default, notes are written under a target folder.
 
 ```text
 vault/
 └── Get笔记/
     ├── 纯文本/
-    │   └── 会议记录.md
+    │   └── Meeting Notes.md
     ├── 链接笔记/
-    │   └── 2026-04-30_文章摘录.md
+    │   └── 2026-04-30_Article Clip.md
     ├── 录音长录/
-    │   ├── 录音摘要.md
+    │   ├── Recording Summary.md
     │   └── asset/
-    │       ├── 录音摘要.mp3
-    │       └── 录音摘要.md
+    │       ├── Recording Summary.mp3
+    │       └── Recording Summary.md
     └── 其他/
-        └── 未识别类型.md
+        └── Unknown Type.md
 ```
 
 Each Markdown note includes frontmatter so future syncs can identify and update the same GetNote item.
@@ -139,7 +141,7 @@ Each Markdown note includes frontmatter so future syncs can identify and update 
 ```yaml
 ---
 uid: "1908723638246504120"
-title: "会议记录"
+title: "Meeting Notes"
 created: 2026-04-30 12:45:24
 modified: 2026-04-30 13:00:07
 source: Get笔记
@@ -152,26 +154,47 @@ tags: ["work"]
 
 | Scenario | Example |
 | --- | --- |
-| Note has a title | `会议记录.md` |
-| Note has no title | `这是笔记的第一段文字.md` |
-| Prefix is `YYYY-MM-DD` | `2026-04-30_会议记录.md` |
-| Same title, different note | `会议记录-2.md` |
+| Note has a title | `Meeting Notes.md` |
+| Note has no title | `First line of content.md` |
+| Prefix is `YYYY-MM-DD` | `2026-04-30_Meeting Notes.md` |
+| Same title, different note | `Meeting Notes-2.md` |
 
 Invalid filename characters such as `\ / : * ? " < > |` are removed automatically.
+
+## Filename Prefix
+
+Prepend a date/time pattern to every filename. Available tokens:
+
+| Token | Meaning | Example |
+| --- | --- | --- |
+| `YYYY` | 4-digit year | `2026` |
+| `MM` | 2-digit month | `04` |
+| `DD` | 2-digit day | `30` |
+| `HH` | 2-digit hour (24h) | `14` |
+| `mm` | 2-digit minute | `30` |
+| `ss` | 2-digit second | `05` |
+
+**Examples:**
+
+| Prefix | Resulting filename |
+| --- | --- |
+| `YYYY-MM-DD` | `2026-04-30_Meeting Notes.md` |
+| `YYYYMMDD_HHmm` | `20260430_1430_Meeting Notes.md` |
+| `YYYY-MM-DD` | `2026-04-30_.md` (no title → content preview) |
+
+The plugin replaces each token with the corresponding value from the note's `created_at` timestamp. Tokens are case-sensitive — use `mm` for minutes, not `MM` (which means month).
 
 ## Settings
 
 | Setting | Description | Default |
 | --- | --- | --- |
-| API Token | GetNote Open API token | empty |
-| Client ID | GetNote Open API client ID | empty |
-| Target folder | Destination folder inside your vault | `Get笔记` |
-| Max sync days | Only sync notes updated in the last N days. `0` means no limit | `30` |
-| Sync start date | Optional absolute start date for manual sync | empty |
-| Filename prefix | Date/time prefix format, such as `YYYY-MM-DD` | empty |
-| Scheduled sync | Run sync automatically in the background | off |
-| Sync interval | Scheduled sync interval in minutes | `30` |
-| Sync on start | Run once when Obsidian starts | on |
+| Target Folder | Destination folder inside your vault | `Get笔记` |
+| Filename Prefix | Date prefix format: `YYYY-MM-DD` → `2026-04-30` | empty |
+| Auto Sync Range | Only sync notes updated in the last N days. `0` means no limit | `30` |
+| Sync Start Date | Optional absolute start date for manual sync | empty |
+| Scheduled Sync | Run sync automatically in the background | off |
+| Sync Interval | Scheduled sync interval in minutes | `30` |
+| Sync on Start | Run once when Obsidian starts | on |
 
 ## Sync Model
 
@@ -179,11 +202,12 @@ GetNote Importer treats GetNote as the source of truth for imported note content
 
 1. Scan the target folder and build a `uid -> file` index from frontmatter.
 2. Fetch notes from the GetNote Open API.
-3. Filter notes by your sync range.
+3. Filter notes by your sync range (max days, start date, or checkpoint timestamp).
 4. Create files for new notes.
 5. Update files when `updated_at` changes.
 6. Rename files when the display title changes.
 7. Record per-note results in sync history.
+8. Save the last processed note's `updated_at` as a checkpoint for the next scheduled sync.
 
 ## Privacy
 
