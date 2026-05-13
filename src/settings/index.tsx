@@ -109,7 +109,7 @@ export function SettingsComponent({
 
   const handleFolderChange = useCallback(
     (value: string) => {
-      const clean = value.replace(/[\\/:*?"<>|]/g, '').trim() || t('settings.folder.placeholder');
+      const clean = value.replace(/[\\:*?"<>|]/g, '').trim() || t('settings.folder.placeholder');
       setFolderName(clean);
       updateSetting('folderName', clean);
     },
