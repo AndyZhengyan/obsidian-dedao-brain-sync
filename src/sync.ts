@@ -1,4 +1,4 @@
-import { App, requestUrl, TFile } from 'obsidian';
+import { App, TFile } from 'obsidian';
 import { fetchAllNotes, fetchNoteDetail } from './api';
 import { formatDateTime, formatTimestampPrefix, renderNote, generateDisplayTitle } from './note-parser';
 import { getCategoryDir } from './types';
@@ -167,12 +167,13 @@ export class SyncEngine {
       // Skip already-existing files
       if (this.app.vault.getAbstractFileByPath(targetPath)) return targetPath;
 
-      const res = await requestUrl({ url: attachment.url, throw: false });
+      const res = await fetch(attachment.url);
       if (res.status < 200 || res.status >= 300) {
         console.error(`[GetNote] Audio download failed: ${res.status}`);
         return null;
       }
-      await this.app.vault.createBinary(targetPath, res.arrayBuffer);
+      const arrayBuffer = await res.arrayBuffer();
+      await this.app.vault.createBinary(targetPath, arrayBuffer);
       return targetPath;
     } catch (err) {
       console.error(`[GetNote] Audio download error:`, err);

@@ -45,4 +45,7 @@ npm run build && cp main.js manifest.json styles.css "/Users/zhengyan/Downloads/
 - GetNote API 使用 64 位整数作为 ID
 - 解析 JSON 时需将 `id`、`note_id`、`cursor` 等字段转为 string，防止精度丢失
 - API base: `https://openapi.biji.com/open/api/v1/`
-- 列表分页参数：`since_id`、`limit`（最大 20）
+- 列表分页参数：`since_id`（最大 20）
+- **网络请求：统一使用 `fetch`，不要使用 `requestUrl`**
+  - 原因：GetNote API 是同域请求，无 CORS 问题，`fetch` 可在 DevTools Network 面板调试，`requestUrl` 不可见
+  - 附件下载也用 `fetch` + `res.arrayBuffer()`

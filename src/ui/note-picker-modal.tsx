@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import type { GetNoteNote } from '../types';
-import { fetchNotes, GETNOTE_LIST_LIMIT } from '../api';
+import { fetchNotes } from '../api';
 import { generateDisplayTitle } from '../note-parser';
 import { t } from '../i18n';
 
@@ -70,10 +70,10 @@ export function NotePickerModal({ token, clientId, onConfirm, onCancel, abortSig
     setNotes([]);
     void (async () => {
       try {
-        const result = await fetchNotes({ token, clientId, sinceId: '0', limit: GETNOTE_LIST_LIMIT, signal: abortSignal });
+        const result = await fetchNotes({ token, clientId, sinceId: '0', signal: abortSignal });
         setNotes(result.notes);
         setHasMore(result.hasMore);
-        if (result.nextCursor) setCursor(result.nextCursor);
+        if (result.notes.length > 0) setCursor(result.notes[result.notes.length - 1].note_id);
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
         setError(err instanceof Error ? err.message : t('picker.error'));
@@ -88,10 +88,10 @@ export function NotePickerModal({ token, clientId, onConfirm, onCancel, abortSig
   const loadNextPage = async () => {
     setLoadingMore(true);
     try {
-      const result = await fetchNotes({ token, clientId, sinceId: cursor, limit: GETNOTE_LIST_LIMIT, signal: abortSignal });
+      const result = await fetchNotes({ token, clientId, sinceId: cursor, signal: abortSignal });
       setNotes(prev => [...prev, ...result.notes]);
       setHasMore(result.hasMore);
-      if (result.nextCursor) setCursor(result.nextCursor);
+      if (result.notes.length > 0) setCursor(result.notes[result.notes.length - 1].note_id);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('picker.error'));
     } finally {
