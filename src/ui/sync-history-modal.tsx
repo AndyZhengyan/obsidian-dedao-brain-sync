@@ -15,7 +15,12 @@ export function formatHistoryScope(entry: SyncHistoryEntry): string {
 
   const parts: string[] = [];
   if (entry.scope?.syncStartDate) {
-    parts.push(t('syncHistory.params.startDate', { date: entry.scope.syncStartDate }));
+    const isAuto = entry.type === 'auto';
+    if (isAuto) {
+      parts.push(t('syncHistory.params.checkpoint', { date: entry.scope.syncStartDate }));
+    } else {
+      parts.push(t('syncHistory.params.startDate', { date: entry.scope.syncStartDate }));
+    }
   }
   if (!entry.scope?.syncStartDate && entry.scope?.maxDays && entry.scope.maxDays > 0) {
     parts.push(t('syncHistory.params.maxDays', { days: entry.scope.maxDays }));

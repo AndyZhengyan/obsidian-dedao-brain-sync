@@ -1,4 +1,4 @@
-const translations: Record<string, Record<string, string>> = {
+export const translations: Record<string, Record<string, string>> = {
   zh: {
     // === Settings ===
     'settings.title': 'Get笔记导入',
@@ -33,6 +33,8 @@ const translations: Record<string, Record<string, string>> = {
     'settings.syncStartDate.desc': '只同步此日期之后的笔记，留空表示不限制',
     'settings.syncStartDate.placeholder': '选择日期',
     'settings.syncStartDate.hint': '留空表示同步全部',
+    'settings.syncStartDate.lastSyncedTo': '上次同步断点',
+    'settings.syncStartDate.lastSyncedToDesc': '下次自动同步从该时间点开始增量拉取',
     'settings.lastSync': '上次同步',
     'settings.lastSync.never': '暂未同步',
     'settings.lastSync.result': '{time} · 新增 {created} 更新 {updated}',
@@ -83,6 +85,7 @@ const translations: Record<string, Record<string, string>> = {
     'syncHistory.mode.auto': '自动 · 定时同步',
     'syncHistory.params.noLimit': '时间不限制',
     'syncHistory.params.startDate': '起始日期 {date}',
+    'syncHistory.params.checkpoint': '同步断点 {date}',
     'syncHistory.params.maxDays': '最近 {days} 天',
     'syncHistory.params.selected': '手动选择 {count} 篇',
     'syncHistory.filter.default': '仅按更新时间过滤，无类型或标签过滤',
@@ -228,6 +231,8 @@ const translations: Record<string, Record<string, string>> = {
     'settings.syncStartDate.desc': 'Only sync notes after this date, leave empty for no limit',
     'settings.syncStartDate.placeholder': 'Select date',
     'settings.syncStartDate.hint': 'Leave empty to sync all',
+    'settings.syncStartDate.lastSyncedTo': 'Last Sync Checkpoint',
+    'settings.syncStartDate.lastSyncedToDesc': 'Next auto sync will resume from this point',
     'settings.lastSync': 'Last sync',
     'settings.lastSync.never': 'Never synced',
     'settings.lastSync.result': '{time} · Created {created} Updated {updated}',
@@ -280,6 +285,7 @@ const translations: Record<string, Record<string, string>> = {
     'syncHistory.mode.auto': 'Auto · Scheduled Sync',
     'syncHistory.params.noLimit': 'No time limit',
     'syncHistory.params.startDate': 'Start date {date}',
+    'syncHistory.params.checkpoint': 'Checkpoint {date}',
     'syncHistory.params.maxDays': 'Last {days} days',
     'syncHistory.params.selected': '{count} manually selected',
     'syncHistory.filter.default': 'Only updated time is filtered; no type or tag filter',

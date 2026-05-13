@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as i18n from '../src/i18n';
+import { readdirSync, readFileSync, statSync } from 'fs';
+import { join } from 'path';
 
 describe('initI18n', () => {
   it('sets locale to zh for zh-CN', () => {
@@ -309,5 +311,65 @@ describe('t() - New sync keys', () => {
     expect(i18n.t('sync.started')).toBe('GetNote sync started...');
     expect(i18n.t('sync.autoFailRepeated', { count: 3 }))
       .toBe('Auto sync failed 3 times, please check settings');
+  });
+});
+
+describe('key usage in source code', () => {
+  const SRC_DIR = join(__dirname, '..', 'src');
+  const knownKeys = new Set(Object.keys(i18n.translations.zh));
+
+  function* walkFiles(dir: string): Generator<string> {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory() && !entry.name.startsWith('ui')) {
+        yield* walkFiles(path);
+      } else if (entry.isFile() && /\.(ts|tsx)$/.test(entry.name) && !entry.name.includes('test')) {
+        yield path;
+      }
+    }
+  }
+  function* walkUi(): Generator<string> {
+    const uiDir = join(SRC_DIR, 'ui');
+    try {
+      for (const entry of readdirSync(uiDir, { withFileTypes: true })) {
+        if (entry.isFile() && /\.(ts|tsx)$/.test(entry.name)) {
+          yield join(uiDir, entry.name);
+        }
+      }
+    } catch { /* no ui dir */ }
+  }
+
+  it('every t() key used in source files has a translation', () => {
+    const missing: string[] = [];
+
+    for (const filePath of [walkFiles(SRC_DIR), walkUi()].flatMap(g => [...g]).filter(f => !f.includes('.test.'))) {
+      const content = readFileSync(filePath, 'utf-8');
+      const regex = /(?<![a-zA-Z.])t\(['"]([^'"]+)['"]\)/g;
+      let match: RegExpExecArray | null;
+      while ((match = regex.exec(content)) !== null) {
+        const key = match[1];
+        if (!knownKeys.has(key)) {
+          missing.push(`${key} (in ${filePath.replace(SRC_DIR, 'src')})`);
+        }
+      }
+    }
+
+    expect(missing, `Missing i18n keys:\n${missing.join('\n')}`).toEqual([]);
+  });
+});
+
+describe('locale symmetry', () => {
+  it('all zh keys exist in en and vice versa', () => {
+    const zhKeys = Object.keys(i18n.translations.zh).sort();
+    const enKeys = Object.keys(i18n.translations.en).sort();
+
+    const missingInEn = zhKeys.filter(k => !enKeys.includes(k));
+    const missingInZh = enKeys.filter(k => !zhKeys.includes(k));
+
+    const msg: string[] = [];
+    if (missingInEn.length) msg.push(`Missing in en: ${missingInEn.join(', ')}`);
+    if (missingInZh.length) msg.push(`Missing in zh: ${missingInZh.join(', ')}`);
+
+    expect(msg, msg.join('\n')).toEqual([]);
   });
 });

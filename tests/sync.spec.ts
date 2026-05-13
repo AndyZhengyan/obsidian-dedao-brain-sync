@@ -172,7 +172,7 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     });
   });
 
-  it('does not advance scheduled sync checkpoint when any note fails', async () => {
+  it('advances checkpoint when any note succeeds even if other notes fail', async () => {
     vi.spyOn(SyncEngine.prototype, 'sync').mockResolvedValue({
       created: 1,
       updated: 0,
@@ -190,6 +190,7 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
       syncStartDate: plugin.settings.lastSyncEndTimestamp,
     });
 
-    expect(plugin.settings.lastSyncEndTimestamp).toBe('2026-05-09T10:00:00+08:00');
+    // checkpoint advances because created > 0, even though failed = 1
+    expect(plugin.settings.lastSyncEndTimestamp).toBe('2026-05-10T12:00:00+08:00');
   });
 });

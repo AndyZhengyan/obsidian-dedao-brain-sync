@@ -173,4 +173,15 @@ describe('sync history scope display', () => {
       },
     }))).toBe('起始日期 2026-05-09');
   });
+
+  it('shows checkpoint label for auto sync', () => {
+    initI18n('zh-CN');
+
+    expect(formatHistoryScope(makeEntry({
+      type: 'auto',
+      scope: {
+        syncStartDate: '2026-05-09T10:00:00+08:00',
+      },
+    }))).toBe('同步断点 2026-05-09T10:00:00+08:00');
+  });
 });

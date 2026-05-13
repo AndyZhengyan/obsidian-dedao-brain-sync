@@ -53,4 +53,4 @@ npm run build && cp main.js manifest.json styles.css "/Users/zhengyan/Downloads/
 - 列表分页参数：`since_id`（最大 20）
 - **网络请求：统一使用 `fetch`，不要使用 `requestUrl`**
   - 原因：GetNote API 是同域请求，无 CORS 问题，`fetch` 可在 DevTools Network 面板调试，`requestUrl` 不可见
-  - 附件下载也用 `fetch` + `res.arrayBuffer()`
+  - 包括二进制附件/音频下载：`fetch(url).then(r => r.arrayBuffer())`

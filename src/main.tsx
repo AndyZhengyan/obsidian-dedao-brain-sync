@@ -187,7 +187,9 @@ export default class GetNoteSyncPlugin extends Plugin {
     this.settings.syncHistory = this.syncHistory;
 
     // lastSyncEndTimestamp only belongs to auto sync
-    if (type === 'auto' && result.failed === 0 && result.lastNoteTimestamp) {
+    // 更新断点只要：有笔记成功同步且有 lastNoteTimestamp（即使有部分失败）
+    const hasSuccessfulSync = (result.created > 0 || result.updated > 0);
+    if (type === 'auto' && hasSuccessfulSync && result.lastNoteTimestamp) {
       this.settings.lastSyncEndTimestamp = result.lastNoteTimestamp;
     }
 
