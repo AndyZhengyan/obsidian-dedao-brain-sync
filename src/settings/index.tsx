@@ -33,6 +33,7 @@ class FolderSuggest extends AbstractInputSuggest<string> {
   selectSuggestion(value: string): void {
     this.el.value = value;
     this.el.dispatchEvent(new Event('input'));
+    this.close();
   }
 }
 

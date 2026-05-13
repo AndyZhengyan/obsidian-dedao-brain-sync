@@ -20,6 +20,10 @@
 - 示例：`1.0.5`、`0.5.22`
 - Release workflow 只监听 `[0-9]*` pattern，不触发带 `v` 前缀的标签
 - **不要删除旧的 release tag**，每次都用新版本号
+- **push tag 禁止使用 `--force`**，会覆盖远程已有的 tag
+  - 正确流程：如果 tag 已存在，说明版本号冲突，改用新的 `x.y.z` 版本号
+  - 错误示例：`git push origin 1.0.7 --force` ❌（会覆盖旧的 1.0.7）
+  - 正确示例：`git push origin 1.0.8` ✅
 
 ### 本地测试
 
