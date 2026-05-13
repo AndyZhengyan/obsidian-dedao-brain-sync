@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import * as obsidian from 'obsidian';
-import { fetchNotes, fetchNoteDetail, GETNOTE_LIST_LIMIT } from '../src/api';
+import { fetchNotes, fetchNoteDetail } from '../src/api';
 import type { ListResponse } from '../src/types';
 
 // Extract the internal safeJsonParse for direct testing
@@ -10,6 +9,17 @@ function safeJsonParse(text: string): unknown {
     '"$1":"$2"'
   );
   return JSON.parse(safe);
+}
+
+function mockFetchResponse(body: unknown, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: new Headers({ 'content-type': 'application/json' }),
+    json: () => Promise.resolve(body),
+    text: () => Promise.resolve(JSON.stringify(body)),
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+  } as unknown as Response;
 }
 
 describe('safeJsonParse', () => {
@@ -92,19 +102,16 @@ describe('fetchNoteDetail', () => {
       },
     };
 
-    const requestSpy = vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-      text: JSON.stringify(mockResponse),
-      json: mockResponse,
-      arrayBuffer: new ArrayBuffer(0),
-    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse(mockResponse) as Response);
 
-    const result = await fetchNoteDetail('1908723638246504120', 'test-token', 'test-client');
-    expect(requestSpy).toHaveBeenCalledWith(expect.objectContaining({ throw: false }));
-    expect(result.attachments).toHaveLength(1);
-    expect(result.attachments![0].type).toBe('audio');
-    expect(result.audio).toContain('说话人1');
+    try {
+      const result = await fetchNoteDetail('1908723638246504120', 'test-token', 'test-client');
+      expect(result.attachments).toHaveLength(1);
+      expect(result.attachments![0].type).toBe('audio');
+      expect(result.audio).toContain('说话人1');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
   });
 
   it('兼容详情接口 data.note + data.audio.original 的嵌套结构', async () => {
@@ -131,70 +138,67 @@ describe('fetchNoteDetail', () => {
       },
     };
 
-    vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-      text: JSON.stringify(mockResponse),
-      json: mockResponse,
-      arrayBuffer: new ArrayBuffer(0),
-    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse(mockResponse) as Response);
 
-    const result = await fetchNoteDetail('1909428570156704824', 'test-token', 'test-client');
-
-    expect(result.title).toBe('嵌套录音');
-    expect(result.attachments).toHaveLength(1);
-    expect(result.audio).toBe('🟢 说话人1 [00:00:01]\n嵌套转写');
+    try {
+      const result = await fetchNoteDetail('1909428570156704824', 'test-token', 'test-client');
+      expect(result.title).toBe('嵌套录音');
+      expect(result.attachments).toHaveLength(1);
+      expect(result.audio).toBe('🟢 说话人1 [00:00:01]\n嵌套转写');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
   });
 
   it('笔记不存在时抛出错误', async () => {
-    vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-      text: JSON.stringify({ success: false, error: { message: '笔记不存在' } }),
-      json: { success: false, error: { message: '笔记不存在' } },
-      arrayBuffer: new ArrayBuffer(0),
-    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ success: false, error: { message: '笔记不存在' } }) as Response
+    );
 
-    await expect(fetchNoteDetail('not-exist', 'test-token', 'test-client')).rejects.toThrow('笔记不存在');
+    try {
+      await expect(fetchNoteDetail('not-exist', 'test-token', 'test-client')).rejects.toThrow('笔记不存在');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
   });
 });
 
 describe('fetchNotes limit', () => {
   function mockListResponse() {
-    vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-      text: JSON.stringify({
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
         data: { notes: [], has_more: false, next_cursor: '' },
-      } satisfies ListResponse),
-      json: {
-        data: { notes: [], has_more: false, next_cursor: '' },
-      },
-      arrayBuffer: new ArrayBuffer(0),
-    });
+      }) as Response
+    );
   }
 
-  it('默认按 GetNote list API 最大 20 条请求', async () => {
+  it('默认请求不带 limit 参数（API 最大 20 条）', async () => {
     mockListResponse();
 
-    await fetchNotes({ token: 'test-token', clientId: 'test-client' });
+    try {
+      await fetchNotes({ token: 'test-token', clientId: 'test-client' });
 
-    expect(obsidian.requestUrl).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: expect.stringContaining(`limit=${GETNOTE_LIST_LIMIT}`),
-      })
-    );
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.not.stringContaining('limit='),
+        expect.any(Object)
+      );
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
   });
 
-  it('外部误传超过 20 的 limit 时会压到 20', async () => {
+  it('limit 参数不再传递到 URL（已移除）', async () => {
     mockListResponse();
 
-    await fetchNotes({ token: 'test-token', clientId: 'test-client', limit: 50 });
+    try {
+      await fetchNotes({ token: 'test-token', clientId: 'test-client', limit: 50 });
 
-    expect(obsidian.requestUrl).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: expect.stringContaining(`limit=${GETNOTE_LIST_LIMIT}`),
-      })
-    );
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.not.stringContaining('limit='),
+        expect.any(Object)
+      );
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
   });
 });

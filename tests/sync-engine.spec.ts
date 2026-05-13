@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as obsidian from 'obsidian';
 import { SyncEngine } from '../src/sync';
 import type { Settings, GetNoteNote } from '../src/types';
 
@@ -83,12 +82,16 @@ function makeNote(overrides: Partial<GetNoteNote> = {}): GetNoteNote {
   };
 }
 
-// Mock fetchAllNotes generator
-function mockFetchAllNotes(notes: GetNoteNote[] = []) {
-  const gen = (async function* () {
-    yield notes;
-  })();
-  return gen as unknown as ReturnType<typeof import('../src/api').fetchAllNotes>;
+// Mock fetch for API responses
+function mockFetchResponse(body: unknown) {
+  return {
+    ok: true,
+    status: 200,
+    headers: new Headers({ 'content-type': 'application/json' }),
+    json: () => Promise.resolve(body),
+    text: () => Promise.resolve(JSON.stringify(body)),
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+  };
 }
 
 describe('SyncEngine — filterRecentNotes', () => {
@@ -159,10 +162,8 @@ describe('SyncEngine — page cutoff', () => {
   });
 
   it('uses chronological time instead of string order for last synced timestamp', async () => {
-    const requestSpy = vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-      text: JSON.stringify({
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
         data: {
           notes: [
             makeNote({
@@ -177,10 +178,8 @@ describe('SyncEngine — page cutoff', () => {
           has_more: false,
           next_cursor: '',
         },
-      }),
-      json: null,
-      arrayBuffer: new ArrayBuffer(0),
-    });
+      }) as Response
+    );
 
     try {
       const app = makeMockApp();
@@ -190,17 +189,15 @@ describe('SyncEngine — page cutoff', () => {
 
       expect(result.lastNoteTimestamp).toBe('2026-05-09T02:00:00Z');
     } finally {
-      requestSpy.mockRestore();
+      vi.mocked(globalThis.fetch).mockRestore();
     }
   });
 
   it('processes recent notes on a page before stopping at an old tail note', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-11T12:00:00+08:00'));
-    const requestSpy = vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-      text: JSON.stringify({
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
         data: {
           notes: [
             makeNote({
@@ -217,10 +214,8 @@ describe('SyncEngine — page cutoff', () => {
           has_more: false,
           next_cursor: '',
         },
-      }),
-      json: null,
-      arrayBuffer: new ArrayBuffer(0),
-    });
+      }) as Response
+    );
 
     try {
       const app = makeMockApp();
@@ -236,7 +231,7 @@ describe('SyncEngine — page cutoff', () => {
         }),
       ]);
     } finally {
-      requestSpy.mockRestore();
+      vi.mocked(globalThis.fetch).mockRestore();
       vi.useRealTimers();
     }
   });
@@ -361,48 +356,36 @@ describe('SyncEngine — audio note sync', () => {
   it('音频笔记下载附件到 asset 目录，md 内嵌音频链接', async () => {
     const createdFiles: string[] = [];
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
-    const requestSpy = vi.spyOn(obsidian, 'requestUrl').mockImplementation((request: any) => {
-      const urlStr = typeof request === 'string' ? request : request.url;
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: unknown) => {
+      const urlStr = typeof url === 'string' ? url : (url as Request).url;
       if (urlStr.includes('/resource/note/list')) {
-        return Promise.resolve({
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-          text: JSON.stringify({
-            data: { notes: [audioNote], has_more: false, next_cursor: '' },
-          }),
-          json: { data: { notes: [audioNote], has_more: false, next_cursor: '' } },
-          arrayBuffer: new ArrayBuffer(0),
-        });
+        return Promise.resolve(mockFetchResponse({
+          data: { notes: [audioNote], has_more: false, next_cursor: '' },
+        }) as Response);
       }
       if (urlStr.includes('/resource/note/detail')) {
-        return Promise.resolve({
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-          text: JSON.stringify({
-            success: true,
-            data: {
-              ...audioNote,
-              attachments: [{ type: 'audio', url: 'https://cdn.example.com/test.mp3', title: '', duration: 883920 }],
-              audio: '🟢 说话人1 [00:00:01]\n转写内容',
-            },
-          }),
-          json: null,
-          arrayBuffer: new ArrayBuffer(0),
-        });
+        return Promise.resolve(mockFetchResponse({
+          success: true,
+          data: {
+            ...audioNote,
+            attachments: [{ type: 'audio', url: 'https://cdn.example.com/test.mp3', title: '', duration: 883920 }],
+            audio: '🟢 说话人1 [00:00:01]\n转写内容',
+          },
+        }) as Response);
       }
       if (new URL(urlStr).hostname === 'cdn.example.com') {
         return Promise.resolve({
+          ok: true,
           status: 200,
-          headers: {},
-          text: '',
-          json: null,
-          arrayBuffer: new ArrayBuffer(1024),
-        });
+          headers: new Headers({}),
+          json: () => Promise.resolve(null),
+          text: () => Promise.resolve(''),
+          arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
+        } as Response);
       }
       throw new Error(`Unexpected request: ${urlStr}`);
-    }) as any;
+    });
 
     const mockApp = makeMockApp();
     mockApp.vault.create = vi.fn().mockImplementation(async (path: string) => {
@@ -417,44 +400,36 @@ describe('SyncEngine — audio note sync', () => {
       return { path };
     });
 
-    const engine = new SyncEngine(mockApp as any, makeSettings());
-    const result = await engine.sync();
+    try {
+      const engine = new SyncEngine(mockApp as any, makeSettings());
+      const result = await engine.sync();
 
-    // 验证 asset 目录被创建/写入
-    expect(createdFiles.some(f => f.includes('/asset/'))).toBe(true);
-    expect(createdFiles).toContain('Get笔记/录音长录/asset/我的录音笔记_audio.mp3');
-    expect(createdFiles).toContain('Get笔记/录音长录/asset/我的录音笔记_transcript.md');
-    expect(requestSpy).toHaveBeenCalledWith(expect.objectContaining({
-      url: 'https://cdn.example.com/test.mp3',
-      throw: false,
-    }));
-    expect(fetchSpy).not.toHaveBeenCalledWith('https://cdn.example.com/test.mp3');
-    // 验证 md 文件被创建
-    expect(createdFiles.some(f => f.endsWith('.md'))).toBe(true);
-    expect(result.items).toEqual([
-      expect.objectContaining({
-        noteId: audioNote.note_id,
-        title: audioNote.title,
-        noteType: audioNote.note_type,
-        updatedAt: audioNote.updated_at,
-        status: 'created',
-      }),
-    ]);
-    expect(logSpy).not.toHaveBeenCalled();
-
-    logSpy.mockRestore();
-    fetchSpy.mockRestore();
+      // 验证 asset 目录被创建/写入
+      expect(createdFiles.some(f => f.includes('/asset/'))).toBe(true);
+      expect(createdFiles).toContain('Get笔记/录音长录/asset/我的录音笔记_audio.mp3');
+      expect(createdFiles).toContain('Get笔记/录音长录/asset/我的录音笔记_transcript.md');
+      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalledWith('https://cdn.example.com/test.mp3');
+      // 验证 md 文件被创建
+      expect(createdFiles.some(f => f.endsWith('.md'))).toBe(true);
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          noteId: audioNote.note_id,
+          title: audioNote.title,
+          noteType: audioNote.note_type,
+          updatedAt: audioNote.updated_at,
+          status: 'created',
+        }),
+      ]);
+      expect(logSpy).not.toHaveBeenCalled();
+    } finally {
+      logSpy.mockRestore();
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
   });
 
   it('拒绝下载非 HTTPS 音频附件', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const requestSpy = vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
-      status: 200,
-      headers: {},
-      text: '',
-      json: null,
-      arrayBuffer: new ArrayBuffer(1024),
-    });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
     const mockApp = makeMockApp();
     const engine = new SyncEngine(mockApp as any, makeSettings());
@@ -468,83 +443,78 @@ describe('SyncEngine — audio note sync', () => {
     });
 
     expect(result).toBeNull();
-    expect(requestSpy).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
     expect(mockApp.vault.createBinary).not.toHaveBeenCalled();
     expect(warnSpy.mock.calls.flat().join(' ')).not.toContain('http://127.0.0.1/private.mp3');
 
     warnSpy.mockRestore();
+    fetchSpy.mockRestore();
   });
 
   it('音频下载失败日志不泄露附件 URL', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
+    const signedUrl = 'https://cdn.example.com/test.mp3?Expires=1778291785&Signature=secret';
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
       status: 403,
-      headers: {},
-      text: 'forbidden',
-      json: null,
-      arrayBuffer: new ArrayBuffer(0),
-    });
+      headers: new Headers({}),
+      json: () => Promise.resolve(null),
+      text: () => Promise.resolve('forbidden'),
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    } as Response);
 
     const mockApp = makeMockApp();
     const engine = new SyncEngine(mockApp as any, makeSettings());
-    const signedUrl = 'https://cdn.example.com/test.mp3?Expires=1778291785&Signature=secret';
 
-    // @ts-ignore accessing private method for security regression coverage
-    const result = await engine['downloadAudioAsset'](audioNote, {
-      type: 'audio',
-      url: signedUrl,
-      title: '',
-      duration: 1000,
-    });
+    try {
+      // @ts-ignore accessing private method for security regression coverage
+      const result = await engine['downloadAudioAsset'](audioNote, {
+        type: 'audio',
+        url: signedUrl,
+        title: '',
+        duration: 1000,
+      });
 
-    expect(result).toBeNull();
-    expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(signedUrl);
-
-    errorSpy.mockRestore();
+      expect(result).toBeNull();
+      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(signedUrl);
+    } finally {
+      errorSpy.mockRestore();
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
   });
 
   it('详情接口缺少核心笔记字段时使用列表笔记兜底', async () => {
     const createdFiles: string[] = [];
 
-    vi.spyOn(obsidian, 'requestUrl').mockImplementation((request: any) => {
-      const urlStr = typeof request === 'string' ? request : request.url;
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: unknown) => {
+      const urlStr = typeof url === 'string' ? url : (url as Request).url;
       if (urlStr.includes('/resource/note/list')) {
-        return Promise.resolve({
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-          text: JSON.stringify({
-            data: { notes: [audioNote], has_more: false, next_cursor: '' },
-          }),
-          json: null,
-          arrayBuffer: new ArrayBuffer(0),
-        });
+        return Promise.resolve(mockFetchResponse({
+          data: { notes: [audioNote], has_more: false, next_cursor: '' },
+        }) as Response);
       }
       if (urlStr.includes('/resource/note/detail')) {
-        return Promise.resolve({
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-          text: JSON.stringify({
-            success: true,
-            data: {
-              attachments: [{ type: 'audio', url: 'https://cdn.example.com/test.mp3', title: '', duration: 883920 }],
-              audio: { original: '🟢 说话人1 [00:00:01]\n转写内容' },
-            },
-          }),
-          json: null,
-          arrayBuffer: new ArrayBuffer(0),
-        });
+        return Promise.resolve(mockFetchResponse({
+          success: true,
+          data: {
+            attachments: [{ type: 'audio', url: 'https://cdn.example.com/test.mp3', title: '', duration: 883920 }],
+            audio: { original: '🟢 说话人1 [00:00:01]\n转写内容' },
+          },
+        }) as Response);
       }
       if (new URL(urlStr).hostname === 'cdn.example.com') {
         return Promise.resolve({
+          ok: true,
           status: 200,
-          headers: {},
-          text: '',
-          json: null,
-          arrayBuffer: new ArrayBuffer(1024),
-        });
+          headers: new Headers({}),
+          json: () => Promise.resolve(null),
+          text: () => Promise.resolve(''),
+          arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
+        } as Response);
       }
       throw new Error(`Unexpected request: ${urlStr}`);
-    }) as any;
+    });
 
     const mockApp = makeMockApp();
     mockApp.vault.create = vi.fn().mockImplementation(async (path: string, content?: string) => {
@@ -557,14 +527,18 @@ describe('SyncEngine — audio note sync', () => {
       return { path };
     });
 
-    const engine = new SyncEngine(mockApp as any, makeSettings());
-    const result = await engine.sync();
+    try {
+      const engine = new SyncEngine(mockApp as any, makeSettings());
+      const result = await engine.sync();
 
-    expect(result.failed).toBe(0);
-    expect(createdFiles).toContain('Get笔记/录音长录/asset/我的录音笔记_audio.mp3');
-    expect(createdFiles).toContain('Get笔记/录音长录/asset/我的录音笔记_transcript.md');
-    expect(createdFiles).toContain('Get笔记/录音长录/我的录音笔记.md');
-    expect(createdFiles.join('\n')).toContain('created: 2026-04-30 12:45:24');
+      expect(result.failed).toBe(0);
+      expect(createdFiles).toContain('Get笔记/录音长录/asset/我的录音笔记_audio.mp3');
+      expect(createdFiles).toContain('Get笔记/录音长录/asset/我的录音笔记_transcript.md');
+      expect(createdFiles).toContain('Get笔记/录音长录/我的录音笔记.md');
+      expect(createdFiles.join('\n')).toContain('created: 2026-04-30 12:45:24');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
   });
 });
 
@@ -575,15 +549,11 @@ describe('SyncEngine — selective sync cancellation', () => {
       makeNote({ note_id: 'select_2', title: '选择 2' }),
     ];
 
-    vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-      text: JSON.stringify({
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
         data: { notes, has_more: false, next_cursor: '' },
-      }),
-      json: { data: { notes, has_more: false, next_cursor: '' } },
-      arrayBuffer: new ArrayBuffer(0),
-    }) as any;
+      }) as Response
+    );
 
     const mockApp = makeMockApp();
     const engine = new SyncEngine(mockApp as any, makeSettings(), (info) => {
@@ -592,7 +562,11 @@ describe('SyncEngine — selective sync cancellation', () => {
       }
     });
 
-    await expect(engine.syncNoteIds(['select_1', 'select_2'])).rejects.toThrow('Sync cancelled');
-    expect(mockApp.vault.create).toHaveBeenCalledTimes(1);
+    try {
+      await expect(engine.syncNoteIds(['select_1', 'select_2'])).rejects.toThrow('Sync cancelled');
+      expect(mockApp.vault.create).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
   });
 });
