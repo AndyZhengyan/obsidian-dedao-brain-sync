@@ -254,7 +254,7 @@ The GitHub release workflow verifies typecheck, lint, tests, build, and version/
 
 Enterprise AI practitioner, indie AI blogger, AGI believer, and enthusiast. Scan to follow my WeChat public account — let's talk.
 
-![WeChat Public Account](docs/screenshots/wechat-qr.jpg)
+<img src="docs/screenshots/wechat-qr.jpg" alt="WeChat Public Account" width="250" />
 
 ## License
 

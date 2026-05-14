@@ -403,7 +403,7 @@ export const translations: Record<string, Record<string, string>> = {
 let currentLocale = 'zh';
 
 export function initI18n(locale: string): void {
-  currentLocale = locale.startsWith('zh') ? 'zh' : 'en';
+  currentLocale = locale.startsWith('zh') || locale === '简体中文' || locale === '中文' ? 'zh' : 'en';
 }
 
 export function t(key: string, vars?: Record<string, string | number>): string {

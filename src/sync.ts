@@ -67,6 +67,7 @@ type WriteStatus = SyncResultItem['status'];
 
 interface WriteNoteResult {
   status: WriteStatus;
+  file?: TFile;
   error?: string;
 }
 
@@ -206,6 +207,38 @@ export class SyncEngine {
     }
   }
 
+  /**
+   * Check if a note and all its artifacts already exist in the vault and are up to date.
+   * Uses UID-based lookup so renamed/moved files are still found.
+   */
+  private preCheckNote(
+    note: GetNoteNote,
+    uidIndex: Map<string, TFile>
+  ): { exists: boolean; file?: TFile } {
+    const existingFile = uidIndex.get(note.note_id);
+    if (!existingFile) return { exists: false };
+
+    const contentChanged = this.isContentChanged(existingFile, note);
+    if (contentChanged) return { exists: false, file: existingFile };
+
+    // For audio notes, verify attachments exist as well
+    if (AUDIO_NOTE_TYPES.has(note.note_type)) {
+      const categoryDir = getCategoryDir(note.note_type);
+      const basePath = `${this.settings.folderName}/${categoryDir}`;
+      const assetDir = `${basePath}/asset`;
+      const baseFilename = this.getFileName(note);
+
+      if (
+        !this.app.vault.getAbstractFileByPath(`${assetDir}/${baseFilename}_audio.mp3`) ||
+        !this.app.vault.getAbstractFileByPath(`${assetDir}/${baseFilename}_transcript.md`)
+      ) {
+        return { exists: false, file: existingFile };
+      }
+    }
+
+    return { exists: true, file: existingFile };
+  }
+
   private isContentChanged(file: TFile, note: GetNoteNote): boolean {
     try {
       const cached = this.app.metadataCache.getFileCache(file);
@@ -259,21 +292,21 @@ export class SyncEngine {
         const contentChanged = this.isContentChanged(existingByUid, note);
         const pathChanged = existingByUid.path !== targetPath;
 
-        if (!contentChanged && !pathChanged) return { status: 'skipped' };
+        if (!contentChanged && !pathChanged) return { status: 'skipped', file: existingByUid };
 
         const content = renderNote(note, note.assetFileName);
         if (pathChanged) {
           await this.app.vault.rename(existingByUid, targetPath);
         }
         await this.app.vault.modify(existingByUid, content);
-        return { status: 'updated' };
+        return { status: 'updated', file: existingByUid };
       } else if (existingAtTarget instanceof TFile) {
         // File exists at target path but wasn't in uidIndex - check content
         const contentChanged = this.isContentChanged(existingAtTarget, note);
         const content = renderNote(note, note.assetFileName);
         await this.app.vault.modify(existingAtTarget, content);
         uidIndex.set(note.note_id, existingAtTarget);
-        return { status: contentChanged ? 'updated' : 'skipped' };
+        return { status: contentChanged ? 'updated' : 'skipped', file: existingAtTarget };
       } else {
         const content = renderNote(note, note.assetFileName);
         try {
@@ -282,7 +315,7 @@ export class SyncEngine {
           if (created && created instanceof TFile) {
             uidIndex.set(note.note_id, created);
           }
-          return { status: 'created' };
+          return { status: 'created', file: created instanceof TFile ? created : undefined };
         } catch (createErr) {
           // File was created by another process between check and create
           const existing = this.app.vault.getAbstractFileByPath(targetPath);
@@ -290,7 +323,7 @@ export class SyncEngine {
             const contentChanged = this.isContentChanged(existing, note);
             await this.app.vault.modify(existing, content);
             uidIndex.set(note.note_id, existing);
-            return { status: contentChanged ? 'updated' : 'skipped' };
+            return { status: contentChanged ? 'updated' : 'skipped', file: existing };
           }
           throw createErr;
         }
@@ -299,6 +332,7 @@ export class SyncEngine {
       console.error(`[GetNote] Write failed [${generateDisplayTitle(note) || note.note_id}]:`, err);
       return {
         status: 'failed',
+        file: undefined,
         error: err instanceof Error ? err.message : String(err),
       };
     }
@@ -364,7 +398,7 @@ export class SyncEngine {
 
     return notes.filter(note => {
       const updated = parseNoteUpdatedTime(note);
-      return updated !== null && updated >= startTime;
+      return updated !== null && updated > startTime;
     });
   }
 
@@ -382,6 +416,7 @@ export class SyncEngine {
   async sync(modal?: SyncModal): Promise<SyncResult> {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
     const uidIndex = this.buildUidIndex();
+    const seenNoteIds = new Set<string>();
     const controller = new AbortController();
     this.abortController = controller;
     let pageCount = 0;
@@ -419,6 +454,8 @@ export class SyncEngine {
 
         for (const note of filtered) {
           if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
+          if (seenNoteIds.has(note.note_id)) continue;
+          seenNoteIds.add(note.note_id);
           result.total++;
           const noteToWrite = await this.enrichAudioNote(note, controller.signal);
           const writeResult = await this.writeNote(noteToWrite, uidIndex);
@@ -479,6 +516,7 @@ export class SyncEngine {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
     const idSet = new Set(noteIds);
     const uidIndex = this.buildUidIndex();
+    const seenNoteIds = new Set<string>();
     const controller = new AbortController();
     this.abortController = controller;
     this.cancelled = false;
@@ -498,6 +536,8 @@ export class SyncEngine {
 
         for (const note of matched) {
           if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
+          if (seenNoteIds.has(note.note_id)) continue;
+          seenNoteIds.add(note.note_id);
 
           fetchedCount++;
           result.total++;
@@ -507,6 +547,14 @@ export class SyncEngine {
             total: noteIds.length,
             percent,
           });
+          // Pre-check: skip if note and attachments already exist and are up-to-date.
+          // Uses UID-based lookup so renamed/moved files are still found.
+          const preCheck = this.preCheckNote(note, uidIndex);
+          if (preCheck.exists) {
+            result.skipped++;
+            this.recordItem(result, note, { status: 'skipped' });
+            continue;
+          }
           const noteToWrite = await this.enrichAudioNote(note, controller.signal);
           const writeResult = await this.writeNote(noteToWrite, uidIndex);
           switch (writeResult.status) {

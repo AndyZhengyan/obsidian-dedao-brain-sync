@@ -543,6 +543,285 @@ describe('SyncEngine — audio note sync', () => {
 });
 
 describe('SyncEngine — selective sync cancellation', () => {
+  describe('SyncEngine — preCheckNote', () => {
+    it('不存在 uidIndex 时返回 { exists: false }', () => {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings());
+      const note = makeNote({ note_id: 'note_missing' });
+      // @ts-ignore
+      const result = engine['preCheckNote'](note, new Map());
+      expect(result.exists).toBe(false);
+    });
+
+    it('uid 命中但内容已修改时返回 { exists: false, file }', () => {
+      const app = makeMockApp();
+      app.vault._addFile(
+        'Get笔记/纯文本/test.md',
+        '---\nuid: "note_changed"\nmodified: "2026-04-27 10:00:00"\n---\n旧内容',
+        { uid: 'note_changed', modified: '2026-04-27 10:00:00' }
+      );
+      app.vault._addFolder('Get笔记/纯文本');
+      const engine = new SyncEngine(app as any, makeSettings());
+      const note = makeNote({
+        note_id: 'note_changed',
+        updated_at: '2026-04-28T10:00:00+08:00',
+      });
+      const index = new Map([['note_changed', { path: 'Get笔记/纯文本/test.md' }]]);
+      // @ts-ignore
+      const result = engine['preCheckNote'](note, index);
+      expect(result.exists).toBe(false);
+      expect(result.file).toBeDefined();
+    });
+
+    it('uid 命中且内容未变时返回 { exists: true }（非音频笔记）', () => {
+      const app = makeMockApp();
+      app.vault._addFile(
+        'Get笔记/纯文本/test.md',
+        '---\nuid: "note_unchanged"\nmodified: "2026-04-28 10:00:00"\n---\n正文',
+        { uid: 'note_unchanged', modified: '2026-04-28 10:00:00' }
+      );
+      app.vault._addFolder('Get笔记/纯文本');
+      const engine = new SyncEngine(app as any, makeSettings());
+      const note = makeNote({
+        note_id: 'note_unchanged',
+        note_type: 'plain_text',
+        updated_at: '2026-04-28T10:00:00+08:00',
+      });
+      const index = new Map([['note_unchanged', { path: 'Get笔记/纯文本/test.md' }]]);
+      // @ts-ignore
+      const result = engine['preCheckNote'](note, index);
+      expect(result.exists).toBe(true);
+    });
+
+    it('音频笔记：附件齐全且内容未变时返回 { exists: true }', () => {
+      const app = makeMockApp();
+      app.vault._addFile(
+        'Get笔记/录音长录/test.md',
+        '---\nuid: "audio_ready"\nmodified: "2026-04-28 10:00:00"\n---\n音频笔记',
+        { uid: 'audio_ready', modified: '2026-04-28 10:00:00' }
+      );
+      app.vault._addFolder('Get笔记/录音长录');
+      app.vault._addFolder('Get笔记/录音长录/asset');
+      app.vault._addFile('Get笔记/录音长录/asset/测试笔记_audio.mp3', '');
+      app.vault._addFile('Get笔记/录音长录/asset/测试笔记_transcript.md', '');
+      const engine = new SyncEngine(app as any, makeSettings());
+      const note = makeNote({
+        note_id: 'audio_ready',
+        title: '测试笔记',
+        note_type: 'recorder_audio',
+        updated_at: '2026-04-28T10:00:00+08:00',
+      });
+      const index = new Map([['audio_ready', { path: 'Get笔记/录音长录/test.md' }]]);
+      // @ts-ignore
+      const result = engine['preCheckNote'](note, index);
+      expect(result.exists).toBe(true);
+    });
+
+    it('音频笔记：缺少音频文件时返回 { exists: false }', () => {
+      const app = makeMockApp();
+      app.vault._addFile(
+        'Get笔记/录音长录/test.md',
+        '---\nuid: "audio_missing_mp3"\nmodified: "2026-04-28 10:00:00"\n---\n音频笔记',
+        { uid: 'audio_missing_mp3', modified: '2026-04-28 10:00:00' }
+      );
+      app.vault._addFolder('Get笔记/录音长录');
+      app.vault._addFolder('Get笔记/录音长录/asset');
+      app.vault._addFile('Get笔记/录音长录/asset/测试笔记_transcript.md', '');
+      const engine = new SyncEngine(app as any, makeSettings());
+      const note = makeNote({
+        note_id: 'audio_missing_mp3',
+        title: '测试笔记',
+        note_type: 'recorder_audio',
+        updated_at: '2026-04-28T10:00:00+08:00',
+      });
+      const index = new Map([['audio_missing_mp3', { path: 'Get笔记/录音长录/test.md' }]]);
+      // @ts-ignore
+      const result = engine['preCheckNote'](note, index);
+      expect(result.exists).toBe(false);
+    });
+
+    it('音频笔记：缺少转写文件时返回 { exists: false }', () => {
+      const app = makeMockApp();
+      app.vault._addFile(
+        'Get笔记/录音长录/test.md',
+        '---\nuid: "audio_missing_transcript"\nmodified: "2026-04-28 10:00:00"\n---\n音频笔记',
+        { uid: 'audio_missing_transcript', modified: '2026-04-28 10:00:00' }
+      );
+      app.vault._addFolder('Get笔记/录音长录');
+      app.vault._addFolder('Get笔记/录音长录/asset');
+      app.vault._addFile('Get笔记/录音长录/asset/测试笔记_audio.mp3', '');
+      const engine = new SyncEngine(app as any, makeSettings());
+      const note = makeNote({
+        note_id: 'audio_missing_transcript',
+        title: '测试笔记',
+        note_type: 'recorder_audio',
+        updated_at: '2026-04-28T10:00:00+08:00',
+      });
+      const index = new Map([['audio_missing_transcript', { path: 'Get笔记/录音长录/test.md' }]]);
+      // @ts-ignore
+      const result = engine['preCheckNote'](note, index);
+      expect(result.exists).toBe(false);
+    });
+
+    it('非音频笔记忽略附件检查直接通过', () => {
+      const app = makeMockApp();
+      app.vault._addFile(
+        'Get笔记/链接笔记/test.md',
+        '---\nuid: "note_link"\nmodified: "2026-04-28 10:00:00"\n---\n链接笔记',
+        { uid: 'note_link', modified: '2026-04-28 10:00:00' }
+      );
+      app.vault._addFolder('Get笔记/链接笔记');
+      const engine = new SyncEngine(app as any, makeSettings());
+      const note = makeNote({
+        note_id: 'note_link',
+        note_type: 'link',
+        updated_at: '2026-04-28T10:00:00+08:00',
+      });
+      const index = new Map([['note_link', { path: 'Get笔记/链接笔记/test.md' }]]);
+      // @ts-ignore
+      const result = engine['preCheckNote'](note, index);
+      expect(result.exists).toBe(true);
+    });
+  });
+
+  describe('SyncEngine — syncNoteIds pre-check integration', () => {
+    it('预检查通过时跳过笔记（标记为 skipped，不调用 enrichAudioNote）', async () => {
+      const note = makeNote({
+        note_id: 'pre_skip',
+        title: '已有笔记',
+        note_type: 'plain_text',
+      });
+
+      // 在 vault 中预先创建该笔记（UID 命中且内容一致）
+      const app = makeMockApp();
+      app.vault._addFile(
+        'Get笔记/纯文本/已有笔记.md',
+        '---\nuid: "pre_skip"\nmodified: "2026-04-28 10:00:00"\n---\n已有内容',
+        { uid: 'pre_skip', modified: '2026-04-28 10:00:00' }
+      );
+      app.vault._addFolder('Get笔记/纯文本');
+
+      // Mock API 返回该笔记
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        mockFetchResponse({
+          data: { notes: [note], has_more: false, next_cursor: '' },
+        }) as Response
+      );
+
+      try {
+        const engine = new SyncEngine(app as any, makeSettings());
+        const result = await engine.syncNoteIds(['pre_skip']);
+
+        expect(result.total).toBe(1);
+        expect(result.skipped).toBe(1);
+        expect(result.created).toBe(0);
+        expect(result.updated).toBe(0);
+
+        // 验证未创建任何新文件（pre-check 跳过了全部写操作）
+        expect(app.vault.create).not.toHaveBeenCalled();
+        expect(app.vault.modify).not.toHaveBeenCalled();
+
+        // 验证 recordItem 正确记录了 skipped 状态
+        expect(result.items).toEqual([
+          expect.objectContaining({
+            noteId: 'pre_skip',
+            status: 'skipped',
+          }),
+        ]);
+      } finally {
+        vi.mocked(globalThis.fetch).mockRestore();
+      }
+    });
+
+    it('预检查不通过时正常处理笔记', async () => {
+      const note = makeNote({
+        note_id: 'pre_proceed',
+        title: '新笔记',
+        note_type: 'plain_text',
+      });
+
+      // vault 中不存在该笔记（UID 不命中）
+      const app = makeMockApp();
+      app.vault._addFolder('Get笔记/纯文本');
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        mockFetchResponse({
+          data: { notes: [note], has_more: false, next_cursor: '' },
+        }) as Response
+      );
+
+      try {
+        const engine = new SyncEngine(app as any, makeSettings());
+        const result = await engine.syncNoteIds(['pre_proceed']);
+
+        expect(result.total).toBe(1);
+        expect(result.created).toBe(1);
+        expect(result.skipped).toBe(0);
+
+        // 验证创建了新文件
+        expect(app.vault.create).toHaveBeenCalledTimes(1);
+
+        // 验证 recordItem 正确记录了 created 状态
+        expect(result.items).toEqual([
+          expect.objectContaining({
+            noteId: 'pre_proceed',
+            status: 'created',
+          }),
+        ]);
+      } finally {
+        vi.mocked(globalThis.fetch).mockRestore();
+      }
+    });
+
+    it('部分笔记通过预检查、部分未通过时正确混合计数', async () => {
+      const existing = makeNote({
+        note_id: 'existing',
+        title: '已存在',
+        note_type: 'plain_text',
+        updated_at: '2026-04-28T10:00:00+08:00',
+      });
+      const newNote = makeNote({
+        id: 2,
+        note_id: 'new_one',
+        title: '新增',
+        note_type: 'plain_text',
+        updated_at: '2026-04-29T10:00:00+08:00',
+      });
+
+      const app = makeMockApp();
+      app.vault._addFile(
+        'Get笔记/纯文本/已存在.md',
+        '---\nuid: "existing"\nmodified: "2026-04-28 10:00:00"\n---\n已有',
+        { uid: 'existing', modified: '2026-04-28 10:00:00' }
+      );
+      app.vault._addFolder('Get笔记/纯文本');
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        mockFetchResponse({
+          data: { notes: [existing, newNote], has_more: false, next_cursor: '' },
+        }) as Response
+      );
+
+      try {
+        const engine = new SyncEngine(app as any, makeSettings());
+        const result = await engine.syncNoteIds(['existing', 'new_one']);
+
+        expect(result.total).toBe(2);
+        expect(result.skipped).toBe(1);
+        expect(result.created).toBe(1);
+        expect(result.updated).toBe(0);
+        expect(result.failed).toBe(0);
+
+        expect(result.items).toEqual([
+          expect.objectContaining({ noteId: 'existing', status: 'skipped' }),
+          expect.objectContaining({ noteId: 'new_one', status: 'created' }),
+        ]);
+      } finally {
+        vi.mocked(globalThis.fetch).mockRestore();
+      }
+    });
+  });
+
   it('engine.cancel 会停止选择同步的后续笔记处理', async () => {
     const notes = [
       makeNote({ note_id: 'select_1', title: '选择 1' }),
