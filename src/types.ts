@@ -49,6 +49,8 @@ export interface ScheduledSyncSettings {
 export interface Settings {
   apiToken: string;
   clientId: string;
+  webApiToken: string;        // 网页版 JWT token (绕过 OpenAPI 付费限制)
+  webCsrfToken: string;      // 网页版 xi-csrf-token
   folderName: string;
   filenamePrefix: string;
   maxDays: number;
@@ -57,6 +59,8 @@ export interface Settings {
   scheduledSync: ScheduledSyncSettings;
   syncHistory: SyncHistoryEntry[];
 }
+
+export type ApiMode = 'auto' | 'openapi' | 'webapi';
 
 export interface SyncScopeOptions {
   maxDays: number;
@@ -73,6 +77,8 @@ export interface SyncHistoryScope {
 export const DEFAULT_SETTINGS: Settings = {
   apiToken: '',
   clientId: '',
+  webApiToken: '',
+  webCsrfToken: '',
   folderName: 'Get笔记',
   filenamePrefix: '',
   maxDays: 30,
