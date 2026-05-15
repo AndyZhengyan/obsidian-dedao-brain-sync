@@ -83,6 +83,15 @@ class SyncHistoryModal extends Modal {
         return t('syncHistory.mode.time');
       };
 
+      const formatItemCounts = (entry: SyncHistoryEntry): string => {
+        const parts: string[] = [];
+        if (entry.result.created > 0) parts.push(t('syncHistory.items.created', { count: entry.result.created }));
+        if (entry.result.updated > 0) parts.push(t('syncHistory.items.updated', { count: entry.result.updated }));
+        if (entry.result.skipped > 0) parts.push(t('syncHistory.items.skipped', { count: entry.result.skipped }));
+        if (entry.result.failed > 0) parts.push(t('syncHistory.items.failed', { count: entry.result.failed }));
+        return parts.join(' · ');
+      };
+
       const renderMeta = (parent: HTMLElement, label: string, value: string): void => {
         const item = parent.createDiv('getnote-history-meta-item');
         item.createSpan({ cls: 'getnote-history-meta-label', text: label });
@@ -155,9 +164,11 @@ class SyncHistoryModal extends Modal {
       const renderEntry = (entry: SyncHistoryEntry, index: number): void => {
         const entryEl = listEl.createEl('details', { cls: 'getnote-history-entry' });
         entryEl.open = index === 0;
-        entryEl
-          .createEl('summary', { cls: 'getnote-history-header' })
-          .setText(`${formatTime(entry.finishedAt)} · ${formatMode(entry)} · ${formatStatus(entry.status)}`);
+        const headerEl = entryEl
+          .createEl('summary', { cls: 'getnote-history-header' });
+        const countsText = formatItemCounts(entry);
+        headerEl.setText(`${formatTime(entry.finishedAt)} · ${formatMode(entry)} · ${formatStatus(entry.status)}`);
+        headerEl.setAttribute('data-counts', countsText);
 
         const detailEl = entryEl.createDiv('getnote-history-entry-body');
         const metaEl = detailEl.createDiv('getnote-history-meta-grid');
