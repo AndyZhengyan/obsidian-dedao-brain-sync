@@ -2,7 +2,8 @@
 import type { ListResponse, GetNoteNote, Attachment } from './types';
 import { t } from './i18n';
 
-const BASE_URL = 'https://openapi.biji.com/open/api/v1';
+const OPENAPI_BASE = 'https://openapi.biji.com/open/api/v1';
+const WEBAPI_BASE = 'https://get-notes.luojilab.com/voicenotes/web';
 export const GETNOTE_LIST_LIMIT = 20;
 
 function safeJsonParse(text: string): unknown {
@@ -94,6 +95,14 @@ async function apiRequest<T>(
   const text = await res.text();
   const data = safeJsonParse(text) as Record<string, unknown>;
 
+  // Handle OpenAPI paid-only error code 10201 — signals Web API fallback needed
+  if (data.success === false) {
+    const error = data.error as Record<string, unknown> | undefined;
+    if (error?.code === 10201) {
+      throw new Error('OpenAPI_ONLY_MEMBER');
+    }
+  }
+
   // Handle rate limit error code 10202 (qps_bucket_exceeded)
   if (data.success === false) {
     const error = data.error as Record<string, unknown> | undefined;
@@ -121,12 +130,69 @@ export interface FetchNotesOptions {
   signal?: AbortSignal;
 }
 
+// Web API response types
+interface WebApiNoteListResponse {
+  h: { c: number; e: string; s: number; t: number; apm: string };
+  c: {
+    total_items: number;
+    list: WebApiNote[];
+    has_more: boolean;
+    next_cursor: string;
+  };
+}
+
+export interface WebApiNote {
+  id: string;
+  note_id: string;
+  source: string;
+  entry_type: string;
+  note_type: string;
+  title: string;
+  json_content: string;
+  content: string;
+  body_text: string;
+  ref_content: string;
+  topics: unknown[];
+  book_topics: unknown[];
+  tags: { id: string; name: string; type: string; visible: boolean; is_deleted: number; create_time: number; update_time: number; tag_type: string }[];
+  is_ai_generated: boolean;
+  attachments: { type: string; url: string; size: number; title: string; sub_title: string; duration: number; favicon: string }[];
+  edit_time: string;
+  created_at: string;
+  updated_at: string;
+  version: number;
+  status: number;
+  display_status: number;
+  share_scope: number;
+  is_author: boolean;
+}
+
+function webApiNoteToNote(webNote: WebApiNote): GetNoteNote {
+  return {
+    id: parseInt(webNote.note_id, 10),
+    note_id: webNote.note_id,
+    title: webNote.title,
+    content: webNote.content,
+    note_type: webNote.note_type as import('./types').NoteType,
+    source: webNote.source,
+    tags: webNote.tags.map(tag => ({ name: tag.name })),
+    created_at: webNote.created_at,
+    updated_at: webNote.updated_at,
+    attachments: webNote.attachments.map(att => ({
+      type: att.type as 'audio',
+      url: att.url,
+      title: att.title,
+      duration: att.duration,
+    })),
+  };
+}
+
 export async function fetchNotes(options: FetchNotesOptions): Promise<{
   notes: GetNoteNote[];
   hasMore: boolean;
 }> {
   const { token, clientId, sinceId = '0', signal } = options;
-  const url = `${BASE_URL}/resource/note/list?since_id=${sinceId}`;
+  const url = `${OPENAPI_BASE}/resource/note/list?since_id=${sinceId}`;
 
   const data = await apiRequest<ListResponse>(url, {
     method: 'GET',
@@ -142,13 +208,90 @@ export async function fetchNotes(options: FetchNotesOptions): Promise<{
   };
 }
 
+// Web API fetch functions (bypass OpenAPI paid requirement)
+export async function fetchNotesWebApi(
+  webToken: string,
+  csrfToken: string,
+  sinceId: string = '',
+  limit: number = 20,
+  signal?: AbortSignal
+): Promise<{ notes: GetNoteNote[]; hasMore: boolean }> {
+  const url = `${WEBAPI_BASE}/notes?limit=${limit}&since_id=${sinceId}&sort=create_desc`;
+
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${webToken}`,
+      'xi-csrf-token': csrfToken,
+      'x-request-id': String(Date.now()),
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    signal,
+  });
+
+  if (res.status === 401) {
+    throw new Error(t('error.invalidCredentials'));
+  }
+
+  if (res.status < 200 || res.status >= 300) {
+    const text = await res.text();
+    throw new Error(t('error.apiFailed', { status: res.status, msg: text }));
+  }
+
+  const text = await res.text();
+  const json = safeJsonParse(text) as WebApiNoteListResponse;
+
+  return {
+    notes: json.c.list.map(webApiNoteToNote),
+    hasMore: json.c.has_more,
+  };
+}
+
+export async function fetchNoteDetailWebApi(
+  noteId: string,
+  webToken: string,
+  csrfToken: string,
+  signal?: AbortSignal
+): Promise<Partial<GetNoteNote>> {
+  const url = `${WEBAPI_BASE}/notes/${noteId}`;
+
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${webToken}`,
+      'xi-csrf-token': csrfToken,
+      'x-request-id': String(Date.now()),
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    signal,
+  });
+
+  if (res.status === 401) {
+    throw new Error(t('error.invalidCredentials'));
+  }
+
+  if (res.status < 200 || res.status >= 300) {
+    const text = await res.text();
+    throw new Error(t('error.apiFailed', { status: res.status, msg: text }));
+  }
+
+  const text = await res.text();
+  const json = safeJsonParse(text) as WebApiNoteListResponse;
+  const note = json.c.list[0];
+  if (!note) throw new Error('Note not found');
+
+  return webApiNoteToNote(note);
+}
+
 export async function fetchNoteDetail(
   id: string,
   token: string,
   clientId: string,
   signal?: AbortSignal
 ): Promise<Partial<GetNoteNote>> {
-  const url = `${BASE_URL}/resource/note/detail?id=${id}`;
+  const url = `${OPENAPI_BASE}/resource/note/detail?id=${id}`;
   const data = await apiRequest<{
     success: boolean;
     data?: unknown;
@@ -190,7 +333,7 @@ export async function fetchOAuthDeviceCode(
 ): Promise<OAuthDeviceCodeResponse> {
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
 
-  const res = await fetch(`${BASE_URL}/oauth/device/code`, {
+  const res = await fetch(`${OPENAPI_BASE}/oauth/device/code`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ client_id: 'cli_a1b2c3d4e5f6789012345678abcdef90' }),
@@ -264,7 +407,7 @@ export async function pollOAuthToken(
   for (let i = 0; i < maxAttempts; i++) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
 
-    const res = await fetch(`${BASE_URL}/oauth/token`, {
+    const res = await fetch(`${OPENAPI_BASE}/oauth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -335,4 +478,47 @@ export async function* fetchAllNotes(
     if (!hasMore || notes.length === 0) break;
     cursor = notes[notes.length - 1].note_id;
   }
+}
+
+// Web API async generator for fetching all notes
+export async function* fetchAllNotesWebApi(
+  webToken: string,
+  csrfToken: string,
+  signal?: AbortSignal,
+  startCursor?: string | null
+): AsyncGenerator<GetNoteNote[]> {
+  let cursor = startCursor ?? '';
+
+  while (true) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    const { notes, hasMore } = await fetchNotesWebApi(webToken, csrfToken, cursor, 20, signal);
+
+    if (notes && notes.length > 0) {
+      yield notes;
+    }
+
+    if (!hasMore || notes.length === 0) break;
+    cursor = notes[notes.length - 1].note_id;
+  }
+}
+
+// Check if error is OpenAPI member-only error (code: 10201)
+export function isMemberOnlyError(err: unknown): boolean {
+  if (err instanceof Error) {
+    return err.message.includes('OpenAPI_ONLY_MEMBER') || err.message.includes('10201');
+  }
+  return false;
+}
+
+// Determine which API mode to use based on available credentials
+export type EffectiveApiMode = 'openapi' | 'webapi';
+
+export function getEffectiveApiMode(settings: { apiToken: string; clientId: string; webApiToken: string }): EffectiveApiMode {
+  if (settings.apiToken && settings.clientId) {
+    return 'openapi';
+  }
+  if (settings.webApiToken) {
+    return 'webapi';
+  }
+  return 'openapi'; // fallback (will fail if credentials missing)
 }
