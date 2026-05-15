@@ -170,6 +170,14 @@ export const translations: Record<string, Record<string, string>> = {
 
     // === Notices ===
     'sync.autoSwitchToWebApi': '检测到会员专属笔记，正在切换到网页 API...',
+    'settings.webApi.title': '网页版 API（免费用户）',
+    'settings.webApi.desc': '在 Chrome 中打开 biji.com 并登录，按 F12 打开开发者工具 → Network 标签，刷新页面后复制以下两个值：',
+    'settings.webApi.tokenPlaceholder': 'Authorization: Bearer xxx',
+    'settings.webApi.csrfPlaceholder': 'xi-csrf-token: xxx',
+    'settings.webApi.save': '保存并测试连接',
+    'settings.webApi.hint': '⚠️ Token 有效期约 8 天，过期后需重新从 DevTools 复制',
+    'settings.webApi.success': '连接成功',
+    'settings.webApi.error': '连接失败',
     'sync.started': 'Get笔记同步开始...',
     'sync.autoComplete': '自动同步完成：新增 {created} 更新 {updated}',
     'sync.autoFailRepeated': '自动同步连续失败 {count} 次，请检查设置',
@@ -371,6 +379,14 @@ export const translations: Record<string, Record<string, string>> = {
 
     // === Notices ===
     'sync.autoSwitchToWebApi': 'Member-only notes detected, switching to Web API...',
+    'settings.webApi.title': 'Web API (Free Users)',
+    'settings.webApi.desc': 'Configure web API token for free users. Open Chrome DevTools (F12) → Network tab after logging into biji.com to find the token.',
+    'settings.webApi.tokenPlaceholder': 'Authorization: Bearer xxx',
+    'settings.webApi.csrfPlaceholder': 'xi-csrf-token: xxx',
+    'settings.webApi.save': 'Save & Test Connection',
+    'settings.webApi.hint': '⚠️ Token expires in ~8 days. Re-copy from DevTools when expired.',
+    'settings.webApi.success': 'Connection successful',
+    'settings.webApi.error': 'Connection failed',
     'sync.started': 'GetNote sync started...',
     'sync.autoComplete': 'Auto sync complete: {created} created {updated} updated',
     'sync.autoFailRepeated': 'Auto sync failed {count} times, please check settings',

@@ -5,7 +5,7 @@ import { OAuthButton } from './oauth-button';
 import { openSyncHistoryModal } from '../ui/sync-history-modal';
 import type { Settings, SyncHistoryEntry, SyncProgressDetail } from '../types';
 import { App, AbstractInputSuggest } from 'obsidian';
-import { fetchNotes } from '../api';
+import { fetchNotes, fetchNotesWebApi } from '../api';
 import { t } from '../i18n';
 
 const GITHUB_URL = 'https://github.com/AndyZhengyan/obsidian-getnote-importer#about-the-author';
@@ -78,6 +78,10 @@ export function SettingsComponent({
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [connectionErrorMsg, setConnectionErrorMsg] = useState('');
   const [intervalWarning, setIntervalWarning] = useState(false);
+  const [webApiToken, setWebApiToken] = useState(settings.webApiToken);
+  const [webCsrfToken, setWebCsrfToken] = useState(settings.webCsrfToken);
+  const [webApiTestStatus, setWebApiTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [webApiTestError, setWebApiTestError] = useState('');
 
   const folderInputRef = useRef<HTMLInputElement>(null);
 
@@ -118,6 +122,30 @@ export function SettingsComponent({
     },
     [updateSetting]
   );
+
+  const handleWebApiTokenChange = useCallback((value: string) => {
+    setWebApiToken(value.trim());
+    updateSetting('webApiToken', value.trim());
+  }, [updateSetting]);
+
+  const handleWebCsrfTokenChange = useCallback((value: string) => {
+    setWebCsrfToken(value.trim());
+    updateSetting('webCsrfToken', value.trim());
+  }, [updateSetting]);
+
+  const handleTestWebApi = async () => {
+    if (!webApiToken || !webCsrfToken) return;
+    setWebApiTestStatus('idle');
+    setWebApiTestError('');
+    try {
+      await fetchNotesWebApi(webApiToken, webCsrfToken, '', 1);
+      setWebApiTestStatus('success');
+      window.setTimeout(() => setWebApiTestStatus('idle'), 3000);
+    } catch (err) {
+      setWebApiTestStatus('error');
+      setWebApiTestError(err instanceof Error ? err.message : String(err));
+    }
+  };
 
   const handleFolderChange = useCallback(
     (value: string) => {
@@ -286,6 +314,47 @@ export function SettingsComponent({
               {t('settings.connectionError')}{connectionErrorMsg ? `: ${connectionErrorMsg}` : ''}
             </span>
           )}
+        </div>
+      </SettingItem>
+
+      {/* 免费用户网页 API 配置 */}
+      <SettingItem
+        name={t('settings.webApi.title')}
+        description={t('settings.webApi.desc')}
+      >
+        <div className="getnote-webapi-config">
+          <div className="getnote-webapi-hint">{t('settings.webApi.desc')}</div>
+          <input
+            type="text"
+            className="getnote-input"
+            placeholder={t('settings.webApi.tokenPlaceholder')}
+            value={webApiToken}
+            onInput={(e) => handleWebApiTokenChange((e.target as HTMLInputElement).value)}
+          />
+          <input
+            type="text"
+            className="getnote-input"
+            placeholder={t('settings.webApi.csrfPlaceholder')}
+            value={webCsrfToken}
+            onInput={(e) => handleWebCsrfTokenChange((e.target as HTMLInputElement).value)}
+          />
+          <div className="getnote-webapi-actions">
+            <button
+              className="mod-cta"
+              onClick={() => { void handleTestWebApi(); }}
+            >
+              {t('settings.webApi.save')}
+            </button>
+          </div>
+          {webApiTestStatus === 'success' && (
+            <span className="getnote-connection-success">{t('settings.webApi.success')}</span>
+          )}
+          {webApiTestStatus === 'error' && (
+            <span className="getnote-connection-error">
+              {t('settings.webApi.error')}: {webApiTestError}
+            </span>
+          )}
+          <div className="getnote-input-hint">{t('settings.webApi.hint')}</div>
         </div>
       </SettingItem>
 
