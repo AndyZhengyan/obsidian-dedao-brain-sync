@@ -268,7 +268,7 @@ describe('t() - New settings keys', () => {
   });
 
   it('settings.onboarding', () => {
-    expect(i18n.t('settings.onboarding')).toBe('👋 欢迎使用！请先选择认证方式并填写凭证，然后点击同步。OpenAPI 适合 PRO 用户，网页模式可手动粘贴网页版 Token。');
+    expect(i18n.t('settings.onboarding')).toBe('👋 欢迎使用！请先选择认证方式并填写凭证，然后点击同步。');
   });
 
   it('settings.lastSync.result with vars', () => {
@@ -283,7 +283,7 @@ describe('t() - New settings keys', () => {
     expect(i18n.t('settings.maxDays.hint')).toBe('0 = no limit');
     expect(i18n.t('settings.interval.hint')).toBe('Minimum 5 minutes');
     expect(i18n.t('settings.lastSync.never')).toBe('Never synced');
-    expect(i18n.t('settings.onboarding')).toBe('👋 Welcome! Choose an authentication mode and enter credentials first. OpenAPI is for PRO users; Web mode accepts a manually copied web token.');
+    expect(i18n.t('settings.onboarding')).toBe('👋 Welcome! Choose an authentication mode and enter credentials first.');
   });
 });
 

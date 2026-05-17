@@ -355,13 +355,14 @@ export class SyncEngine {
     }
 
     try {
+      // For Web API, use prime_id (not id/note_id) for the detail URL
+      const detailId = (note as { prime_id?: string }).prime_id ?? note.note_id;
       const noteDetail = await fetchNoteDetail(
-        note.note_id,
+        detailId,
         this.settings.apiToken,
         this.settings.clientId,
         signal,
-        this.settings.authMode,
-        this.settings.webCsrfToken
+        this.settings.authMode
       );
       const enrichedNote: GetNoteNote = {
         ...note,
@@ -446,7 +447,7 @@ export class SyncEngine {
     modal?.setOnCancel(cleanup);
 
     try {
-      for await (const notes of fetchAllNotes(this.settings.apiToken, this.settings.clientId, controller.signal, null, this.settings.authMode, this.settings.webCsrfToken)) {
+      for await (const notes of fetchAllNotes(this.settings.apiToken, this.settings.clientId, controller.signal, null, this.settings.authMode)) {
         if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
         pageCount++;
         this.onProgress?.({ page: pageCount, percent: 0 });
@@ -531,7 +532,7 @@ export class SyncEngine {
     modal?.setOnCancel(cleanup);
 
     try {
-      for await (const batch of fetchAllNotes(this.settings.apiToken, this.settings.clientId, controller.signal, null, this.settings.authMode, this.settings.webCsrfToken)) {
+      for await (const batch of fetchAllNotes(this.settings.apiToken, this.settings.clientId, controller.signal, null, this.settings.authMode)) {
         if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
 
         const matched = batch.filter(n => idSet.has(n.note_id));

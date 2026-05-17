@@ -204,9 +204,9 @@ describe('fetchNotes limit', () => {
 });
 
 describe('web auth mode', () => {
-  it('requests the web notes endpoint with bearer and csrf headers', async () => {
+  it('requests the web notes endpoint with bearer and x-request-id headers', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      mockFetchResponse({ data: { notes: [], has_more: false } }) as Response
+      mockFetchResponse({ h: {}, c: { list: [], has_more: false } }) as Response
     );
 
     try {
@@ -214,7 +214,6 @@ describe('web auth mode', () => {
         token: 'web-token',
         clientId: '',
         authMode: 'web',
-        webCsrfToken: 'csrf-token',
         sinceId: '0',
         limit: 10,
       });
@@ -225,7 +224,6 @@ describe('web auth mode', () => {
           method: 'GET',
           headers: expect.objectContaining({
             Authorization: 'Bearer web-token',
-            'xi-csrf-token': 'csrf-token',
             'x-request-id': expect.any(String),
           }),
         })
@@ -235,9 +233,9 @@ describe('web auth mode', () => {
     }
   });
 
-  it('keeps an existing Bearer prefix and reads flat web list data', async () => {
+  it('reads web API list format { h, c: { list, has_more } }', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      mockFetchResponse({ notes: [{ note_id: 'n1', id: 'n1' }], has_more: true }) as Response
+      mockFetchResponse({ h: {}, c: { list: [{ note_id: 'n1', id: 'n1' }], has_more: true } }) as Response
     );
 
     try {
@@ -264,7 +262,8 @@ describe('web auth mode', () => {
   it('fetches note detail from the web detail endpoint', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       mockFetchResponse({
-        data: {
+        h: {},
+        c: {
           id: '1909428570156704824',
           note_id: '1909428570156704824',
           title: '网页模式详情',

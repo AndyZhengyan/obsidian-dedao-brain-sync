@@ -4,6 +4,7 @@ import { t } from '../i18n';
 
 interface OAuthButtonProps {
   onAuthorize: (apiToken: string, clientId: string) => void;
+  onTestConnection: (apiToken: string, clientId: string) => Promise<{ isMemberError: boolean; message: string }>;
 }
 
 type OAuthStep = 'idle' | 'opening' | 'code' | 'polling' | 'success' | 'error';
@@ -88,10 +89,22 @@ export function OAuthButton({ onAuthorize }: OAuthButtonProps) {
       setIsPolling(true);
       const token = await pollOAuthToken(dc.code, dc.interval, controller.signal);
       setIsPolling(false);
-      setStep('success');
-      // Save credentials immediately
+
+      // Step 3: save credentials
       onAuthorize(token.api_key, token.client_id);
-      window.setTimeout(() => setStep('idle'), 3000);
+
+      // Step 4: test connection
+      setStep('polling');
+      const testResult = await onTestConnection(token.api_key, token.client_id);
+
+      if (testResult.isMemberError) {
+        // 10201: not a member, switch to web auth mode
+        setStep('success');
+        window.setTimeout(() => setStep('idle'), 4000);
+      } else {
+        setStep('success');
+        window.setTimeout(() => setStep('idle'), 3000);
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         setStep('idle');

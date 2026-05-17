@@ -1,10 +1,64 @@
-// No import needed - using native fetch
-import type { ListResponse, GetNoteNote, Attachment, AuthMode } from './types';
+// Central API entry point - delegates to client implementations based on authMode
+import { fetchNotes as openapiFetchNotes, fetchNoteDetail as openapiFetchNoteDetail } from './api-clients/openapi-client';
+import { fetchNotes as webapiFetchNotes, fetchNoteDetail as webapiFetchNoteDetail } from './api-clients/webapi-client';
+import type { GetNoteNote, AuthMode } from './types';
 import { t } from './i18n';
 
-const BASE_URL = 'https://openapi.biji.com/open/api/v1';
-const WEB_BASE_URL = 'https://get-notes.luojilab.com/voicenotes/web';
 export const GETNOTE_LIST_LIMIT = 20;
+
+export interface FetchNotesOptions {
+  token: string;
+  clientId: string;
+  sinceId?: string;
+  limit?: number;
+  signal?: AbortSignal;
+  authMode?: AuthMode;
+}
+
+export async function fetchNotes(options: FetchNotesOptions): Promise<{
+  notes: GetNoteNote[];
+  hasMore: boolean;
+}> {
+  const { token, clientId, authMode } = options;
+  if (authMode === 'web') {
+    return webapiFetchNotes({ token, sinceId: options.sinceId, limit: options.limit, signal: options.signal });
+  }
+  return openapiFetchNotes({ token, clientId, sinceId: options.sinceId, limit: options.limit, signal: options.signal });
+}
+
+export async function fetchNoteDetail(
+  id: string,
+  token: string,
+  clientId: string,
+  signal?: AbortSignal,
+  authMode?: AuthMode,
+  _csrfToken?: string // kept for API compatibility, unused
+): Promise<Partial<GetNoteNote>> {
+  if (authMode === 'web') {
+    return webapiFetchNoteDetail(id, token, signal);
+  }
+  return openapiFetchNoteDetail(id, token, clientId, signal);
+}
+
+export async function* fetchAllNotes(
+  token: string,
+  clientId: string,
+  signal?: AbortSignal,
+  startCursor?: string | null,
+  authMode?: AuthMode,
+  _csrfToken?: string
+): AsyncGenerator<GetNoteNote[]> {
+  let cursor = startCursor && startCursor !== '0' ? startCursor : '0';
+  while (true) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    const { notes, hasMore } = await fetchNotes({ token, clientId, sinceId: cursor, signal, authMode });
+    if (notes.length > 0) yield notes;
+    if (!hasMore || notes.length === 0) break;
+    cursor = notes[notes.length - 1].note_id;
+  }
+}
+
+// === OAuth functions (OpenAPI only) ===
 
 function safeJsonParse(text: string): unknown {
   const safe = text.replace(
@@ -14,214 +68,7 @@ function safeJsonParse(text: string): unknown {
   return JSON.parse(safe);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-
-function normalizeAuthMode(authMode?: AuthMode): AuthMode {
-  return authMode === 'web' ? 'web' : 'openapi';
-}
-
-function normalizeBearerToken(token: string): string {
-  const trimmed = token.trim();
-  return /^Bearer\s+/i.test(trimmed) ? trimmed : `Bearer ${trimmed}`;
-}
-
-function buildAuthHeaders(token: string, clientId: string, authMode?: AuthMode, webCsrfToken?: string): Record<string, string> {
-  if (normalizeAuthMode(authMode) === 'web') {
-    const headers: Record<string, string> = {
-      Authorization: normalizeBearerToken(token),
-      'x-request-id': String(Date.now()),
-    };
-    const csrf = webCsrfToken?.trim();
-    if (csrf) headers['xi-csrf-token'] = csrf;
-    return headers;
-  }
-
-  return {
-    Authorization: normalizeBearerToken(token),
-    'X-Client-ID': clientId,
-  };
-}
-
-function normalizeListData(value: unknown): { notes: GetNoteNote[]; hasMore: boolean } {
-  if (!isRecord(value)) return { notes: [], hasMore: false };
-
-  const data = isRecord(value.data) ? value.data : value;
-  const notes = Array.isArray(data.notes) ? data.notes as GetNoteNote[] : [];
-  const hasMore = Boolean(data.has_more ?? data.hasMore);
-
-  return { notes, hasMore };
-}
-
-function normalizeAudio(value: unknown): string | undefined {
-  if (typeof value === 'string') return value;
-  if (!isRecord(value)) return undefined;
-
-  const original = value.original;
-  if (typeof original === 'string') return original;
-
-  const firstTextValue = Object.values(value).find((item): item is string => typeof item === 'string');
-  return firstTextValue;
-}
-
-function normalizeNoteDetailData(value: unknown): Partial<GetNoteNote> | null {
-  if (!isRecord(value)) return null;
-
-  const nestedNote = isRecord(value.note) ? value.note : null;
-  const source = nestedNote ?? value;
-  const detail = { ...source } as Partial<GetNoteNote>;
-
-  const attachments = (value.attachments ?? source.attachments) as Attachment[] | undefined;
-  const audio = normalizeAudio(value.audio ?? source.audio);
-
-  return {
-    ...detail,
-    attachments,
-    audio,
-  };
-}
-
-async function apiRequest<T>(
-  url: string,
-  options: RequestInit,
-  retries = 1,
-  signal?: AbortSignal
-): Promise<T> {
-  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-
-  const res = await fetch(url, {
-    ...options,
-    signal,
-  });
-
-  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-
-  if (res.status === 401) {
-    throw new Error(t('error.invalidCredentials'));
-  }
-
-  if (res.status === 429) {
-    const retryAfter = res.headers.get('Retry-After');
-    const limitRemaining = res.headers.get('X-RateLimit-Remaining');
-
-    if ((limitRemaining === '0' || !retryAfter) && retries > 0) {
-      throw new Error(t('error.quotaExceeded'));
-    }
-
-    if (retryAfter) {
-      const baseDelay = parseInt(retryAfter, 10);
-      const delay = Math.min(baseDelay, 60) * 1000;
-      await new Promise((r, reject) => {
-        const timer = window.setTimeout(() => r(undefined), delay);
-        signal?.addEventListener('abort', () => { window.clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); });
-      });
-      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-      return apiRequest(url, options, retries - 1, signal);
-    }
-
-    throw new Error(t('error.apiFailed', { status: 429, msg: 'Rate limit exceeded' }));
-  }
-
-  if (res.status < 200 || res.status >= 300) {
-    const text = await res.text();
-    throw new Error(t('error.apiFailed', { status: res.status, msg: text }));
-  }
-
-  const text = await res.text();
-  const data = safeJsonParse(text) as Record<string, unknown>;
-
-  // Handle rate limit error code 10202 (qps_bucket_exceeded)
-  if (data.success === false) {
-    const error = data.error as Record<string, unknown> | undefined;
-    if (error?.code === 10202) {
-      if (retries > 0) {
-        await new Promise((r, reject) => {
-          const timer = window.setTimeout(() => r(undefined), 3000);
-          signal?.addEventListener('abort', () => { window.clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); });
-        });
-        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-        return apiRequest(url, options, retries - 1, signal);
-      }
-      throw new Error(t('error.apiFailed', { status: 429, msg: '请求频率超限' }));
-    }
-  }
-
-  return data as T;
-}
-
-export interface FetchNotesOptions {
-  token: string;
-  clientId: string;
-  sinceId?: string;
-  limit?: number;
-  signal?: AbortSignal;
-  authMode?: AuthMode;
-  webCsrfToken?: string;
-}
-
-export async function fetchNotes(options: FetchNotesOptions): Promise<{
-  notes: GetNoteNote[];
-  hasMore: boolean;
-}> {
-  const { token, clientId, sinceId = '0', limit, signal, authMode, webCsrfToken } = options;
-  const mode = normalizeAuthMode(authMode);
-  const params = new URLSearchParams();
-  let url: string;
-
-  if (mode === 'web') {
-    params.set('limit', String(limit ?? GETNOTE_LIST_LIMIT));
-    params.set('since_id', sinceId === '0' ? '' : sinceId);
-    params.set('sort', 'create_desc');
-    url = `${WEB_BASE_URL}/notes?${params.toString()}`;
-  } else {
-    params.set('since_id', sinceId);
-    url = `${BASE_URL}/resource/note/list?${params.toString()}`;
-  }
-
-  const data = await apiRequest<ListResponse>(url, {
-    method: 'GET',
-    headers: buildAuthHeaders(token, clientId, mode, webCsrfToken),
-  }, 3, signal);
-
-  return normalizeListData(data);
-}
-
-export async function fetchNoteDetail(
-  id: string,
-  token: string,
-  clientId: string,
-  signal?: AbortSignal,
-  authMode?: AuthMode,
-  webCsrfToken?: string
-): Promise<Partial<GetNoteNote>> {
-  const mode = normalizeAuthMode(authMode);
-  const url = mode === 'web'
-    ? `${WEB_BASE_URL}/notes/${encodeURIComponent(id)}`
-    : `${BASE_URL}/resource/note/detail?id=${encodeURIComponent(id)}`;
-  const data = await apiRequest<{
-    success?: boolean;
-    data?: unknown;
-    error?: { message: string };
-  }>(url, {
-    method: 'GET',
-    headers: buildAuthHeaders(token, clientId, mode, webCsrfToken),
-  }, 2, signal);
-
-  const detailData = mode === 'web' ? data.data ?? data : data.data;
-
-  if (data.success === false || !detailData) {
-    throw new Error(data.error?.message ?? 'Failed to fetch note detail');
-  }
-
-  const noteDetail = normalizeNoteDetailData(detailData);
-  if (!noteDetail) {
-    throw new Error('Failed to parse note detail');
-  }
-
-  return noteDetail;
-}
+const BASE_URL = 'https://openapi.biji.com/open/api/v1';
 
 export interface OAuthDeviceCodeResponse {
   verification_uri: string;
@@ -235,39 +82,28 @@ export interface OAuthTokenResponse {
   client_id: string;
 }
 
-export async function fetchOAuthDeviceCode(
-  signal?: AbortSignal
-): Promise<OAuthDeviceCodeResponse> {
+export async function fetchOAuthDeviceCode(signal?: AbortSignal): Promise<OAuthDeviceCodeResponse> {
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-
   const res = await fetch(`${BASE_URL}/oauth/device/code`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ client_id: 'cli_a1b2c3d4e5f6789012345678abcdef90' }),
     signal,
   });
-
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-
   if (res.status < 200 || res.status >= 300) {
     const text = await res.text();
     throw new Error(t('error.oauthDeviceCodeFailed', { status: res.status, msg: text }));
   }
-
   const text = await res.text();
   const json = safeJsonParse(text) as Record<string, unknown>;
-
-  // Support both { success, data } wrapper and flat response
   const source = (json.data ?? json) as Record<string, unknown>;
-
   if (json.success === false) {
     throw new Error(t('error.oauthDeviceCodeFailed', { status: res.status, msg: (json.message as string) ?? 'unknown' }));
   }
-
   if (!source.code && !source.verification_uri) {
     throw new Error(t('error.oauthDeviceCodeFailed', { status: res.status, msg: (json.message as string) ?? 'unknown' }));
   }
-
   return {
     verification_uri: source.verification_uri as string,
     user_code: source.user_code as string,
@@ -277,56 +113,30 @@ export async function fetchOAuthDeviceCode(
 }
 
 function parseOAuthTokenResponse(json: Record<string, unknown>): { status: number; message: string; apiKey: string; clientId: string; isSuccess: boolean } {
-  // The API returns { success: true, data: { ... }, error, meta, request_id }
   const inner = (json.data ?? json) as Record<string, unknown>;
-
-  // Check for pending/expired messages in data.msg
   const dataMsg = inner.msg as string | undefined;
-
-  if (dataMsg === 'authorization_pending') {
-    return { status: 10012, message: '', apiKey: '', clientId: '', isSuccess: false };
-  }
-
-  if (dataMsg === 'expired_token') {
-    return { status: 10013, message: t('error.oauthExpired'), apiKey: '', clientId: '', isSuccess: false };
-  }
-
-  // Check for credentials in either inner (from data: { ... }) or flat
+  if (dataMsg === 'authorization_pending') return { status: 10012, message: '', apiKey: '', clientId: '', isSuccess: false };
+  if (dataMsg === 'expired_token') return { status: 10013, message: t('error.oauthExpired'), apiKey: '', clientId: '', isSuccess: false };
+  if (dataMsg === 'rejected') return { status: 10014, message: t('error.oauthRejected'), apiKey: '', clientId: '', isSuccess: false };
   const apiKey = (inner.api_key as string) ?? (inner.apiKey as string) ?? (json.api_key as string) ?? '';
   const clientId = (inner.client_id as string) ?? (inner.clientId as string) ?? (json.client_id as string) ?? '';
   const message = (json.message as string) ?? (inner.message as string) ?? '';
-
-  if (apiKey && clientId) {
-    return { status: 0, message: '', apiKey, clientId, isSuccess: true };
-  }
-
-  // Unknown state
+  if (apiKey && clientId) return { status: 0, message: '', apiKey, clientId, isSuccess: true };
   const status = json.status as number | undefined ?? -1;
   return { status, message, apiKey: '', clientId: '', isSuccess: false };
 }
 
-export async function pollOAuthToken(
-  code: string,
-  interval: number,
-  signal?: AbortSignal
-): Promise<OAuthTokenResponse> {
+export async function pollOAuthToken(code: string, interval: number, signal?: AbortSignal): Promise<OAuthTokenResponse> {
   const maxAttempts = 60;
   for (let i = 0; i < maxAttempts; i++) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-
     const res = await fetch(`${BASE_URL}/oauth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        grant_type: 'device_code',
-        client_id: 'cli_a1b2c3d4e5f6789012345678abcdef90',
-        code,
-      }),
+      body: JSON.stringify({ grant_type: 'device_code', client_id: 'cli_a1b2c3d4e5f6789012345678abcdef90', code }),
       signal,
     });
-
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-
     if (res.status < 200 || res.status >= 300) {
       const text = await res.text();
       throw new Error(t('error.apiFailed', { status: res.status, msg: text }));
@@ -334,59 +144,18 @@ export async function pollOAuthToken(
     const text = await res.text();
     const json = safeJsonParse(text) as Record<string, unknown>;
     const parsed = parseOAuthTokenResponse(json);
-
-    if (parsed.isSuccess) {
-      return { api_key: parsed.apiKey, client_id: parsed.clientId };
-    }
-
+    if (parsed.isSuccess) return { api_key: parsed.apiKey, client_id: parsed.clientId };
     if (parsed.status === 10012) {
-      // still pending, wait interval seconds
       await new Promise<void>((resolve, reject) => {
-        const t = window.setTimeout(() => resolve(), interval * 1000);
-        signal?.addEventListener('abort', () => { window.clearTimeout(t); reject(new DOMException('Aborted', 'AbortError')); });
+        const timer = window.setTimeout(() => resolve(), interval * 1000);
+        signal?.addEventListener('abort', () => { window.clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); });
       });
       continue;
     }
-
-    if (parsed.status === 10013) {
-      throw new Error(t('error.oauthExpired'));
-    }
-
+    if (parsed.status === 10013) throw new Error(t('error.oauthExpired'));
+    if (parsed.status === 10014) throw new Error(t('error.oauthRejected'));
     const rawMsg = JSON.stringify(json).slice(0, 200);
-    throw new Error(
-      (parsed.message ? parsed.message + ' ' : '') + t('error.oauthUnknown', { status: parsed.status }) + ` (${rawMsg})`
-    );
+    throw new Error((parsed.message ? parsed.message + ' ' : '') + t('error.oauthUnknown', { status: parsed.status }) + ` (${rawMsg})`);
   }
-
   throw new Error(t('error.oauthTimeout'));
-}
-
-export async function* fetchAllNotes(
-  token: string,
-  clientId: string,
-  signal?: AbortSignal,
-  startCursor?: string | null,
-  authMode?: AuthMode,
-  webCsrfToken?: string
-): AsyncGenerator<GetNoteNote[]> {
-  let cursor = startCursor && startCursor !== '0' ? startCursor : '0';
-
-  while (true) {
-    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-    const { notes, hasMore } = await fetchNotes({
-      token,
-      clientId,
-      sinceId: cursor,
-      signal,
-      authMode,
-      webCsrfToken,
-    });
-
-    if (notes && notes.length > 0) {
-      yield notes;
-    }
-
-    if (!hasMore || notes.length === 0) break;
-    cursor = notes[notes.length - 1].note_id;
-  }
 }

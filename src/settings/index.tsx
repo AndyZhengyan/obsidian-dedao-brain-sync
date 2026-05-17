@@ -67,9 +67,9 @@ export function SettingsComponent({
   syncHistory = [],
 }: SettingsComponentProps) {
   const [authMode, setAuthMode] = useState<AuthMode>(settings.authMode);
-  const [apiToken, setApiToken] = useState(settings.apiToken);
-  const [clientId, setClientId] = useState(settings.clientId);
-  const [webCsrfToken, setWebCsrfToken] = useState(settings.webCsrfToken);
+  const [apiTokenOpenapi, setApiTokenOpenapi] = useState(settings.apiToken);
+  const [clientIdOpenapi, setClientIdOpenapi] = useState(settings.clientId);
+  const [apiTokenWeb, setApiTokenWeb] = useState(settings.apiToken);
   const [showApiToken, setShowApiToken] = useState(false);
   const [folderName, setFolderName] = useState(settings.folderName);
   const [filenamePrefix, setFilenamePrefix] = useState(settings.filenamePrefix);
@@ -79,6 +79,7 @@ export function SettingsComponent({
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [connectionErrorMsg, setConnectionErrorMsg] = useState('');
+  const [connectionExpiryMin, setConnectionExpiryMin] = useState<number | null>(null);
   const [intervalWarning, setIntervalWarning] = useState(false);
 
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -113,26 +114,26 @@ export function SettingsComponent({
     [updateSetting]
   );
 
-  const handleApiTokenChange = useCallback(
+  const handleApiTokenOpenapiChange = useCallback(
     (value: string) => {
-      setApiToken(value);
+      setApiTokenOpenapi(value);
       updateSetting('apiToken', value.trim());
     },
     [updateSetting]
   );
 
-  const handleClientIdChange = useCallback(
+  const handleClientIdOpenapiChange = useCallback(
     (value: string) => {
-      setClientId(value);
+      setClientIdOpenapi(value);
       updateSetting('clientId', value.trim());
     },
     [updateSetting]
   );
 
-  const handleWebCsrfTokenChange = useCallback(
+  const handleApiTokenWebChange = useCallback(
     (value: string) => {
-      setWebCsrfToken(value);
-      updateSetting('webCsrfToken', value.trim());
+      setApiTokenWeb(value);
+      updateSetting('apiToken', value.trim());
     },
     [updateSetting]
   );
@@ -193,32 +194,44 @@ export function SettingsComponent({
     setTestingConnection(true);
     setConnectionStatus('idle');
     setConnectionErrorMsg('');
+    setConnectionExpiryMin(null);
+    const token = authMode === 'web' ? apiTokenWeb.trim() : apiTokenOpenapi.trim();
+    const cid = authMode === 'web' ? '' : clientIdOpenapi.trim();
     try {
       await fetchNotes({
-        token: apiToken.trim(),
-        clientId: clientId.trim(),
+        token,
+        clientId: cid,
         authMode,
-        webCsrfToken: webCsrfToken.trim(),
         sinceId: '0',
         limit: 1,
       });
+      if (authMode === 'web') {
+        try {
+          const tokenStr = token.replace(/^Bearer\s+/i, '');
+          const payload = JSON.parse(atob(tokenStr.split('.')[1]));
+          if (payload.exp) {
+            const remaining = Math.round((payload.exp - Date.now() / 1000) / 60);
+            if (remaining > 0) setConnectionExpiryMin(remaining);
+          }
+        } catch { /* ignore */ }
+      }
       setConnectionStatus('success');
-      window.setTimeout(() => setConnectionStatus('idle'), 3000);
+      window.setTimeout(() => { setConnectionStatus('idle'); setConnectionExpiryMin(null); }, 4000);
     } catch (err) {
       setConnectionStatus('error');
       setConnectionErrorMsg(err instanceof Error ? err.message : String(err));
-      window.setTimeout(() => {
-        setConnectionStatus('idle');
-        setConnectionErrorMsg('');
-      }, 3000);
+      window.setTimeout(() => { setConnectionStatus('idle'); setConnectionErrorMsg(''); }, 4000);
     } finally {
       setTestingConnection(false);
     }
   };
 
+  const currentApiToken = authMode === 'web' ? apiTokenWeb : apiTokenOpenapi;
+  const currentClientId = clientIdOpenapi;
+
   const hasCredentials = authMode === 'web'
-    ? Boolean(apiToken.trim())
-    : Boolean(apiToken.trim() && clientId.trim());
+    ? Boolean(apiTokenWeb.trim())
+    : Boolean(apiTokenOpenapi.trim() && clientIdOpenapi.trim());
   const { scheduledSync } = settings;
   const currentSyncHistory = syncHistory.length > 0 ? syncHistory : settings.syncHistory;
 
@@ -250,9 +263,7 @@ export function SettingsComponent({
         </p>
       </div>
 
-      {!hasCredentials && (
-        <div className="getnote-onboarding">{t('settings.onboarding')}</div>
-      )}
+      <div className="getnote-onboarding">{t('settings.onboarding')}</div>
 
       {/* 凭证设置 */}
       <SettingItem
@@ -261,58 +272,103 @@ export function SettingsComponent({
       >
         <div className="getnote-credentials-control">
           <div className="getnote-primary-input-stack">
-            <select
-              className="getnote-input"
-              value={authMode}
-              onChange={(e) => handleAuthModeChange((e.target as HTMLSelectElement).value as AuthMode)}
-            >
-              <option value="openapi">{t('settings.authMode.openapi')}</option>
-              <option value="web">{t('settings.authMode.web')}</option>
-            </select>
-            {authMode !== 'web' && (
-              <input
-                type="text"
-                className="getnote-input"
-                placeholder={t('settings.clientId.placeholder')}
-                value={clientId}
-                onInput={(e) => handleClientIdChange((e.target as HTMLInputElement).value)}
-              />
-            )}
-            <div className="getnote-input-row">
-              <input
-                type={showApiToken ? 'text' : 'password'}
-                className="getnote-input"
-                placeholder={authMode === 'web' ? t('settings.webToken.placeholder') : t('settings.apiToken.placeholder')}
-                value={apiToken}
-                onInput={(e) => handleApiTokenChange((e.target as HTMLInputElement).value)}
-              />
-              <button
-                type="button"
-                className="getnote-input-toggle"
-                onClick={() => setShowApiToken(!showApiToken)}
-                title={showApiToken ? t('settings.hideToken') : t('settings.showToken')}
-              >
-                {showApiToken ? '🔒' : '👁'}
-              </button>
+            <div className="getnote-authmode-toggle">
+              <label className={`getnote-authmode-btn${authMode === 'openapi' ? ' active' : ''}`}>
+                <input
+                  type="radio"
+                  name="authMode"
+                  value="openapi"
+                  checked={authMode === 'openapi'}
+                  onChange={() => handleAuthModeChange('openapi')}
+                />
+                {t('settings.authMode.openapi')}
+              </label>
+              <label className={`getnote-authmode-btn${authMode === 'web' ? ' active' : ''}`}>
+                <input
+                  type="radio"
+                  name="authMode"
+                  value="web"
+                  checked={authMode === 'web'}
+                  onChange={() => handleAuthModeChange('web')}
+                />
+                {t('settings.authMode.web')}
+              </label>
             </div>
+            {authMode === 'openapi' && (
+              <>
+                <input
+                  type="text"
+                  className="getnote-input"
+                  placeholder={t('settings.clientId.placeholder')}
+                  value={currentClientId}
+                  onInput={(e) => handleClientIdOpenapiChange((e.target as HTMLInputElement).value)}
+                />
+                <div className="getnote-input-row">
+                  <input
+                    type={showApiToken ? 'text' : 'password'}
+                    className="getnote-input"
+                    placeholder={t('settings.apiToken.placeholder')}
+                    value={currentApiToken}
+                    onInput={(e) => handleApiTokenOpenapiChange((e.target as HTMLInputElement).value)}
+                  />
+                  <button
+                    type="button"
+                    className="getnote-input-toggle"
+                    onClick={() => setShowApiToken(!showApiToken)}
+                    title={showApiToken ? t('settings.hideToken') : t('settings.showToken')}
+                  >
+                    {showApiToken ? '🔒' : '👁'}
+                  </button>
+                </div>
+              </>
+            )}
             {authMode === 'web' && (
-              <input
-                type="text"
-                className="getnote-input"
-                placeholder={t('settings.webCsrf.placeholder')}
-                value={webCsrfToken}
-                onInput={(e) => handleWebCsrfTokenChange((e.target as HTMLInputElement).value)}
-              />
+              <>
+                <div className="getnote-input-row">
+                  <input
+                    type={showApiToken ? 'text' : 'password'}
+                    className="getnote-input"
+                    placeholder={t('settings.webToken.placeholder')}
+                    value={currentApiToken}
+                    onInput={(e) => handleApiTokenWebChange((e.target as HTMLInputElement).value)}
+                  />
+                  <button
+                    type="button"
+                    className="getnote-input-toggle"
+                    onClick={() => setShowApiToken(!showApiToken)}
+                    title={showApiToken ? t('settings.hideToken') : t('settings.showToken')}
+                  >
+                    {showApiToken ? '🔒' : '👁'}
+                  </button>
+                </div>
+              </>
             )}
           </div>
           <div className="getnote-credentials-actions">
             {authMode !== 'web' && (
               <OAuthButton
                 onAuthorize={(token, cid) => {
-                  setApiToken(token);
-                  setClientId(cid);
+                  setApiTokenOpenapi(token);
+                  setClientIdOpenapi(cid);
                   updateSetting('apiToken', token);
                   updateSetting('clientId', cid);
+                }}
+                onTestConnection={async (token, cid) => {
+                  try {
+                    await fetchNotes({ token, clientId: cid, authMode: 'openapi', sinceId: '0', limit: 1 });
+                    return { isMemberError: false, message: '' };
+                  } catch (err) {
+                    const msg = err instanceof Error ? err.message : String(err);
+                    const isMemberError = msg.includes('10201') || msg.includes('仅对会员开放') || msg.includes('not_member');
+                    if (isMemberError) {
+                      // Auto-switch to web auth mode
+                      setAuthMode('web');
+                      setApiTokenWeb(token);
+                      updateSetting('authMode', 'web');
+                      updateSetting('apiToken', token);
+                    }
+                    return { isMemberError, message: msg };
+                  }
                 }}
               />
             )}
@@ -327,7 +383,11 @@ export function SettingsComponent({
             </button>
           </div>
           {connectionStatus === 'success' && (
-            <span className="getnote-connection-success">{t('settings.connectionSuccess')}</span>
+            <span className="getnote-connection-success">
+              {connectionExpiryMin !== null
+                ? t('settings.connectionSuccessWithExpiry', { minutes: connectionExpiryMin })
+                : t('settings.connectionSuccess')}
+            </span>
           )}
           {connectionStatus === 'error' && (
             <span className="getnote-connection-error">
