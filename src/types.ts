@@ -1,7 +1,7 @@
 // Get笔记 API 响应类型
 
 export interface GetNoteNote {
-  id: number;            // 64位整数，JSON 解析前需预处理
+  id: string | number;  // OpenAPI: number → string via safeJsonParse; Web API: string
   note_id: string;
   title: string;
   content: string;       // 正文（markdown），录音笔记为 AI 摘要

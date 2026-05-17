@@ -147,6 +147,48 @@
   width: 100%;
 }
 
+.getnote-authmode-toggle {
+  display: flex;
+  gap: 16px;
+}
+
+.getnote-authmode-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-muted);
+  transition: color 0.15s;
+}
+
+.getnote-authmode-btn input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--background-modifier-border);
+  border-radius: 50%;
+  background: var(--background-primary);
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.getnote-authmode-btn:hover {
+  color: var(--text-normal);
+}
+
+.getnote-authmode-btn.active {
+  color: var(--text-normal);
+}
+
+.getnote-authmode-btn input[type="radio"]:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: inset 0 0 0 3px var(--background-primary);
+}
+
 .getnote-credential-action-button {
   font-size: 12px;
   padding: 4px 10px;
@@ -1044,4 +1086,11 @@
   .getnote-history-pagination {
     justify-content: space-between;
   }
+}
+
+/* === Notice === */
+.getnote-notice-success .notice-content,
+.notice:not(.getnote-notice-error) .notice-content {
+  color: var(--color-green);
+  font-weight: 500;
 }
