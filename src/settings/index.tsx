@@ -82,8 +82,13 @@ export function SettingsComponent({
   const [webCsrfToken, setWebCsrfToken] = useState(settings.webCsrfToken);
   const [webApiTestStatus, setWebApiTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [webApiTestError, setWebApiTestError] = useState('');
+  const [apiMode, setApiModeLocal] = useState<'oauth' | 'webapi'>('oauth');
 
   const folderInputRef = useRef<HTMLInputElement>(null);
+
+  const handleApiModeChange = useCallback((mode: 'oauth' | 'webapi') => {
+    setApiModeLocal(mode);
+  }, []);
 
   useEffect(() => {
     if (!settings.syncStartDate && !settings.lastSyncEndTimestamp) {
@@ -199,21 +204,30 @@ export function SettingsComponent({
     updateSetting('scheduledSync', { ...settings.scheduledSync, syncOnStart: checked });
   };
 
-  const handleTestConnection = async () => {
+  const handleTestConnection = async (overrideToken?: string, overrideClientId?: string) => {
     setTestingConnection(true);
     setConnectionStatus('idle');
     setConnectionErrorMsg('');
     try {
-      await fetchNotes({ token: apiToken.trim(), clientId: clientId.trim(), sinceId: '0', limit: 1 });
+      const token = overrideToken ?? apiToken.trim();
+      const cid = overrideClientId ?? clientId.trim();
+      await fetchNotes({ token, clientId: cid, sinceId: '0', limit: 1 });
       setConnectionStatus('success');
       window.setTimeout(() => setConnectionStatus('idle'), 3000);
     } catch (err) {
-      setConnectionStatus('error');
-      setConnectionErrorMsg(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      // OAuth success → auto-test fails with 10201 → switch to webapi mode
+      if (msg.includes('10201') || msg.includes('OpenAPI_ONLY_MEMBER')) {
+        setApiMode('webapi');
+        setConnectionError('请切换到 Token 配置模式');
+      } else {
+        setConnectionStatus('error');
+        setConnectionErrorMsg(msg);
+      }
       window.setTimeout(() => {
         setConnectionStatus('idle');
         setConnectionErrorMsg('');
-      }, 3000);
+      }, 5000);
     } finally {
       setTestingConnection(false);
     }
@@ -261,100 +275,124 @@ export function SettingsComponent({
         description={t('settings.credentials.tip')}
       >
         <div className="getnote-credentials-control">
-          <div className="getnote-primary-input-stack">
-            <input
-              type="text"
-              className="getnote-input"
-              placeholder={t('settings.clientId.placeholder')}
-              value={clientId}
-              onInput={(e) => handleClientIdChange((e.target as HTMLInputElement).value)}
-            />
-            <div className="getnote-input-row">
+          {/* API Mode Radio Group */}
+          <div className="getnote-api-mode-radio">
+            <label className="getnote-radio-label">
               <input
-                type={showApiToken ? 'text' : 'password'}
-                className="getnote-input"
-                placeholder={t('settings.apiToken.placeholder')}
-                value={apiToken}
-                onInput={(e) => handleApiTokenChange((e.target as HTMLInputElement).value)}
+                type="radio"
+                name="apiMode"
+                value="oauth"
+                checked={apiMode === 'oauth'}
+                onChange={() => handleApiModeChange('oauth')}
               />
-              <button
-                type="button"
-                className="getnote-input-toggle"
-                onClick={() => setShowApiToken(!showApiToken)}
-                title={showApiToken ? t('settings.hideToken') : t('settings.showToken')}
-              >
-                {showApiToken ? '🔒' : '👁'}
-              </button>
-            </div>
+              <span>{t('settings.apiMode.oauth')}</span>
+            </label>
+            <label className="getnote-radio-label">
+              <input
+                type="radio"
+                name="apiMode"
+                value="webapi"
+                checked={apiMode === 'webapi'}
+                onChange={() => handleApiModeChange('webapi')}
+              />
+              <span>{t('settings.apiMode.webapi')}</span>
+            </label>
           </div>
-          <div className="getnote-credentials-actions">
-            <OAuthButton
-              onAuthorize={(token, cid) => {
-                setApiToken(token);
-                setClientId(cid);
-                updateSetting('apiToken', token);
-                updateSetting('clientId', cid);
-              }}
-            />
-            <button
-              className="mod-secondary getnote-credential-action-button"
-              disabled={testingConnection}
-              onClick={() => {
-                void handleTestConnection();
-              }}
-            >
-              {testingConnection ? t('settings.testingConnection') : t('settings.testConnection')}
-            </button>
-          </div>
-          {connectionStatus === 'success' && (
-            <span className="getnote-connection-success">{t('settings.connectionSuccess')}</span>
-          )}
-          {connectionStatus === 'error' && (
-            <span className="getnote-connection-error">
-              {t('settings.connectionError')}{connectionErrorMsg ? `: ${connectionErrorMsg}` : ''}
-            </span>
-          )}
-        </div>
-      </SettingItem>
 
-      {/* 免费用户网页 API 配置 */}
-      <SettingItem
-        name={t('settings.webApi.title')}
-        description={t('settings.webApi.desc')}
-      >
-        <div className="getnote-webapi-config">
-          <div className="getnote-webapi-hint">{t('settings.webApi.desc')}</div>
-          <input
-            type="text"
-            className="getnote-input"
-            placeholder={t('settings.webApi.tokenPlaceholder')}
-            value={webApiToken}
-            onInput={(e) => handleWebApiTokenChange((e.target as HTMLInputElement).value)}
-          />
-          <input
-            type="text"
-            className="getnote-input"
-            placeholder={t('settings.webApi.csrfPlaceholder')}
-            value={webCsrfToken}
-            onInput={(e) => handleWebCsrfTokenChange((e.target as HTMLInputElement).value)}
-          />
-          <div className="getnote-webapi-actions">
-            <button
-              className="mod-cta"
-              onClick={() => { void handleTestWebApi(); }}
-            >
-              {t('settings.webApi.save')}
-            </button>
-          </div>
-          {webApiTestStatus === 'success' && (
-            <span className="getnote-connection-success">{t('settings.webApi.success')}</span>
+          {apiMode === 'oauth' && (
+            <>
+              <div className="getnote-primary-input-stack">
+                <input
+                  type="text"
+                  className="getnote-input"
+                  placeholder={t('settings.clientId.placeholder')}
+                  value={clientId}
+                  onInput={(e) => handleClientIdChange((e.target as HTMLInputElement).value)}
+                />
+                <div className="getnote-input-row">
+                  <input
+                    type={showApiToken ? 'text' : 'password'}
+                    className="getnote-input"
+                    placeholder={t('settings.apiToken.placeholder')}
+                    value={apiToken}
+                    onInput={(e) => handleApiTokenChange((e.target as HTMLInputElement).value)}
+                  />
+                  <button
+                    type="button"
+                    className="getnote-input-toggle"
+                    onClick={() => setShowApiToken(!showApiToken)}
+                    title={showApiToken ? t('settings.hideToken') : t('settings.showToken')}
+                  >
+                    {showApiToken ? '🔒' : '👁'}
+                  </button>
+                </div>
+              </div>
+              <div className="getnote-credentials-actions">
+                <OAuthButton
+                  onAuthorize={(token, cid) => {
+                    setApiToken(token);
+                    setClientId(cid);
+                    updateSetting('apiToken', token);
+                    updateSetting('clientId', cid);
+                    // Auto-test after OAuth success; if 10201, switch to webapi mode
+                    void handleTestConnection(token, cid);
+                  }}
+                />
+                <button
+                  className="mod-secondary getnote-credential-action-button"
+                  disabled={testingConnection}
+                  onClick={() => {
+                    void handleTestConnection();
+                  }}
+                >
+                  {testingConnection ? t('settings.testingConnection') : t('settings.testConnection')}
+                </button>
+              </div>
+              {connectionStatus === 'success' && (
+                <span className="getnote-connection-success">{t('settings.connectionSuccess')}</span>
+              )}
+              {connectionStatus === 'error' && (
+                <span className="getnote-connection-error">
+                  {t('settings.connectionError')}{connectionErrorMsg ? `: ${connectionErrorMsg}` : ''}
+                </span>
+              )}
+            </>
           )}
-          {webApiTestStatus === 'error' && (
-            <span className="getnote-connection-error">
-              {t('settings.webApi.error')}: {webApiTestError}
-            </span>
+
+          {apiMode === 'webapi' && (
+            <>
+              <input
+                type="text"
+                className="getnote-input"
+                placeholder={t('settings.webApi.tokenPlaceholder')}
+                value={webApiToken}
+                onInput={(e) => handleWebApiTokenChange((e.target as HTMLInputElement).value)}
+              />
+              <input
+                type="text"
+                className="getnote-input"
+                placeholder={t('settings.webApi.csrfPlaceholder')}
+                value={webCsrfToken}
+                onInput={(e) => handleWebCsrfTokenChange((e.target as HTMLInputElement).value)}
+              />
+              <div className="getnote-credentials-actions">
+                <button
+                  className="mod-cta getnote-credential-action-button"
+                  onClick={() => { void handleTestWebApi(); }}
+                >
+                  {t('settings.webApi.save')}
+                </button>
+              </div>
+              {webApiTestStatus === 'success' && (
+                <span className="getnote-connection-success">{t('settings.webApi.success')}</span>
+              )}
+              {webApiTestStatus === 'error' && (
+                <span className="getnote-connection-error">
+                  {t('settings.webApi.error')}: {webApiTestError}
+                </span>
+              )}
+            </>
           )}
-          <div className="getnote-input-hint">{t('settings.webApi.hint')}</div>
         </div>
       </SettingItem>
 
