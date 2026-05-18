@@ -8,8 +8,6 @@ import { App, AbstractInputSuggest } from 'obsidian';
 import { fetchNotes } from '../api';
 import { t } from '../i18n';
 
-const GITHUB_URL = 'https://github.com/AndyZhengyan/obsidian-getnote-importer#about-the-author';
-
 class FolderSuggest extends AbstractInputSuggest<string> {
   private el: HTMLInputElement;
 
@@ -271,7 +269,7 @@ export function SettingsComponent({
       <div className="getnote-settings-header">
         <h2>{t('settings.title')} <span className="getnote-settings-author">by 关山的月儿</span></h2>
         <p className="getnote-settings-desc">
-          {t('settings.desc')} <a href={GITHUB_URL} target="_blank" rel="noopener">{t('settings.community')}</a>
+          {t('settings.desc')} <a href={t('settings.communityUrl')} target="_blank" rel="noopener">{t('settings.community')}</a>
         </p>
       </div>
 
@@ -282,7 +280,7 @@ export function SettingsComponent({
         name={t('settings.credentials.label')}
         description={
           authMode === 'web'
-            ? <span>{t('settings.credentials.webTip')} <a href={`${GITHUB_URL}#web-mode-manual-token`} target="_blank" rel="noopener">{t('settings.webTipHelp')}</a></span>
+            ? <span>{t('settings.credentials.webTip')} <a href={t('settings.webTipHelpUrl')} target="_blank" rel="noopener">{t('settings.webTipHelp')}</a></span>
             : t('settings.credentials.tip')
         }
       >

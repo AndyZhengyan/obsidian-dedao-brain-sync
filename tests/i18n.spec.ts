@@ -52,6 +52,11 @@ describe('t() - Chinese translations', () => {
     expect(i18n.t('settings.community')).toBe('欢迎交流、留下star');
   });
 
+  it('returns Chinese GitHub documentation links', () => {
+    expect(i18n.t('settings.communityUrl')).toContain('README_zh.md');
+    expect(i18n.t('settings.webTipHelpUrl')).toContain('README_zh.md#web-模式手动-token');
+  });
+
   it('returns Chinese for sync.start', () => {
     expect(i18n.t('sync.start')).toBe('按时间同步');
   });
@@ -92,6 +97,11 @@ describe('t() - English translations', () => {
 
   it('returns English for settings.community', () => {
     expect(i18n.t('settings.community')).toBe('Welcome, leave a star');
+  });
+
+  it('returns English GitHub documentation links', () => {
+    expect(i18n.t('settings.communityUrl')).toContain('README.md');
+    expect(i18n.t('settings.webTipHelpUrl')).toContain('README.md#web-mode-manual-token');
   });
 
   it('returns English for sync.start', () => {
