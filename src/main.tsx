@@ -261,16 +261,19 @@ export default class GetNoteSyncPlugin extends Plugin {
         if (type === 'auto') {
           this.autoSyncFailCount++;
           const isQuotaExceeded = error.includes('配额') || error.includes('quota') || error.includes('429');
+          const isAuthError = error.includes('401') || error.includes('鉴权') || error.includes('Token 无效') || error.includes('Invalid') || error.includes('unauthorized') || error.includes('expired');
           if (isQuotaExceeded) {
             this.stopAutoSync();
             this.settings.scheduledSync.enabled = false;
             await this.saveSettings();
-            showNotice(t('notice.quotaExceededStop'), 20000);
+            showError(t('notice.quotaExceededStop'));
+          } else if (isAuthError) {
+            showError(t('notice.autoSyncAuthFailed', { msg: error }));
           } else {
             const msg = this.autoSyncFailCount >= 3
               ? t('sync.autoFailRepeated', { count: this.autoSyncFailCount })
               : t('notice.autoSyncFailed');
-            showNotice(msg, 15000);
+            showError(t('notice.autoSyncFailedWithMsg', { msg: error }));
           }
         } else {
           this.syncProgress = { message: t('notice.syncFailed', { msg: error }), count: '', percent: 0 };
@@ -373,7 +376,6 @@ class NotePickerModalWrapper extends Modal {
         token={this.plugin.settings.apiToken}
         clientId={this.plugin.settings.clientId}
         authMode={this.plugin.settings.authMode}
-        webCsrfToken={this.plugin.settings.webCsrfToken}
         abortSignal={this.abortController.signal}
         onConfirm={(noteIds) => {
           this.abortController.abort();

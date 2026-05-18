@@ -1,4 +1,5 @@
 import type { GetNoteNote, Attachment } from '../types';
+import { t } from '../i18n';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -54,14 +55,30 @@ async function apiRequest<T>(url: string, options: RequestInit, retries = 1, sig
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   const res = await fetch(url, { ...options, signal });
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-  if (res.status === 401) throw new Error('API Token 无效，请检查设置');
-  if (res.status === 429) throw new Error('API 配额已用完，请明天再试');
+  if (res.status === 401 || res.status === 403) {
+    const text = await res.text().catch(() => '');
+    const json = JSON.parse(text || '{}') as Record<string, unknown>;
+    const msg = (json.message as string) ?? '';
+    if (msg === 'LoginRequired') throw new Error(t('error.webApiLoginRequired'));
+    throw new Error(t('error.webApiForbidden'));
+  }
+  if (res.status === 429) throw new Error(t('error.quotaExceeded'));
   if (res.status < 200 || res.status >= 300) {
-    const text = await res.text();
-    throw new Error(`API 错误 ${res.status}: ${text}`);
+    if (res.status >= 500 && retries > 0) {
+      await new Promise(r => window.setTimeout(r, 3000));
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+      return apiRequest(url, options, retries - 1, signal);
+    }
+    throw new Error(t('error.apiServerError', { status: res.status }));
   }
   const text = await res.text();
-  return JSON.parse(text) as T;
+  const json = JSON.parse(text) as Record<string, unknown>;
+  if (json.success === false) {
+    const err = (json.error ?? json) as Record<string, unknown>;
+    const errMsg = (err?.message as string) ?? (json.message as string) ?? '';
+    throw new Error(errMsg ? t('error.apiGenericWithMsg', { msg: errMsg }) : t('error.apiGeneric'));
+  }
+  return json as T;
 }
 
 export interface FetchNotesOptions {
@@ -96,10 +113,14 @@ export async function fetchNoteDetail(
     headers: buildHeaders(token),
   }, 2, signal);
   // Web API detail: data is in .c, not .data
-  if (data.message) throw new Error(data.message);
+  if (data.message) {
+    if (data.message === 'LoginRequired') throw new Error(t('error.webApiLoginRequired'));
+    const rawMsg = data.message as string;
+    throw new Error(rawMsg ? t('error.apiGenericWithMsg', { msg: rawMsg }) : t('error.apiGeneric'));
+  }
   const c = data.c;
-  if (!isRecord(c)) throw new Error('Failed to parse note detail');
+  if (!isRecord(c)) throw new Error(t('error.fetchNoteDetailFailed'));
   const noteDetail = normalizeNoteDetailData(c);
-  if (!noteDetail) throw new Error('Failed to parse note detail');
+  if (!noteDetail) throw new Error(t('error.fetchNoteDetailFailed'));
   return noteDetail;
 }

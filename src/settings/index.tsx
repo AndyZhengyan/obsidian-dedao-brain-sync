@@ -268,7 +268,11 @@ export function SettingsComponent({
       {/* 凭证设置 */}
       <SettingItem
         name={t('settings.credentials.label')}
-        description={authMode === 'web' ? t('settings.credentials.webTip') : t('settings.credentials.tip')}
+        description={
+          authMode === 'web'
+            ? <span>{t('settings.credentials.webTip')} <a href={`${GITHUB_URL}#web-mode-manual-token`} target="_blank" rel="noopener">{t('settings.webTipHelp')}</a></span>
+            : t('settings.credentials.tip')
+        }
       >
         <div className="getnote-credentials-control">
           <div className="getnote-primary-input-stack">
@@ -360,14 +364,7 @@ export function SettingsComponent({
                   } catch (err) {
                     const msg = err instanceof Error ? err.message : String(err);
                     const isMemberError = msg.includes('10201') || msg.includes('仅对会员开放') || msg.includes('not_member');
-                    if (isMemberError) {
-                      // Auto-switch to web auth mode
-                      setAuthMode('web');
-                      setApiTokenWeb(token);
-                      updateSetting('authMode', 'web');
-                      updateSetting('apiToken', token);
-                    }
-                    return { isMemberError, message: msg };
+                    return { isMemberError, message: isMemberError ? t('settings.connectionErrorMemberHint') : msg };
                   }
                 }}
               />
