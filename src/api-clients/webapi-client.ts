@@ -52,13 +52,22 @@ function normalizeNoteDetailData(value: unknown): Partial<GetNoteNote> | null {
   return { ...detail, attachments, audio };
 }
 
+function tryParseJsonObject(text: string): Record<string, unknown> {
+  try {
+    const value = JSON.parse(text || '{}') as unknown;
+    return isRecord(value) ? value : {};
+  } catch {
+    return {};
+  }
+}
+
 async function apiRequest<T>(url: string, options: RequestInit, retries = 1, signal?: AbortSignal): Promise<T> {
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   const res = await fetch(url, { ...options, signal });
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   if (res.status === 401 || res.status === 403) {
     const text = await res.text().catch(() => '');
-    const json = JSON.parse(text || '{}') as Record<string, unknown>;
+    const json = tryParseJsonObject(text);
     const msg = (json.message as string) ?? '';
     if (msg === 'LoginRequired') throw new Error(t('error.webApiLoginRequired'));
     throw new Error(t('error.webApiForbidden'));

@@ -22,6 +22,16 @@ function mockFetchResponse(body: unknown, status = 200) {
   } as unknown as Response;
 }
 
+function mockTextFetchResponse(text: string, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: new Headers({ 'content-type': 'text/html' }),
+    text: () => Promise.resolve(text),
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+  } as unknown as Response;
+}
+
 describe('safeJsonParse', () => {
   it('将大整数 id 字段转为字符串以防止精度丢失', () => {
     const input = '{"id":9007199254740999,"note_id":123456789012345678,"title":"test"}';
@@ -292,6 +302,23 @@ describe('web auth mode', () => {
         'https://get-notes.luojilab.com/voicenotes/web/notes/1909428570156704824',
         expect.objectContaining({ method: 'GET' })
       );
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('surfaces a friendly web auth error when 403 body is not JSON', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockTextFetchResponse('<html>Forbidden</html>', 403) as Response
+    );
+
+    try {
+      await expect(fetchNotes({
+        token: 'web-token',
+        clientId: '',
+        authMode: 'web',
+        sinceId: '0',
+      })).rejects.toThrow('Web Token 无效，请检查设置');
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
     }
