@@ -11,7 +11,9 @@ interface ManualSyncModalProps {
 }
 
 export function ManualSyncModal({ initialOptions, onConfirm, onCancel }: ManualSyncModalProps) {
-  const [syncMode, setSyncMode] = useState<SyncMode>('date');
+  const [syncMode, setSyncMode] = useState<SyncMode>(
+    initialOptions.maxDays > 0 ? 'days' : initialOptions.syncStartDate ? 'date' : 'days'
+  );
   const [syncStartDate, setSyncStartDate] = useState(initialOptions.syncStartDate);
   const [maxDays, setMaxDays] = useState(String(initialOptions.maxDays));
 
@@ -22,7 +24,7 @@ export function ManualSyncModal({ initialOptions, onConfirm, onCancel }: ManualS
       const parsedMaxDays = parseInt(maxDays, 10);
       onConfirm({
         syncStartDate: '',
-        maxDays: Number.isNaN(parsedMaxDays) || parsedMaxDays < 0 ? 0 : parsedMaxDays,
+        maxDays: Number.isNaN(parsedMaxDays) || parsedMaxDays < 1 ? 1 : parsedMaxDays,
       });
     }
   };
