@@ -781,7 +781,7 @@ describe('SyncEngine — getFileName', () => {
     expect(engine['getFileName'](note)).toBe('我的笔记');
   });
 
-  it('附加笔记在文件名末尾追加 __note_id', () => {
+  it('附加笔记使用父文档名作为前缀', () => {
     const app = makeMockApp();
     const engine = new SyncEngine(app as any, makeSettings({ filenamePrefix: 'getnote' }));
     const note = makeNote({
@@ -791,8 +791,13 @@ describe('SyncEngine — getFileName', () => {
       is_child_note: true,
     });
 
+    // 子文档不带 parentBaseName 时，返回带前缀的标题（不用 note_id）
     // @ts-ignore
-    expect(engine['getFileName'](note)).toBe('getnote_原笔记标题__1909246675068292528');
+    expect(engine['getFileName'](note)).toBe('getnote_原笔记标题');
+
+    // 传入父文档 baseName 时，格式为：父文档名__子文档标题
+    // @ts-ignore
+    expect(engine['getFileName'](note, 'getnote_主笔记标题')).toBe('getnote_主笔记标题__原笔记标题');
   });
 });
 
@@ -855,9 +860,10 @@ describe('SyncEngine — append note sync', () => {
       ]);
       const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
       expect(createdPaths).toContain('Get笔记/纯文本/主笔记.md');
-      expect(createdPaths).toContain('Get笔记/纯文本/附加笔记正文__1909246675068292528.md');
+      // 子文档命名：父文档名__子文档标题（不用 note_id）
+      expect(createdPaths).toContain('Get笔记/纯文本/主笔记__附加笔记正文.md');
       const childContent = vi.mocked(app.vault.create).mock.calls.find(([path]) =>
-        path === 'Get笔记/纯文本/附加笔记正文__1909246675068292528.md'
+        path === 'Get笔记/纯文本/主笔记__附加笔记正文.md'
       )?.[1] as string;
       expect(childContent).toContain('parent_id: "1909193892067130512"');
       expect(childContent).toContain('is_child_note: true');
