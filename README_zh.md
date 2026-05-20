@@ -1,5 +1,7 @@
 # GetNote Importer（Get笔记导入器）
 
+【[English](README.md) | [简体中文](README_zh.md)】
+
 [![社区插件](https://img.shields.io/badge/Obsidian-Community%20Plugin-7c3aed?style=flat-square&logo=obsidian)](https://community.obsidian.md/plugins/getnote-importer)
 [![最新版本](https://img.shields.io/github/v/release/AndyZhengyan/obsidian-getnote-importer?style=flat-square)](https://github.com/AndyZhengyan/obsidian-getnote-importer/releases)
 [![下载量](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json&query=%24.getnote-importer.downloads&style=flat-square&label=downloads)](https://community.obsidian.md/plugins/getnote-importer)
@@ -39,17 +41,17 @@ Get笔记官方只支持导出为**离线 HTML 文件**：
 
 ## 截图
 
-插件设置页面 — 凭证配置、文件名格式、定时同步开关和间隔设置。
+插件设置页面 — API 凭证配置、目标文件夹、文件名格式、定时同步开关。
 
 ![设置页面](docs/screenshots/settings.png)
 
-同步日志弹窗 — 显示每次同步的过滤条件、参数和逐条笔记的处理结果（新增/更新/跳过/失败）。
-
-![同步历史](docs/screenshots/sync-history.png)
-
-手动同步弹窗 — 填写起始日期后按时间同步，笔记详情以折叠组展示。
+手动同步弹窗 — 填写起始日期后按时间范围同步笔记。
 
 ![手动同步](docs/screenshots/manual-sync.png)
+
+同步历史弹窗 — 逐条显示每次同步的处理结果：新增、更新、跳过、失败。
+
+![同步历史](docs/screenshots/sync-history.png)
 
 同步后的录音笔记 — 包含音频文件、转写文本和 AI 总结，元数据（uid、标签、来源）记录在 frontmatter 中。
 
@@ -97,14 +99,35 @@ Get笔记官方只支持导出为**离线 HTML 文件**：
 
 > **注意**：Get笔记开放平台 API 需要 **Get笔记PRO** 会员才可使用。我们与 Get笔记刀哥确认过，OpenAPI 运营成本较高，目前仅对付费会员开放。如果你是免费用户，API 接口将无法返回数据。
 
-API 凭证保存在 Obsidian 插件设置中，仅用于访问 Get笔记开放平台 API。
+API 凭证保存在 Obsidian 插件设置中，仅用于访问你选择的 Get笔记接口模式。
+
+### OpenAPI 模式
 
 1. 打开 GetNote 应用。
 2. 进入 `设置 -> 开放平台`.
 3. 创建应用，复制 `Token` 和 `Client ID`。
-4. 粘贴到 `设置 -> GetNote Importer` 中。
+4. 在 `设置 -> GetNote Importer` 中选择 `OpenAPI鉴权（会员）`，粘贴两个值。
 
 如果设置页提供 OAuth 按钮，也可以通过 OAuth 自动获取凭证。
+
+### Web 模式（手动 Token）
+
+如果你的账号无法使用 OpenAPI，可以选择 `Web 模式（手动 Token）`。这个模式复用浏览器里已经登录的 Get笔记网页版会话，不需要填写 `Client ID`。
+
+独立图文步骤见：[Web 模式手动 Token 指南](docs/web-mode-manual-token_zh.md)。
+
+复制 Token 的操作步骤：
+
+1. 用 Chrome 或 Edge 打开 Get笔记网页版并登录。
+2. 打开浏览器开发者工具：Windows/Linux 按 `F12` 或 `Ctrl + Shift + I`；Mac 按 `⌘ + ⌥ + I`（`Command + Option + I`）。
+3. 切到 `Network` 面板，并选择 `Fetch/XHR` 过滤。
+4. 刷新 Get笔记网页版，或打开笔记列表 / 任意一篇笔记，让页面发起接口请求。
+5. 在请求列表里点开名称类似 `notes?...` 或 `list?...` 的请求；右侧 Headers 里看到的 `Host` 通常是 `get-notes.luojilab.com`。
+6. 在右侧面板打开 `Headers -> Request Headers`，复制完整的 `Authorization` 值。
+7. 粘贴到 `设置 -> GetNote Importer -> 临时鉴权（Free）` 的 Token 输入框。
+8. 点击 `测试连接`，成功后再执行 `按时间同步` 或 `按笔记同步`。
+
+这个值通常以 `Bearer eyJ...` 开头；插件支持粘贴完整的 `Bearer ...`，也支持只粘贴 JWT token。这里不要粘贴 OpenAPI 的 `gk_...` Token。Web Token 是浏览器会话凭证，通常几天后会过期；如果 `测试连接` 或同步返回 `401`、`403`、`Web Token 已过期`，请刷新网页版并重新复制 `Authorization` header。
 
 ## 使用
 

@@ -1,5 +1,7 @@
 # GetNote Importer
 
+【[English](README.md) | [简体中文](README_zh.md)】
+
 [![Community Plugin](https://img.shields.io/badge/Obsidian-Community%20Plugin-7c3aed?style=flat-square&logo=obsidian)](https://community.obsidian.md/plugins/getnote-importer)
 [![Latest Release](https://img.shields.io/github/v/release/AndyZhengyan/obsidian-getnote-importer?style=flat-square)](https://github.com/AndyZhengyan/obsidian-getnote-importer/releases)
 [![Downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json&query=%24.getnote-importer.downloads&style=flat-square&label=downloads)](https://community.obsidian.md/plugins/getnote-importer)
@@ -39,17 +41,17 @@ If you've ever tried to find that one note in a 10,000-note HTML file, you know 
 
 ## Screenshots
 
-Settings page — credentials, filename format, scheduled sync toggle and interval.
+Settings page — API credentials, target folder, filename format, and scheduled sync toggle.
 
 ![Settings](docs/screenshots/settings.png)
 
-Sync history modal — shows filter criteria, parameters, and per-note results (created, updated, skipped, failed) for each sync run.
-
-![Sync History](docs/screenshots/sync-history.png)
-
-Manual sync modal — specify a start date to sync by time range, with note details displayed in collapsible groups.
+Manual sync modal — select a start date to sync notes by time range.
 
 ![Manual Sync](docs/screenshots/manual-sync.png)
+
+Sync history modal — per-note results for each sync run: created, updated, skipped, failed.
+
+![Sync History](docs/screenshots/sync-history.png)
 
 Synced recording note — includes audio file, transcript text, and AI summary, with metadata (uid, tags, source) recorded in frontmatter.
 
@@ -108,7 +110,22 @@ You can also use the OAuth button in the plugin settings when available.
 
 ### Web Mode (Manual Token)
 
-If OpenAPI is unavailable for your account, select `Web mode (manual token)` and paste the `Authorization` Bearer token from an active GetNote web session. You may also paste `xi-csrf-token` when your captured request includes it. Web tokens are copied manually from your browser session and may expire after several days, so refresh them if connection testing or syncing starts returning authentication errors.
+If OpenAPI is unavailable for your account, use `Web mode (manual token)`. This mode reuses the signed-in GetNote Web session from your browser, so it does not need `Client ID`.
+
+For the dedicated guide, see [Web Mode Manual Token Guide](docs/web-mode-manual-token.md).
+
+How to copy the token:
+
+1. Open GetNote Web in Chrome or Edge and sign in.
+2. Open browser DevTools: Windows/Linux `F12` or `Ctrl + Shift + I`; Mac `⌘ + ⌥ + I` (`Command + Option + I`).
+3. Go to `Network`, then filter by `Fetch/XHR`.
+4. Refresh GetNote Web, open the note list, or open any note so the page sends API requests.
+5. Click a request whose name looks like `notes?...` or `list?...`; the `Host` in Headers is usually `get-notes.luojilab.com`.
+6. In the right panel, open `Headers -> Request Headers`, then copy the full `Authorization` value.
+7. Paste it into `Settings -> GetNote Importer -> Temp Auth (Free)`.
+8. Click `Test Connection`. If it succeeds, run `Sync by Time` or `Sync by Notes`.
+
+The value usually starts with `Bearer eyJ...`; pasting either the full `Bearer ...` value or only the JWT token is supported. Do not paste the OpenAPI `gk_...` token here. Web tokens are session tokens and may expire after several days. If `Test Connection` or syncing starts returning `401`, `403`, or "Web Token expired", refresh GetNote Web and copy a new `Authorization` header.
 
 ## Usage
 
