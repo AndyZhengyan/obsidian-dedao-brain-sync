@@ -639,6 +639,18 @@ describe('SyncEngine — getFileName', () => {
     // @ts-ignore
     expect(engine['getFileName'](note)).toBe('我的笔记');
   });
+
+  it('追加笔记在文件名末尾追加 __note_id', () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({ filenamePrefix: 'getnote' }));
+    const note = makeNote({
+      title: '原笔记标题',
+      note_id: 'append_001',
+      parent_id: 'primary_001',
+    });
+    // @ts-ignore
+    expect(engine['getFileName'](note)).toBe('getnote_原笔记标题__append_001');
+  });
 });
 
 describe('SyncEngine — audio note sync', () => {

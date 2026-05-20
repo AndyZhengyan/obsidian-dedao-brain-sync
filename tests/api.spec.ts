@@ -270,6 +270,37 @@ describe('web auth mode', () => {
     }
   });
 
+  it('maps web API parent_id/follow_id for append-note detection', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        h: {},
+        c: {
+          list: [{
+            note_id: 'append-1',
+            id: 'append-1',
+            parent_id: 'primary-1',
+            follow_id: 'follow-1',
+          }],
+          has_more: false,
+        },
+      }) as Response
+    );
+
+    try {
+      const result = await fetchNotes({
+        token: 'web-token',
+        clientId: '',
+        authMode: 'web',
+      });
+
+      expect(result.notes[0].note_id).toBe('append-1');
+      expect(result.notes[0].parent_id).toBe('primary-1');
+      expect(result.notes[0].follow_id).toBe('follow-1');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
   it('fetches note detail from the web detail endpoint', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       mockFetchResponse({

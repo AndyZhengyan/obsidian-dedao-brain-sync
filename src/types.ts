@@ -3,6 +3,8 @@
 export interface GetNoteNote {
   id: string | number;  // OpenAPI: number → string via safeJsonParse; Web API: string
   note_id: string;
+  parent_id?: string;
+  follow_id?: string;
   title: string;
   content: string;       // 正文（markdown），录音笔记为 AI 摘要
   note_type: NoteType;
