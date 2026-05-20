@@ -1,5 +1,5 @@
 import { App, TFile } from 'obsidian';
-import { fetchAllNotes, fetchNoteDetail } from './api';
+import { fetchAllNotes, fetchNoteChildren, fetchNoteDetail } from './api';
 import { formatDateTime, formatTimestampPrefix, renderNote, generateDisplayTitle } from './note-parser';
 import { getCategoryDir } from './types';
 import { getAuthCredentials, type GetNoteNote, type Settings, type SyncResult, type SyncResultItem, type SyncScopeOptions } from './types';
@@ -378,8 +378,10 @@ export class SyncEngine {
       updated_at: detail.updated_at ?? note.updated_at,
       parent_id: detail.parent_id ?? note.parent_id,
       children_count: detail.children_count ?? note.children_count,
-      children_ids: detail.children_ids ?? note.children_ids,
-      is_child_note: detail.is_child_note ?? note.is_child_note,
+      // Don't overwrite relation fields that were already populated by list data;
+      // some detail responses omit them.
+      children_ids: note.children_ids ?? detail.children_ids,
+      is_child_note: note.is_child_note,
     };
   }
 
@@ -392,11 +394,14 @@ export class SyncEngine {
     if (!needsAudioDetail && !this.needsRelationDetail(note)) {
       return note;
     }
+    const credentials = getAuthCredentials(this.settings);
+    if (credentials.authMode === 'web' && !needsAudioDetail) {
+      return note;
+    }
 
     try {
       // For Web API, use prime_id (not id/note_id) for the detail URL
       const detailId = (note as { prime_id?: string }).prime_id ?? note.note_id;
-      const credentials = getAuthCredentials(this.settings);
       const noteDetail = await fetchNoteDetail(
         detailId,
         credentials.token,
@@ -428,18 +433,58 @@ export class SyncEngine {
     signal: AbortSignal,
     result: SyncResult
   ): Promise<GetNoteNote[]> {
+    const credentials = getAuthCredentials(this.settings);
+    if (credentials.authMode === 'web' && (parent.children_count ?? 0) > 0 && !parent.children_ids?.length) {
+      const parentDetailId = (parent as { prime_id?: string }).prime_id ?? parent.note_id;
+      try {
+        const children = await fetchNoteChildren(
+          parentDetailId,
+          credentials.token,
+          signal,
+          credentials.authMode
+        );
+        const appendNotes: GetNoteNote[] = [];
+        for (const child of children) {
+          const baseChild: GetNoteNote = {
+            ...child,
+            parent_id: child.parent_id || parent.note_id,
+            is_child_note: child.is_child_note ?? true,
+          };
+          appendNotes.push(await this.enrichAudioNote(baseChild, signal));
+        }
+        return appendNotes;
+      } catch (err) {
+        result.failed++;
+        const failedNote: GetNoteNote = {
+          id: parentDetailId,
+          note_id: parentDetailId,
+          title: '',
+          content: '',
+          note_type: 'plain_text',
+          source: parent.source,
+          tags: [],
+          created_at: parent.created_at,
+          updated_at: parent.updated_at,
+          parent_id: parent.note_id,
+          is_child_note: true,
+        };
+        this.recordItem(result, failedNote, {
+          status: 'failed',
+          error: err instanceof Error ? err.message : String(err),
+        });
+        console.warn(`[GetNote] Failed to fetch append notes for ${parentDetailId}:`, err);
+      }
+      return [];
+    }
+
     const childIds = parent.children_ids ?? [];
     if (!childIds.length) return [];
 
-    const credentials = getAuthCredentials(this.settings);
     const appendNotes: GetNoteNote[] = [];
     for (const childId of childIds) {
       try {
-        // Web API may require prime_id (not note_id) to locate child note details.
-        // Use prime_id when available, mirroring enrichAudioNote's detailId pattern.
-        const detailId = (parent as { prime_id?: string }).prime_id ?? childId;
         const childDetail = await fetchNoteDetail(
-          detailId,
+          childId,
           credentials.token,
           credentials.clientId,
           signal,

@@ -1352,3 +1352,157 @@ describe('SyncEngine auth credential chains', () => {
     });
   });
 });
+
+// ---- Integration tests using fixture loader ----
+import { getFixtureRequests, loadScenario, resetFixtures } from './mocks/fixtures/loader';
+
+describe('SyncEngine — append notes integration (fixture loader)', () => {
+  it('OpenAPI: parent + child notes both created', async () => {
+    resetFixtures();
+    loadScenario('sync-parent-and-children-openapi');
+
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'test-openapi-token',
+      openApiClientId: 'test-client',
+      maxDays: 0,
+    }));
+
+    const result = await engine.sync();
+
+    expect(result.created).toBe(2);
+    expect(result.items).toEqual([
+      expect.objectContaining({ noteId: '1909193892067130512', status: 'created' }),
+      expect.objectContaining({ noteId: '1909246675068292528', status: 'created' }),
+    ]);
+    const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
+    expect(createdPaths).toContain('Get笔记/纯文本/主笔记.md');
+    expect(createdPaths).toContain('Get笔记/纯文本/附加笔记正文__1909246675068292528.md');
+    const childContent = vi.mocked(app.vault.create).mock.calls.find(([path]) =>
+      path === 'Get笔记/纯文本/附加笔记正文__1909246675068292528.md'
+    )?.[1] as string;
+    expect(childContent).toContain('parent_id: "1909193892067130512"');
+    expect(childContent).toContain('is_child_note: true');
+  });
+
+  it('WebAPI: parent + child notes both created', async () => {
+    resetFixtures();
+    loadScenario('sync-parent-and-children-webapi');
+
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'web',
+      webApiToken: 'test-web-token',
+      maxDays: 0,
+    }));
+
+    const result = await engine.sync();
+
+    expect(result.created).toBe(2);
+    expect(result.items).toEqual([
+      expect.objectContaining({ noteId: '1909193892067130512', status: 'created' }),
+      expect.objectContaining({ noteId: '1909246675068292528', status: 'created' }),
+    ]);
+    const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
+    expect(createdPaths).toContain('Get笔记/纯文本/主笔记.md');
+    expect(createdPaths).toContain('Get笔记/纯文本/附加笔记正文__1909246675068292528.md');
+    expect(getFixtureRequests().map(request => request.url)).toContain(
+      'https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children'
+    );
+    expect(getFixtureRequests().map(request => request.url)).not.toContain(
+      'https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512'
+    );
+  });
+
+  it('OpenAPI: append-note detail failure increments result.failed', async () => {
+    resetFixtures();
+    loadScenario('sync-failed-child-openapi');
+
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'test-openapi-token',
+      openApiClientId: 'test-client',
+      maxDays: 0,
+    }));
+
+    const result = await engine.sync();
+
+    expect(result.created).toBe(1); // parent OK
+    expect(result.failed).toBe(1);   // child failed
+    const failedItems = result.items.filter(i => i.status === 'failed');
+    expect(failedItems.length).toBe(1);
+    expect(failedItems[0].noteId).toBe('1909246675068292528');
+  });
+
+  it('WebAPI: append-note detail failure increments result.failed', async () => {
+    resetFixtures();
+    loadScenario('sync-failed-child-webapi');
+
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'web',
+      webApiToken: 'test-web-token',
+      maxDays: 0,
+    }));
+
+    const result = await engine.sync();
+
+    expect(result.created).toBe(1);
+    expect(result.failed).toBe(1);
+    const failedItems = result.items.filter(i => i.status === 'failed');
+    expect(failedItems.length).toBe(1);
+    expect(failedItems[0].noteId).toBe('prime_1909193892067130512');
+    expect(getFixtureRequests().map(request => request.url)).toContain(
+      'https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children'
+    );
+  });
+
+  it('WebAPI: fetchAppendNotes uses prime_id when available (P1 fix)', async () => {
+    resetFixtures();
+    loadScenario('sync-parent-primeid-webapi');
+
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'web',
+      webApiToken: 'test-web-token',
+      maxDays: 0,
+    }));
+
+    const result = await engine.sync();
+
+    expect(result.created).toBe(2);
+    expect(result.items).toEqual([
+      expect.objectContaining({ noteId: '1909193892067130512', status: 'created' }),
+      expect.objectContaining({ noteId: '1909246675068292528', status: 'created' }),
+    ]);
+    expect(getFixtureRequests().map(request => request.url)).toContain(
+      'https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children'
+    );
+  });
+
+  it('selective sync: parent + child both written via syncNoteIds', async () => {
+    resetFixtures();
+    loadScenario('selective-sync-openapi');
+
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'test-openapi-token',
+      openApiClientId: 'test-client',
+      maxDays: 0,
+    }));
+
+    const result = await engine.syncNoteIds(['1909193892067130512']);
+
+    expect(result.created).toBe(2);
+    expect(result.items).toEqual([
+      expect.objectContaining({ noteId: '1909193892067130512', status: 'created' }),
+      expect.objectContaining({ noteId: '1909246675068292528', status: 'created' }),
+    ]);
+    const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
+    expect(createdPaths).toContain('Get笔记/纯文本/主笔记.md');
+    expect(createdPaths).toContain('Get笔记/纯文本/附加笔记正文__1909246675068292528.md');
+  });
+});

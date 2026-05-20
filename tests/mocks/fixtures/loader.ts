@@ -22,7 +22,7 @@ export interface ScenarioRequest {
 
 export interface ScenarioResponse {
   status?: number;
-  body: unknown;
+  body?: unknown;
 }
 
 export interface Scenario {
@@ -35,48 +35,49 @@ export interface Scenario {
   }>;
 }
 
-let fixtures: Array<Fixture & { index: number }> = [];
-let sequence: Array<{ response: FixtureResponse }> = [];
-let nextSequenceIndex = 0;
-let isMocked = false;
-let originalFetch: typeof fetch | null = null;
+// Module-level mutable state
+let fixtures: Fixture[] = [];
+let requests: Array<{ method: string; url: string }> = [];
 
-function spyFetch(): void {
-  if (isMocked) return;
-  originalFetch = globalThis.fetch;
-  isMocked = true;
+// Stable mockFetch — its closure captures the live fixtures array.
+async function mockFetch(url: URL | Request | string, options?: RequestInit): Promise<Response> {
+  const urlStr = typeof url === 'string' ? url : url instanceof Request ? url.url : url.href;
+  const method = (options?.method ?? 'GET').toUpperCase();
+  requests.push({ method, url: urlStr });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (globalThis as any).fetch = async (url: URL | Request | string, options?: RequestInit) => {
-    const urlStr = typeof url === 'string' ? url : url instanceof Request ? url.url : url.href;
-    const method = (options?.method ?? 'GET').toUpperCase();
+  const matched = fixtures.find(f => {
+    if (f.method && f.method.toUpperCase() !== method) return false;
+    return urlsMatch(f.url, f.query, urlStr);
+  });
 
-    // First check sequence (ordered)
-    if (nextSequenceIndex < sequence.length) {
-      const seq = sequence[nextSequenceIndex];
-      nextSequenceIndex++;
-      return makeResponse(seq.response.status ?? 200, seq.response.body);
-    }
+  if (matched) {
+    return makeResponse(matched.response.status ?? 200, matched.response.body);
+  }
 
-    // Then check registered fixtures (order matters for first-match)
-    const matched = fixtures.find(f => {
-      if (f.method && f.method.toUpperCase() !== method) return false;
-      if (!urlStr.startsWith(f.url)) return false;
-      if (f.query) {
-        const urlObj = new URL(urlStr);
-        for (const [k, v] of Object.entries(f.query)) {
-          if (urlObj.searchParams.get(k) !== v) return false;
-        }
-      }
-      return true;
-    });
+  throw new Error(`[fixture loader] No fixture matched: ${method} ${urlStr}`);
+}
 
-    if (matched) {
-      return makeResponse(matched.response.status ?? 200, matched.response.body);
-    }
+function urlsMatch(expectedUrl: string, expectedQuery: Record<string, string> | undefined, actualUrl: string): boolean {
+  const expected = new URL(expectedUrl);
+  const actual = new URL(actualUrl);
+  if (expected.origin !== actual.origin || expected.pathname !== actual.pathname) return false;
 
-    throw new Error(`[fixture loader] No fixture matched: ${method} ${urlStr}`);
-  };
+  const query = new URLSearchParams(expected.search);
+  for (const [key, value] of Object.entries(expectedQuery ?? {})) {
+    query.set(key, value);
+  }
+
+  return searchParamsEqual(query, actual.searchParams);
+}
+
+function searchParamsEqual(expected: URLSearchParams, actual: URLSearchParams): boolean {
+  const expectedEntries = [...expected.entries()].sort(([a], [b]) => a.localeCompare(b));
+  const actualEntries = [...actual.entries()].sort(([a], [b]) => a.localeCompare(b));
+  if (expectedEntries.length !== actualEntries.length) return false;
+  return expectedEntries.every(([key, value], index) => {
+    const [actualKey, actualValue] = actualEntries[index];
+    return key === actualKey && value === actualValue;
+  });
 }
 
 function makeResponse(status: number, body: unknown): Response {
@@ -90,20 +91,20 @@ function makeResponse(status: number, body: unknown): Response {
 }
 
 export function registerFixture(fixture: Fixture): void {
-  if (!isMocked) spyFetch();
-  fixtures.push({ ...fixture, index: fixtures.length });
+  fixtures.push(fixture);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).fetch = mockFetch;
 }
 
 export function resetFixtures(): void {
   fixtures = [];
-  sequence = [];
-  nextSequenceIndex = 0;
-  if (isMocked && originalFetch) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (globalThis as any).fetch = originalFetch;
-    originalFetch = null;
-    isMocked = false;
-  }
+  requests = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).fetch = mockFetch;
+}
+
+export function getFixtureRequests(): Array<{ method: string; url: string }> {
+  return [...requests];
 }
 
 export function loadScenario(name: string): void {
@@ -121,16 +122,15 @@ export function loadScenario(name: string): void {
     throw new Error(`[fixture loader] Invalid scenario: ${name}`);
   }
 
-  if (!isMocked) spyFetch();
-  sequence = scenario.sequence.map(seq => ({ response: seq.response }));
-  nextSequenceIndex = 0;
-
-  // Also register fixtures for non-sequence based lookups
-  for (const seq of scenario.sequence) {
-    registerFixture({
+  // Register fixtures with query params embedded in the URL so that
+  // list fixture "notes?limit=20" won't match child detail URLs "notes/prime_child_xxx"
+  // via startsWith (the ? appears before the path segment).
+  fixtures = scenario.sequence.map(seq => {
+    return {
       url: seq.request.url,
+      query: seq.request.params,
       method: 'GET',
-      response: seq.response,
-    });
-  }
+      response: seq.response as FixtureResponse,
+    };
+  });
 }

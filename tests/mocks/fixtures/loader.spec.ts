@@ -100,23 +100,19 @@ describe('fixture loader', () => {
   });
 
   describe('loadScenario', () => {
-    it('loads YAML scenario file and registers sequence of responses', async () => {
-      // Load the scenario - the loader reads the YAML and registers responses
+    it('loads JSON scenario file and registers URL-matched responses', async () => {
+      // Load the scenario - the loader reads JSON and registers responses
       loadScenario('sync-parent-and-children-openapi');
 
-      // First call - list notes
       const listResponse = await fetch('https://openapi.biji.com/open/api/v1/resource/note/list?since_id=0');
       const listData = await listResponse.json();
       expect(listData).toHaveProperty('data');
       expect(Array.isArray(listData.data?.notes)).toBe(true);
     });
 
-    it('sequence: second request returns second response in scenario', async () => {
+    it('matches detail responses by URL rather than call order', async () => {
       loadScenario('sync-parent-and-children-openapi');
 
-      // First - list
-      await fetch('https://openapi.biji.com/open/api/v1/resource/note/list?since_id=0');
-      // Second - parent detail
       const detailResp = await fetch('https://openapi.biji.com/open/api/v1/resource/note/detail?id=1909193892067130512');
       const detailData = await detailResp.json();
       expect(detailData).toHaveProperty('data');

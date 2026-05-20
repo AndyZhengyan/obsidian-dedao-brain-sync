@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fetchNotes, fetchNoteDetail } from '../src/api';
+import { fetchNoteChildren, fetchNotes, fetchNoteDetail } from '../src/api';
 import type { ListResponse } from '../src/types';
 
 // Extract the internal safeJsonParse for direct testing
@@ -402,6 +402,64 @@ describe('web auth mode', () => {
       expect(globalThis.fetch).toHaveBeenCalledWith(
         'https://get-notes.luojilab.com/voicenotes/web/notes/1909428570156704824',
         expect.objectContaining({ method: 'GET' })
+      );
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('fetches append children from the web children endpoint', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        h: {},
+        c: {
+          total_items: 1,
+          list: [
+            {
+              id: '1910451630291348232',
+              note_id: '1910451630291348232',
+              prime_id: 'KJp3l6ykbVEeANdP',
+              title: '',
+              content: 'hihi 18 plus',
+              note_type: 'plain_text',
+              source: 'web',
+              tags: [],
+              created_at: '2026-05-20 11:00:00',
+              updated_at: '2026-05-20 11:00:00',
+              parent_id: '1910450663922605144',
+              is_child_note: true,
+              sub_note_count: 0,
+            },
+          ],
+          has_more: false,
+        },
+      }) as Response
+    );
+
+    try {
+      const result = await fetchNoteChildren(
+        'WPKWeqDApaE6XrDP',
+        'web-token',
+        undefined,
+        'web'
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual(expect.objectContaining({
+        note_id: '1910451630291348232',
+        parent_id: '1910450663922605144',
+        is_child_note: true,
+        children_count: 0,
+      }));
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        'https://get-notes.luojilab.com/voicenotes/web/notes/WPKWeqDApaE6XrDP/children',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer web-token',
+            'x-request-id': expect.any(String),
+          }),
+        })
       );
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
