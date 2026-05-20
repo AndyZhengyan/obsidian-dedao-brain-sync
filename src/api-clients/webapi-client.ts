@@ -28,6 +28,8 @@ function parseWebApiListResponse(value: unknown): { notes: GetNoteNote[]; hasMor
   const notes: GetNoteNote[] = list.map((n): GetNoteNote => ({
     id: n.id as string,
     note_id: n.note_id as string,
+    parent_id: (n.parent_id as string) ?? undefined,
+    follow_id: (n.follow_id as string) ?? undefined,
     title: (n.title as string) ?? '',
     content: (n.content as string) ?? '',
     note_type: (n.note_type as string) ?? 'plain_text',

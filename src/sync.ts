@@ -105,22 +105,26 @@ export class SyncEngine {
     const rawTitle = generateDisplayTitle(note);
     const displayTitle = rawTitle || t('picker.noTitle');
     const prefix = this.settings.filenamePrefix?.trim();
-    if (!prefix) {
-      return displayTitle;
-    }
+    const baseName = (() => {
+      if (!prefix) return displayTitle;
 
-    const hasTimestampTokens = /YYYY|MM|DD|HH|mm|ss/.test(prefix);
-    if (hasTimestampTokens) {
-      const formattedPrefix = formatTimestampPrefix(prefix, note.created_at);
-      if (!formattedPrefix) {
-        return displayTitle;
+      const hasTimestampTokens = /YYYY|MM|DD|HH|mm|ss/.test(prefix);
+      if (hasTimestampTokens) {
+        const formattedPrefix = formatTimestampPrefix(prefix, note.created_at);
+        if (!formattedPrefix) {
+          return displayTitle;
+        }
+        const separator = formattedPrefix.endsWith('_') ? '' : '_';
+        return `${formattedPrefix}${separator}${displayTitle}`;
       }
-      const separator = formattedPrefix.endsWith('_') ? '' : '_';
-      return `${formattedPrefix}${separator}${displayTitle}`;
-    }
 
-    const separator = prefix.endsWith('_') ? '' : '_';
-    return `${prefix}${separator}${displayTitle}`;
+      const separator = prefix.endsWith('_') ? '' : '_';
+      return `${prefix}${separator}${displayTitle}`;
+    })();
+
+    const isAppendNote = Boolean(note.parent_id || note.follow_id);
+    if (!isAppendNote) return baseName;
+    return `${baseName}__${note.note_id}`;
   }
 
   private getFilePath(categoryDir: string, note: GetNoteNote): string {
