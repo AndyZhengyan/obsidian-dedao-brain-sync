@@ -1356,7 +1356,89 @@ describe('SyncEngine auth credential chains', () => {
 // ---- Integration tests using fixture loader ----
 import { getFixtureRequests, loadScenario, resetFixtures } from './mocks/fixtures/loader';
 
-describe('SyncEngine — append notes integration (fixture loader)', () => {
+describe('SyncEngine — fixture-based sync integration', () => {
+  it('OpenAPI: full sync writes paginated notes across core note types', async () => {
+    resetFixtures();
+    loadScenario('sync-core-openapi');
+
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'test-openapi-token',
+      openApiClientId: 'test-client',
+      maxDays: 0,
+    }));
+
+    const result = await engine.sync();
+
+    expect(result.created).toBe(3);
+    expect(result.failed).toBe(0);
+    expect(result.total).toBe(3);
+    expect(result.lastNoteTimestamp).toBe('2026-05-20 10:00:00');
+    const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
+    expect(createdPaths).toEqual(expect.arrayContaining([
+      'Get笔记/纯文本/OpenAPI 纯文本.md',
+      'Get笔记/链接笔记/OpenAPI 链接.md',
+      'Get笔记/纯文本/OpenAPI 第二页.md',
+    ]));
+    expect(getFixtureRequests().map(request => request.url)).toEqual([
+      'https://openapi.biji.com/open/api/v1/resource/note/list?since_id=0',
+      'https://openapi.biji.com/open/api/v1/resource/note/list?since_id=open_link_2',
+    ]);
+  });
+
+  it('WebAPI: full sync writes paginated notes with web list query shape', async () => {
+    resetFixtures();
+    loadScenario('sync-core-webapi');
+
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'web',
+      webApiToken: 'test-web-token',
+      maxDays: 0,
+    }));
+
+    const result = await engine.sync();
+
+    expect(result.created).toBe(3);
+    expect(result.failed).toBe(0);
+    expect(result.total).toBe(3);
+    expect(result.lastNoteTimestamp).toBe('2026-05-20 10:00:00');
+    const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
+    expect(createdPaths).toEqual(expect.arrayContaining([
+      'Get笔记/纯文本/WebAPI 纯文本.md',
+      'Get笔记/链接笔记/WebAPI 链接.md',
+      'Get笔记/纯文本/WebAPI 第二页.md',
+    ]));
+    expect(getFixtureRequests().map(request => request.url)).toEqual([
+      'https://get-notes.luojilab.com/voicenotes/web/notes?limit=20&since_id=&sort=create_desc',
+      'https://get-notes.luojilab.com/voicenotes/web/notes?limit=20&since_id=web_link_2&sort=create_desc',
+    ]);
+  });
+
+  it('WebAPI: selective sync writes only requested notes', async () => {
+    resetFixtures();
+    loadScenario('selective-sync-webapi');
+
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'web',
+      webApiToken: 'test-web-token',
+      maxDays: 0,
+    }));
+
+    const result = await engine.syncNoteIds(['web_selected']);
+
+    expect(result.created).toBe(1);
+    expect(result.failed).toBe(0);
+    expect(result.total).toBe(1);
+    expect(result.items).toEqual([
+      expect.objectContaining({ noteId: 'web_selected', status: 'created' }),
+    ]);
+    const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
+    expect(createdPaths).toEqual(['Get笔记/纯文本/WebAPI 被选择.md']);
+  });
+
   it('OpenAPI: parent + child notes both created', async () => {
     resetFixtures();
     loadScenario('sync-parent-and-children-openapi');
