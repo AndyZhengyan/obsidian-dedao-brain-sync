@@ -108,9 +108,30 @@ function buildFrontmatter(note: GetNoteNote): string {
 }
 
 /**
+ * 生成内部 wiki 链接行（主子文档互链）
+ */
+function buildRelationLinks(note: GetNoteNote, parentFileName?: string, childFileNames?: string[]): string {
+  const lines: string[] = [];
+
+  // 子文档：链接到父文档文件名
+  if (note.is_child_note && parentFileName) {
+    lines.push(`\n\n> ⬆️ 主笔记: [[${parentFileName}]]`);
+  }
+
+  // 父文档：链接到子文档文件名
+  if (childFileNames?.length) {
+    for (const childName of childFileNames) {
+      lines.push(`\n\n> ⬇️ 追加笔记: [[${childName}]]`);
+    }
+  }
+
+  return lines.join('');
+}
+
+/**
  * 将 GetNoteNote 渲染为完整的 Markdown 字符串
  */
-export function renderNote(note: GetNoteNote, assetFileName?: string): string {
+export function renderNote(note: GetNoteNote, assetFileName?: string, parentFileName?: string, childFileNames?: string[]): string {
   const frontmatter = buildFrontmatter(note);
   let body = note.content || '';
 
@@ -126,6 +147,9 @@ export function renderNote(note: GetNoteNote, assetFileName?: string): string {
     const transcriptHeader = '\n### 原始录音转写\n\n';
     body = audioBlock + body + transcriptHeader + note.audio;
   }
+
+  // 添加主子文档互链
+  body += buildRelationLinks(note, parentFileName, childFileNames);
 
   return frontmatter + body;
 }

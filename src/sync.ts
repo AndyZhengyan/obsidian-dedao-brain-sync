@@ -33,10 +33,15 @@ function parseNoteUpdatedTime(note: GetNoteNote): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-function isSortedByUpdatedDesc(notes: GetNoteNote[]): boolean {
+function parseNoteCreatedTime(note: GetNoteNote): number | null {
+  const parsed = Date.parse(note.created_at);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function isSortedByCreatedDesc(notes: GetNoteNote[]): boolean {
   let previous: number | null = null;
   for (const note of notes) {
-    const current = parseNoteUpdatedTime(note);
+    const current = parseNoteCreatedTime(note);
     if (current === null) return false;
     if (previous !== null && current > previous) return false;
     previous = current;
@@ -101,31 +106,33 @@ export class SyncEngine {
     return fullPath;
   }
 
-  private getFileName(note: GetNoteNote): string {
+  private buildBaseName(note: GetNoteNote): string {
     const rawTitle = generateDisplayTitle(note);
     const displayTitle = rawTitle || t('picker.noTitle');
     const prefix = this.settings.filenamePrefix?.trim();
-    const baseName = (() => {
-      if (!prefix) return displayTitle;
+    if (!prefix) return displayTitle;
 
-      const hasTimestampTokens = /YYYY|MM|DD|HH|mm|ss/.test(prefix);
-      if (hasTimestampTokens) {
-        const formattedPrefix = formatTimestampPrefix(prefix, note.created_at);
-        if (!formattedPrefix) {
-          return displayTitle;
-        }
-        const separator = formattedPrefix.endsWith('_') ? '' : '_';
-        return `${formattedPrefix}${separator}${displayTitle}`;
+    const hasTimestampTokens = /YYYY|MM|DD|HH|mm|ss/.test(prefix);
+    if (hasTimestampTokens) {
+      const formattedPrefix = formatTimestampPrefix(prefix, note.created_at);
+      if (!formattedPrefix) {
+        return displayTitle;
       }
-
-      const separator = prefix.endsWith('_') ? '' : '_';
-      return `${prefix}${separator}${displayTitle}`;
-    })();
-
-    if (note.is_child_note || note.parent_id) {
-      return `${baseName}__${note.note_id}`;
+      const separator = formattedPrefix.endsWith('_') ? '' : '_';
+      return `${formattedPrefix}${separator}${displayTitle}`;
     }
-    return baseName;
+
+    const separator = prefix.endsWith('_') ? '' : '_';
+    return `${prefix}${separator}${displayTitle}`;
+  }
+
+  private getFileName(note: GetNoteNote, parentBaseName?: string): string {
+    // 子文档用父文档 baseName + 子文档标题，不用 note_id
+    if (parentBaseName) {
+      const childTitle = generateDisplayTitle(note) || t('picker.noTitle');
+      return `${parentBaseName}__${childTitle}`;
+    }
+    return this.buildBaseName(note);
   }
 
   private getFilePath(categoryDir: string, note: GetNoteNote): string {
@@ -274,11 +281,14 @@ export class SyncEngine {
 
   private async writeNote(
     note: GetNoteNote,
-    uidIndex: Map<string, TFile>
+    uidIndex: Map<string, TFile>,
+    parentBaseName?: string,
+    parentFileName?: string,
+    childFileNames?: string[]
   ): Promise<WriteNoteResult> {
     try {
       const categoryDir = await this.ensureCategoryDir(getCategoryDir(note.note_type));
-      let targetPath = this.getFilePath(categoryDir, note);
+      let targetPath = `${categoryDir}/${this.getFileName(note, parentBaseName)}.md`;
       const existingByUid = uidIndex.get(note.note_id);
       const existingAtTarget = this.app.vault.getAbstractFileByPath(targetPath);
 
@@ -293,13 +303,14 @@ export class SyncEngine {
         }
       }
 
+      const content = renderNote(note, note.assetFileName, parentFileName, childFileNames);
+
       if (existingByUid) {
         const contentChanged = this.isContentChanged(existingByUid, note);
         const pathChanged = existingByUid.path !== targetPath;
 
         if (!contentChanged && !pathChanged) return { status: 'skipped', file: existingByUid };
 
-        const content = renderNote(note, note.assetFileName);
         if (pathChanged) {
           await this.app.vault.rename(existingByUid, targetPath);
         }
@@ -308,12 +319,10 @@ export class SyncEngine {
       } else if (existingAtTarget instanceof TFile) {
         // File exists at target path but wasn't in uidIndex - check content
         const contentChanged = this.isContentChanged(existingAtTarget, note);
-        const content = renderNote(note, note.assetFileName);
         await this.app.vault.modify(existingAtTarget, content);
         uidIndex.set(note.note_id, existingAtTarget);
         return { status: contentChanged ? 'updated' : 'skipped', file: existingAtTarget };
       } else {
-        const content = renderNote(note, note.assetFileName);
         try {
           await this.app.vault.create(targetPath, content);
           const created = this.app.vault.getAbstractFileByPath(targetPath);
@@ -603,16 +612,24 @@ export class SyncEngine {
           seenNoteIds.add(note.note_id);
           result.total++;
           const noteToWrite = await this.enrichAudioNote(note, controller.signal);
-          const writeResult = await this.writeNote(noteToWrite, uidIndex);
+
+          const appendNotes = await this.fetchAppendNotes(noteToWrite, controller.signal, result);
+          const parentBaseName = this.buildBaseName(noteToWrite);
+          const parentFileName = this.getFileName(noteToWrite);
+          // 子文档完整文件名（用于父文档的 wiki 链接）
+          const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
+
+          // 写入父文档（含子文档链接）
+          const writeResult = await this.writeNote(noteToWrite, uidIndex, undefined, undefined, childFileNames);
           this.applyWriteResult(result, writeResult);
           this.recordItem(result, noteToWrite, writeResult);
 
-          const appendNotes = await this.fetchAppendNotes(noteToWrite, controller.signal, result);
+          // 写入子文档（链接回父文档）
           for (const appendNote of appendNotes) {
             if (seenNoteIds.has(appendNote.note_id)) continue;
             seenNoteIds.add(appendNote.note_id);
             result.total++;
-            const appendWriteResult = await this.writeNote(appendNote, uidIndex);
+            const appendWriteResult = await this.writeNote(appendNote, uidIndex, parentBaseName, parentFileName);
             this.applyWriteResult(result, appendWriteResult);
             this.recordItem(result, appendNote, appendWriteResult);
           }
@@ -624,12 +641,12 @@ export class SyncEngine {
           }
         }
 
-        // Notes are sorted by updated_at DESC. Once the oldest note in this page
+        // List APIs page by created_at DESC. Once the oldest created note in this page
         // is older than the cutoff, later pages can be skipped after this page's
         // still-valid notes have been processed.
-        if (cutoffTime !== null && notes.length > 0 && isSortedByUpdatedDesc(notes)) {
+        if (cutoffTime !== null && notes.length > 0 && isSortedByCreatedDesc(notes)) {
           const oldestNote = notes[notes.length - 1];
-          const oldestTime = parseNoteUpdatedTime(oldestNote);
+          const oldestTime = parseNoteCreatedTime(oldestNote);
           if (oldestTime !== null && oldestTime < cutoffTime) {
             break;
           }
@@ -705,23 +722,30 @@ export class SyncEngine {
           if (preCheck.exists) {
             result.skipped++;
             this.recordItem(result, note, { status: 'skipped' });
-            if (!this.needsRelationDetail(note)) {
+            const mayHaveAppendNotes = (note.children_count ?? 0) > 0 || Boolean(note.children_ids?.length);
+            if (!mayHaveAppendNotes) {
               continue;
             }
           }
           const noteToWrite = await this.enrichAudioNote(note, controller.signal);
+
+          const appendNotes = await this.fetchAppendNotes(noteToWrite, controller.signal, result);
+          const parentBaseName = this.buildBaseName(noteToWrite);
+          const parentFileName = this.getFileName(noteToWrite);
+          const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
+
           if (!preCheck.exists) {
-            const writeResult = await this.writeNote(noteToWrite, uidIndex);
+            const writeResult = await this.writeNote(noteToWrite, uidIndex, undefined, parentFileName, childFileNames);
             this.applyWriteResult(result, writeResult);
             this.recordItem(result, noteToWrite, writeResult);
           }
 
-          const appendNotes = await this.fetchAppendNotes(noteToWrite, controller.signal, result);
+          // 写入子文档（链接回父文档）
           for (const appendNote of appendNotes) {
             if (seenNoteIds.has(appendNote.note_id)) continue;
             seenNoteIds.add(appendNote.note_id);
             result.total++;
-            const appendWriteResult = await this.writeNote(appendNote, uidIndex);
+            const appendWriteResult = await this.writeNote(appendNote, uidIndex, parentBaseName, parentFileName);
             this.applyWriteResult(result, appendWriteResult);
             this.recordItem(result, appendNote, appendWriteResult);
           }

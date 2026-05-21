@@ -243,6 +243,147 @@ describe('SyncEngine — page cutoff', () => {
       vi.useRealTimers();
     }
   });
+
+  it('stops OpenAPI pagination when maxDays reaches a stale created_at tail page', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-11T12:00:00+08:00'));
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const requestUrl = String(url);
+      if (requestUrl.includes('since_id=old_tail')) {
+        return mockFetchResponse({
+          data: {
+            notes: [
+              makeNote({
+                note_id: 'should_not_fetch_page_2',
+                title: '不应该翻到第二页',
+                created_at: '2026-05-11T10:00:00+08:00',
+                updated_at: '2026-05-11T10:00:00+08:00',
+              }),
+            ],
+            has_more: false,
+            next_cursor: '',
+          },
+        }) as Response;
+      }
+
+      return mockFetchResponse({
+        data: {
+          notes: [
+            makeNote({
+              note_id: 'fresh',
+              title: '一天内',
+              created_at: '2026-05-11T11:30:00+08:00',
+              updated_at: '2026-05-11T11:30:00+08:00',
+            }),
+            makeNote({
+              note_id: 'old_created_recently_updated',
+              title: '旧创建但刚更新',
+              created_at: '2026-05-09T12:00:00+08:00',
+              updated_at: '2026-05-11T11:00:00+08:00',
+            }),
+            makeNote({
+              note_id: 'old_tail',
+              title: '超过一天',
+              created_at: '2026-05-09T11:30:00+08:00',
+              updated_at: '2026-05-09T11:30:00+08:00',
+            }),
+          ],
+          has_more: true,
+          next_cursor: 'old_tail',
+        },
+      }) as Response;
+    });
+
+    try {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings({
+        authMode: 'openapi',
+        openApiToken: 'openapi-token',
+        openApiClientId: 'openapi-client',
+        maxDays: 1,
+      }));
+
+      const result = await engine.sync();
+
+      expect(result.items?.map(item => item.noteId)).toEqual(['fresh', 'old_created_recently_updated']);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      expect(String(vi.mocked(globalThis.fetch).mock.calls[0][0])).toBe(
+        'https://openapi.biji.com/open/api/v1/resource/note/list?since_id=0'
+      );
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('stops Web API pagination when maxDays reaches a stale created_at tail page', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-11T12:00:00+08:00'));
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const requestUrl = String(url);
+      if (requestUrl.includes('since_id=old_tail')) {
+        return mockFetchResponse({
+          h: {},
+          c: {
+            list: [
+              makeNote({
+                note_id: 'should_not_fetch_page_2',
+                title: '不应该翻到第二页',
+                created_at: '2026-05-11T10:00:00+08:00',
+                updated_at: '2026-05-11T10:00:00+08:00',
+              }),
+            ],
+            has_more: false,
+          },
+        }) as Response;
+      }
+
+      return mockFetchResponse({
+        h: {},
+        c: {
+          list: [
+            makeNote({
+              note_id: 'fresh',
+              title: '一天内',
+              created_at: '2026-05-11T11:30:00+08:00',
+              updated_at: '2026-05-11T11:30:00+08:00',
+            }),
+            makeNote({
+              note_id: 'old_created_recently_updated',
+              title: '旧创建但刚更新',
+              created_at: '2026-05-09T12:00:00+08:00',
+              updated_at: '2026-05-11T11:00:00+08:00',
+            }),
+            makeNote({
+              note_id: 'old_tail',
+              title: '超过一天',
+              created_at: '2026-05-09T11:30:00+08:00',
+              updated_at: '2026-05-09T11:30:00+08:00',
+            }),
+          ],
+          has_more: true,
+        },
+      }) as Response;
+    });
+
+    try {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings({
+        authMode: 'web',
+        webApiToken: 'web-token',
+        maxDays: 1,
+      }));
+
+      const result = await engine.sync();
+
+      expect(result.items?.map(item => item.noteId)).toEqual(['fresh', 'old_created_recently_updated']);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      expect(String(vi.mocked(globalThis.fetch).mock.calls[0][0])).toContain('sort=create_desc');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('SyncEngine — filterNotesByDateRange', () => {
@@ -640,7 +781,7 @@ describe('SyncEngine — getFileName', () => {
     expect(engine['getFileName'](note)).toBe('我的笔记');
   });
 
-  it('附加笔记在文件名末尾追加 __note_id', () => {
+  it('附加笔记使用父文档名作为前缀', () => {
     const app = makeMockApp();
     const engine = new SyncEngine(app as any, makeSettings({ filenamePrefix: 'getnote' }));
     const note = makeNote({
@@ -650,8 +791,13 @@ describe('SyncEngine — getFileName', () => {
       is_child_note: true,
     });
 
+    // 子文档不带 parentBaseName 时，返回带前缀的标题（不用 note_id）
     // @ts-ignore
-    expect(engine['getFileName'](note)).toBe('getnote_原笔记标题__1909246675068292528');
+    expect(engine['getFileName'](note)).toBe('getnote_原笔记标题');
+
+    // 传入父文档 baseName 时，格式为：父文档名__子文档标题
+    // @ts-ignore
+    expect(engine['getFileName'](note, 'getnote_主笔记标题')).toBe('getnote_主笔记标题__原笔记标题');
   });
 });
 
@@ -714,9 +860,10 @@ describe('SyncEngine — append note sync', () => {
       ]);
       const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
       expect(createdPaths).toContain('Get笔记/纯文本/主笔记.md');
-      expect(createdPaths).toContain('Get笔记/纯文本/附加笔记正文__1909246675068292528.md');
+      // 子文档命名：父文档名__子文档标题（不用 note_id）
+      expect(createdPaths).toContain('Get笔记/纯文本/主笔记__附加笔记正文.md');
       const childContent = vi.mocked(app.vault.create).mock.calls.find(([path]) =>
-        path === 'Get笔记/纯文本/附加笔记正文__1909246675068292528.md'
+        path === 'Get笔记/纯文本/主笔记__附加笔记正文.md'
       )?.[1] as string;
       expect(childContent).toContain('parent_id: "1909193892067130512"');
       expect(childContent).toContain('is_child_note: true');
@@ -1460,9 +1607,9 @@ describe('SyncEngine — fixture-based sync integration', () => {
     ]);
     const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
     expect(createdPaths).toContain('Get笔记/纯文本/主笔记.md');
-    expect(createdPaths).toContain('Get笔记/纯文本/附加笔记正文__1909246675068292528.md');
+    expect(createdPaths).toContain('Get笔记/纯文本/主笔记__附加笔记正文.md');
     const childContent = vi.mocked(app.vault.create).mock.calls.find(([path]) =>
-      path === 'Get笔记/纯文本/附加笔记正文__1909246675068292528.md'
+      path === 'Get笔记/纯文本/主笔记__附加笔记正文.md'
     )?.[1] as string;
     expect(childContent).toContain('parent_id: "1909193892067130512"');
     expect(childContent).toContain('is_child_note: true');
@@ -1488,7 +1635,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     ]);
     const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
     expect(createdPaths).toContain('Get笔记/纯文本/主笔记.md');
-    expect(createdPaths).toContain('Get笔记/纯文本/附加笔记正文__1909246675068292528.md');
+    expect(createdPaths).toContain('Get笔记/纯文本/主笔记__附加笔记正文.md');
     expect(getFixtureRequests().map(request => request.url)).toContain(
       'https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children'
     );
@@ -1585,6 +1732,6 @@ describe('SyncEngine — fixture-based sync integration', () => {
     ]);
     const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
     expect(createdPaths).toContain('Get笔记/纯文本/主笔记.md');
-    expect(createdPaths).toContain('Get笔记/纯文本/附加笔记正文__1909246675068292528.md');
+    expect(createdPaths).toContain('Get笔记/纯文本/主笔记__附加笔记正文.md');
   });
 });
