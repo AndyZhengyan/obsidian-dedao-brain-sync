@@ -1610,11 +1610,43 @@ describe('SyncEngine — fixture-based sync integration', () => {
     expect(createdPaths).toContain('Get笔记/纯文本/主笔记.md');
     expect(createdPaths).toContain('Get笔记/纯文本/主笔记__附加笔记正文.md');
     expect(createdPaths).toContain('Get笔记/纯文本/主笔记__第二条附加笔记正文.md');
+    expect(getFixtureRequests().map(request => request.url)).not.toContain(
+      'https://openapi.biji.com/open/api/v1/resource/note/detail?id=1909246675068292530'
+    );
     const childContent = vi.mocked(app.vault.create).mock.calls.find(([path]) =>
       path === 'Get笔记/纯文本/主笔记__附加笔记正文.md'
     )?.[1] as string;
     expect(childContent).toContain('parent_id: "1909193892067130512"');
     expect(childContent).toContain('is_child_note: true');
+  });
+
+  it('OpenAPI: detail child relation overrides stale list child IDs', async () => {
+    resetFixtures();
+    loadScenario('sync-stale-children-openapi');
+
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'test-openapi-token',
+      openApiClientId: 'test-client',
+      maxDays: 0,
+    }));
+
+    const result = await engine.sync();
+
+    expect(result.created).toBe(2);
+    expect(result.failed).toBe(0);
+    expect(result.items).toEqual([
+      expect.objectContaining({ noteId: '1909193892067130512', status: 'created' }),
+      expect.objectContaining({ noteId: '1909246675068292528', status: 'created' }),
+    ]);
+    const requestUrls = getFixtureRequests().map(request => request.url);
+    expect(requestUrls).toContain(
+      'https://openapi.biji.com/open/api/v1/resource/note/detail?id=1909193892067130512'
+    );
+    expect(requestUrls).not.toContain(
+      'https://openapi.biji.com/open/api/v1/resource/note/detail?id=1909246675068292530'
+    );
   });
 
   it('WebAPI: parent + child notes both created', async () => {

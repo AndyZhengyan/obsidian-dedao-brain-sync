@@ -373,7 +373,7 @@ export class SyncEngine {
   }
 
   private mergeNoteDetail(note: GetNoteNote, detail: Partial<GetNoteNote>): GetNoteNote {
-    const childrenIds = detail.children_ids && detail.children_ids.length >= (note.children_ids?.length ?? 0)
+    const childrenIds = detail.children_ids
       ? detail.children_ids
       : note.children_ids;
     return {
@@ -398,7 +398,9 @@ export class SyncEngine {
   }
 
   private needsRelationDetail(note: GetNoteNote): boolean {
-    return (note.children_count ?? 0) > (note.children_ids?.length ?? 0);
+    const childrenCount = note.children_count ?? 0;
+    const childrenIdsCount = note.children_ids?.length ?? 0;
+    return childrenCount > 0 && childrenCount !== childrenIdsCount;
   }
 
   private async enrichAudioNote(note: GetNoteNote, signal: AbortSignal): Promise<GetNoteNote> {
