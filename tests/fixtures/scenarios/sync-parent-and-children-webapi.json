@@ -29,7 +29,7 @@
                 "created_at": "2026-05-06 22:07:04",
                 "updated_at": "2026-05-06 22:07:04",
                 "prime_id": "prime_1909193892067130512",
-                "sub_note_count": 1,
+                "sub_note_count": 2,
                 "is_child_note": false
               }
             ],
@@ -42,14 +42,18 @@
     {
       "request": {
         "url": "https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children",
-        "params": {}
+        "params": {
+          "limit": "20",
+          "since_id": "",
+          "sort": "create_desc"
+        }
       },
       "response": {
         "status": 200,
         "body": {
           "h": {},
           "c": {
-            "total_items": 1,
+            "total_items": 2,
             "list": [
               {
                 "id": "1909246675068292528",
@@ -63,6 +67,44 @@
                 "tags": [],
                 "created_at": "2026-05-07 19:19:30",
                 "updated_at": "2026-05-07 19:19:30",
+                "parent_id": "1909193892067130512",
+                "is_child_note": true,
+                "sub_note_count": 0
+              }
+            ],
+            "has_more": true
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "url": "https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children",
+        "params": {
+          "limit": "20",
+          "since_id": "1909246675068292528",
+          "sort": "create_desc"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "h": {},
+          "c": {
+            "total_items": 2,
+            "list": [
+              {
+                "id": "1909246675068292529",
+                "note_id": "1909246675068292529",
+                "prime_id": "prime_child_1909246675068292529",
+                "title": "",
+                "content": "第二条附加笔记正文",
+                "body_text": "第二条附加笔记正文",
+                "note_type": "plain_text",
+                "source": "web",
+                "tags": [],
+                "created_at": "2026-05-07 19:20:30",
+                "updated_at": "2026-05-07 19:20:30",
                 "parent_id": "1909193892067130512",
                 "is_child_note": true,
                 "sub_note_count": 0

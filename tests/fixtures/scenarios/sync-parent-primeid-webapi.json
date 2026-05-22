@@ -44,7 +44,12 @@
     },
     {
       "request": {
-        "url": "https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children"
+        "url": "https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children",
+        "params": {
+          "limit": "20",
+          "since_id": "",
+          "sort": "create_desc"
+        }
       },
       "response": {
         "status": 200,

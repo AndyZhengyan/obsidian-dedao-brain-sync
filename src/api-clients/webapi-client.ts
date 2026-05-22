@@ -186,10 +186,24 @@ export async function fetchNoteChildren(
   token: string,
   signal?: AbortSignal
 ): Promise<GetNoteNote[]> {
-  const url = `https://get-notes.luojilab.com/voicenotes/web/notes/${encodeURIComponent(parentPrimeId)}/children`;
-  const data = await apiRequest<{ h?: unknown; c?: unknown }>(url, {
-    method: 'GET',
-    headers: buildHeaders(token),
-  }, 2, signal);
-  return parseWebApiListResponse(data).notes;
+  const notes: GetNoteNote[] = [];
+  let sinceId = '0';
+
+  while (true) {
+    const params = new URLSearchParams();
+    params.set('limit', '20');
+    params.set('since_id', sinceId === '0' ? '' : sinceId);
+    params.set('sort', 'create_desc');
+    const url = `https://get-notes.luojilab.com/voicenotes/web/notes/${encodeURIComponent(parentPrimeId)}/children?${params.toString()}`;
+    const data = await apiRequest<{ h?: unknown; c?: unknown }>(url, {
+      method: 'GET',
+      headers: buildHeaders(token),
+    }, 2, signal);
+    const page = parseWebApiListResponse(data);
+    notes.push(...page.notes);
+    if (!page.hasMore || page.notes.length === 0) break;
+    sinceId = page.notes[page.notes.length - 1].note_id;
+  }
+
+  return notes;
 }
