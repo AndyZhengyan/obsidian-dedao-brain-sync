@@ -1649,6 +1649,39 @@ describe('SyncEngine — fixture-based sync integration', () => {
     );
   });
 
+  it('WebAPI: detail child relation overrides stale list child IDs', async () => {
+    resetFixtures();
+    loadScenario('sync-stale-children-webapi');
+
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'web',
+      webApiToken: 'test-web-token',
+      maxDays: 0,
+    }));
+
+    const result = await engine.sync();
+
+    expect(result.created).toBe(2);
+    expect(result.failed).toBe(0);
+    expect(result.items).toEqual([
+      expect.objectContaining({ noteId: '1909193892067130512', status: 'created' }),
+      expect.objectContaining({ noteId: '1909246675068292528', status: 'created' }),
+    ]);
+    const requestUrls = getFixtureRequests().map(request => request.url);
+    expect(requestUrls).toContain(
+      'https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512'
+    );
+    expect(requestUrls).toContain(
+      'https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children?limit=20&since_id=&sort=create_desc'
+    );
+    const parentContent = vi.mocked(app.vault.create).mock.calls.find(([path]) =>
+      path === 'Get笔记/录音长录/WebAPI 录音主笔记.md'
+    )?.[1] as string;
+    expect(parentContent).toContain('children_ids: ["1909246675068292528"]');
+    expect(parentContent).not.toContain('1909246675068292530');
+  });
+
   it('WebAPI: parent + child notes both created', async () => {
     resetFixtures();
     loadScenario('sync-parent-and-children-webapi');

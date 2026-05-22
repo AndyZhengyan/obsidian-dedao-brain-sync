@@ -1,0 +1,118 @@
+{
+  "name": "sync-stale-children-webapi",
+  "description": "WebAPI: detail children_ids overrides stale extra child IDs from list data",
+  "authMode": "web",
+  "sequence": [
+    {
+      "request": {
+        "url": "https://get-notes.luojilab.com/voicenotes/web/notes",
+        "params": {
+          "limit": "20",
+          "since_id": "",
+          "sort": "create_desc"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "h": {},
+          "c": {
+            "list": [
+              {
+                "id": "1",
+                "note_id": "1909193892067130512",
+                "title": "WebAPI 录音主笔记",
+                "content": "录音摘要",
+                "note_type": "recorder_audio",
+                "source": "web",
+                "tags": [],
+                "created_at": "2026-05-06 22:07:04",
+                "updated_at": "2026-05-06 22:07:04",
+                "prime_id": "prime_1909193892067130512",
+                "sub_note_count": 1,
+                "children_ids": ["1909246675068292528", "1909246675068292530"],
+                "is_child_note": false
+              }
+            ],
+            "total_items": 1,
+            "has_more": false
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "url": "https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "h": {},
+          "c": {
+            "id": "1",
+            "note_id": "1909193892067130512",
+            "title": "WebAPI 录音主笔记",
+            "content": "录音摘要",
+            "note_type": "recorder_audio",
+            "source": "web",
+            "tags": [],
+            "created_at": "2026-05-06 22:07:04",
+            "updated_at": "2026-05-06 22:07:04",
+            "prime_id": "prime_1909193892067130512",
+            "sub_note_count": 1,
+            "children_count": 1,
+            "children_ids": ["1909246675068292528"],
+            "attachments": [
+              {
+                "type": "audio",
+                "url": "file://unsafe-local-audio.mp3",
+                "title": "",
+                "duration": 1000
+              }
+            ],
+            "audio": "WebAPI 转写正文",
+            "is_child_note": false
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "url": "https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children",
+        "params": {
+          "limit": "20",
+          "since_id": "",
+          "sort": "create_desc"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "h": {},
+          "c": {
+            "total_items": 1,
+            "list": [
+              {
+                "id": "1909246675068292528",
+                "note_id": "1909246675068292528",
+                "prime_id": "prime_child_1909246675068292528",
+                "title": "",
+                "content": "WebAPI 附加笔记正文",
+                "body_text": "WebAPI 附加笔记正文",
+                "note_type": "plain_text",
+                "source": "web",
+                "tags": [],
+                "created_at": "2026-05-07 19:19:30",
+                "updated_at": "2026-05-07 19:19:30",
+                "parent_id": "1909193892067130512",
+                "is_child_note": true,
+                "sub_note_count": 0
+              }
+            ],
+            "has_more": false
+          }
+        }
+      }
+    }
+  ]
+}
