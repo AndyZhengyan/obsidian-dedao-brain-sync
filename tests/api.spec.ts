@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fetchNotes, fetchNoteDetail } from '../src/api';
+import { fetchNoteChildren, fetchNotes, fetchNoteDetail } from '../src/api';
 import type { ListResponse } from '../src/types';
 
 // Extract the internal safeJsonParse for direct testing
@@ -401,6 +401,96 @@ describe('web auth mode', () => {
       expect(result.title).toBe('网页模式详情');
       expect(globalThis.fetch).toHaveBeenCalledWith(
         'https://get-notes.luojilab.com/voicenotes/web/notes/1909428570156704824',
+        expect.objectContaining({ method: 'GET' })
+      );
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('fetches append children from the paginated web children endpoint', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        mockFetchResponse({
+          h: {},
+          c: {
+            total_items: 2,
+            list: [
+              {
+                id: '1910451630291348232',
+                note_id: '1910451630291348232',
+                prime_id: 'KJp3l6ykbVEeANdP',
+                title: '',
+                content: 'hihi 18 plus',
+                note_type: 'plain_text',
+                source: 'web',
+                tags: [],
+                created_at: '2026-05-20 11:00:00',
+                updated_at: '2026-05-20 11:00:00',
+                parent_id: '1910450663922605144',
+                is_child_note: true,
+                sub_note_count: 0,
+              },
+            ],
+            has_more: true,
+          },
+        }) as Response
+      )
+      .mockResolvedValueOnce(
+        mockFetchResponse({
+          h: {},
+          c: {
+            total_items: 2,
+            list: [
+              {
+                id: '1910451630291348233',
+                note_id: '1910451630291348233',
+                prime_id: 'KJp3l6ykbVEeANdQ',
+                title: '',
+                content: 'hihi 19 plus',
+                note_type: 'plain_text',
+                source: 'web',
+                tags: [],
+                created_at: '2026-05-20 11:01:00',
+                updated_at: '2026-05-20 11:01:00',
+                parent_id: '1910450663922605144',
+                is_child_note: true,
+                sub_note_count: 0,
+              },
+            ],
+            has_more: false,
+          },
+        }) as Response
+      );
+
+    try {
+      const result = await fetchNoteChildren(
+        'WPKWeqDApaE6XrDP',
+        'web-token',
+        undefined,
+        'web'
+      );
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual(expect.objectContaining({
+        note_id: '1910451630291348232',
+        parent_id: '1910450663922605144',
+        is_child_note: true,
+        children_count: 0,
+      }));
+      expect(result[1].note_id).toBe('1910451630291348233');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        'https://get-notes.luojilab.com/voicenotes/web/notes/WPKWeqDApaE6XrDP/children?limit=20&since_id=&sort=create_desc',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer web-token',
+            'x-request-id': expect.any(String),
+          }),
+        })
+      );
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        'https://get-notes.luojilab.com/voicenotes/web/notes/WPKWeqDApaE6XrDP/children?limit=20&since_id=1910451630291348232&sort=create_desc',
         expect.objectContaining({ method: 'GET' })
       );
     } finally {

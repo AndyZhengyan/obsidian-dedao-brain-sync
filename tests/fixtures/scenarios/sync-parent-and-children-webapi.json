@@ -1,0 +1,119 @@
+{
+  "name": "sync-parent-and-children-webapi",
+  "description": "WebAPI: parent list returns sub_note_count, append children are fetched from /notes/{prime_id}/children",
+  "authMode": "web",
+  "sequence": [
+    {
+      "request": {
+        "url": "https://get-notes.luojilab.com/voicenotes/web/notes",
+        "params": {
+          "limit": "20",
+          "since_id": "",
+          "sort": "create_desc"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "h": {},
+          "c": {
+            "list": [
+              {
+                "id": "1",
+                "note_id": "1909193892067130512",
+                "title": "主笔记",
+                "content": "主笔记正文",
+                "note_type": "plain_text",
+                "source": "web",
+                "tags": [],
+                "created_at": "2026-05-06 22:07:04",
+                "updated_at": "2026-05-06 22:07:04",
+                "prime_id": "prime_1909193892067130512",
+                "sub_note_count": 2,
+                "is_child_note": false
+              }
+            ],
+            "total_items": 1,
+            "has_more": false
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "url": "https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children",
+        "params": {
+          "limit": "20",
+          "since_id": "",
+          "sort": "create_desc"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "h": {},
+          "c": {
+            "total_items": 2,
+            "list": [
+              {
+                "id": "1909246675068292528",
+                "note_id": "1909246675068292528",
+                "prime_id": "prime_child_1909246675068292528",
+                "title": "",
+                "content": "附加笔记正文",
+                "body_text": "附加笔记正文",
+                "note_type": "plain_text",
+                "source": "web",
+                "tags": [],
+                "created_at": "2026-05-07 19:19:30",
+                "updated_at": "2026-05-07 19:19:30",
+                "parent_id": "1909193892067130512",
+                "is_child_note": true,
+                "sub_note_count": 0
+              }
+            ],
+            "has_more": true
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "url": "https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children",
+        "params": {
+          "limit": "20",
+          "since_id": "1909246675068292528",
+          "sort": "create_desc"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "h": {},
+          "c": {
+            "total_items": 2,
+            "list": [
+              {
+                "id": "1909246675068292529",
+                "note_id": "1909246675068292529",
+                "prime_id": "prime_child_1909246675068292529",
+                "title": "",
+                "content": "第二条附加笔记正文",
+                "body_text": "第二条附加笔记正文",
+                "note_type": "plain_text",
+                "source": "web",
+                "tags": [],
+                "created_at": "2026-05-07 19:20:30",
+                "updated_at": "2026-05-07 19:20:30",
+                "parent_id": "1909193892067130512",
+                "is_child_note": true,
+                "sub_note_count": 0
+              }
+            ],
+            "has_more": false
+          }
+        }
+      }
+    }
+  ]
+}

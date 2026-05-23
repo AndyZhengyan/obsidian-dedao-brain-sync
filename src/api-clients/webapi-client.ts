@@ -29,7 +29,11 @@ function parseWebApiListResponse(value: unknown): { notes: GetNoteNote[]; hasMor
     id: n.id as string,
     note_id: n.note_id as string,
     parent_id: (n.parent_id as string) ?? undefined,
-    children_count: typeof n.children_count === 'number' ? n.children_count : undefined,
+    children_count: typeof n.children_count === 'number'
+      ? n.children_count
+      : typeof n.sub_note_count === 'number'
+        ? n.sub_note_count
+        : undefined,
     children_ids: Array.isArray(n.children_ids) ? n.children_ids.map((id: unknown) => String(id)) : undefined,
     is_child_note: typeof n.is_child_note === 'boolean' ? n.is_child_note : undefined,
     title: (n.title as string) ?? '',
@@ -48,6 +52,8 @@ function parseWebApiListResponse(value: unknown): { notes: GetNoteNote[]; hasMor
 
 function normalizeNoteDetailData(value: unknown): Partial<GetNoteNote> | null {
   if (!isRecord(value)) return null;
+  // Guard: if value has a list property it is a list response, not a note detail.
+  if ('list' in (value as Record<string, unknown>)) return null;
   const nestedNote = isRecord(value.note) ? value.note : null;
   const source = nestedNote ?? value;
   const detail = { ...source } as Partial<GetNoteNote>;
@@ -170,6 +176,34 @@ export async function fetchNoteDetail(
   const c = data.c;
   if (!isRecord(c)) throw new Error(t('error.fetchNoteDetailFailed'));
   const noteDetail = normalizeNoteDetailData(c);
-  if (!noteDetail) throw new Error(t('error.fetchNoteDetailFailed'));
+  // noteDetail.note_id is required — throw if missing (e.g. error response body)
+  if (!noteDetail || !noteDetail.note_id) throw new Error(t('error.fetchNoteDetailFailed'));
   return noteDetail;
+}
+
+export async function fetchNoteChildren(
+  parentPrimeId: string,
+  token: string,
+  signal?: AbortSignal
+): Promise<GetNoteNote[]> {
+  const notes: GetNoteNote[] = [];
+  let sinceId = '0';
+
+  while (true) {
+    const params = new URLSearchParams();
+    params.set('limit', '20');
+    params.set('since_id', sinceId === '0' ? '' : sinceId);
+    params.set('sort', 'create_desc');
+    const url = `https://get-notes.luojilab.com/voicenotes/web/notes/${encodeURIComponent(parentPrimeId)}/children?${params.toString()}`;
+    const data = await apiRequest<{ h?: unknown; c?: unknown }>(url, {
+      method: 'GET',
+      headers: buildHeaders(token),
+    }, 2, signal);
+    const page = parseWebApiListResponse(data);
+    notes.push(...page.notes);
+    if (!page.hasMore || page.notes.length === 0) break;
+    sinceId = page.notes[page.notes.length - 1].note_id;
+  }
+
+  return notes;
 }

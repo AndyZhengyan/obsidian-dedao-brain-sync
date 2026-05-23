@@ -1,0 +1,61 @@
+{
+  "name": "selective-sync-webapi",
+  "description": "WebAPI: selective sync writes only requested notes from the list response",
+  "authMode": "web",
+  "sequence": [
+    {
+      "request": {
+        "url": "https://get-notes.luojilab.com/voicenotes/web/notes",
+        "params": {
+          "limit": "20",
+          "since_id": "",
+          "sort": "create_desc"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "h": {},
+          "c": {
+            "total_items": 2,
+            "list": [
+              {
+                "id": "web_selected",
+                "note_id": "web_selected",
+                "prime_id": "prime_web_selected",
+                "title": "WebAPI 被选择",
+                "content": "只应该同步这一条",
+                "body_text": "只应该同步这一条",
+                "note_type": "plain_text",
+                "source": "web",
+                "tags": [],
+                "created_at": "2026-05-20 09:00:00",
+                "updated_at": "2026-05-20 09:00:00",
+                "is_child_note": false,
+                "parent_id": "",
+                "sub_note_count": 0
+              },
+              {
+                "id": "web_unselected",
+                "note_id": "web_unselected",
+                "prime_id": "prime_web_unselected",
+                "title": "WebAPI 未选择",
+                "content": "这一条不应该写入",
+                "body_text": "这一条不应该写入",
+                "note_type": "plain_text",
+                "source": "web",
+                "tags": [],
+                "created_at": "2026-05-19 09:00:00",
+                "updated_at": "2026-05-19 09:00:00",
+                "is_child_note": false,
+                "parent_id": "",
+                "sub_note_count": 0
+              }
+            ],
+            "has_more": false
+          }
+        }
+      }
+    }
+  ]
+}

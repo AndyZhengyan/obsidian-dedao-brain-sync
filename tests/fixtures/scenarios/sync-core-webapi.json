@@ -1,0 +1,99 @@
+{
+  "name": "sync-core-webapi",
+  "description": "WebAPI: full sync creates notes across paginated list responses",
+  "authMode": "web",
+  "sequence": [
+    {
+      "request": {
+        "url": "https://get-notes.luojilab.com/voicenotes/web/notes",
+        "params": {
+          "limit": "20",
+          "since_id": "",
+          "sort": "create_desc"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "h": {},
+          "c": {
+            "total_items": 3,
+            "list": [
+              {
+                "id": "web_plain_1",
+                "note_id": "web_plain_1",
+                "prime_id": "prime_web_plain_1",
+                "title": "WebAPI 纯文本",
+                "content": "WebAPI 第一页正文",
+                "body_text": "WebAPI 第一页正文",
+                "note_type": "plain_text",
+                "source": "web",
+                "tags": [],
+                "created_at": "2026-05-20 10:00:00",
+                "updated_at": "2026-05-20 10:00:00",
+                "is_child_note": false,
+                "parent_id": "",
+                "sub_note_count": 0
+              },
+              {
+                "id": "web_link_2",
+                "note_id": "web_link_2",
+                "prime_id": "prime_web_link_2",
+                "title": "WebAPI 链接",
+                "content": "https://example.com/web",
+                "body_text": "https://example.com/web",
+                "note_type": "link",
+                "source": "web",
+                "tags": [],
+                "created_at": "2026-05-19 10:00:00",
+                "updated_at": "2026-05-19 10:00:00",
+                "is_child_note": false,
+                "parent_id": "",
+                "sub_note_count": 0
+              }
+            ],
+            "has_more": true
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "url": "https://get-notes.luojilab.com/voicenotes/web/notes",
+        "params": {
+          "limit": "20",
+          "since_id": "web_link_2",
+          "sort": "create_desc"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "h": {},
+          "c": {
+            "total_items": 1,
+            "list": [
+              {
+                "id": "web_plain_3",
+                "note_id": "web_plain_3",
+                "prime_id": "prime_web_plain_3",
+                "title": "WebAPI 第二页",
+                "content": "WebAPI 第二页正文",
+                "body_text": "WebAPI 第二页正文",
+                "note_type": "plain_text",
+                "source": "web",
+                "tags": [],
+                "created_at": "2026-05-18 10:00:00",
+                "updated_at": "2026-05-18 10:00:00",
+                "is_child_note": false,
+                "parent_id": "",
+                "sub_note_count": 0
+              }
+            ],
+            "has_more": false
+          }
+        }
+      }
+    }
+  ]
+}
