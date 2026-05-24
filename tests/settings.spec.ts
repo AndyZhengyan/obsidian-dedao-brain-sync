@@ -227,5 +227,6 @@ describe('SettingsComponent auth credentials', () => {
 
     expect(updateSetting).not.toHaveBeenCalledWith('enabledNoteTypes', []);
     expect(updateSetting).toHaveBeenCalledWith('enabledNoteTypes', ['plain_text']);
+    expect(checkbox.checked).toBe(true);
   });
 });

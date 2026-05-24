@@ -80,6 +80,7 @@ export function SettingsComponent({
   const [showApiToken, setShowApiToken] = useState(false);
   const [folderName, setFolderName] = useState(settings.folderName);
   const [filenamePrefix, setFilenamePrefix] = useState(settings.filenamePrefix);
+  const [enabledNoteTypes, setEnabledNoteTypes] = useState(settings.enabledNoteTypes);
   // Only show actual lastSyncEndTimestamp — do NOT fallback to syncStartDate
   const lastSyncedTo = settings.lastSyncEndTimestamp || '';
   const [scheduledEnabled, setScheduledEnabled] = useState(settings.scheduledSync.enabled);
@@ -206,15 +207,18 @@ export function SettingsComponent({
 
   const handleNoteTypeToggle = (noteType: string, checked: boolean) => {
     const allNoteTypes = NOTE_TYPE_OPTIONS.map(option => option.noteType);
-    const current = settings.enabledNoteTypes.length > 0 ? settings.enabledNoteTypes : allNoteTypes;
+    const current = enabledNoteTypes.length > 0 ? enabledNoteTypes : allNoteTypes;
     const next = checked
       ? Array.from(new Set([...current, noteType]))
       : current.filter(type => type !== noteType);
     if (next.length === 0) {
+      setEnabledNoteTypes([noteType]);
       updateSetting('enabledNoteTypes', [noteType]);
       return;
     }
-    updateSetting('enabledNoteTypes', next.length === allNoteTypes.length ? [] : next);
+    const stored = next.length === allNoteTypes.length ? [] : next;
+    setEnabledNoteTypes(stored);
+    updateSetting('enabledNoteTypes', stored);
   };
 
   const handleTestConnection = async () => {
@@ -461,7 +465,7 @@ export function SettingsComponent({
       >
         <div className="getnote-note-type-control">
           {NOTE_TYPE_OPTIONS.map((option) => {
-            const checked = settings.enabledNoteTypes.length === 0 || settings.enabledNoteTypes.includes(option.noteType);
+            const checked = enabledNoteTypes.length === 0 || enabledNoteTypes.includes(option.noteType);
             return (
               <label className="getnote-note-type-option" key={option.noteType}>
                 <input

@@ -11,6 +11,7 @@ interface NotePickerModalProps {
   clientId: string;
   authMode?: AuthMode;
   abortSignal?: AbortSignal;
+  enabledNoteTypes?: string[];
 }
 
 function formatRelativeTime(iso: string): string {
@@ -53,7 +54,7 @@ function NoteRow({ note, checked, onChange }: { note: GetNoteNote; checked: bool
   );
 }
 
-export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel, abortSignal }: NotePickerModalProps) {
+export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel, abortSignal, enabledNoteTypes = [] }: NotePickerModalProps) {
   const [notes, setNotes] = useState<GetNoteNote[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -116,9 +117,12 @@ export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel
   const handleSelectNone = () => setSelected(new Set());
   const handleConfirm = () => onConfirm(Array.from(selected));
 
-  const filteredNotes = searchQuery
-    ? notes.filter(n => generateDisplayTitle(n).toLowerCase().includes(searchQuery.toLowerCase()))
+  const typeFilteredNotes = enabledNoteTypes.length > 0
+    ? notes.filter(note => enabledNoteTypes.includes(note.note_type))
     : notes;
+  const filteredNotes = searchQuery
+    ? typeFilteredNotes.filter(n => generateDisplayTitle(n).toLowerCase().includes(searchQuery.toLowerCase()))
+    : typeFilteredNotes;
 
   return (
     <div className="getnote-picker">

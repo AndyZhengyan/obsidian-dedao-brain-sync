@@ -76,7 +76,7 @@ describe('filterNotes (note picker search)', () => {
 });
 
 describe('NotePickerModal auth chains', () => {
-  async function renderPicker(props: { token: string; clientId: string; authMode: 'openapi' | 'web' }) {
+  async function renderPicker(props: { token: string; clientId: string; authMode: 'openapi' | 'web'; enabledNoteTypes?: string[] }) {
     const container = document.createElement('div');
     document.body.appendChild(container);
     await act(async () => {
@@ -90,6 +90,7 @@ describe('NotePickerModal auth chains', () => {
       );
       await Promise.resolve();
     });
+    return container;
   }
 
   it('loads the first page with OpenAPI credentials', async () => {
@@ -120,5 +121,25 @@ describe('NotePickerModal auth chains', () => {
       authMode: 'web',
       sinceId: '0',
     }));
+  });
+
+  it('hides notes outside the enabled type filter', async () => {
+    vi.mocked(fetchNotes).mockResolvedValueOnce({
+      notes: [
+        makeNote({ note_id: 'plain', title: '纯文本笔记', note_type: 'plain_text' }),
+        makeNote({ note_id: 'link', title: '链接笔记', note_type: 'link' }),
+      ],
+      hasMore: false,
+    });
+
+    const container = await renderPicker({
+      token: 'web-token',
+      clientId: '',
+      authMode: 'web',
+      enabledNoteTypes: ['link'],
+    });
+
+    expect(container.textContent).not.toContain('纯文本笔记');
+    expect(container.textContent).toContain('链接笔记');
   });
 });

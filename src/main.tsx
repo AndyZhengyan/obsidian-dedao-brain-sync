@@ -388,6 +388,7 @@ class NotePickerModalWrapper extends Modal {
         token={getAuthCredentials(this.plugin.settings).token}
         clientId={getAuthCredentials(this.plugin.settings).clientId}
         authMode={getAuthCredentials(this.plugin.settings).authMode}
+        enabledNoteTypes={this.plugin.settings.enabledNoteTypes}
         abortSignal={this.abortController.signal}
         onConfirm={(noteIds) => {
           this.abortController.abort();
