@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { SyncHistoryEntry, SyncResult } from '../src/types';
 import { initI18n } from '../src/i18n';
-import { formatHistoryNoteType, formatHistoryScope } from '../src/ui/sync-history-modal';
+import { formatHistoryFilter, formatHistoryNoteType, formatHistoryScope } from '../src/ui/sync-history-modal';
 
 function makeResult(overrides: Partial<SyncResult> = {}): SyncResult {
   return { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, ...overrides };
@@ -183,5 +183,40 @@ describe('sync history scope display', () => {
         syncStartDate: '2026-05-09T10:00:00+08:00',
       },
     }))).toBe('同步断点 2026-05-09T10:00:00+08:00');
+  });
+
+  it('shows configured note type filters', () => {
+    initI18n('zh-CN');
+
+    expect(formatHistoryFilter(makeEntry({
+      scope: {
+        syncStartDate: '',
+        maxDays: 0,
+        enabledNoteTypes: ['plain_text', 'link'],
+      },
+    }))).toBe('仅同步：纯文本、链接笔记');
+  });
+
+  it('uses English separators for note type filters in English', () => {
+    initI18n('en');
+
+    expect(formatHistoryFilter(makeEntry({
+      scope: {
+        syncStartDate: '',
+        maxDays: 0,
+        enabledNoteTypes: ['plain_text', 'link'],
+      },
+    }))).toBe('Only sync: Plain Text, Link Note');
+  });
+
+  it('shows the default filter copy when note types are unrestricted', () => {
+    initI18n('zh-CN');
+
+    expect(formatHistoryFilter(makeEntry({
+      scope: {
+        syncStartDate: '',
+        maxDays: 0,
+      },
+    }))).toBe('仅按更新时间过滤，无类型或标签过滤');
   });
 });

@@ -384,6 +384,27 @@
   width: var(--getnote-secondary-input-width);
 }
 
+.getnote-note-type-control {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+  gap: 8px 12px;
+  width: 100%;
+  max-width: var(--getnote-primary-input-width);
+}
+
+.getnote-note-type-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-normal);
+}
+
+.getnote-note-type-control .getnote-input-hint {
+  grid-column: 1 / -1;
+}
+
 .getnote-sync-history {
   display: flex;
   flex-direction: column;

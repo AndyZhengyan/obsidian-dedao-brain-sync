@@ -208,4 +208,24 @@ describe('SettingsComponent auth credentials', () => {
     expect(links.some((href) => href.includes('README.md#about-the-author'))).toBe(true);
     expect(links.some((href) => href.includes('docs/web-mode-manual-token.md'))).toBe(true);
   });
+
+  it('keeps at least one note type selected when changing type filters', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      enabledNoteTypes: ['plain_text'],
+    }));
+
+    const plainTextOption = Array.from(container.querySelectorAll('label'))
+      .find(label => label.textContent === '纯文本');
+    expect(plainTextOption).toBeTruthy();
+    const checkbox = plainTextOption!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+
+    await act(() => {
+      checkbox.checked = false;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(updateSetting).not.toHaveBeenCalledWith('enabledNoteTypes', []);
+    expect(updateSetting).toHaveBeenCalledWith('enabledNoteTypes', ['plain_text']);
+  });
 });

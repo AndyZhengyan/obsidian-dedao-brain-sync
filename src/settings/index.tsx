@@ -3,10 +3,14 @@ import { SettingItem } from './setting-item';
 import { SyncButton } from './sync-button';
 import { OAuthButton } from './oauth-button';
 import { openSyncHistoryModal } from '../ui/sync-history-modal';
-import type { AuthMode, Settings, SyncHistoryEntry, SyncProgressDetail } from '../types';
+import { NOTE_CATEGORIES, type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressDetail } from '../types';
 import { App, AbstractInputSuggest } from 'obsidian';
 import { fetchNotes } from '../api';
 import { t } from '../i18n';
+
+const NOTE_TYPE_OPTIONS = NOTE_CATEGORIES.filter((category, index, categories) =>
+  categories.findIndex(item => item.noteType === category.noteType) === index
+);
 
 class FolderSuggest extends AbstractInputSuggest<string> {
   private el: HTMLInputElement;
@@ -198,6 +202,19 @@ export function SettingsComponent({
 
   const handleScheduledOnStart = (checked: boolean) => {
     updateSetting('scheduledSync', { ...settings.scheduledSync, syncOnStart: checked });
+  };
+
+  const handleNoteTypeToggle = (noteType: string, checked: boolean) => {
+    const allNoteTypes = NOTE_TYPE_OPTIONS.map(option => option.noteType);
+    const current = settings.enabledNoteTypes.length > 0 ? settings.enabledNoteTypes : allNoteTypes;
+    const next = checked
+      ? Array.from(new Set([...current, noteType]))
+      : current.filter(type => type !== noteType);
+    if (next.length === 0) {
+      updateSetting('enabledNoteTypes', [noteType]);
+      return;
+    }
+    updateSetting('enabledNoteTypes', next.length === allNoteTypes.length ? [] : next);
   };
 
   const handleTestConnection = async () => {
@@ -437,6 +454,28 @@ export function SettingsComponent({
       </SettingItem>
 
       <div className="getnote-settings-divider" />
+
+      <SettingItem
+        name={t('settings.noteTypes.label')}
+        description={t('settings.noteTypes.desc')}
+      >
+        <div className="getnote-note-type-control">
+          {NOTE_TYPE_OPTIONS.map((option) => {
+            const checked = settings.enabledNoteTypes.length === 0 || settings.enabledNoteTypes.includes(option.noteType);
+            return (
+              <label className="getnote-note-type-option" key={option.noteType}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(e) => handleNoteTypeToggle(option.noteType, (e.target as HTMLInputElement).checked)}
+                />
+                <span>{t(`picker.type.${option.noteType}`)}</span>
+              </label>
+            );
+          })}
+          <div className="getnote-input-hint">{t('settings.noteTypes.hint')}</div>
+        </div>
+      </SettingItem>
 
       <SettingItem
         name={t('settings.scheduled.label')}

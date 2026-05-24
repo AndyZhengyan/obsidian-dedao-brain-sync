@@ -68,16 +68,19 @@ export interface Settings {
   lastSyncEndTimestamp: string;  // ISO datetime of last synced note's updated_at
   scheduledSync: ScheduledSyncSettings;
   syncHistory: SyncHistoryEntry[];
+  enabledNoteTypes: string[];  // empty = all types
 }
 
 export interface SyncScopeOptions {
   maxDays: number;
   syncStartDate: string;
+  enabledNoteTypes?: string[];
 }
 
 export interface SyncHistoryScope {
   maxDays: number;
   syncStartDate: string;
+  enabledNoteTypes?: string[];
   selectedCount?: number;
   selectedIds?: string[];
 }
@@ -101,6 +104,7 @@ export const DEFAULT_SETTINGS: Settings = {
     syncOnStart: true,
   },
   syncHistory: [],
+  enabledNoteTypes: [],
 };
 
 export interface AuthCredentials {

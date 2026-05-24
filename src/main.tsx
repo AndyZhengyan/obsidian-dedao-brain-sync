@@ -58,6 +58,7 @@ function normalizeSyncHistory(value: unknown): SyncHistoryEntry[] {
           ? {
             maxDays: typeof maybeScope.maxDays === 'number' ? maybeScope.maxDays : 0,
             syncStartDate: typeof maybeScope.syncStartDate === 'string' ? maybeScope.syncStartDate : '',
+            enabledNoteTypes: Array.isArray(maybeScope.enabledNoteTypes) ? maybeScope.enabledNoteTypes.filter((type): type is string => typeof type === 'string') : undefined,
             selectedCount: typeof maybeScope.selectedCount === 'number' ? maybeScope.selectedCount : undefined,
             selectedIds: Array.isArray(maybeScope.selectedIds) ? maybeScope.selectedIds.filter((id): id is string => typeof id === 'string') : undefined,
           }
@@ -96,6 +97,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       webApiToken: migratedWebApiToken,
       scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, ...loaded?.scheduledSync },
       syncHistory: normalizeSyncHistory(loaded?.syncHistory),
+      enabledNoteTypes: Array.isArray(loaded?.enabledNoteTypes) ? loaded.enabledNoteTypes.filter((type): type is string => typeof type === 'string') : [],
     };
     this.syncHistory = this.settings.syncHistory;
     this.lastSyncResult = this.syncHistory.at(-1) ?? null;
@@ -217,9 +219,11 @@ export default class GetNoteSyncPlugin extends Plugin {
 
     const startedAt = Date.now();
     const resolvedSyncStartDate = scopeOptions?.syncStartDate ?? this.settings.syncStartDate;
+    const resolvedEnabledNoteTypes = scopeOptions?.enabledNoteTypes ?? this.settings.enabledNoteTypes ?? [];
     const resolvedScope: SyncHistoryScope = {
       maxDays: resolvedSyncStartDate ? 0 : scopeOptions?.maxDays ?? this.settings.maxDays,
       syncStartDate: resolvedSyncStartDate,
+      enabledNoteTypes: resolvedEnabledNoteTypes.length > 0 ? resolvedEnabledNoteTypes : undefined,
       selectedCount: selectedIds?.length,
       selectedIds,
     };
@@ -301,9 +305,10 @@ export default class GetNoteSyncPlugin extends Plugin {
     // Auto sync uses lastSyncEndTimestamp as cutoff: skip notes already synced last time.
     // This IS the early-exit mechanism — no separate lastSyncEndTimestamp logic needed in engine.
     const syncStartDate = this.settings.lastSyncEndTimestamp || this.settings.syncStartDate;
+    const enabledNoteTypes = this.settings.enabledNoteTypes ?? [];
     const scopeOptions: Partial<SyncScopeOptions> = syncStartDate
-      ? { syncStartDate, maxDays: 0 }
-      : {};
+      ? { syncStartDate, maxDays: 0, enabledNoteTypes }
+      : { enabledNoteTypes };
     void this.runSync('auto', scopeOptions);
   }
 

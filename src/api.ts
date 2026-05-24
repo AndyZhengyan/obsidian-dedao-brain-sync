@@ -13,6 +13,7 @@ export interface FetchNotesOptions {
   limit?: number;
   signal?: AbortSignal;
   authMode?: AuthMode;
+  webCsrfToken?: string;
 }
 
 export async function fetchNotes(options: FetchNotesOptions): Promise<{

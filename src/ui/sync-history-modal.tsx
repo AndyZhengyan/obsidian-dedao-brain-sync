@@ -28,6 +28,14 @@ export function formatHistoryScope(entry: SyncHistoryEntry): string {
   return parts.length > 0 ? parts.join(' · ') : t('syncHistory.params.noLimit');
 }
 
+export function formatHistoryFilter(entry: SyncHistoryEntry): string {
+  const enabledNoteTypes = entry.scope?.enabledNoteTypes ?? [];
+  if (enabledNoteTypes.length === 0) return t('syncHistory.filter.default');
+  return t('syncHistory.filter.noteTypes', {
+    types: enabledNoteTypes.map(formatHistoryNoteType).join(t('syncHistory.filter.noteTypes.separator')),
+  });
+}
+
 export function openSyncHistoryModal(app: App, history: SyncHistoryEntry[]) {
   const modal = new SyncHistoryModal(app, history);
   modal.open();
@@ -174,7 +182,7 @@ class SyncHistoryModal extends Modal {
         const metaEl = detailEl.createDiv('getnote-history-meta-grid');
         renderMeta(metaEl, t('syncHistory.meta.method'), formatMode(entry));
         renderMeta(metaEl, t('syncHistory.meta.params'), formatHistoryScope(entry));
-        renderMeta(metaEl, t('syncHistory.meta.filter'), t('syncHistory.filter.default'));
+        renderMeta(metaEl, t('syncHistory.meta.filter'), formatHistoryFilter(entry));
         renderMeta(metaEl, t('syncHistory.meta.result'), `${formatStatus(entry.status)} · ${formatDuration(entry.durationMs)}`);
 
         renderSummary(detailEl, entry);

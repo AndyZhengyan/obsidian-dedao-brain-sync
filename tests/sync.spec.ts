@@ -99,6 +99,30 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     expect(plugin.syncHistory.at(-1)?.scope).toEqual({
       maxDays: 0,
       syncStartDate: '2026-05-09',
+      enabledNoteTypes: undefined,
+      selectedCount: undefined,
+      selectedIds: undefined,
+    });
+  });
+
+  it('records enabled note types in sync history scope', async () => {
+    vi.spyOn(SyncEngine.prototype, 'sync').mockResolvedValue({
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+      total: 0,
+      items: [],
+    });
+    const plugin = makePlugin();
+    plugin.settings.enabledNoteTypes = ['link'];
+
+    await plugin['runSync']('full', { maxDays: 0, syncStartDate: '' });
+
+    expect(plugin.syncHistory.at(-1)?.scope).toEqual({
+      maxDays: 0,
+      syncStartDate: '',
+      enabledNoteTypes: ['link'],
       selectedCount: undefined,
       selectedIds: undefined,
     });
@@ -118,6 +142,7 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
       {
         maxDays: 7,
         syncStartDate: '',
+        enabledNoteTypes: [],
       },
     ]);
   });
@@ -136,6 +161,7 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
       {
         maxDays: 0,
         syncStartDate: '2026-05-09',
+        enabledNoteTypes: [],
       },
     ]);
   });
@@ -174,6 +200,7 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
         {
           maxDays: 0,
           syncStartDate: '2026-05-09T10:00:00+08:00',
+          enabledNoteTypes: [],
         },
       ]);
     });
@@ -197,11 +224,13 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
         {
           maxDays: 0,
           syncStartDate: '2026-05-09',
+          enabledNoteTypes: [],
         },
       ]);
       expect(plugin.syncHistory.at(-1)?.scope).toEqual({
         maxDays: 0,
         syncStartDate: '2026-05-09',
+        enabledNoteTypes: undefined,
         selectedCount: undefined,
         selectedIds: undefined,
       });
