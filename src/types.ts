@@ -52,6 +52,10 @@ export interface ScheduledSyncSettings {
   enabledNoteTypes?: string[];  // undefined = all types, empty array = no types
 }
 
+export interface ReverseSyncSettings {
+  enabled: boolean;
+}
+
 export type AuthMode = 'openapi' | 'web';
 
 export interface Settings {
@@ -68,6 +72,7 @@ export interface Settings {
   syncStartDate: string;  // ISO date string, empty means no limit
   lastSyncEndTimestamp: string;  // ISO datetime of last synced note's updated_at
   scheduledSync: ScheduledSyncSettings;
+  reverseSync: ReverseSyncSettings;
   syncHistory: SyncHistoryEntry[];
 }
 
@@ -102,6 +107,9 @@ export const DEFAULT_SETTINGS: Settings = {
     enabled: false,
     intervalMinutes: 30,
     syncOnStart: true,
+  },
+  reverseSync: {
+    enabled: false,
   },
   syncHistory: [],
 };

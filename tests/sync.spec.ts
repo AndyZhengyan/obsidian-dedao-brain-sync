@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { App } from 'obsidian';
 import GetNoteSyncPlugin from '../src/main';
+import { ReverseSyncEngine } from '../src/reverse-sync';
 import { SyncCancelledError, SyncEngine } from '../src/sync';
 import { DEFAULT_SETTINGS } from '../src/types';
 
@@ -277,5 +278,62 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
       selectedCount: 1,
       selectedIds: ['note-1'],
     });
+  });
+
+  it('scheduled sync does not run reverse upload even when uploads are enabled', async () => {
+    vi.spyOn(SyncEngine.prototype, 'sync').mockResolvedValue({
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+      total: 0,
+    });
+    const reverseSyncBack = vi.spyOn(ReverseSyncEngine.prototype, 'syncBack').mockResolvedValue({
+      created: 1,
+      skipped: 0,
+      failed: 0,
+      total: 1,
+    });
+    const plugin = makePlugin();
+    plugin.settings.reverseSync = { enabled: true };
+
+    plugin['doAutoSync']();
+
+    await vi.waitFor(() => {
+      expect(SyncEngine.prototype.sync).toHaveBeenCalled();
+    });
+    expect(reverseSyncBack).not.toHaveBeenCalled();
+  });
+
+  it('does not run reverse sync when upload permission is disabled', async () => {
+    const syncBack = vi.spyOn(ReverseSyncEngine.prototype, 'syncBack').mockResolvedValue({
+      created: 1,
+      skipped: 0,
+      failed: 0,
+      total: 1,
+    });
+    const plugin = makePlugin();
+    plugin.settings.reverseSync = { enabled: false };
+
+    await plugin['reverseSyncToGetNote']();
+
+    expect(syncBack).not.toHaveBeenCalled();
+    expect(plugin.isSyncing).toBe(false);
+  });
+
+  it('runs reverse sync when upload permission is enabled', async () => {
+    const syncBack = vi.spyOn(ReverseSyncEngine.prototype, 'syncBack').mockResolvedValue({
+      created: 1,
+      skipped: 0,
+      failed: 0,
+      total: 1,
+    });
+    const plugin = makePlugin();
+    plugin.settings.reverseSync = { enabled: true };
+
+    await plugin['reverseSyncToGetNote']();
+
+    expect(syncBack).toHaveBeenCalledTimes(1);
+    expect(plugin.isSyncing).toBe(false);
   });
 });

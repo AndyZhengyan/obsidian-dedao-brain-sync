@@ -36,6 +36,10 @@ export const translations: Record<string, Record<string, string>> = {
     'noteTypes.all': '全部类型',
     'noteTypes.none': '未选择类型',
     'noteTypes.selected': '已选 {count} 项',
+    'settings.reverseSync.label': '允许上传本地笔记到 Get笔记',
+    'settings.reverseSync.desc': '开启后可手动把目标文件夹中的本地笔记写回 Get笔记；不会自动随定时同步上传。',
+    'settings.reverseSync.enabled': '启用上传',
+    'settings.reverseSync.hint': '当前仅创建远端不存在的本地笔记；远端已存在的 uid 会跳过，不会覆盖远端内容。',
     'settings.syncStartDate.label': '同步起始日期',
     'settings.syncStartDate.desc': '只同步此日期之后的笔记，留空表示不限制',
     'settings.syncStartDate.placeholder': '选择日期',
@@ -201,6 +205,7 @@ export const translations: Record<string, Record<string, string>> = {
     'reverseSync.running': '正在写回 Get笔记...',
     'reverseSync.complete': '写回完成：新增 {created} · 跳过 {skipped} · 失败 {failed}',
     'reverseSync.failed': '写回失败：{msg}',
+    'reverseSync.disabled': '请先在设置中开启「允许上传本地笔记到 Get笔记」',
 
     // === API Errors ===
     'error.invalidCredentials': 'API Token 或 Client ID 无效，请检查设置',
@@ -269,6 +274,10 @@ export const translations: Record<string, Record<string, string>> = {
     'noteTypes.all': 'All types',
     'noteTypes.none': 'No types selected',
     'noteTypes.selected': '{count} selected',
+    'settings.reverseSync.label': 'Allow Local Uploads to GetNote',
+    'settings.reverseSync.desc': 'When enabled, you can manually write local notes in the target folder back to GetNote. Scheduled sync will not upload automatically.',
+    'settings.reverseSync.enabled': 'Enable uploads',
+    'settings.reverseSync.hint': 'This currently creates local notes that do not exist remotely. Existing remote uids are skipped and remote content is not overwritten.',
     'settings.syncStartDate.label': 'Sync Start Date',
     'settings.syncStartDate.desc': 'Only sync notes after this date, leave empty for no limit',
     'settings.syncStartDate.placeholder': 'Select date',
@@ -436,6 +445,7 @@ export const translations: Record<string, Record<string, string>> = {
     'reverseSync.running': 'Writing back to GetNote...',
     'reverseSync.complete': 'Write-back complete: {created} created · {skipped} skipped · {failed} failed',
     'reverseSync.failed': 'Write-back failed: {msg}',
+    'reverseSync.disabled': 'Enable "Allow Local Uploads to GetNote" in settings first',
 
     // === API Errors ===
     'error.invalidCredentials': 'Invalid API Token or Client ID, please check settings',

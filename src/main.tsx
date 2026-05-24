@@ -105,6 +105,7 @@ export default class GetNoteSyncPlugin extends Plugin {
           ? loaded.scheduledSync.enabledNoteTypes.filter((type): type is string => typeof type === 'string')
           : undefined,
       },
+      reverseSync: { ...DEFAULT_SETTINGS.reverseSync, ...loaded?.reverseSync },
       syncHistory: normalizeSyncHistory(loaded?.syncHistory),
     };
     this.syncHistory = this.settings.syncHistory;
@@ -361,6 +362,10 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   private async reverseSyncToGetNote(): Promise<void> {
     if (this.isSyncing) return;
+    if (!this.settings.reverseSync.enabled) {
+      showError(t('reverseSync.disabled'));
+      return;
+    }
     this.isSyncing = true;
     this.syncProgress = { message: t('reverseSync.running'), count: '', percent: 0 };
     this.refreshSettingsTab();

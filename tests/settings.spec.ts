@@ -62,6 +62,27 @@ afterEach(() => {
 });
 
 describe('SettingsComponent auth credentials', () => {
+  it('toggles reverse sync upload permission', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      reverseSync: { enabled: false },
+    }));
+
+    expect(container.textContent).toContain('允许上传本地笔记到 Get笔记');
+    const reverseSyncCheckbox = Array.from(container.querySelectorAll('input[type="checkbox"]'))
+      .find((input): input is HTMLInputElement => {
+        const row = input.closest('.getnote-scheduled-row');
+        return Boolean(row?.textContent?.includes('启用上传'));
+      });
+    expect(reverseSyncCheckbox).toBeTruthy();
+
+    await act(() => {
+      reverseSyncCheckbox!.checked = true;
+      reverseSyncCheckbox!.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('reverseSync', { enabled: true });
+  });
+
   it('writes the visible mode token back when switching auth modes', async () => {
     const { container, updateSetting } = renderSettings(makeSettings({
       authMode: 'openapi',

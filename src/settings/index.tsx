@@ -209,6 +209,10 @@ export function SettingsComponent({
     updateSetting('scheduledSync', { ...settings.scheduledSync, enabledNoteTypes: value });
   };
 
+  const handleReverseSyncEnabled = (checked: boolean) => {
+    updateSetting('reverseSync', { ...settings.reverseSync, enabled: checked });
+  };
+
   const handleTestConnection = async () => {
     setTestingConnection(true);
     setConnectionStatus('idle');
@@ -518,6 +522,23 @@ export function SettingsComponent({
               <div className="getnote-input-hint">{t('settings.syncStartDate.desc')}</div>
             )}
           </div>
+        </div>
+      </SettingItem>
+
+      <SettingItem
+        name={t('settings.reverseSync.label')}
+        description={t('settings.reverseSync.desc')}
+      >
+        <div className="getnote-scheduled-control">
+          <div className="getnote-scheduled-row">
+            <span>{t('settings.reverseSync.enabled')}</span>
+            <input
+              type="checkbox"
+              checked={settings.reverseSync.enabled}
+              onChange={(e) => handleReverseSyncEnabled((e.target as HTMLInputElement).checked)}
+            />
+          </div>
+          <div className="getnote-input-hint">{t('settings.reverseSync.hint')}</div>
         </div>
       </SettingItem>
 
