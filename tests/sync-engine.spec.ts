@@ -1743,6 +1743,39 @@ describe('SyncEngine — fixture-based sync integration', () => {
     ]);
   });
 
+  it('WebAPI: selective sync writes selected parent with append children', async () => {
+    resetFixtures();
+    loadScenario('sync-parent-and-children-webapi');
+
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'web',
+      webApiToken: 'test-web-token',
+      maxDays: 0,
+    }));
+
+    const result = await engine.syncNoteIds(['1909193892067130512']);
+
+    expect(result.created).toBe(3);
+    expect(result.failed).toBe(0);
+    expect(result.total).toBe(3);
+    expect(result.items).toEqual([
+      expect.objectContaining({ noteId: '1909193892067130512', status: 'created' }),
+      expect.objectContaining({ noteId: '1909246675068292528', status: 'created' }),
+      expect.objectContaining({ noteId: '1909246675068292529', status: 'created' }),
+    ]);
+    const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
+    expect(createdPaths).toContain('Get笔记/纯文本/主笔记.md');
+    expect(createdPaths).toContain('Get笔记/纯文本/主笔记__附加笔记正文.md');
+    expect(createdPaths).toContain('Get笔记/纯文本/主笔记__第二条附加笔记正文.md');
+    expect(getFixtureRequests().map(request => request.url)).toContain(
+      'https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children?limit=20&since_id=&sort=create_desc'
+    );
+    expect(getFixtureRequests().map(request => request.url)).toContain(
+      'https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children?limit=20&since_id=1909246675068292528&sort=create_desc'
+    );
+  });
+
   it('OpenAPI: parent + child notes both created', async () => {
     resetFixtures();
     loadScenario('sync-parent-and-children-openapi');
@@ -1962,5 +1995,6 @@ describe('SyncEngine — fixture-based sync integration', () => {
     const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
     expect(createdPaths).toContain('Get笔记/纯文本/主笔记.md');
     expect(createdPaths).toContain('Get笔记/纯文本/主笔记__附加笔记正文.md');
+    expect(createdPaths).not.toContain('Get笔记/纯文本/未选择的 OpenAPI 笔记.md');
   });
 });

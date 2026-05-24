@@ -26,6 +26,19 @@
                 "updated_at": "2026-05-06 22:07:04",
                 "children_count": 1,
                 "is_child_note": false
+              },
+              {
+                "id": "1909193892067130999",
+                "note_id": "1909193892067130999",
+                "title": "未选择的 OpenAPI 笔记",
+                "content": "这篇笔记不应该被选择性同步写入",
+                "note_type": "plain_text",
+                "source": "app",
+                "tags": [],
+                "created_at": "2026-05-06 22:08:04",
+                "updated_at": "2026-05-06 22:08:04",
+                "children_count": 0,
+                "is_child_note": false
               }
             ],
             "has_more": false
