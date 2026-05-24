@@ -565,14 +565,64 @@ describe('createNote', () => {
     }
   });
 
-  it('rejects reverse writes in Web API mode', async () => {
-    await expect(createNote({
-      token: 'web-token',
-      clientId: '',
-      authMode: 'web',
-      title: 'Local title',
-      content: 'Local body',
-      noteType: 'plain_text',
-    })).rejects.toThrow('OpenAPI');
+  it('creates a Web API note with json_content payload', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        h: {},
+        c: {
+          note_id: '1911000000000000000',
+          id: '1911000000000000000',
+          prime_id: 'prime-created',
+        },
+      }) as Response
+    );
+
+    try {
+      const result = await createNote({
+        token: 'web-token',
+        clientId: '',
+        authMode: 'web',
+        title: '',
+        content: '19\n\n',
+        noteType: 'plain_text',
+      });
+
+      expect(result.noteId).toBe('1911000000000000000');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        'https://get-notes.luojilab.com/voicenotes/web/notes',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer web-token',
+            'Content-Type': 'application/json',
+            'x-request-id': expect.any(String),
+          }),
+          body: JSON.stringify({
+            title: '',
+            content: '19\n\n',
+            json_content: JSON.stringify({
+              type: 'doc',
+              content: [
+                {
+                  type: 'paragraph',
+                  attrs: { textAlign: null },
+                  content: [{ type: 'text', text: '19' }],
+                },
+                {
+                  type: 'paragraph',
+                  attrs: { textAlign: null },
+                },
+              ],
+            }),
+            entry_type: 'manual',
+            note_type: 'plain_text',
+            source: 'web',
+            tags: [],
+          }),
+        })
+      );
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
   });
 });

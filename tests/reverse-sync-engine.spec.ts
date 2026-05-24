@@ -175,18 +175,28 @@ describe('ReverseSyncEngine', () => {
     expect(app.vault._getFile('Get笔记/missing.md')?.content).toContain('Keep this body');
   });
 
-  it('requires OpenAPI credentials because Web API writes are not supported', async () => {
+  it('creates a local-only markdown note through Web API mode', async () => {
     const app = makeMockApp();
     app.vault._addFile('Get笔记/local.md', [
       '---',
       'title: "Local title"',
       '---',
-      'Local body',
+      '19',
     ].join('\n'));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ h: {}, c: { note_id: '1911000000000000000', prime_id: 'prime-created' } })
+    );
 
-    await expect(new ReverseSyncEngine(app as any, makeSettings({
+    const result = await new ReverseSyncEngine(app as any, makeSettings({
       authMode: 'web',
       webApiToken: 'web-token',
-    })).syncBack()).rejects.toThrow('OpenAPI');
+    })).syncBack();
+
+    expect(result).toEqual({ created: 1, skipped: 0, failed: 0, total: 1 });
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'https://get-notes.luojilab.com/voicenotes/web/notes',
+      expect.objectContaining({ method: 'POST' })
+    );
+    expect(app.vault._getFile('Get笔记/local.md')?.content).toContain('uid: "1911000000000000000"');
   });
 });

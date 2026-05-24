@@ -53,9 +53,6 @@ function getConfig() {
   if (authMode === 'web' && !looksLikeWebToken(token)) {
     throw new Error('Web smoke needs a Web Bearer/JWT token.');
   }
-  if (reverse && authMode !== 'openapi') {
-    throw new Error('Reverse smoke writes to GetNote and only supports OpenAPI.');
-  }
   return { authMode, token, clientId: authMode === 'web' ? '' : clientId, limit, reverse };
 }
 
@@ -138,6 +135,10 @@ function summarizeDetail(detail) {
     attachments: attachments.length,
     hasAudio: Boolean(detail.audio ?? detailRecord.audio),
   };
+}
+
+function normalizeNoteBody(value) {
+  return String(value ?? '').replace(/\s+$/g, '');
 }
 
 function createTempVaultApp(root) {
@@ -306,10 +307,10 @@ async function runReverseSyncSmoke(config, api) {
     ].join('\n'));
 
     const settings = {
-      authMode: 'openapi',
-      openApiToken: config.token,
-      openApiClientId: config.clientId,
-      webApiToken: '',
+      authMode: config.authMode,
+      openApiToken: config.authMode === 'openapi' ? config.token : '',
+      openApiClientId: config.authMode === 'openapi' ? config.clientId : '',
+      webApiToken: config.authMode === 'web' ? config.token : '',
       apiToken: '',
       clientId: '',
       webCsrfToken: '',
@@ -328,12 +329,12 @@ async function runReverseSyncSmoke(config, api) {
     console.log(`[GetNote smoke] reverse sync ok: total=${result.total}, created=${result.created}, skipped=${result.skipped}, failed=${result.failed}, ${Date.now() - started}ms`);
     console.log('[GetNote smoke] reverse local uid:', uid ? mask(String(uid)) : '<missing>');
 
-    const detail = await api.fetchNoteDetail(String(uid), config.token, config.clientId, undefined, 'openapi');
+    const detail = await api.fetchNoteDetail(String(uid), config.token, config.clientId, undefined, config.authMode);
     console.log('[GetNote smoke] reverse detail:', JSON.stringify({
       note_id: String(detail.note_id ?? ''),
       title: String(detail.title ?? ''),
       note_type: String(detail.note_type ?? ''),
-      contentMatches: String(detail.content ?? '') === body,
+      contentMatches: normalizeNoteBody(detail.content) === normalizeNoteBody(body),
     }));
     console.log('[GetNote smoke] reverse created remote note; delete it manually if this was only a smoke run.');
   } finally {

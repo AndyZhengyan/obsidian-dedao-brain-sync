@@ -1,6 +1,6 @@
 // Central API entry point - delegates to client implementations based on authMode
 import { createNote as openapiCreateNote, fetchNotes as openapiFetchNotes, fetchNoteDetail as openapiFetchNoteDetail } from './api-clients/openapi-client';
-import { fetchNotes as webapiFetchNotes, fetchNoteChildren as webapiFetchNoteChildren, fetchNoteDetail as webapiFetchNoteDetail } from './api-clients/webapi-client';
+import { createNote as webapiCreateNote, fetchNotes as webapiFetchNotes, fetchNoteChildren as webapiFetchNoteChildren, fetchNoteDetail as webapiFetchNoteDetail } from './api-clients/webapi-client';
 import type { GetNoteNote, AuthMode } from './types';
 import { t } from './i18n';
 
@@ -64,7 +64,14 @@ export interface CreateNoteOptions {
 
 export async function createNote(options: CreateNoteOptions): Promise<{ noteId: string }> {
   if (options.authMode === 'web') {
-    throw new Error(t('error.reverseSyncOpenApiOnly'));
+    return webapiCreateNote({
+      token: options.token,
+      title: options.title,
+      content: options.content,
+      noteType: options.noteType,
+      tags: options.tags,
+      signal: options.signal,
+    });
   }
   return openapiCreateNote({
     token: options.token,

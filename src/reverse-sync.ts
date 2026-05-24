@@ -1,7 +1,6 @@
 import type { App, TFile } from 'obsidian';
 import { createNote, fetchNoteDetail } from './api';
-import { getAuthCredentials, type Settings } from './types';
-import { t } from './i18n';
+import { getAuthCredentials, type AuthCredentials, type Settings } from './types';
 
 export interface ReverseSyncResult {
   created: number;
@@ -90,12 +89,12 @@ function isInsideFolder(file: TFile, folderName: string): boolean {
 export class ReverseSyncEngine {
   constructor(private app: App, private settings: Settings) {}
 
-  private requireOpenApiCredentials(): { token: string; clientId: string } {
+  private requireCredentials(): AuthCredentials {
     const credentials = getAuthCredentials(this.settings);
-    if (credentials.authMode !== 'openapi' || !credentials.token || !credentials.clientId) {
-      throw new Error(t('error.reverseSyncOpenApiOnly'));
+    if (!credentials.token || (credentials.authMode !== 'web' && !credentials.clientId)) {
+      throw new Error('Missing GetNote credentials');
     }
-    return { token: credentials.token, clientId: credentials.clientId };
+    return credentials;
   }
 
   private async readLocalNote(file: TFile): Promise<LocalMarkdownNote | null> {
@@ -119,9 +118,9 @@ export class ReverseSyncEngine {
     };
   }
 
-  private async remoteExists(uid: string, token: string, clientId: string): Promise<boolean> {
+  private async remoteExists(uid: string, credentials: AuthCredentials): Promise<boolean> {
     try {
-      await fetchNoteDetail(uid, token, clientId, undefined, 'openapi');
+      await fetchNoteDetail(uid, credentials.token, credentials.clientId, undefined, credentials.authMode);
       return true;
     } catch (err) {
       if (isMissingRemoteError(err)) return false;
@@ -129,11 +128,11 @@ export class ReverseSyncEngine {
     }
   }
 
-  private async createRemoteNote(note: LocalMarkdownNote, token: string, clientId: string): Promise<void> {
+  private async createRemoteNote(note: LocalMarkdownNote, credentials: AuthCredentials): Promise<void> {
     const created = await createNote({
-      token,
-      clientId,
-      authMode: 'openapi',
+      token: credentials.token,
+      clientId: credentials.clientId,
+      authMode: credentials.authMode,
       title: note.title,
       content: note.body,
       noteType: note.noteType,
@@ -143,7 +142,7 @@ export class ReverseSyncEngine {
   }
 
   async syncBack(): Promise<ReverseSyncResult> {
-    const { token, clientId } = this.requireOpenApiCredentials();
+    const credentials = this.requireCredentials();
     const result: ReverseSyncResult = { created: 0, skipped: 0, failed: 0, total: 0 };
 
     for (const file of this.app.vault.getMarkdownFiles().filter(item => isInsideFolder(item, this.settings.folderName))) {
@@ -152,11 +151,11 @@ export class ReverseSyncEngine {
       result.total++;
 
       try {
-        if (note.uid && await this.remoteExists(note.uid, token, clientId)) {
+        if (note.uid && await this.remoteExists(note.uid, credentials)) {
           result.skipped++;
           continue;
         }
-        await this.createRemoteNote(note, token, clientId);
+        await this.createRemoteNote(note, credentials);
         result.created++;
       } catch (err) {
         console.error(`[GetNote] Reverse sync failed [${file.path}]:`, err);
