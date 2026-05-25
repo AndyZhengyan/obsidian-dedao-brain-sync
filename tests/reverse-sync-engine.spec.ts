@@ -199,4 +199,37 @@ describe('ReverseSyncEngine', () => {
     );
     expect(app.vault._getFile('Get笔记/local.md')?.content).toContain('uid: "1911000000000000000"');
   });
+
+  it('uploads only the markdown files explicitly selected by the user', async () => {
+    const app = makeMockApp();
+    app.vault._addFile('Get笔记/a.md', [
+      '---',
+      'title: "A"',
+      '---',
+      'Body A',
+    ].join('\n'));
+    app.vault._addFile('Get笔记/b.md', [
+      '---',
+      'title: "B"',
+      '---',
+      'Body B',
+    ].join('\n'));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ success: true, data: { note: { note_id: 'selected-created' } } })
+    );
+
+    const selectedFile = app.vault.getMarkdownFiles().find(file => file.path === 'Get笔记/b.md');
+    const result = await new ReverseSyncEngine(app as any, makeSettings()).syncFiles(selectedFile ? [selectedFile as any] : []);
+
+    expect(result).toEqual({ created: 1, skipped: 0, failed: 0, total: 1 });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'https://openapi.biji.com/open/api/v1/resource/note/save',
+      expect.objectContaining({
+        body: expect.stringContaining('"title":"B"'),
+      })
+    );
+    expect(app.vault._getFile('Get笔记/a.md')?.content).not.toContain('selected-created');
+    expect(app.vault._getFile('Get笔记/b.md')?.content).toContain('uid: "selected-created"');
+  });
 });

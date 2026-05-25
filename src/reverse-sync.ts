@@ -141,11 +141,11 @@ export class ReverseSyncEngine {
     await this.app.vault.modify(note.file, replaceOrInsertUid(note.content, created.noteId));
   }
 
-  async syncBack(): Promise<ReverseSyncResult> {
+  async syncFiles(files: TFile[]): Promise<ReverseSyncResult> {
     const credentials = this.requireCredentials();
     const result: ReverseSyncResult = { created: 0, skipped: 0, failed: 0, total: 0 };
 
-    for (const file of this.app.vault.getMarkdownFiles().filter(item => isInsideFolder(item, this.settings.folderName))) {
+    for (const file of files) {
       const note = await this.readLocalNote(file);
       if (!note) continue;
       result.total++;
@@ -164,5 +164,10 @@ export class ReverseSyncEngine {
     }
 
     return result;
+  }
+
+  async syncBack(): Promise<ReverseSyncResult> {
+    const files = this.app.vault.getMarkdownFiles().filter(item => isInsideFolder(item, this.settings.folderName));
+    return this.syncFiles(files);
   }
 }

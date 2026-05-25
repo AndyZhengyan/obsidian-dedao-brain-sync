@@ -336,4 +336,30 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     expect(syncBack).toHaveBeenCalledTimes(1);
     expect(plugin.isSyncing).toBe(false);
   });
+
+  it('uploads selected local files without scanning the whole sync folder', async () => {
+    const syncBack = vi.spyOn(ReverseSyncEngine.prototype, 'syncBack').mockResolvedValue({
+      created: 99,
+      skipped: 0,
+      failed: 0,
+      total: 99,
+    });
+    const syncFiles = vi.spyOn(ReverseSyncEngine.prototype, 'syncFiles').mockResolvedValue({
+      created: 1,
+      skipped: 0,
+      failed: 0,
+      total: 1,
+    });
+    const plugin = makePlugin();
+    plugin.settings.reverseSync = { enabled: true };
+    const selectedFiles = [{ path: 'Inbox/upload-me.md' }];
+
+    plugin.uploadSelectedLocalNotes(selectedFiles as any);
+
+    await vi.waitFor(() => {
+      expect(syncFiles).toHaveBeenCalledWith(selectedFiles);
+    });
+    expect(syncBack).not.toHaveBeenCalled();
+    expect(plugin.isSyncing).toBe(false);
+  });
 });

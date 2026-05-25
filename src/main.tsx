@@ -1,4 +1,4 @@
-import { App, Modal, Plugin, getLanguage } from 'obsidian';
+import { App, Modal, Plugin, getLanguage, type TFile } from 'obsidian';
 import ReactDOM from 'react-dom';
 import { DEFAULT_SETTINGS, getAuthCredentials, type Settings, type SyncHistoryScope, type SyncProgressDetail, type SyncHistoryEntry, type SyncResult, type SyncScopeOptions } from './types';
 import { GetNoteSettingsTab } from './settings-tab';
@@ -6,6 +6,7 @@ import { SyncEngine, SyncCancelledError } from './sync';
 import { showError, showNotice, showSuccess } from './ui/notice';
 import { NotePickerModal } from './ui/note-picker-modal';
 import { ManualSyncModal } from './ui/manual-sync-modal';
+import { LocalUploadModal } from './ui/local-upload-modal';
 import { initI18n, t } from './i18n';
 import { ReverseSyncEngine } from './reverse-sync';
 
@@ -121,9 +122,9 @@ export default class GetNoteSyncPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: 'reverse-sync-notes',
-      name: t('command.reverseSync'),
-      callback: () => { void this.reverseSyncToGetNote(); },
+      id: 'upload-local-notes',
+      name: t('command.uploadLocal'),
+      callback: () => this.openLocalUploadModal(),
     });
 
     this.addRibbonIcon('book-lock', t('ribbon.tooltip'), () => this.openManualSyncModal());
@@ -360,7 +361,20 @@ export default class GetNoteSyncPlugin extends Plugin {
     void this.runSync('selective', { maxDays: 0, syncStartDate: '', ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}) }, noteIds);
   }
 
-  private async reverseSyncToGetNote(): Promise<void> {
+  openLocalUploadModal(): void {
+    if (!this.settings.reverseSync.enabled) {
+      showError(t('reverseSync.disabled'));
+      return;
+    }
+    const wrapper = new LocalUploadModalWrapper(this.app, this);
+    wrapper.open();
+  }
+
+  uploadSelectedLocalNotes(files: TFile[]): void {
+    void this.reverseSyncToGetNote(files);
+  }
+
+  private async reverseSyncToGetNote(files?: TFile[]): Promise<void> {
     if (this.isSyncing) return;
     if (!this.settings.reverseSync.enabled) {
       showError(t('reverseSync.disabled'));
@@ -371,7 +385,8 @@ export default class GetNoteSyncPlugin extends Plugin {
     this.refreshSettingsTab();
 
     try {
-      const result = await new ReverseSyncEngine(this.app, this.settings).syncBack();
+      const engine = new ReverseSyncEngine(this.app, this.settings);
+      const result = files ? await engine.syncFiles(files) : await engine.syncBack();
       showSuccess(t('reverseSync.complete', {
         created: result.created,
         skipped: result.skipped,
@@ -450,6 +465,32 @@ class NotePickerModalWrapper extends Modal {
 
   onClose() {
     this.abortController.abort();
+    ReactDOM.unmountComponentAtNode(this.contentEl);
+  }
+}
+
+class LocalUploadModalWrapper extends Modal {
+  constructor(app: App, private plugin: GetNoteSyncPlugin) {
+    super(app);
+    this.titleEl.setText(t('upload.title'));
+  }
+
+  onOpen() {
+    ReactDOM.render(
+      <LocalUploadModal
+        files={this.app.vault.getMarkdownFiles()}
+        initialFolder={this.plugin.settings.folderName}
+        onConfirm={(files) => {
+          this.close();
+          this.plugin.uploadSelectedLocalNotes(files);
+        }}
+        onCancel={() => this.close()}
+      />,
+      this.contentEl
+    );
+  }
+
+  onClose() {
     ReactDOM.unmountComponentAtNode(this.contentEl);
   }
 }
