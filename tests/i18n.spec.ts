@@ -269,6 +269,10 @@ describe('t() - New settings keys', () => {
     expect(i18n.t('settings.maxDays.hint')).toBe('0 = 不限制');
   });
 
+  it('settings.noteTypes.label', () => {
+    expect(i18n.t('settings.noteTypes.label')).toBe('同步笔记类型');
+  });
+
   it('settings.interval.hint', () => {
     expect(i18n.t('settings.interval.hint')).toBe('最小 5 分钟');
   });
@@ -299,6 +303,7 @@ describe('t() - New settings keys', () => {
     expect(i18n.t('settings.testConnection')).toBe('Test Connection');
     expect(i18n.t('settings.connectionSuccess')).toBe('Connection successful');
     expect(i18n.t('settings.maxDays.hint')).toBe('0 = no limit');
+    expect(i18n.t('settings.noteTypes.label')).toBe('Note Types');
     expect(i18n.t('settings.interval.hint')).toBe('Minimum 5 minutes');
     expect(i18n.t('settings.lastSync.never')).toBe('Never synced');
     expect(i18n.t('settings.onboarding')).toBe('👋 Welcome! Choose an authentication mode and enter credentials first.');

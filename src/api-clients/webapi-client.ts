@@ -180,7 +180,6 @@ export async function fetchNoteDetail(
   if (!noteDetail || !noteDetail.note_id) throw new Error(t('error.fetchNoteDetailFailed'));
   return noteDetail;
 }
-
 export async function fetchNoteChildren(
   parentPrimeId: string,
   token: string,

@@ -113,6 +113,42 @@ describe('SyncEngine — filterRecentNotes', () => {
     });
   });
 
+  it('keeps only enabled note types when a type filter is configured', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        data: {
+          notes: [
+            makeNote({ note_id: 'plain', title: '纯文本', note_type: 'plain_text' }),
+            makeNote({ note_id: 'link', title: '链接', note_type: 'link' }),
+          ],
+          has_more: false,
+          next_cursor: '',
+        },
+      }) as Response
+    );
+
+    try {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings(), undefined, { enabledNoteTypes: ['link'] });
+
+      const result = await engine.sync();
+
+      expect(result.total).toBe(1);
+      expect(result.created).toBe(1);
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          noteId: 'link',
+          noteType: 'link',
+          status: 'created',
+        }),
+      ]);
+      expect(app.vault.create).toHaveBeenCalledTimes(1);
+      expect(app.vault.create).toHaveBeenCalledWith(expect.stringContaining('/链接笔记/'), expect.any(String));
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
   it('返回所有笔记当 maxDays <= 0', () => {
     const app = makeMockApp();
     const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
@@ -1400,7 +1436,6 @@ describe('SyncEngine — selective sync cancellation', () => {
     }
   });
 });
-
 describe('SyncEngine auth credential chains', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -1552,9 +1587,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     ]);
   });
 
-  it('OpenAPI: full sync writes all note types when enabledNoteTypes is set', async () => {
-    // TODO: implement enabledNoteTypes filtering in SyncEngine
-    // Currently all notes are synced regardless of enabledNoteTypes
+  it('OpenAPI: full sync writes only enabled note types', async () => {
     resetFixtures();
     loadScenario('sync-core-openapi');
 
@@ -1570,10 +1603,15 @@ describe('SyncEngine — fixture-based sync integration', () => {
 
     const result = await engine.sync();
 
-    // Without filtering, all 3 notes are created
-    expect(result.created).toBe(3);
+    expect(result.created).toBe(2);
     expect(result.failed).toBe(0);
-    expect(result.total).toBe(3);
+    expect(result.total).toBe(2);
+    expect(result.items.map(item => item.noteId)).toEqual(['open_plain_1', 'open_plain_3']);
+    const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
+    expect(createdPaths).toEqual([
+      'Get笔记/纯文本/OpenAPI 纯文本.md',
+      'Get笔记/纯文本/OpenAPI 第二页.md',
+    ]);
   });
 
   it('WebAPI: full sync writes paginated notes with web list query shape', async () => {
@@ -1605,9 +1643,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     ]);
   });
 
-  it('WebAPI: full sync writes all note types when enabledNoteTypes is set', async () => {
-    // TODO: implement enabledNoteTypes filtering in SyncEngine
-    // Currently all notes are synced regardless of enabledNoteTypes
+  it('WebAPI: full sync writes only enabled note types', async () => {
     resetFixtures();
     loadScenario('sync-core-webapi');
 
@@ -1622,10 +1658,15 @@ describe('SyncEngine — fixture-based sync integration', () => {
 
     const result = await engine.sync();
 
-    // Without filtering, all 3 notes are created
-    expect(result.created).toBe(3);
+    expect(result.created).toBe(2);
     expect(result.failed).toBe(0);
-    expect(result.total).toBe(3);
+    expect(result.total).toBe(2);
+    expect(result.items.map(item => item.noteId)).toEqual(['web_plain_1', 'web_plain_3']);
+    const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
+    expect(createdPaths).toEqual([
+      'Get笔记/纯文本/WebAPI 纯文本.md',
+      'Get笔记/纯文本/WebAPI 第二页.md',
+    ]);
   });
 
   it('WebAPI: selective sync writes only requested notes', async () => {
@@ -1649,6 +1690,57 @@ describe('SyncEngine — fixture-based sync integration', () => {
     ]);
     const createdPaths = vi.mocked(app.vault.create).mock.calls.map(([path]) => path);
     expect(createdPaths).toEqual(['Get笔记/纯文本/WebAPI 被选择.md']);
+  });
+
+  it('OpenAPI: selective sync skips selected notes outside the enabled type filter', async () => {
+    resetFixtures();
+    loadScenario('selective-sync-openapi');
+
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'test-openapi-token',
+      openApiClientId: 'test-client',
+      maxDays: 0,
+    }), undefined, {
+      enabledNoteTypes: ['link'],
+    });
+
+    const result = await engine.syncNoteIds(['1909193892067130512']);
+
+    expect(result.created).toBe(0);
+    expect(result.failed).toBe(0);
+    expect(result.total).toBe(0);
+    expect(result.items).toEqual([]);
+    expect(app.vault.create).not.toHaveBeenCalled();
+    expect(getFixtureRequests().map(request => request.url)).toEqual([
+      'https://openapi.biji.com/open/api/v1/resource/note/list?since_id=0',
+    ]);
+  });
+
+  it('WebAPI: selective sync skips selected notes outside the enabled type filter', async () => {
+    resetFixtures();
+    loadScenario('selective-sync-webapi');
+
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'web',
+      webApiToken: 'test-web-token',
+      maxDays: 0,
+    }), undefined, {
+      enabledNoteTypes: ['link'],
+    });
+
+    const result = await engine.syncNoteIds(['web_selected']);
+
+    expect(result.created).toBe(0);
+    expect(result.failed).toBe(0);
+    expect(result.total).toBe(0);
+    expect(result.items).toEqual([]);
+    expect(app.vault.create).not.toHaveBeenCalled();
+    expect(getFixtureRequests().map(request => request.url)).toEqual([
+      'https://get-notes.luojilab.com/voicenotes/web/notes?limit=20&since_id=&sort=create_desc',
+    ]);
   });
 
   it('OpenAPI: parent + child notes both created', async () => {

@@ -3,9 +3,10 @@ import type { AuthMode, GetNoteNote } from '../types';
 import { fetchNotes } from '../api';
 import { generateDisplayTitle } from '../note-parser';
 import { t } from '../i18n';
+import { NoteTypeSelect } from './note-type-select';
 
 interface NotePickerModalProps {
-  onConfirm: (selectedNoteIds: string[]) => void;
+  onConfirm: (selectedNoteIds: string[], enabledNoteTypes?: string[]) => void;
   onCancel: () => void;
   token: string;
   clientId: string;
@@ -62,6 +63,7 @@ export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel
   const [cursor, setCursor] = useState('0');
   const [hasMore, setHasMore] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [enabledNoteTypes, setEnabledNoteTypes] = useState<string[] | undefined>(undefined);
 
   const loadFirstPage = useCallback(() => {
     setLoading(true);
@@ -112,17 +114,24 @@ export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel
     });
   };
 
+  const typeFilteredNotes = enabledNoteTypes === undefined
+    ? notes
+    : enabledNoteTypes.length > 0
+    ? notes.filter(note => enabledNoteTypes.includes(note.note_type))
+    : [];
+  const filteredNotes = searchQuery
+    ? typeFilteredNotes.filter(n => generateDisplayTitle(n).toLowerCase().includes(searchQuery.toLowerCase()))
+    : typeFilteredNotes;
+  const visibleSelectedIds = filteredNotes.filter(note => selected.has(note.note_id)).map(note => note.note_id);
+
   const handleSelectAll = () => setSelected(new Set(filteredNotes.map(n => n.note_id)));
   const handleSelectNone = () => setSelected(new Set());
-  const handleConfirm = () => onConfirm(Array.from(selected));
-
-  const filteredNotes = searchQuery
-    ? notes.filter(n => generateDisplayTitle(n).toLowerCase().includes(searchQuery.toLowerCase()))
-    : notes;
+  const handleConfirm = () => onConfirm(visibleSelectedIds, enabledNoteTypes);
 
   return (
     <div className="getnote-picker">
       <div className="getnote-picker-header">
+        <NoteTypeSelect value={enabledNoteTypes} onChange={setEnabledNoteTypes} />
         <div className="getnote-picker-actions">
           <button onClick={handleSelectAll}>{t('picker.selectAll')}</button>
           <button onClick={handleSelectNone}>{t('picker.selectNone')}</button>
@@ -176,10 +185,10 @@ export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel
         {!loading && !error && notes.length === 0 && <div className="getnote-picker-empty">{t('picker.empty')}</div>}
       </div>
       <div className="getnote-picker-footer">
-        <span className="getnote-picker-count">{t('picker.selected', { count: selected.size })}</span>
+        <span className="getnote-picker-count">{t('picker.selected', { count: visibleSelectedIds.length })}</span>
         <div className="getnote-picker-btns">
           <button className="mod-cancel" onClick={onCancel}>{t('picker.cancel')}</button>
-          <button className="mod-cta" disabled={selected.size === 0} onClick={handleConfirm}>{t('picker.confirm')}</button>
+          <button className="mod-cta" disabled={visibleSelectedIds.length === 0} onClick={handleConfirm}>{t('picker.confirm')}</button>
         </div>
       </div>
     </div>

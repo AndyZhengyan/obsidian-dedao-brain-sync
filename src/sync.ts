@@ -89,9 +89,11 @@ export class SyncEngine {
     this.app = app;
     this.settings = settings;
     const syncStartDate = scopeOptions?.syncStartDate ?? settings.syncStartDate;
+    const enabledNoteTypes = scopeOptions?.enabledNoteTypes;
     this.scopeOptions = {
       maxDays: syncStartDate ? 0 : scopeOptions?.maxDays ?? settings.maxDays,
       syncStartDate,
+      ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}),
     };
     this.onProgress = onProgress;
   }
@@ -562,6 +564,13 @@ export class SyncEngine {
     });
   }
 
+  private filterNotesByType(notes: GetNoteNote[]): GetNoteNote[] {
+    const enabledNoteTypes = this.scopeOptions.enabledNoteTypes;
+    if (enabledNoteTypes === undefined) return notes;
+    if (enabledNoteTypes.length === 0) return [];
+    return notes.filter(note => enabledNoteTypes.includes(note.note_type));
+  }
+
   private filterRecentNotes(notes: GetNoteNote[]): GetNoteNote[] {
     const { maxDays } = this.scopeOptions;
     if (!maxDays || maxDays <= 0) return notes;
@@ -612,8 +621,9 @@ export class SyncEngine {
 
         const recentNotes = this.filterRecentNotes(notes);
         const filtered = this.filterNotesByDateRange(recentNotes);
+        const typeFiltered = this.filterNotesByType(filtered);
 
-        for (const note of filtered) {
+        for (const note of typeFiltered) {
           if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
           if (seenNoteIds.has(note.note_id)) continue;
           seenNoteIds.add(note.note_id);
@@ -709,8 +719,9 @@ export class SyncEngine {
         if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
 
         const matched = batch.filter(n => idSet.has(n.note_id));
+        const typeFiltered = this.filterNotesByType(matched);
 
-        for (const note of matched) {
+        for (const note of typeFiltered) {
           if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
           if (seenNoteIds.has(note.note_id)) continue;
           seenNoteIds.add(note.note_id);

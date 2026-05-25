@@ -3,7 +3,8 @@ import { SettingItem } from './setting-item';
 import { SyncButton } from './sync-button';
 import { OAuthButton } from './oauth-button';
 import { openSyncHistoryModal } from '../ui/sync-history-modal';
-import type { AuthMode, Settings, SyncHistoryEntry, SyncProgressDetail } from '../types';
+import { NoteTypeSelect } from '../ui/note-type-select';
+import { type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressDetail } from '../types';
 import { App, AbstractInputSuggest } from 'obsidian';
 import { fetchNotes } from '../api';
 import { t } from '../i18n';
@@ -79,6 +80,7 @@ export function SettingsComponent({
   // Only show actual lastSyncEndTimestamp — do NOT fallback to syncStartDate
   const lastSyncedTo = settings.lastSyncEndTimestamp || '';
   const [scheduledEnabled, setScheduledEnabled] = useState(settings.scheduledSync.enabled);
+  const [scheduledNoteTypes, setScheduledNoteTypes] = useState<string[] | undefined>(settings.scheduledSync.enabledNoteTypes);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [connectionErrorMsg, setConnectionErrorMsg] = useState('');
@@ -171,7 +173,7 @@ export function SettingsComponent({
 
   const handleScheduledEnabled = (checked: boolean) => {
     setScheduledEnabled(checked);
-    updateSetting('scheduledSync', { ...settings.scheduledSync, enabled: checked });
+    updateSetting('scheduledSync', { ...settings.scheduledSync, enabledNoteTypes: scheduledNoteTypes, enabled: checked });
     if (checked) {
       startAutoSync();
     } else {
@@ -185,19 +187,26 @@ export function SettingsComponent({
       setIntervalWarning(true);
       updateSetting('scheduledSync', {
         ...settings.scheduledSync,
+        enabledNoteTypes: scheduledNoteTypes,
         intervalMinutes: 5,
       });
       window.setTimeout(() => setIntervalWarning(false), 3000);
     } else {
       updateSetting('scheduledSync', {
         ...settings.scheduledSync,
+        enabledNoteTypes: scheduledNoteTypes,
         intervalMinutes: n,
       });
     }
   };
 
   const handleScheduledOnStart = (checked: boolean) => {
-    updateSetting('scheduledSync', { ...settings.scheduledSync, syncOnStart: checked });
+    updateSetting('scheduledSync', { ...settings.scheduledSync, enabledNoteTypes: scheduledNoteTypes, syncOnStart: checked });
+  };
+
+  const handleScheduledNoteTypes = (value: string[] | undefined) => {
+    setScheduledNoteTypes(value);
+    updateSetting('scheduledSync', { ...settings.scheduledSync, enabledNoteTypes: value });
   };
 
   const handleTestConnection = async () => {
@@ -480,7 +489,13 @@ export function SettingsComponent({
                 />
               </span>
             </div>
-                        <div className="getnote-scheduled-row getnote-scheduled-date-row">
+            <div className="getnote-scheduled-row">
+              <span className="getnote-scheduled-row-label">{t('settings.noteTypes.label')}</span>
+              <span className="getnote-scheduled-row-control">
+                <NoteTypeSelect value={scheduledNoteTypes} onChange={handleScheduledNoteTypes} />
+              </span>
+            </div>
+            <div className="getnote-scheduled-row getnote-scheduled-date-row">
               <span className="getnote-scheduled-row-label">
                 {lastSyncedTo ? t('settings.syncStartDate.lastSyncedTo') : t('settings.syncStartDate.label')}
               </span>

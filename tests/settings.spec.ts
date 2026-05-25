@@ -211,4 +211,38 @@ describe('SettingsComponent auth credentials', () => {
     expect(links.some((href) => href.includes('README.md#about-the-author'))).toBe(true);
     expect(links.some((href) => href.includes('docs/web-mode-manual-token.md'))).toBe(true);
   });
+
+  it('stores note type filters inside scheduled sync settings', async () => {
+    const scheduledSync = {
+      ...DEFAULT_SETTINGS.scheduledSync,
+      enabled: true,
+    };
+    const { container, updateSetting } = renderSettings(makeSettings({
+      scheduledSync,
+    }));
+
+    const trigger = Array.from(container.querySelectorAll('button'))
+      .find(button => button.textContent === '全部类型');
+    expect(trigger).toBeTruthy();
+    await act(() => {
+      trigger!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const plainTextOption = Array.from(container.querySelectorAll('label'))
+      .find(label => label.textContent === '纯文本');
+    expect(plainTextOption).toBeTruthy();
+    const checkbox = plainTextOption!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+
+    await act(() => {
+      checkbox.checked = false;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(updateSetting).not.toHaveBeenCalledWith('enabledNoteTypes', expect.anything());
+    expect(updateSetting).toHaveBeenCalledWith('scheduledSync', {
+      ...scheduledSync,
+      enabledNoteTypes: ['link', 'immediate_audio', 'recorder_audio', 'recorder_flash_audio', 'audio_long', 'local_audio'],
+    });
+  });
 });

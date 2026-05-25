@@ -49,6 +49,7 @@ export interface ScheduledSyncSettings {
   enabled: boolean;
   intervalMinutes: number;
   syncOnStart: boolean;
+  enabledNoteTypes?: string[];  // undefined = all types, empty array = no types
 }
 
 export type AuthMode = 'openapi' | 'web';
@@ -73,11 +74,13 @@ export interface Settings {
 export interface SyncScopeOptions {
   maxDays: number;
   syncStartDate: string;
+  enabledNoteTypes?: string[];
 }
 
 export interface SyncHistoryScope {
   maxDays: number;
   syncStartDate: string;
+  enabledNoteTypes?: string[];
   selectedCount?: number;
   selectedIds?: string[];
 }
