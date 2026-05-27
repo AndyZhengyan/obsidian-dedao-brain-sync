@@ -16,7 +16,8 @@ export interface GetNoteNote {
   updated_at: string;
   attachments?: Attachment[];  // 详情接口返回的附件列表
   audio?: string;             // 详情接口返回的原始转写文本
-  assetFileName?: string;     // 内部使用：音频/转写文件的文件名（含前缀）
+  assetFileName?: string;     // 内部使用：音频文件的文件名（不含扩展名）
+  assetPaths?: string[];      // 内部使用：所有附件文件的完整路径（图片、音频等）
   prime_id?: string;          // Web API detail identifier
 }
 
@@ -189,8 +190,8 @@ export function getCategoryDir(noteType: string): string {
 }
 
 export interface Attachment {
-  type: 'audio' | (string & {});
+  type: 'audio' | 'image' | (string & {});
   url: string;
   title: string;
-  duration: number;  // 毫秒
+  duration?: number;  // milliseconds, only for audio
 }

@@ -57,6 +57,17 @@ function isSafeAttachmentUrl(url: string): boolean {
   }
 }
 
+const IMAGE_EXT_PATTERN = /\.(png|jpg|jpeg|gif|webp|bmp|svg)(\?|$)/i;
+
+function extractImageExtension(url: string): string {
+  const match = url.match(IMAGE_EXT_PATTERN);
+  return match ? match[1].toLowerCase() : 'png';
+}
+
+function isImageAttachment(attachment: { type: string }): boolean {
+  return attachment.type === 'image';
+}
+
 export class SyncCancelledError extends Error {
   constructor() {
     super('Sync cancelled');
@@ -176,7 +187,8 @@ export class SyncEngine {
         await this.app.vault.createFolder(assetDir);
       }
 
-      const filename = `${this.getFileName(note)}_audio.mp3`;
+      const rawFilename = `${this.getFileName(note)}_audio.mp3`;
+      const filename = rawFilename.split('/').pop()!.split('\\').pop()!;
       const targetPath = `${assetDir}/${filename}`;
 
       // Skip already-existing files
@@ -192,6 +204,44 @@ export class SyncEngine {
       return targetPath;
     } catch (err) {
       console.error(`[GetNote] Audio download error:`, err);
+      return null;
+    }
+  }
+
+  private async downloadImageAsset(
+    note: GetNoteNote,
+    attachment: { type: string; url: string; title: string }
+  ): Promise<string | null> {
+    try {
+      if (!isSafeAttachmentUrl(attachment.url)) {
+        console.warn('[GetNote] Skipped unsafe image attachment URL');
+        return null;
+      }
+
+      const categoryDir = await this.ensureCategoryDir(getCategoryDir(note.note_type));
+      const assetDir = `${categoryDir}/asset`;
+      if (!this.app.vault.getAbstractFileByPath(assetDir)) {
+        await this.app.vault.createFolder(assetDir);
+      }
+
+      const ext = extractImageExtension(attachment.url);
+      const rawFilename = `${this.getFileName(note)}_image.${ext}`;
+      // Strip path traversal components — only keep the last segment
+      const filename = rawFilename.split('/').pop()!.split('\\').pop()!;
+      const targetPath = `${assetDir}/${filename}`;
+
+      if (this.app.vault.getAbstractFileByPath(targetPath)) return targetPath;
+
+      const res = await fetch(attachment.url);
+      if (res.status < 200 || res.status >= 300) {
+        console.error(`[GetNote] Image download failed: ${res.status}`);
+        return null;
+      }
+      const arrayBuffer = await res.arrayBuffer();
+      await this.app.vault.createBinary(targetPath, arrayBuffer);
+      return targetPath;
+    } catch (err) {
+      console.error(`[GetNote] Image download error:`, err);
       return null;
     }
   }
@@ -235,7 +285,6 @@ export class SyncEngine {
     const contentChanged = this.isContentChanged(existingFile, note);
     if (contentChanged) return { exists: false, file: existingFile };
 
-    // For audio notes, verify attachments exist as well
     if (AUDIO_NOTE_TYPES.has(note.note_type)) {
       const categoryDir = getCategoryDir(note.note_type);
       const basePath = `${this.settings.folderName}/${categoryDir}`;
@@ -246,6 +295,18 @@ export class SyncEngine {
         !this.app.vault.getAbstractFileByPath(`${assetDir}/${baseFilename}_audio.mp3`) ||
         !this.app.vault.getAbstractFileByPath(`${assetDir}/${baseFilename}_transcript.md`)
       ) {
+        return { exists: false, file: existingFile };
+      }
+    }
+
+    const imageAttachments = (note.attachments ?? []).filter(isImageAttachment);
+    if (imageAttachments.length > 0) {
+      const categoryDir = getCategoryDir(note.note_type);
+      const basePath = `${this.settings.folderName}/${categoryDir}`;
+      const assetDir = `${basePath}/asset`;
+      const baseFilename = this.getFileName(note);
+      const expectedImagePath = `${assetDir}/${baseFilename}_image.png`;
+      if (!this.app.vault.getAbstractFileByPath(expectedImagePath)) {
         return { exists: false, file: existingFile };
       }
     }
@@ -419,7 +480,6 @@ export class SyncEngine {
     }
 
     try {
-      // For Web API, use prime_id (not id/note_id) for the detail URL
       const detailId = (note as { prime_id?: string }).prime_id ?? note.note_id;
       const noteDetail = await fetchNoteDetail(
         detailId,
@@ -429,17 +489,31 @@ export class SyncEngine {
         credentials.authMode
       );
       const enrichedNote = this.mergeNoteDetail(note, noteDetail);
-      if (!needsAudioDetail) {
-        return enrichedNote;
+      const assetPaths: string[] = [];
+
+      if (needsAudioDetail) {
+        const audioAttachment = enrichedNote.attachments?.find(a => a.type === 'audio');
+        if (audioAttachment) {
+          const audioPath = await this.downloadAudioAsset(enrichedNote, audioAttachment);
+          if (audioPath) assetPaths.push(audioPath);
+        } else {
+          console.warn(`[GetNote] No audio attachment found in note detail [${note.note_id}]`);
+        }
+        const transcriptPath = await this.writeAudioTranscriptAsset(enrichedNote);
+        if (transcriptPath) assetPaths.push(transcriptPath);
+        enrichedNote.assetFileName = this.getFileName(enrichedNote);
       }
-      const attachment = enrichedNote.attachments?.find(a => a.type === 'audio');
-      if (attachment) {
-        await this.downloadAudioAsset(enrichedNote, attachment);
-      } else {
-        console.warn(`[GetNote] No audio attachment found in note detail [${note.note_id}]`);
+
+      const imageAttachments = (enrichedNote.attachments ?? []).filter(isImageAttachment);
+      for (const img of imageAttachments) {
+        const imgPath = await this.downloadImageAsset(enrichedNote, img);
+        if (imgPath) assetPaths.push(imgPath);
       }
-      await this.writeAudioTranscriptAsset(enrichedNote);
-      enrichedNote.assetFileName = this.getFileName(enrichedNote);
+
+      if (assetPaths.length > 0) {
+        enrichedNote.assetPaths = assetPaths;
+      }
+
       return enrichedNote;
     } catch (err) {
       console.warn(`[GetNote] Failed to enrich note ${note.note_id}:`, err);
