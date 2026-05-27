@@ -22,7 +22,7 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
   };
 }
 
-function renderSettings(settings: Settings, updateSetting = vi.fn()) {
+function renderSettings(settings: Settings, updateSetting = vi.fn(), openLocalUpload = vi.fn()) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   render(
@@ -32,6 +32,7 @@ function renderSettings(settings: Settings, updateSetting = vi.fn()) {
       startSync: vi.fn(),
       isSyncing: false,
       openNotePicker: vi.fn(),
+      openLocalUpload,
       startAutoSync: vi.fn(),
       stopAutoSync: vi.fn(),
       cancelSync: vi.fn(),
@@ -39,7 +40,7 @@ function renderSettings(settings: Settings, updateSetting = vi.fn()) {
     }),
     container
   );
-  return { container, updateSetting };
+  return { container, updateSetting, openLocalUpload };
 }
 
 function inputValue(input: Element, value: string) {
@@ -81,6 +82,41 @@ describe('SettingsComponent auth credentials', () => {
     });
 
     expect(updateSetting).toHaveBeenCalledWith('reverseSync', { enabled: true });
+  });
+
+  it('opens the local upload picker from the upload settings button', async () => {
+    const openLocalUpload = vi.fn();
+    const { container } = renderSettings(makeSettings({
+      authMode: 'web',
+      webApiToken: 'web-token',
+      apiToken: 'web-token',
+      reverseSync: { enabled: true },
+    }), vi.fn(), openLocalUpload);
+
+    const uploadButton = Array.from(container.querySelectorAll('button'))
+      .find((button): button is HTMLButtonElement => button.textContent === '选择笔记上传');
+    expect(uploadButton).toBeTruthy();
+    expect(uploadButton!.disabled).toBe(false);
+
+    await act(() => {
+      uploadButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(openLocalUpload).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables the local upload button until uploads and credentials are enabled', () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'web',
+      webApiToken: '',
+      apiToken: '',
+      reverseSync: { enabled: false },
+    }));
+
+    const uploadButton = Array.from(container.querySelectorAll('button'))
+      .find((button): button is HTMLButtonElement => button.textContent === '选择笔记上传');
+    expect(uploadButton).toBeTruthy();
+    expect(uploadButton!.disabled).toBe(true);
   });
 
   it('writes the visible mode token back when switching auth modes', async () => {

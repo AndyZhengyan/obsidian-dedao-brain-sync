@@ -42,6 +42,7 @@ interface SettingsComponentProps {
   startSync: () => void;
   isSyncing: boolean;
   openNotePicker: () => void;
+  openLocalUpload: () => void;
   startAutoSync: () => void;
   stopAutoSync: () => void;
   cancelSync: () => void;
@@ -57,6 +58,7 @@ export function SettingsComponent({
   startSync,
   isSyncing,
   openNotePicker,
+  openLocalUpload,
   startAutoSync,
   stopAutoSync,
   cancelSync,
@@ -537,6 +539,15 @@ export function SettingsComponent({
               checked={settings.reverseSync.enabled}
               onChange={(e) => handleReverseSyncEnabled((e.target as HTMLInputElement).checked)}
             />
+          </div>
+          <div className="getnote-actions-row">
+            <button
+              className="mod-cta getnote-sync-action-button"
+              disabled={!settings.reverseSync.enabled || !hasCredentials || isSyncing}
+              onClick={openLocalUpload}
+            >
+              {t('settings.reverseSync.uploadButton')}
+            </button>
           </div>
           <div className="getnote-input-hint">{t('settings.reverseSync.hint')}</div>
         </div>
