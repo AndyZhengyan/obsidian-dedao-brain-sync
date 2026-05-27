@@ -88,10 +88,12 @@ describe('SettingsComponent auth credentials', () => {
 
     expect(container.textContent).toContain('从 Get笔记同步到 Obsidian');
     expect(container.textContent).toContain('从 Obsidian 上传到 Get笔记');
+    expect(container.textContent).not.toContain('选择笔记上传');
     const uploadButton = Array.from(container.querySelectorAll('button'))
-      .find((button): button is HTMLButtonElement => button.textContent === '选择笔记上传');
+      .find((button): button is HTMLButtonElement => button.textContent === '按笔记上传');
     expect(uploadButton).toBeTruthy();
     expect(uploadButton!.disabled).toBe(false);
+    expect(uploadButton!.classList.contains('mod-secondary')).toBe(true);
 
     await act(() => {
       uploadButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -109,7 +111,7 @@ describe('SettingsComponent auth credentials', () => {
     }));
 
     const uploadButton = Array.from(container.querySelectorAll('button'))
-      .find((button): button is HTMLButtonElement => button.textContent === '选择笔记上传');
+      .find((button): button is HTMLButtonElement => button.textContent === '按笔记上传');
     expect(uploadButton).toBeTruthy();
     expect(uploadButton!.disabled).toBe(true);
   });
@@ -122,7 +124,7 @@ describe('SettingsComponent auth credentials', () => {
     }), vi.fn(), vi.fn(), { isSyncing: true });
 
     const uploadButton = Array.from(container.querySelectorAll('button'))
-      .find((button): button is HTMLButtonElement => button.textContent === '选择笔记上传');
+      .find((button): button is HTMLButtonElement => button.textContent === '按笔记上传');
     expect(uploadButton).toBeTruthy();
     expect(uploadButton!.disabled).toBe(true);
   });

@@ -546,7 +546,7 @@ export function SettingsComponent({
             <div className="getnote-manual-action-title">{t('settings.manualSync.upload')}</div>
             <div className="getnote-actions-row">
               <button
-                className="mod-cta getnote-sync-action-button"
+                className="mod-secondary getnote-sync-action-button"
                 disabled={!hasCredentials || isSyncing}
                 onClick={openLocalUpload}
               >

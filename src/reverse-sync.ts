@@ -146,9 +146,12 @@ export class ReverseSyncEngine {
     const result: ReverseSyncResult = { created: 0, skipped: 0, failed: 0, total: 0 };
 
     for (const file of files) {
-      const note = await this.readLocalNote(file);
-      if (!note) continue;
       result.total++;
+      const note = await this.readLocalNote(file);
+      if (!note) {
+        result.skipped++;
+        continue;
+      }
 
       try {
         if (note.uid && await this.remoteExists(note.uid, credentials)) {

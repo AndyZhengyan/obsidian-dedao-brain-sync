@@ -232,4 +232,25 @@ describe('ReverseSyncEngine', () => {
     expect(app.vault._getFile('Get笔记/a.md')?.content).not.toContain('selected-created');
     expect(app.vault._getFile('Get笔记/b.md')?.content).toContain('uid: "selected-created"');
   });
+
+  it('counts selected markdown files that cannot be uploaded as skipped', async () => {
+    const app = makeMockApp();
+    app.vault._addFile('Get笔记/empty.md', [
+      '---',
+      'title: "Empty"',
+      'note_type: plain_text',
+      '---',
+      '',
+    ].join('\n'));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ success: true, data: { note: { note_id: 'should-not-create' } } })
+    );
+
+    const selectedFile = app.vault.getMarkdownFiles().find(file => file.path === 'Get笔记/empty.md');
+    const result = await new ReverseSyncEngine(app as any, makeSettings()).syncFiles(selectedFile ? [selectedFile as any] : []);
+
+    expect(result).toEqual({ created: 0, skipped: 1, failed: 0, total: 1 });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(app.vault.modify).not.toHaveBeenCalled();
+  });
 });
