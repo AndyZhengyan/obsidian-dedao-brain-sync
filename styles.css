@@ -261,6 +261,27 @@
   gap: 8px;
 }
 
+.getnote-manual-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: var(--getnote-primary-input-width);
+}
+
+.getnote-manual-action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.getnote-manual-action-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: right;
+}
+
 .getnote-secondary-button {
   min-width: 160px;
 }

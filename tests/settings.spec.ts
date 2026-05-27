@@ -22,7 +22,12 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
   };
 }
 
-function renderSettings(settings: Settings, updateSetting = vi.fn(), openLocalUpload = vi.fn()) {
+function renderSettings(
+  settings: Settings,
+  updateSetting = vi.fn(),
+  openLocalUpload = vi.fn(),
+  options: { isSyncing?: boolean } = {}
+) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   render(
@@ -30,7 +35,7 @@ function renderSettings(settings: Settings, updateSetting = vi.fn(), openLocalUp
       settings,
       updateSetting,
       startSync: vi.fn(),
-      isSyncing: false,
+      isSyncing: options.isSyncing ?? false,
       openNotePicker: vi.fn(),
       openLocalUpload,
       startAutoSync: vi.fn(),
@@ -63,36 +68,26 @@ afterEach(() => {
 });
 
 describe('SettingsComponent auth credentials', () => {
-  it('toggles reverse sync upload permission', async () => {
-    const { container, updateSetting } = renderSettings(makeSettings({
+  it('does not render a separate upload permission switch', () => {
+    const { container } = renderSettings(makeSettings({
       reverseSync: { enabled: false },
     }));
 
-    expect(container.textContent).toContain('允许上传本地笔记到 Get笔记');
-    const reverseSyncCheckbox = Array.from(container.querySelectorAll('input[type="checkbox"]'))
-      .find((input): input is HTMLInputElement => {
-        const row = input.closest('.getnote-scheduled-row');
-        return Boolean(row?.textContent?.includes('启用上传'));
-      });
-    expect(reverseSyncCheckbox).toBeTruthy();
-
-    await act(() => {
-      reverseSyncCheckbox!.checked = true;
-      reverseSyncCheckbox!.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-
-    expect(updateSetting).toHaveBeenCalledWith('reverseSync', { enabled: true });
+    expect(container.textContent).not.toContain('允许上传本地笔记到 Get笔记');
+    expect(container.textContent).not.toContain('启用上传');
   });
 
-  it('opens the local upload picker from the upload settings button', async () => {
+  it('opens the local upload picker from the manual sync upload button', async () => {
     const openLocalUpload = vi.fn();
     const { container } = renderSettings(makeSettings({
       authMode: 'web',
       webApiToken: 'web-token',
       apiToken: 'web-token',
-      reverseSync: { enabled: true },
+      reverseSync: { enabled: false },
     }), vi.fn(), openLocalUpload);
 
+    expect(container.textContent).toContain('从 Get笔记同步到 Obsidian');
+    expect(container.textContent).toContain('从 Obsidian 上传到 Get笔记');
     const uploadButton = Array.from(container.querySelectorAll('button'))
       .find((button): button is HTMLButtonElement => button.textContent === '选择笔记上传');
     expect(uploadButton).toBeTruthy();
@@ -105,13 +100,26 @@ describe('SettingsComponent auth credentials', () => {
     expect(openLocalUpload).toHaveBeenCalledTimes(1);
   });
 
-  it('disables the local upload button until uploads and credentials are enabled', () => {
+  it('disables the local upload button until credentials are configured', () => {
     const { container } = renderSettings(makeSettings({
       authMode: 'web',
       webApiToken: '',
       apiToken: '',
-      reverseSync: { enabled: false },
+      reverseSync: { enabled: true },
     }));
+
+    const uploadButton = Array.from(container.querySelectorAll('button'))
+      .find((button): button is HTMLButtonElement => button.textContent === '选择笔记上传');
+    expect(uploadButton).toBeTruthy();
+    expect(uploadButton!.disabled).toBe(true);
+  });
+
+  it('disables the local upload button while syncing', () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'web',
+      webApiToken: 'web-token',
+      apiToken: 'web-token',
+    }), vi.fn(), vi.fn(), { isSyncing: true });
 
     const uploadButton = Array.from(container.querySelectorAll('button'))
       .find((button): button is HTMLButtonElement => button.textContent === '选择笔记上传');

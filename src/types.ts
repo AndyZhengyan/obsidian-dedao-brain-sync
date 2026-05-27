@@ -143,8 +143,8 @@ export interface SyncHistoryEntry {
   durationMs: number;
   timestamp: number;
   result: SyncResult;
-  type: 'full' | 'selective' | 'auto';
-  mode?: 'time' | 'selected' | 'auto';
+  type: 'full' | 'selective' | 'auto' | 'upload';
+  mode?: 'time' | 'selected' | 'auto' | 'local-upload';
   scope?: SyncHistoryScope;
   status: 'success' | 'failed' | 'cancelled';
   error?: string;

@@ -8,7 +8,7 @@ import { NotePickerModal } from './ui/note-picker-modal';
 import { ManualSyncModal } from './ui/manual-sync-modal';
 import { LocalUploadModal } from './ui/local-upload-modal';
 import { initI18n, t } from './i18n';
-import { ReverseSyncEngine } from './reverse-sync';
+import { ReverseSyncEngine, type ReverseSyncResult } from './reverse-sync';
 
 const MAX_SYNC_HISTORY = 20;
 
@@ -29,10 +29,13 @@ function normalizeSyncHistory(value: unknown): SyncHistoryEntry[] {
       const startedAt = typeof entry.startedAt === 'number' ? entry.startedAt : timestamp;
       const finishedAt = typeof entry.finishedAt === 'number' ? entry.finishedAt : timestamp;
       const result = entry.result ?? emptySyncResult();
-      const type: SyncHistoryEntry['type'] = entry.type === 'selective' || entry.type === 'auto' ? entry.type : 'full';
+      const type: SyncHistoryEntry['type'] =
+        entry.type === 'selective' || entry.type === 'auto' || entry.type === 'upload' ? entry.type : 'full';
       const mode: SyncHistoryEntry['mode'] =
-        entry.mode === 'selected' || entry.mode === 'auto' || entry.mode === 'time'
+        entry.mode === 'selected' || entry.mode === 'auto' || entry.mode === 'time' || entry.mode === 'local-upload'
           ? entry.mode
+          : type === 'upload'
+            ? 'local-upload'
           : type === 'selective'
             ? 'selected'
             : type === 'auto'
@@ -186,7 +189,7 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   private async recordSyncHistory(
     result: SyncResult,
-    type: 'full' | 'selective' | 'auto',
+    type: SyncHistoryEntry['type'],
     startedAt: number,
     scope: SyncHistoryScope,
     status: SyncHistoryEntry['status'] = 'success',
@@ -201,7 +204,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       timestamp: finishedAt,
       result,
       type,
-      mode: type === 'selective' ? 'selected' : type === 'auto' ? 'auto' : 'time',
+      mode: type === 'selective' ? 'selected' : type === 'auto' ? 'auto' : type === 'upload' ? 'local-upload' : 'time',
       scope,
       status,
       error,
@@ -362,8 +365,9 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 
   openLocalUploadModal(): void {
-    if (!this.settings.reverseSync.enabled) {
-      showError(t('reverseSync.disabled'));
+    const credentials = getAuthCredentials(this.settings);
+    if (!credentials.token || (credentials.authMode !== 'web' && !credentials.clientId)) {
+      showError(t('notice.fillCredentials'));
       return;
     }
     const wrapper = new LocalUploadModalWrapper(this.app, this);
@@ -376,10 +380,7 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   private async reverseSyncToGetNote(files?: TFile[]): Promise<void> {
     if (this.isSyncing) return;
-    if (!this.settings.reverseSync.enabled) {
-      showError(t('reverseSync.disabled'));
-      return;
-    }
+    const startedAt = Date.now();
     this.isSyncing = true;
     this.syncProgress = { message: t('reverseSync.running'), count: '', percent: 0 };
     this.refreshSettingsTab();
@@ -387,6 +388,7 @@ export default class GetNoteSyncPlugin extends Plugin {
     try {
       const engine = new ReverseSyncEngine(this.app, this.settings);
       const result = files ? await engine.syncFiles(files) : await engine.syncBack();
+      await this.recordUploadHistory(result, startedAt, files?.map(file => file.path));
       showSuccess(t('reverseSync.complete', {
         created: result.created,
         skipped: result.skipped,
@@ -394,6 +396,12 @@ export default class GetNoteSyncPlugin extends Plugin {
       }), 8000);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      await this.recordUploadHistory({
+        created: 0,
+        skipped: 0,
+        failed: files?.length ?? 0,
+        total: files?.length ?? 0,
+      }, startedAt, files?.map(file => file.path), message);
       this.syncProgress = { message: t('reverseSync.failed', { msg: message }), count: '', percent: 0 };
       showError(t('reverseSync.failed', { msg: message }));
       return;
@@ -403,6 +411,35 @@ export default class GetNoteSyncPlugin extends Plugin {
       this.syncProgress = { message: '', count: '', percent: 0 };
       this.refreshSettingsTab();
     }
+  }
+
+  private async recordUploadHistory(
+    result: ReverseSyncResult,
+    startedAt: number,
+    selectedIds?: string[],
+    error?: string
+  ): Promise<void> {
+    const syncResult: SyncResult = {
+      created: result.created,
+      updated: 0,
+      skipped: result.skipped,
+      failed: result.failed,
+      total: result.total,
+      items: [],
+    };
+    await this.recordSyncHistory(
+      syncResult,
+      'upload',
+      startedAt,
+      {
+        maxDays: 0,
+        syncStartDate: '',
+        selectedCount: selectedIds?.length,
+        selectedIds,
+      },
+      error || result.failed > 0 ? 'failed' : 'success',
+      error ?? (result.failed > 0 ? t('reverseSync.failedCount', { failed: result.failed }) : undefined)
+    );
   }
 }
 

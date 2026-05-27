@@ -280,7 +280,7 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     });
   });
 
-  it('scheduled sync does not run reverse upload even when uploads are enabled', async () => {
+  it('scheduled sync does not run reverse upload', async () => {
     vi.spyOn(SyncEngine.prototype, 'sync').mockResolvedValue({
       created: 0,
       updated: 0,
@@ -295,7 +295,6 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
       total: 1,
     });
     const plugin = makePlugin();
-    plugin.settings.reverseSync = { enabled: true };
 
     plugin['doAutoSync']();
 
@@ -305,7 +304,7 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     expect(reverseSyncBack).not.toHaveBeenCalled();
   });
 
-  it('does not run reverse sync when upload permission is disabled', async () => {
+  it('runs reverse sync without requiring an upload permission switch', async () => {
     const syncBack = vi.spyOn(ReverseSyncEngine.prototype, 'syncBack').mockResolvedValue({
       created: 1,
       skipped: 0,
@@ -317,27 +316,13 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
 
     await plugin['reverseSyncToGetNote']();
 
-    expect(syncBack).not.toHaveBeenCalled();
-    expect(plugin.isSyncing).toBe(false);
-  });
-
-  it('runs reverse sync when upload permission is enabled', async () => {
-    const syncBack = vi.spyOn(ReverseSyncEngine.prototype, 'syncBack').mockResolvedValue({
-      created: 1,
-      skipped: 0,
-      failed: 0,
-      total: 1,
-    });
-    const plugin = makePlugin();
-    plugin.settings.reverseSync = { enabled: true };
-
-    await plugin['reverseSyncToGetNote']();
-
     expect(syncBack).toHaveBeenCalledTimes(1);
-    expect(plugin.isSyncing).toBe(false);
+    await vi.waitFor(() => {
+      expect(plugin.isSyncing).toBe(false);
+    });
   });
 
-  it('uploads selected local files without scanning the whole sync folder', async () => {
+  it('uploads selected local files without scanning the whole sync folder and records upload history', async () => {
     const syncBack = vi.spyOn(ReverseSyncEngine.prototype, 'syncBack').mockResolvedValue({
       created: 99,
       skipped: 0,
@@ -351,7 +336,7 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
       total: 1,
     });
     const plugin = makePlugin();
-    plugin.settings.reverseSync = { enabled: true };
+    plugin.settings.reverseSync = { enabled: false };
     const selectedFiles = [{ path: 'Inbox/upload-me.md' }];
 
     plugin.uploadSelectedLocalNotes(selectedFiles as any);
@@ -360,6 +345,41 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
       expect(syncFiles).toHaveBeenCalledWith(selectedFiles);
     });
     expect(syncBack).not.toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(plugin.syncHistory.at(-1)).toEqual(expect.objectContaining({
+        type: 'upload',
+        mode: 'local-upload',
+        status: 'success',
+        result: expect.objectContaining({
+          created: 1,
+          skipped: 0,
+          failed: 0,
+          total: 1,
+        }),
+      }));
+      expect(plugin.isSyncing).toBe(false);
+    });
+  });
+
+  it('records failed upload history when selected local upload fails', async () => {
+    vi.spyOn(ReverseSyncEngine.prototype, 'syncFiles').mockResolvedValue({
+      created: 0,
+      skipped: 0,
+      failed: 1,
+      total: 1,
+    });
+    const plugin = makePlugin();
+
+    plugin.uploadSelectedLocalNotes([{ path: 'Inbox/fail.md' }] as any);
+
+    await vi.waitFor(() => {
+      expect(plugin.syncHistory.at(-1)).toEqual(expect.objectContaining({
+        type: 'upload',
+        mode: 'local-upload',
+        status: 'failed',
+        error: '失败 1 篇',
+      }));
+    });
     expect(plugin.isSyncing).toBe(false);
   });
 });
