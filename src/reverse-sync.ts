@@ -67,7 +67,7 @@ function parseFrontmatterBlock(content: string): ParsedFrontmatterBlock | null {
 }
 
 function stripQuotes(value: string): string {
-  return value.trim().replace(/^"|"$/g, '');
+  return value.trim().replace(/^(['"])(.*)\1$/s, '$2');
 }
 
 function readString(frontmatter: Record<string, unknown>, key: string): string {

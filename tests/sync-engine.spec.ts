@@ -129,7 +129,7 @@ describe('SyncEngine — filterRecentNotes', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings(), undefined, { enabledNoteTypes: ['link'] });
+      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }), undefined, { enabledNoteTypes: ['link'] });
 
       const result = await engine.sync();
 

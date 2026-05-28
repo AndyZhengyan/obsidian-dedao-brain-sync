@@ -223,6 +223,29 @@ describe('ReverseSyncEngine', () => {
     expect(app.vault.modify).not.toHaveBeenCalled();
   });
 
+  it('normalizes single-quoted uid values before checking the remote note', async () => {
+    const app = makeMockApp();
+    app.vault._addFile('Get笔记/single-quoted.md', [
+      '---',
+      "uid: 'remote-single'",
+      'title: "Single quoted uid"',
+      'note_type: plain_text',
+      '---',
+      'Body',
+    ].join('\n'));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ success: true, data: { note: { note_id: 'remote-single' } } })
+    );
+
+    const result = await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+
+    expect(result).toEqual(expect.objectContaining({ created: 0, skipped: 1, failed: 0, total: 1 }));
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('id=remote-single'),
+      expect.anything()
+    );
+  });
+
   it('parses uid from current file contents when metadata cache is stale', async () => {
     const app = makeMockApp();
     app.vault._addFile('Get笔记/stale-cache.md', [
