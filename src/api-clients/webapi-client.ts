@@ -76,7 +76,7 @@ function tryParseJsonObject(text: string): Record<string, unknown> {
 
 function safeJsonParse(text: string): unknown {
   const safe = text.replace(
-    /"(id|note_id|parent_id|follow_id|live_id)"\s*:\s*(\d+)/g,
+    /"(id|note_id|prime_id|parent_id|follow_id|live_id)"\s*:\s*(\d+)/g,
     '"$1":"$2"'
   );
   return JSON.parse(safe);

@@ -630,7 +630,7 @@ describe('createNote', () => {
   it('creates a Web API note and preserves unquoted large ids before returning them', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       mockTextFetchResponse(
-        '{"h":{},"c":{"note_id":1911000000000000000,"id":1911000000000000000,"prime_id":"prime-created"}}'
+        '{"h":{},"c":{"note_id":1911000000000000000,"id":1911000000000000000,"prime_id":1911000000000000001}}'
       ) as Response
     );
 
@@ -645,7 +645,7 @@ describe('createNote', () => {
       });
 
       expect(result.noteId).toBe('1911000000000000000');
-      expect(result.detailId).toBe('prime-created');
+      expect(result.detailId).toBe('1911000000000000001');
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
     }
