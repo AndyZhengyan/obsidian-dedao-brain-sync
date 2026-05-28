@@ -1,6 +1,6 @@
 // Central API entry point - delegates to client implementations based on authMode
-import { fetchNotes as openapiFetchNotes, fetchNoteDetail as openapiFetchNoteDetail } from './api-clients/openapi-client';
-import { fetchNotes as webapiFetchNotes, fetchNoteChildren as webapiFetchNoteChildren, fetchNoteDetail as webapiFetchNoteDetail } from './api-clients/webapi-client';
+import { createNote as openapiCreateNote, fetchNotes as openapiFetchNotes, fetchNoteDetail as openapiFetchNoteDetail } from './api-clients/openapi-client';
+import { createNote as webapiCreateNote, fetchNotes as webapiFetchNotes, fetchNoteChildren as webapiFetchNoteChildren, fetchNoteDetail as webapiFetchNoteDetail } from './api-clients/webapi-client';
 import type { GetNoteNote, AuthMode } from './types';
 import { t } from './i18n';
 
@@ -49,6 +49,44 @@ export async function fetchNoteChildren(
 ): Promise<GetNoteNote[]> {
   if (authMode !== 'web') return [];
   return webapiFetchNoteChildren(parentPrimeId, token, signal);
+}
+
+export interface CreateNoteOptions {
+  token: string;
+  clientId: string;
+  authMode?: AuthMode;
+  title: string;
+  content: string;
+  noteType: string;
+  tags?: string[];
+  signal?: AbortSignal;
+}
+
+export interface CreateNoteResult {
+  noteId: string;
+  detailId?: string;
+}
+
+export async function createNote(options: CreateNoteOptions): Promise<CreateNoteResult> {
+  if (options.authMode === 'web') {
+    return webapiCreateNote({
+      token: options.token,
+      title: options.title,
+      content: options.content,
+      noteType: options.noteType,
+      tags: options.tags,
+      signal: options.signal,
+    });
+  }
+  return openapiCreateNote({
+    token: options.token,
+    clientId: options.clientId,
+    title: options.title,
+    content: options.content,
+    noteType: options.noteType,
+    tags: options.tags,
+    signal: options.signal,
+  });
 }
 
 export async function* fetchAllNotes(

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fetchNoteChildren, fetchNotes, fetchNoteDetail } from '../src/api';
+import { createNote, fetchNoteChildren, fetchNotes, fetchNoteDetail } from '../src/api';
 import type { ListResponse } from '../src/types';
 
 // Extract the internal safeJsonParse for direct testing
@@ -510,6 +510,142 @@ describe('web auth mode', () => {
         authMode: 'web',
         sinceId: '0',
       })).rejects.toThrow('Web Token 无效，请检查设置');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+});
+
+describe('createNote', () => {
+  it('creates an OpenAPI note and preserves a large returned note_id as a string', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockTextFetchResponse(
+        JSON.stringify({
+          success: true,
+          data: {
+            note: {
+              note_id: 0,
+            },
+          },
+        }).replace('"note_id":0', '"note_id":1909999999999999999')
+      ) as Response
+    );
+
+    try {
+      const result = await createNote({
+        token: 'test-token',
+        clientId: 'test-client',
+        authMode: 'openapi',
+        title: 'Local title',
+        content: 'Local body',
+        noteType: 'plain_text',
+      });
+
+      expect(result.noteId).toBe('1909999999999999999');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        'https://openapi.biji.com/open/api/v1/resource/note/save',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer test-token',
+            'X-Client-ID': 'test-client',
+            'Content-Type': 'application/json',
+          }),
+          body: JSON.stringify({
+            title: 'Local title',
+            content: 'Local body',
+            note_type: 'plain_text',
+            source: 'app',
+            tags: [],
+          }),
+        })
+      );
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('creates a Web API note with json_content payload', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        h: {},
+        c: {
+          note_id: '1911000000000000000',
+          id: '1911000000000000000',
+          prime_id: 'prime-created',
+        },
+      }) as Response
+    );
+
+    try {
+      const result = await createNote({
+        token: 'web-token',
+        clientId: '',
+        authMode: 'web',
+        title: '',
+        content: '19\n\n',
+        noteType: 'plain_text',
+      });
+
+      expect(result.noteId).toBe('1911000000000000000');
+      expect(result.detailId).toBe('prime-created');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        'https://get-notes.luojilab.com/voicenotes/web/notes',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer web-token',
+            'Content-Type': 'application/json',
+            'x-request-id': expect.any(String),
+          }),
+          body: JSON.stringify({
+            title: '',
+            content: '19\n\n',
+            json_content: JSON.stringify({
+              type: 'doc',
+              content: [
+                {
+                  type: 'paragraph',
+                  attrs: { textAlign: null },
+                  content: [{ type: 'text', text: '19' }],
+                },
+                {
+                  type: 'paragraph',
+                  attrs: { textAlign: null },
+                },
+              ],
+            }),
+            entry_type: 'manual',
+            note_type: 'plain_text',
+            source: 'web',
+            tags: [],
+          }),
+        })
+      );
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('creates a Web API note and preserves unquoted large ids before returning them', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockTextFetchResponse(
+        '{"h":{},"c":{"note_id":1911000000000000000,"id":1911000000000000000,"prime_id":1911000000000000001}}'
+      ) as Response
+    );
+
+    try {
+      const result = await createNote({
+        token: 'web-token',
+        clientId: '',
+        authMode: 'web',
+        title: '',
+        content: '19',
+        noteType: 'plain_text',
+      });
+
+      expect(result.noteId).toBe('1911000000000000000');
+      expect(result.detailId).toBe('1911000000000000001');
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
     }

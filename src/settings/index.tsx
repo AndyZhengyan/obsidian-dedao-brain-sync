@@ -42,6 +42,7 @@ interface SettingsComponentProps {
   startSync: () => void;
   isSyncing: boolean;
   openNotePicker: () => void;
+  openLocalUpload: () => void;
   startAutoSync: () => void;
   stopAutoSync: () => void;
   cancelSync: () => void;
@@ -57,6 +58,7 @@ export function SettingsComponent({
   startSync,
   isSyncing,
   openNotePicker,
+  openLocalUpload,
   startAutoSync,
   stopAutoSync,
   cancelSync,
@@ -522,19 +524,36 @@ export function SettingsComponent({
       </SettingItem>
 
       <SettingItem name={t('settings.manualSync')}>
-        <div className="getnote-actions-row">
-          <SyncButton
-            hasCredentials={hasCredentials}
-            isSyncing={isSyncing}
-            onClick={startSync}
-          />
-          <button
-            className="mod-secondary getnote-sync-action-button"
-            disabled={!hasCredentials || isSyncing}
-            onClick={openNotePicker}
-          >
-            {t('settings.syncPicker.button')}
-          </button>
+        <div className="getnote-manual-actions">
+          <div className="getnote-manual-action-group">
+            <div className="getnote-manual-action-title">{t('settings.manualSync.download')}</div>
+            <div className="getnote-actions-row">
+              <SyncButton
+                hasCredentials={hasCredentials}
+                isSyncing={isSyncing}
+                onClick={startSync}
+              />
+              <button
+                className="mod-secondary getnote-sync-action-button"
+                disabled={!hasCredentials || isSyncing}
+                onClick={openNotePicker}
+              >
+                {t('settings.syncPicker.button')}
+              </button>
+            </div>
+          </div>
+          <div className="getnote-manual-action-group">
+            <div className="getnote-manual-action-title">{t('settings.manualSync.upload')}</div>
+            <div className="getnote-actions-row">
+              <button
+                className="mod-secondary getnote-sync-action-button"
+                disabled={!hasCredentials || isSyncing}
+                onClick={openLocalUpload}
+              >
+                {t('settings.reverseSync.uploadButton')}
+              </button>
+            </div>
+          </div>
         </div>
       </SettingItem>
 

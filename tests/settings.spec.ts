@@ -22,7 +22,12 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
   };
 }
 
-function renderSettings(settings: Settings, updateSetting = vi.fn()) {
+function renderSettings(
+  settings: Settings,
+  updateSetting = vi.fn(),
+  openLocalUpload = vi.fn(),
+  options: { isSyncing?: boolean } = {}
+) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   render(
@@ -30,8 +35,9 @@ function renderSettings(settings: Settings, updateSetting = vi.fn()) {
       settings,
       updateSetting,
       startSync: vi.fn(),
-      isSyncing: false,
+      isSyncing: options.isSyncing ?? false,
       openNotePicker: vi.fn(),
+      openLocalUpload,
       startAutoSync: vi.fn(),
       stopAutoSync: vi.fn(),
       cancelSync: vi.fn(),
@@ -39,7 +45,7 @@ function renderSettings(settings: Settings, updateSetting = vi.fn()) {
     }),
     container
   );
-  return { container, updateSetting };
+  return { container, updateSetting, openLocalUpload };
 }
 
 function inputValue(input: Element, value: string) {
@@ -62,6 +68,67 @@ afterEach(() => {
 });
 
 describe('SettingsComponent auth credentials', () => {
+  it('does not render a separate upload permission switch', () => {
+    const { container } = renderSettings(makeSettings({
+      reverseSync: { enabled: false },
+    }));
+
+    expect(container.textContent).not.toContain('允许上传本地笔记到 Get笔记');
+    expect(container.textContent).not.toContain('启用上传');
+  });
+
+  it('opens the local upload picker from the manual sync upload button', async () => {
+    const openLocalUpload = vi.fn();
+    const { container } = renderSettings(makeSettings({
+      authMode: 'web',
+      webApiToken: 'web-token',
+      apiToken: 'web-token',
+      reverseSync: { enabled: false },
+    }), vi.fn(), openLocalUpload);
+
+    expect(container.textContent).toContain('从 Get笔记同步到 Obsidian');
+    expect(container.textContent).toContain('从 Obsidian 上传到 Get笔记');
+    expect(container.textContent).not.toContain('选择笔记上传');
+    const uploadButton = Array.from(container.querySelectorAll('button'))
+      .find((button): button is HTMLButtonElement => button.textContent === '按笔记上传');
+    expect(uploadButton).toBeTruthy();
+    expect(uploadButton!.disabled).toBe(false);
+    expect(uploadButton!.classList.contains('mod-secondary')).toBe(true);
+
+    await act(() => {
+      uploadButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(openLocalUpload).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables the local upload button until credentials are configured', () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'web',
+      webApiToken: '',
+      apiToken: '',
+      reverseSync: { enabled: true },
+    }));
+
+    const uploadButton = Array.from(container.querySelectorAll('button'))
+      .find((button): button is HTMLButtonElement => button.textContent === '按笔记上传');
+    expect(uploadButton).toBeTruthy();
+    expect(uploadButton!.disabled).toBe(true);
+  });
+
+  it('disables the local upload button while syncing', () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'web',
+      webApiToken: 'web-token',
+      apiToken: 'web-token',
+    }), vi.fn(), vi.fn(), { isSyncing: true });
+
+    const uploadButton = Array.from(container.querySelectorAll('button'))
+      .find((button): button is HTMLButtonElement => button.textContent === '按笔记上传');
+    expect(uploadButton).toBeTruthy();
+    expect(uploadButton!.disabled).toBe(true);
+  });
+
   it('writes the visible mode token back when switching auth modes', async () => {
     const { container, updateSetting } = renderSettings(makeSettings({
       authMode: 'openapi',

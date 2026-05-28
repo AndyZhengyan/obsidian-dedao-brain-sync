@@ -67,11 +67,19 @@ function normalizeNoteDetailData(value: unknown): Partial<GetNoteNote> | null {
 
 function tryParseJsonObject(text: string): Record<string, unknown> {
   try {
-    const value = JSON.parse(text || '{}') as unknown;
+    const value = safeJsonParse(text || '{}') as unknown;
     return isRecord(value) ? value : {};
   } catch {
     return {};
   }
+}
+
+function safeJsonParse(text: string): unknown {
+  const safe = text.replace(
+    /"(id|note_id|prime_id|parent_id|follow_id|live_id)"\s*:\s*(\d+)/g,
+    '"$1":"$2"'
+  );
+  return JSON.parse(safe);
 }
 
 async function waitForRetry(signal?: AbortSignal): Promise<void> {
@@ -127,7 +135,7 @@ async function apiRequest<T>(url: string, options: RequestInit, retries = 1, sig
     throw new Error(t('error.apiServerError', { status: res.status }));
   }
   const text = await res.text();
-  const json = JSON.parse(text) as Record<string, unknown>;
+  const json = safeJsonParse(text) as Record<string, unknown>;
   if (json.success === false) {
     const err = (json.error ?? json) as Record<string, unknown>;
     const errMsg = (err?.message as string) ?? (json.message as string) ?? '';
@@ -140,6 +148,15 @@ export interface FetchNotesOptions {
   token: string;
   sinceId?: string;
   limit?: number;
+  signal?: AbortSignal;
+}
+
+export interface CreateNoteOptions {
+  token: string;
+  title: string;
+  content: string;
+  noteType: string;
+  tags?: string[];
   signal?: AbortSignal;
 }
 
@@ -205,4 +222,71 @@ export async function fetchNoteChildren(
   }
 
   return notes;
+}
+
+function normalizeCreateContent(content: string): string {
+  const trimmed = content.replace(/\s+$/g, '');
+  return trimmed ? `${trimmed}\n\n` : '';
+}
+
+function buildWebJsonContent(content: string): string {
+  const normalized = normalizeCreateContent(content);
+  const textLines = normalized.replace(/\n+$/g, '').split('\n').filter(line => line.length > 0);
+  const paragraphs: Array<{
+    type: string;
+    attrs: { textAlign: null };
+    content?: Array<{ type: string; text: string }>;
+  }> = textLines.map(line => ({
+    type: 'paragraph',
+    attrs: { textAlign: null },
+    content: [{ type: 'text', text: line }],
+  }));
+  paragraphs.push({
+    type: 'paragraph',
+    attrs: { textAlign: null },
+  });
+  return JSON.stringify({ type: 'doc', content: paragraphs });
+}
+
+function extractCreatedNoteIds(value: unknown): { noteId: string; detailId?: string } {
+  if (!isRecord(value)) return { noteId: '' };
+  const source = isRecord(value.c)
+    ? value.c
+    : isRecord(value.data)
+      ? value.data
+      : value;
+  const id = source.note_id ?? source.id;
+  const primeId = source.prime_id;
+  return {
+    noteId: typeof id === 'string' || typeof id === 'number' ? String(id) : '',
+    detailId: typeof primeId === 'string' || typeof primeId === 'number' ? String(primeId) : undefined,
+  };
+}
+
+export async function createNote(options: CreateNoteOptions): Promise<{ noteId: string; detailId?: string }> {
+  const content = normalizeCreateContent(options.content);
+  const data = await apiRequest<{ h?: unknown; c?: unknown; data?: unknown }>(
+    'https://get-notes.luojilab.com/voicenotes/web/notes',
+    {
+      method: 'POST',
+      headers: {
+        ...buildHeaders(options.token),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title: options.title,
+        content,
+        json_content: buildWebJsonContent(content),
+        entry_type: 'manual',
+        note_type: options.noteType,
+        source: 'web',
+        tags: options.tags ?? [],
+      }),
+    },
+    1,
+    options.signal
+  );
+  const { noteId, detailId } = extractCreatedNoteIds(data);
+  if (!noteId) throw new Error(t('error.createNoteFailed'));
+  return { noteId, detailId };
 }
