@@ -1,4 +1,4 @@
-// Get笔记 API 响应类型
+// 得到大脑 API 响应类型
 
 export interface GetNoteNote {
   id: string | number;  // OpenAPI: number → string via safeJsonParse; Web API: string
@@ -100,7 +100,7 @@ export const DEFAULT_SETTINGS: Settings = {
   apiToken: '',
   clientId: '',
   webCsrfToken: '',
-  folderName: 'Get笔记',
+  folderName: '得到大脑',
   filenamePrefix: '',
   maxDays: 30,
   syncStartDate: '',

@@ -207,7 +207,7 @@ export class SyncEngine {
   ): Promise<string | null> {
     try {
       if (!isSafeAttachmentUrl(attachment.url)) {
-        console.warn('[GetNote] Skipped unsafe audio attachment URL');
+        console.warn('[DedaoBrain] Skipped unsafe audio attachment URL');
         return null;
       }
 
@@ -226,14 +226,14 @@ export class SyncEngine {
 
       const res = await fetch(attachment.url);
       if (res.status < 200 || res.status >= 300) {
-        console.error(`[GetNote] Audio download failed: ${res.status}`);
+        console.error(`[DedaoBrain] Audio download failed: ${res.status}`);
         return null;
       }
       const arrayBuffer = await res.arrayBuffer();
       await this.app.vault.createBinary(targetPath, arrayBuffer);
       return targetPath;
     } catch (err) {
-      console.error(`[GetNote] Audio download error:`, err);
+      console.error(`[DedaoBrain] Audio download error:`, err);
       return null;
     }
   }
@@ -245,7 +245,7 @@ export class SyncEngine {
   ): Promise<string | null> {
     try {
       if (!isSafeAttachmentUrl(attachment.url)) {
-        console.warn('[GetNote] Skipped unsafe image attachment URL');
+        console.warn('[DedaoBrain] Skipped unsafe image attachment URL');
         return null;
       }
 
@@ -263,14 +263,14 @@ export class SyncEngine {
 
       const res = await fetch(attachment.url);
       if (res.status < 200 || res.status >= 300) {
-        console.error(`[GetNote] Image download failed: ${res.status}`);
+        console.error(`[DedaoBrain] Image download failed: ${res.status}`);
         return null;
       }
       const arrayBuffer = await res.arrayBuffer();
       await this.app.vault.createBinary(targetPath, arrayBuffer);
       return targetPath;
     } catch (err) {
-      console.error(`[GetNote] Image download error:`, err);
+      console.error(`[DedaoBrain] Image download error:`, err);
       return null;
     }
   }
@@ -295,7 +295,7 @@ export class SyncEngine {
       }
       return targetPath;
     } catch (err) {
-      console.error('[GetNote] Audio transcript write error:', err);
+      console.error('[DedaoBrain] Audio transcript write error:', err);
       return null;
     }
   }
@@ -435,7 +435,7 @@ export class SyncEngine {
         }
       }
     } catch (err) {
-      console.error(`[GetNote] Write failed [${generateDisplayTitle(note) || note.note_id}]:`, err);
+      console.error(`[DedaoBrain] Write failed [${generateDisplayTitle(note) || note.note_id}]:`, err);
       return {
         status: 'failed',
         file: undefined,
@@ -536,7 +536,7 @@ export class SyncEngine {
           const audioPath = await this.downloadAudioAsset(enrichedNote, audioAttachment);
           if (audioPath) assetPaths.push(audioPath);
         } else {
-          console.warn(`[GetNote] No audio attachment found in note detail [${note.note_id}]`);
+          console.warn(`[DedaoBrain] No audio attachment found in note detail [${note.note_id}]`);
         }
         const transcriptPath = await this.writeAudioTranscriptAsset(enrichedNote);
         if (transcriptPath) assetPaths.push(transcriptPath);
@@ -555,7 +555,7 @@ export class SyncEngine {
 
       return enrichedNote;
     } catch (err) {
-      console.warn(`[GetNote] Failed to enrich note ${note.note_id}:`, err);
+      console.warn(`[DedaoBrain] Failed to enrich note ${note.note_id}:`, err);
       return note;
     }
   }
@@ -604,7 +604,7 @@ export class SyncEngine {
           status: 'failed',
           error: err instanceof Error ? err.message : String(err),
         });
-        console.warn(`[GetNote] Failed to fetch append notes for ${parentDetailId}:`, err);
+        console.warn(`[DedaoBrain] Failed to fetch append notes for ${parentDetailId}:`, err);
       }
       return [];
     }
@@ -658,7 +658,7 @@ export class SyncEngine {
           status: 'failed',
           error: err instanceof Error ? err.message : String(err),
         });
-        console.warn(`[GetNote] Failed to fetch append note ${childId}:`, err);
+        console.warn(`[DedaoBrain] Failed to fetch append note ${childId}:`, err);
       }
     }
     return appendNotes;
