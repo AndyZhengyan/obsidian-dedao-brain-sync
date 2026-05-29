@@ -1,7 +1,8 @@
 // Central API entry point - delegates to client implementations based on authMode
-import { createNote as openapiCreateNote, fetchNotes as openapiFetchNotes, fetchNoteDetail as openapiFetchNoteDetail, fetchSubscribedKnowledgeNotes as openapiFetchSubscribedKnowledgeNotes } from './api-clients/openapi-client';
-import { createNote as webapiCreateNote, fetchNotes as webapiFetchNotes, fetchNoteChildren as webapiFetchNoteChildren, fetchNoteDetail as webapiFetchNoteDetail, fetchSubscribedKnowledgeNotes as webapiFetchSubscribedKnowledgeNotes } from './api-clients/webapi-client';
-import type { GetNoteNote, AuthMode } from './types';
+import { createNote as openapiCreateNote, fetchNotes as openapiFetchNotes, fetchNoteDetail as openapiFetchNoteDetail, fetchSubscribedKnowledgeNotes as openapiFetchSubscribedKnowledgeNotes, fetchTopicBloggers as openapiFetchTopicBloggers, fetchTopicContentPreviews as openapiFetchTopicContentPreviews, fetchSubscribedTopics as openapiFetchSubscribedTopics } from './api-clients/openapi-client';
+import { createNote as webapiCreateNote, fetchNotes as webapiFetchNotes, fetchNoteChildren as webapiFetchNoteChildren, fetchNoteDetail as webapiFetchNoteDetail, fetchSubscribedKnowledgeNotes as webapiFetchSubscribedKnowledgeNotes, fetchTopicContentPreviews as webapiFetchTopicContentPreviews, fetchSubscribedTopics as webapiFetchSubscribedTopics } from './api-clients/webapi-client';
+import type { GetNoteNote, AuthMode, SubscribedTopic } from './types';
+import type { Blogger } from './api-clients/openapi-client';
 import { t } from './i18n';
 
 export const GETNOTE_LIST_LIMIT = 20;
@@ -51,6 +52,13 @@ export async function fetchNoteChildren(
   return webapiFetchNoteChildren(parentPrimeId, token, signal);
 }
 
+export async function fetchSubscribedTopics(options: { token: string; clientId: string; authMode?: AuthMode; signal?: AbortSignal }): Promise<SubscribedTopic[]> {
+  if (options.authMode === 'web') {
+    return webapiFetchSubscribedTopics(options.token, options.signal);
+  }
+  return openapiFetchSubscribedTopics(options.token, options.clientId, options.signal);
+}
+
 export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions): Promise<GetNoteNote[]> {
   if (options.authMode === 'web') {
     return webapiFetchSubscribedKnowledgeNotes({
@@ -67,6 +75,38 @@ export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions):
     limit: options.limit,
     signal: options.signal,
   });
+}
+
+export interface ContentPreview {
+  note_id: string;
+  title: string;
+  updated_at: string;
+  blogger_name?: string;
+}
+
+export async function fetchTopicBloggers(
+  topicId: string,
+  token: string,
+  clientId: string,
+  authMode?: AuthMode,
+  signal?: AbortSignal
+): Promise<Blogger[]> {
+  if (authMode !== 'openapi') return [];
+  return openapiFetchTopicBloggers(topicId, token, clientId, signal);
+}
+
+export async function fetchTopicContentPreviews(
+  topicId: string,
+  topicName: string | undefined,
+  token: string,
+  clientId: string,
+  authMode?: AuthMode,
+  signal?: AbortSignal
+): Promise<ContentPreview[]> {
+  if (authMode === 'web') {
+    return webapiFetchTopicContentPreviews(topicId, token, signal);
+  }
+  return openapiFetchTopicContentPreviews(topicId, topicName, token, clientId, signal);
 }
 
 export interface CreateNoteOptions {

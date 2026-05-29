@@ -35,7 +35,6 @@ function renderSettings(
       settings,
       updateSetting,
       startSync: vi.fn(),
-      startSubscribedKnowledgeSync: vi.fn(),
       isSyncing: options.isSyncing ?? false,
       openNotePicker: vi.fn(),
       openLocalUpload,
@@ -74,7 +73,7 @@ describe('SettingsComponent auth credentials', () => {
       reverseSync: { enabled: false },
     }));
 
-    expect(container.textContent).not.toContain('允许上传本地笔记到 得到大脑');
+    expect(container.textContent).not.toContain('允许上传本地笔记到得到大脑');
     expect(container.textContent).not.toContain('启用上传');
   });
 
@@ -87,8 +86,8 @@ describe('SettingsComponent auth credentials', () => {
       reverseSync: { enabled: false },
     }), vi.fn(), openLocalUpload);
 
-    expect(container.textContent).toContain('从 得到大脑同步到 Obsidian');
-    expect(container.textContent).toContain('从 Obsidian 上传到 得到大脑');
+    expect(container.textContent).toContain('从得到大脑同步到 Obsidian');
+    expect(container.textContent).toContain('从 Obsidian 上传到得到大脑');
     expect(container.textContent).not.toContain('选择笔记上传');
     const uploadButton = Array.from(container.querySelectorAll('button'))
       .find((button): button is HTMLButtonElement => button.textContent === '按笔记上传');
@@ -276,7 +275,7 @@ describe('SettingsComponent auth credentials', () => {
     }));
 
     const links = Array.from(container.querySelectorAll('a')).map((link) => link.href);
-    expect(links.some((href) => href.includes('README.md#about-the-author'))).toBe(true);
+    expect(links.some((href) => href.includes('README.md#%E5%85%B3%E4%BA%8E%E4%BD%9C%E8%80%85') || href.includes('README.md#关于作者'))).toBe(true);
     expect(links.some((href) => href.includes('docs/web-mode-manual-token.md'))).toBe(true);
   });
 
@@ -290,14 +289,14 @@ describe('SettingsComponent auth credentials', () => {
     }));
 
     const trigger = Array.from(container.querySelectorAll('button'))
-      .find(button => button.textContent === '全部类型');
+      .find(button => button.textContent === '全部笔记');
     expect(trigger).toBeTruthy();
     await act(() => {
       trigger!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
     const plainTextOption = Array.from(container.querySelectorAll('label'))
-      .find(label => label.textContent === '纯文本');
+      .find(label => label.textContent === '文字笔记');
     expect(plainTextOption).toBeTruthy();
     const checkbox = plainTextOption!.querySelector('input[type="checkbox"]') as HTMLInputElement;
     expect(checkbox.checked).toBe(true);
@@ -310,7 +309,7 @@ describe('SettingsComponent auth credentials', () => {
     expect(updateSetting).not.toHaveBeenCalledWith('enabledNoteTypes', expect.anything());
     expect(updateSetting).toHaveBeenCalledWith('scheduledSync', {
       ...scheduledSync,
-      enabledNoteTypes: ['link', 'immediate_audio', 'recorder_audio', 'recorder_flash_audio', 'audio_long', 'local_audio'],
+      enabledNoteTypes: ['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'link', 'img_text', 'recorder_flash_audio'],
     });
   });
 });

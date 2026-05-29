@@ -5,6 +5,7 @@ import { GetNoteSettingsTab } from './settings-tab';
 import { SyncEngine, SyncCancelledError } from './sync';
 import { showError, showNotice, showSuccess } from './ui/notice';
 import { NotePickerModal } from './ui/note-picker-modal';
+import { TopicPickerModal } from './ui/topic-picker-modal';
 import { ManualSyncModal } from './ui/manual-sync-modal';
 import { LocalUploadModal } from './ui/local-upload-modal';
 import { initI18n, t } from './i18n';
@@ -365,10 +366,15 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 
   syncSubscribedKnowledge(): void {
-    void this.runSubscribedKnowledgeSync();
+    const wrapper = new TopicPickerModalWrapper(this.app, this);
+    wrapper.open();
   }
 
-  private async runSubscribedKnowledgeSync(): Promise<void> {
+  syncSubscribedKnowledgeNotes(noteIds: string[]): void {
+    void this.runSubscribedKnowledgeSync(noteIds);
+  }
+
+  private async runSubscribedKnowledgeSync(selectedNoteIds?: string[]): Promise<void> {
     if (this.isSyncing) return;
     const credentials = getAuthCredentials(this.settings);
     if (!credentials.token || (credentials.authMode !== 'web' && !credentials.clientId)) {
@@ -388,7 +394,7 @@ export default class GetNoteSyncPlugin extends Plugin {
     engine.setOnCancel(() => this.cancelSync());
 
     try {
-      const result = await engine.syncSubscribedKnowledge();
+      const result = await engine.syncSubscribedKnowledge(undefined, selectedNoteIds);
       await this.recordSyncHistory(result, 'full', startedAt, {
         maxDays: this.settings.maxDays,
         syncStartDate: this.settings.syncStartDate,
@@ -571,6 +577,41 @@ class NotePickerModalWrapper extends Modal {
           this.abortController.abort();
           this.close();
           this.plugin.syncSelectedNotes(noteIds, enabledNoteTypes);
+        }}
+        onCancel={() => {
+          this.abortController.abort();
+          this.close();
+        }}
+      />,
+      this.contentEl
+    );
+  }
+
+  onClose() {
+    this.abortController.abort();
+    ReactDOM.unmountComponentAtNode(this.contentEl);
+  }
+}
+
+class TopicPickerModalWrapper extends Modal {
+  private abortController = new AbortController();
+
+  constructor(app: App, private plugin: GetNoteSyncPlugin) {
+    super(app);
+    this.titleEl.setText(t('topicPicker.title'));
+  }
+
+  onOpen() {
+    ReactDOM.render(
+      <TopicPickerModal
+        token={getAuthCredentials(this.plugin.settings).token}
+        clientId={getAuthCredentials(this.plugin.settings).clientId}
+        authMode={getAuthCredentials(this.plugin.settings).authMode}
+        abortSignal={this.abortController.signal}
+        onConfirm={async (noteIds) => {
+          this.abortController.abort();
+          this.close();
+          this.plugin.syncSubscribedKnowledgeNotes(noteIds);
         }}
         onCancel={() => {
           this.abortController.abort();

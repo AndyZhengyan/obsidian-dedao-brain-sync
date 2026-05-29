@@ -787,7 +787,7 @@ export class SyncEngine {
     }
   }
 
-  async syncSubscribedKnowledge(modal?: SyncModal): Promise<SyncResult> {
+  async syncSubscribedKnowledge(modal?: SyncModal, selectedNoteIds?: string[]): Promise<SyncResult> {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
     const uidIndex = this.buildUidIndex();
     const seenNoteIds = new Set<string>();
@@ -813,8 +813,11 @@ export class SyncEngine {
       const recentNotes = this.filterRecentNotes(notes);
       const filtered = this.filterNotesByDateRange(recentNotes);
       const typeFiltered = this.filterNotesByType(filtered);
+      const noteIdFiltered = selectedNoteIds
+        ? typeFiltered.filter(n => selectedNoteIds.includes(n.note_id))
+        : typeFiltered;
 
-      for (const note of typeFiltered) {
+      for (const note of noteIdFiltered) {
         if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
         if (seenNoteIds.has(note.note_id)) continue;
         seenNoteIds.add(note.note_id);
@@ -824,12 +827,12 @@ export class SyncEngine {
         this.recordItem(result, note, writeResult);
         this.onProgress?.({
           processed: result.total,
-          total: typeFiltered.length,
+          total: noteIdFiltered.length,
           created: result.created,
           updated: result.updated,
           skipped: result.skipped,
           failed: result.failed,
-          percent: typeFiltered.length ? Math.round((result.total / typeFiltered.length) * 100) : 100,
+          percent: noteIdFiltered.length ? Math.round((result.total / noteIdFiltered.length) * 100) : 100,
         });
       }
 

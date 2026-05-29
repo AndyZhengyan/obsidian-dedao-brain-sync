@@ -169,7 +169,7 @@ interface SubscribedTopic {
   name?: string;
 }
 
-interface Blogger {
+export interface Blogger {
   follow_id: string;
   name?: string;
 }
@@ -265,7 +265,7 @@ function bloggerContentToNote(content: BloggerContent, topic: SubscribedTopic, b
   };
 }
 
-async function fetchSubscribedTopics(token: string, clientId: string, signal?: AbortSignal): Promise<SubscribedTopic[]> {
+export async function fetchSubscribedTopics(token: string, clientId: string, signal?: AbortSignal): Promise<SubscribedTopic[]> {
   const topics: SubscribedTopic[] = [];
   let page = 1;
   while (true) {
@@ -279,7 +279,7 @@ async function fetchSubscribedTopics(token: string, clientId: string, signal?: A
   return topics;
 }
 
-async function fetchTopicBloggers(topicId: string, token: string, clientId: string, signal?: AbortSignal): Promise<Blogger[]> {
+export async function fetchTopicBloggers(topicId: string, token: string, clientId: string, signal?: AbortSignal): Promise<Blogger[]> {
   const bloggers: Blogger[] = [];
   let page = 1;
   while (true) {
@@ -292,6 +292,34 @@ async function fetchTopicBloggers(topicId: string, token: string, clientId: stri
     page++;
   }
   return bloggers;
+}
+
+export async function fetchTopicContentPreviews(topicId: string, topicName: string | undefined, token: string, clientId: string, signal?: AbortSignal): Promise<{ note_id: string; title: string; updated_at: string; blogger_name: string }[]> {
+  const items: { note_id: string; title: string; updated_at: string; blogger_name: string }[] = [];
+  const bloggers = await fetchTopicBloggers(topicId, token, clientId, signal);
+  for (const blogger of bloggers) {
+    let page = 1;
+    while (true) {
+      const params = new URLSearchParams({ topic_id: topicId, follow_id: blogger.follow_id, page: String(page) });
+      const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/contents?${params.toString()}`;
+      const data = await apiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
+      const source = normalizeData(data);
+      const contents = readArray(source, ['contents', 'posts', 'list', 'items']).map(normalizeContent).filter((item): item is BloggerContent => Boolean(item));
+      for (const content of contents) {
+        const created = content.created_at ?? '';
+        const updated = content.updated_at ?? created;
+        items.push({
+          note_id: `blogger_${content.post_id_alias}`,
+          title: content.title ?? '',
+          updated_at: updated,
+          blogger_name: blogger.name ?? '',
+        });
+      }
+      if (!readHasMore(source) || contents.length === 0) break;
+      page++;
+    }
+  }
+  return items;
 }
 
 async function fetchBloggerContents(topicId: string, blogger: Blogger, token: string, clientId: string, signal?: AbortSignal): Promise<BloggerContent[]> {
