@@ -5,7 +5,7 @@ export const GETNOTE_LIST_LIMIT = 20;
 
 function safeJsonParse(text: string): unknown {
   let safe = text.replace(
-    /"(id|note_id|parent_id|follow_id|live_id)"\s*:\s*(\d+)/g,
+    /"(id|note_id|parent_id|follow_id|live_id|topic_id|post_id|post_id_alias)"\s*:\s*(\d+)/g,
     '"$1":"$2"'
   );
   safe = safe.replace(/"children_ids"\s*:\s*\[([^\]]*)\]/g, (_match, body: string) => {
@@ -152,6 +152,7 @@ export interface FetchNotesOptions {
   sinceId?: string;
   limit?: number;
   signal?: AbortSignal;
+  topicIds?: string[];
 }
 
 export interface CreateNoteOptions {
@@ -164,12 +165,24 @@ export interface CreateNoteOptions {
   signal?: AbortSignal;
 }
 
+<<<<<<< HEAD
+=======
+export interface SubscribedTopic {
+  topic_id: string;
+  name?: string;
+}
+
+>>>>>>> 17f0525 (fix: refine branding UI text)
 export interface Blogger {
   follow_id: string;
   name?: string;
 }
 
+<<<<<<< HEAD
 interface BloggerContent {
+=======
+export interface BloggerContent {
+>>>>>>> 17f0525 (fix: refine branding UI text)
   post_id_alias: string;
   title?: string;
   content?: string;
@@ -178,7 +191,10 @@ interface BloggerContent {
   updated_at?: string;
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 17f0525 (fix: refine branding UI text)
 export async function fetchNotes(options: FetchNotesOptions): Promise<{ notes: GetNoteNote[]; hasMore: boolean }> {
   const { token, clientId, sinceId = '0', signal } = options;
   const params = new URLSearchParams();
@@ -213,7 +229,11 @@ function normalizeTopic(value: unknown): SubscribedTopic | null {
   if (typeof id !== 'string' && typeof id !== 'number') return null;
   return {
     topic_id: String(id),
+<<<<<<< HEAD
     name: typeof value.name === 'string' ? value.name : '',
+=======
+    name: typeof value.name === 'string' ? value.name : undefined,
+>>>>>>> 17f0525 (fix: refine branding UI text)
   };
 }
 
@@ -223,11 +243,15 @@ function normalizeBlogger(value: unknown): Blogger | null {
   if (typeof id !== 'string' && typeof id !== 'number') return null;
   return {
     follow_id: String(id),
+<<<<<<< HEAD
     name: typeof value.name === 'string'
       ? value.name
       : typeof value.nickname === 'string'
         ? value.nickname
         : undefined,
+=======
+    name: typeof value.name === 'string' ? value.name : typeof value.nickname === 'string' ? value.nickname : undefined,
+>>>>>>> 17f0525 (fix: refine branding UI text)
   };
 }
 
@@ -279,7 +303,11 @@ export async function fetchSubscribedTopics(token: string, clientId: string, sig
   return topics;
 }
 
+<<<<<<< HEAD
 export async function fetchTopicBloggers(topicId: string, token: string, clientId: string, signal?: AbortSignal): Promise<Blogger[]> {
+=======
+async function fetchTopicBloggers(topicId: string, token: string, clientId: string, signal?: AbortSignal): Promise<Blogger[]> {
+>>>>>>> 17f0525 (fix: refine branding UI text)
   const bloggers: Blogger[] = [];
   let page = 1;
   while (true) {
@@ -294,6 +322,7 @@ export async function fetchTopicBloggers(topicId: string, token: string, clientI
   return bloggers;
 }
 
+<<<<<<< HEAD
 export async function fetchTopicContentPreviews(
   topicId: string,
   _topicName: string | undefined,
@@ -376,6 +405,8 @@ export async function fetchTopicContentPreviewPage(
   return nextCursor ? { items, nextCursor } : { items };
 }
 
+=======
+>>>>>>> 17f0525 (fix: refine branding UI text)
 async function fetchBloggerContents(topicId: string, blogger: Blogger, token: string, clientId: string, signal?: AbortSignal): Promise<BloggerContent[]> {
   const contents: BloggerContent[] = [];
   let page = 1;
@@ -403,7 +434,13 @@ export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions):
   const { token, clientId, signal } = options;
   const notes: GetNoteNote[] = [];
   const topics = await fetchSubscribedTopics(token, clientId, signal);
+<<<<<<< HEAD
   for (const topic of topics) {
+=======
+  const targetIds = options.topicIds;
+  const filteredTopics = targetIds ? topics.filter(t => targetIds.includes(t.topic_id)) : topics;
+  for (const topic of filteredTopics) {
+>>>>>>> 17f0525 (fix: refine branding UI text)
     const bloggers = await fetchTopicBloggers(topic.topic_id, token, clientId, signal);
     for (const blogger of bloggers) {
       const contents = await fetchBloggerContents(topic.topic_id, blogger, token, clientId, signal);
