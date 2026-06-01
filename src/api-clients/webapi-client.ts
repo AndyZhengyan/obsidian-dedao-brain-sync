@@ -309,7 +309,12 @@ export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions):
   return notes;
 }
 
-export async function fetchTopicContentPreviews(topicId: string, token: string, signal?: AbortSignal): Promise<{ note_id: string; title: string; updated_at: string }[]> {
+export async function fetchTopicContentPreviews(
+  topicId: string,
+  token: string,
+  signal?: AbortSignal,
+  options: { maxPages?: number } = {}
+): Promise<{ note_id: string; title: string; updated_at: string }[]> {
   const items: { note_id: string; title: string; updated_at: string }[] = [];
   const listUrl = 'https://knowledge-api.trytalks.com/v1/web/subscribe/topic/list?page=1&size=200&exclude_mine=true';
   const listData = await apiRequest<Record<string, unknown>>(listUrl, { method: 'GET', headers: buildKnowledgeHeaders(token) }, 2, signal);
@@ -322,7 +327,8 @@ export async function fetchTopicContentPreviews(topicId: string, token: string, 
   const directoryId = rootDir.id;
   if ((typeof topicAlias !== 'string' && typeof topicAlias !== 'number') || (typeof directoryId !== 'string' && typeof directoryId !== 'number')) return items;
   let page = 1;
-  while (true) {
+  const maxPages = options.maxPages ?? Number.POSITIVE_INFINITY;
+  while (page <= maxPages) {
     const params = new URLSearchParams({
       topic_id: '-1',
       topic_id_alias: String(topicAlias),

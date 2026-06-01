@@ -293,12 +293,20 @@ export async function fetchTopicBloggers(topicId: string, token: string, clientI
   return bloggers;
 }
 
-export async function fetchTopicContentPreviews(topicId: string, _topicName: string | undefined, token: string, clientId: string, signal?: AbortSignal): Promise<{ note_id: string; title: string; updated_at: string; blogger_name: string }[]> {
+export async function fetchTopicContentPreviews(
+  topicId: string,
+  _topicName: string | undefined,
+  token: string,
+  clientId: string,
+  signal?: AbortSignal,
+  options: { maxPages?: number } = {}
+): Promise<{ note_id: string; title: string; updated_at: string; blogger_name: string }[]> {
   const items: { note_id: string; title: string; updated_at: string; blogger_name: string }[] = [];
   const bloggers = await fetchTopicBloggers(topicId, token, clientId, signal);
+  const maxPages = options.maxPages ?? Number.POSITIVE_INFINITY;
   for (const blogger of bloggers) {
     let page = 1;
-    while (true) {
+    while (page <= maxPages) {
       const params = new URLSearchParams({ topic_id: topicId, follow_id: blogger.follow_id, page: String(page) });
       const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/contents?${params.toString()}`;
       const data = await apiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);

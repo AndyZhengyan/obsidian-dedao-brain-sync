@@ -92,7 +92,15 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
 
     setTopicData(prev => ({ ...prev, [topic.topic_id]: { ...prev[topic.topic_id], loading: true, error: undefined } }));
     try {
-      const contents = await fetchTopicContentPreviews(topic.topic_id, topic.name, token, clientId, authMode, abortSignal);
+      const contents = await fetchTopicContentPreviews(
+        topic.topic_id,
+        topic.name,
+        token,
+        clientId,
+        authMode,
+        abortSignal,
+        { maxPages: 1 }
+      );
       setTopicData(prev => ({
         ...prev,
         [topic.topic_id]: { ...prev[topic.topic_id], contents, loading: false },

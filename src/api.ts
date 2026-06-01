@@ -84,6 +84,10 @@ export interface ContentPreview {
   blogger_name?: string;
 }
 
+export interface TopicContentPreviewOptions {
+  maxPages?: number;
+}
+
 export async function fetchTopicBloggers(
   topicId: string,
   token: string,
@@ -101,12 +105,13 @@ export async function fetchTopicContentPreviews(
   token: string,
   clientId: string,
   authMode?: AuthMode,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  options?: TopicContentPreviewOptions
 ): Promise<ContentPreview[]> {
   if (authMode === 'web') {
-    return webapiFetchTopicContentPreviews(topicId, token, signal);
+    return webapiFetchTopicContentPreviews(topicId, token, signal, options);
   }
-  return openapiFetchTopicContentPreviews(topicId, topicName, token, clientId, signal);
+  return openapiFetchTopicContentPreviews(topicId, topicName, token, clientId, signal, options);
 }
 
 export interface CreateNoteOptions {

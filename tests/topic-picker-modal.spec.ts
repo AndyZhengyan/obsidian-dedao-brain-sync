@@ -64,6 +64,15 @@ describe('TopicPickerModal', () => {
     await flush();
 
     expect(fetchTopicContentPreviews).toHaveBeenCalledTimes(1);
+    expect(fetchTopicContentPreviews).toHaveBeenCalledWith(
+      'luo',
+      '罗振宇学习笔记',
+      'token',
+      'client',
+      'openapi',
+      undefined,
+      { maxPages: 1 }
+    );
     expect(container.textContent).toContain('罗振宇学习笔记');
     expect(container.textContent).toContain('第一篇内容');
     expect(container.textContent).not.toContain('Get 笔记使用指南');
