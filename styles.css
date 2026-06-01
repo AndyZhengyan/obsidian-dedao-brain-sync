@@ -752,6 +752,53 @@
   color: var(--text-error);
 }
 
+/* === Topic Picker === */
+.getnote-topic-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-normal);
+  text-align: left;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.getnote-topic-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.getnote-topic-row:last-child {
+  border-bottom: none;
+}
+
+.getnote-topic-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.getnote-topic-row-meta,
+.getnote-topic-arrow {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.getnote-topic-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 /* === Note Row === */
 .getnote-picker-row {
   display: flex;

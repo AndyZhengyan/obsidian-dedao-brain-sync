@@ -9,7 +9,6 @@ interface TopicData {
   contents: ContentPreview[];
   loading: boolean;
   error?: string;
-  expanded: boolean;
 }
 
 interface TopicPickerModalProps {
@@ -60,7 +59,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   const [topicData, setTopicData] = useState<Record<string, TopicData>>({});
   const [topicsLoading, setTopicsLoading] = useState(true);
   const [topicsError, setTopicsError] = useState<string | null>(null);
-  const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
+  const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
   const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(new Set());
 
   const loadTopics = useCallback(() => {
@@ -72,7 +71,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
         setTopics(result);
         const init: Record<string, TopicData> = {};
         for (const topic of result) {
-          init[topic.topic_id] = { topic, contents: [], loading: false, expanded: false };
+          init[topic.topic_id] = { topic, contents: [], loading: false };
         }
         setTopicData(init);
       } catch (err) {
@@ -86,28 +85,23 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
 
   useEffect(() => { loadTopics(); }, [loadTopics]);
 
-  const expandTopic = async (topic: SubscribedTopic) => {
-    const wasExpanded = expandedTopic === topic.topic_id;
-    if (wasExpanded) {
-      setExpandedTopic(null);
-      return;
-    }
-    setExpandedTopic(topic.topic_id);
+  const openTopic = async (topic: SubscribedTopic) => {
+    setActiveTopicId(topic.topic_id);
     const data = topicData[topic.topic_id];
     if (!data || data.contents.length > 0) return;
 
-    setTopicData(prev => ({ ...prev, [topic.topic_id]: { ...prev[topic.topic_id], loading: true, expanded: true } }));
+    setTopicData(prev => ({ ...prev, [topic.topic_id]: { ...prev[topic.topic_id], loading: true, error: undefined } }));
     try {
       const contents = await fetchTopicContentPreviews(topic.topic_id, topic.name, token, clientId, authMode, abortSignal);
       setTopicData(prev => ({
         ...prev,
-        [topic.topic_id]: { ...prev[topic.topic_id], contents, loading: false, expanded: true },
+        [topic.topic_id]: { ...prev[topic.topic_id], contents, loading: false },
       }));
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
       setTopicData(prev => ({
         ...prev,
-        [topic.topic_id]: { ...prev[topic.topic_id], loading: false, error: err instanceof Error ? err.message : String(err), expanded: true },
+        [topic.topic_id]: { ...prev[topic.topic_id], loading: false, error: err instanceof Error ? err.message : String(err) },
       }));
     }
   };
@@ -124,14 +118,25 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   const handleConfirm = () => onConfirm(Array.from(selectedNoteIds));
 
   const totalItems = Object.values(topicData).reduce((sum, d) => sum + d.contents.length, 0);
+  const activeTopic = activeTopicId ? topicData[activeTopicId] : null;
 
   return (
     <div className="getnote-picker">
       <div className="getnote-picker-header">
-        <span className="getnote-picker-header-title">{t('topicPicker.title')}</span>
+        {activeTopic ? (
+          <button className="getnote-topic-back" data-topic-back onClick={() => setActiveTopicId(null)}>
+            <span aria-hidden="true">←</span>
+            <span>{t('topicPicker.back')}</span>
+          </button>
+        ) : (
+          <span className="getnote-picker-header-title">{t('topicPicker.title')}</span>
+        )}
+        {activeTopic && (
+          <span className="getnote-picker-header-title">{activeTopic.topic.name || activeTopic.topic.topic_id}</span>
+        )}
       </div>
       <div className="getnote-picker-body">
-        {topicsLoading && (
+        {!activeTopic && topicsLoading && (
           <div className="getnote-picker-skeleton">
             {[1, 2, 3, 4].map(i => (
               <div key={i} className="getnote-skeleton-row">
@@ -143,63 +148,63 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
             ))}
           </div>
         )}
-        {topicsError && !topicsLoading && (
+        {!activeTopic && topicsError && !topicsLoading && (
           <div className="getnote-picker-error">
             {topicsError} <button onClick={loadTopics}>{t('topicPicker.retry')}</button>
           </div>
         )}
-        {!topicsLoading && !topicsError && topics.map(topic => {
+        {!activeTopic && !topicsLoading && !topicsError && topics.map(topic => {
           const data = topicData[topic.topic_id];
-          const isExpanded = expandedTopic === topic.topic_id;
           return (
-            <div key={topic.topic_id} className="getnote-topic-section">
-              <div className="getnote-topic-header" onClick={() => expandTopic(topic)}>
-                <span className="getnote-topic-arrow">{isExpanded ? '▼' : '▶'}</span>
-                <span className="getnote-topic-name">{topic.name || topic.topic_id}</span>
-                {data && data.contents.length > 0 && (
-                  <span className="getnote-topic-count">({data.contents.length})</span>
-                )}
-              </div>
-              {isExpanded && (
-                <div className="getnote-topic-body">
-                  {data?.loading && (
-                    <div className="getnote-picker-skeleton" style="padding: 8px 0 8px 24px;">
-                      {[1, 2].map(i => (
-                        <div key={i} className="getnote-skeleton-row">
-                          <div className="getnote-skeleton-checkbox" />
-                          <div className="getnote-skeleton-lines">
-                            <div className="getnote-skeleton-line getnote-skeleton-line-primary" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {data?.error && !data.loading && (
-                    <div className="getnote-picker-error" style="padding: 8px 0 8px 24px;">{data.error}</div>
-                  )}
-                  {!data?.loading && !data?.error && data && data.contents.length === 0 && (
-                    <div className="getnote-picker-empty" style="padding: 8px 0 8px 24px;">
-                      {t('topicPicker.empty')}
-                    </div>
-                  )}
-                  {!data?.loading && data?.contents.map(item => (
-                    <div key={item.note_id} style="padding-left: 24px;">
-                      <ContentRow item={item} checked={selectedNoteIds.has(item.note_id)} onChange={handleCheck} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <button
+              key={topic.topic_id}
+              className="getnote-topic-row"
+              data-topic-id={topic.topic_id}
+              onClick={() => openTopic(topic)}
+            >
+              <span className="getnote-topic-name">{topic.name || topic.topic_id}</span>
+              <span className="getnote-topic-row-meta">
+                {data && data.contents.length > 0
+                  ? t('topicPicker.loaded', { count: data.contents.length })
+                  : t('topicPicker.chooseTopic')}
+              </span>
+              <span className="getnote-topic-arrow" aria-hidden="true">›</span>
+            </button>
           );
         })}
-        {!topicsLoading && !topicsError && topics.length === 0 && (
+        {!activeTopic && !topicsLoading && !topicsError && topics.length === 0 && (
           <div className="getnote-picker-empty">{t('topicPicker.empty')}</div>
         )}
+        {activeTopic && activeTopic.loading && (
+          <div className="getnote-picker-skeleton">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="getnote-skeleton-row">
+                <div className="getnote-skeleton-checkbox" />
+                <div className="getnote-skeleton-lines">
+                  <div className="getnote-skeleton-line getnote-skeleton-line-primary" />
+                  <div className="getnote-skeleton-line getnote-skeleton-line-secondary" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {activeTopic?.error && !activeTopic.loading && (
+          <div className="getnote-picker-error">
+            {activeTopic.error}{' '}
+            <button onClick={() => openTopic(activeTopic.topic)}>{t('topicPicker.retry')}</button>
+          </div>
+        )}
+        {activeTopic && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length === 0 && (
+          <div className="getnote-picker-empty">{t('topicPicker.emptyContent')}</div>
+        )}
+        {activeTopic && !activeTopic.loading && !activeTopic.error && activeTopic.contents.map(item => (
+          <ContentRow key={item.note_id} item={item} checked={selectedNoteIds.has(item.note_id)} onChange={handleCheck} />
+        ))}
       </div>
       <div className="getnote-picker-footer">
         <span className="getnote-picker-count">
           {t('topicPicker.selected', { count: selectedNoteIds.size })}
-          {totalItems > 0 && <span style="margin-left: 12px;">{t('topicPicker.total', { count: totalItems })}</span>}
+          {totalItems > 0 && <span style="margin-left: 12px;">{t('topicPicker.loaded', { count: totalItems })}</span>}
         </span>
         <div className="getnote-picker-btns">
           <button className="mod-cancel" onClick={onCancel}>{t('topicPicker.cancel')}</button>

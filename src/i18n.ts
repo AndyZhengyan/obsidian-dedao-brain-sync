@@ -179,7 +179,11 @@ export const translations: Record<string, Record<string, string>> = {
     'topicPicker.error': '加载失败',
     'topicPicker.retry': '重试',
     'topicPicker.empty': '暂无订阅专题',
+    'topicPicker.emptyContent': '该专题暂无内容',
     'topicPicker.selected': '已选 {count} 个',
+    'topicPicker.chooseTopic': '查看内容',
+    'topicPicker.loaded': '已加载 {count} 条',
+    'topicPicker.back': '返回专题',
     'topicPicker.cancel': '取消',
     'topicPicker.confirm': '同步专题 ({count})',
 
@@ -450,7 +454,11 @@ export const translations: Record<string, Record<string, string>> = {
     'topicPicker.error': 'Failed to load',
     'topicPicker.retry': 'Retry',
     'topicPicker.empty': 'No subscribed topics',
+    'topicPicker.emptyContent': 'No contents in this topic',
     'topicPicker.selected': '{count} selected',
+    'topicPicker.chooseTopic': 'View contents',
+    'topicPicker.loaded': '{count} loaded',
+    'topicPicker.back': 'Back to topics',
     'topicPicker.cancel': 'Cancel',
     'topicPicker.confirm': 'Sync Topics ({count})',
 
