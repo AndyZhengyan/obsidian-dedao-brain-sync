@@ -313,7 +313,7 @@ export async function fetchTopicContentPreviews(
   topicId: string,
   token: string,
   signal?: AbortSignal,
-  options: { maxPages?: number } = {}
+  options: { maxPages?: number; maxBloggers?: number } = {}
 ): Promise<{ note_id: string; title: string; updated_at: string }[]> {
   const items: { note_id: string; title: string; updated_at: string }[] = [];
   const listUrl = 'https://knowledge-api.trytalks.com/v1/web/subscribe/topic/list?page=1&size=200&exclude_mine=true';

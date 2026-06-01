@@ -299,12 +299,13 @@ export async function fetchTopicContentPreviews(
   token: string,
   clientId: string,
   signal?: AbortSignal,
-  options: { maxPages?: number } = {}
+  options: { maxPages?: number; maxBloggers?: number } = {}
 ): Promise<{ note_id: string; title: string; updated_at: string; blogger_name: string }[]> {
   const items: { note_id: string; title: string; updated_at: string; blogger_name: string }[] = [];
   const bloggers = await fetchTopicBloggers(topicId, token, clientId, signal);
   const maxPages = options.maxPages ?? Number.POSITIVE_INFINITY;
-  for (const blogger of bloggers) {
+  const maxBloggers = options.maxBloggers ?? Number.POSITIVE_INFINITY;
+  for (const blogger of bloggers.slice(0, maxBloggers)) {
     let page = 1;
     while (page <= maxPages) {
       const params = new URLSearchParams({ topic_id: topicId, follow_id: blogger.follow_id, page: String(page) });

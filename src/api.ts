@@ -86,6 +86,7 @@ export interface ContentPreview {
 
 export interface TopicContentPreviewOptions {
   maxPages?: number;
+  maxBloggers?: number;
 }
 
 export async function fetchTopicBloggers(

@@ -99,7 +99,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
         clientId,
         authMode,
         abortSignal,
-        { maxPages: 1 }
+        { maxPages: 1, maxBloggers: 1 }
       );
       setTopicData(prev => ({
         ...prev,

@@ -71,7 +71,7 @@ describe('TopicPickerModal', () => {
       'client',
       'openapi',
       undefined,
-      { maxPages: 1 }
+      { maxPages: 1, maxBloggers: 1 }
     );
     expect(container.textContent).toContain('罗振宇学习笔记');
     expect(container.textContent).toContain('第一篇内容');
