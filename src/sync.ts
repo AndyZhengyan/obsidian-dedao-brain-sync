@@ -1,5 +1,5 @@
 import { App, TFile } from 'obsidian';
-import { fetchAllNotes, fetchNoteChildren, fetchNoteDetail } from './api';
+import { fetchAllNotes, fetchNoteChildren, fetchNoteDetail, fetchSubscribedKnowledgeNotes } from './api';
 import { formatDateTime, formatTimestampPrefix, renderNote, generateDisplayTitle } from './note-parser';
 import { getCategoryDir } from './types';
 import { getAuthCredentials, type GetNoteNote, type Settings, type SyncResult, type SyncResultItem, type SyncScopeOptions } from './types';
@@ -207,7 +207,7 @@ export class SyncEngine {
   ): Promise<string | null> {
     try {
       if (!isSafeAttachmentUrl(attachment.url)) {
-        console.warn('[GetNote] Skipped unsafe audio attachment URL');
+        console.warn('[DedaoBrain] Skipped unsafe audio attachment URL');
         return null;
       }
 
@@ -226,14 +226,14 @@ export class SyncEngine {
 
       const res = await fetch(attachment.url);
       if (res.status < 200 || res.status >= 300) {
-        console.error(`[GetNote] Audio download failed: ${res.status}`);
+        console.error(`[DedaoBrain] Audio download failed: ${res.status}`);
         return null;
       }
       const arrayBuffer = await res.arrayBuffer();
       await this.app.vault.createBinary(targetPath, arrayBuffer);
       return targetPath;
     } catch (err) {
-      console.error(`[GetNote] Audio download error:`, err);
+      console.error(`[DedaoBrain] Audio download error:`, err);
       return null;
     }
   }
@@ -245,7 +245,7 @@ export class SyncEngine {
   ): Promise<string | null> {
     try {
       if (!isSafeAttachmentUrl(attachment.url)) {
-        console.warn('[GetNote] Skipped unsafe image attachment URL');
+        console.warn('[DedaoBrain] Skipped unsafe image attachment URL');
         return null;
       }
 
@@ -263,14 +263,14 @@ export class SyncEngine {
 
       const res = await fetch(attachment.url);
       if (res.status < 200 || res.status >= 300) {
-        console.error(`[GetNote] Image download failed: ${res.status}`);
+        console.error(`[DedaoBrain] Image download failed: ${res.status}`);
         return null;
       }
       const arrayBuffer = await res.arrayBuffer();
       await this.app.vault.createBinary(targetPath, arrayBuffer);
       return targetPath;
     } catch (err) {
-      console.error(`[GetNote] Image download error:`, err);
+      console.error(`[DedaoBrain] Image download error:`, err);
       return null;
     }
   }
@@ -295,7 +295,7 @@ export class SyncEngine {
       }
       return targetPath;
     } catch (err) {
-      console.error('[GetNote] Audio transcript write error:', err);
+      console.error('[DedaoBrain] Audio transcript write error:', err);
       return null;
     }
   }
@@ -435,7 +435,7 @@ export class SyncEngine {
         }
       }
     } catch (err) {
-      console.error(`[GetNote] Write failed [${generateDisplayTitle(note) || note.note_id}]:`, err);
+      console.error(`[DedaoBrain] Write failed [${generateDisplayTitle(note) || note.note_id}]:`, err);
       return {
         status: 'failed',
         file: undefined,
@@ -536,7 +536,7 @@ export class SyncEngine {
           const audioPath = await this.downloadAudioAsset(enrichedNote, audioAttachment);
           if (audioPath) assetPaths.push(audioPath);
         } else {
-          console.warn(`[GetNote] No audio attachment found in note detail [${note.note_id}]`);
+          console.warn(`[DedaoBrain] No audio attachment found in note detail [${note.note_id}]`);
         }
         const transcriptPath = await this.writeAudioTranscriptAsset(enrichedNote);
         if (transcriptPath) assetPaths.push(transcriptPath);
@@ -555,7 +555,7 @@ export class SyncEngine {
 
       return enrichedNote;
     } catch (err) {
-      console.warn(`[GetNote] Failed to enrich note ${note.note_id}:`, err);
+      console.warn(`[DedaoBrain] Failed to enrich note ${note.note_id}:`, err);
       return note;
     }
   }
@@ -604,7 +604,7 @@ export class SyncEngine {
           status: 'failed',
           error: err instanceof Error ? err.message : String(err),
         });
-        console.warn(`[GetNote] Failed to fetch append notes for ${parentDetailId}:`, err);
+        console.warn(`[DedaoBrain] Failed to fetch append notes for ${parentDetailId}:`, err);
       }
       return [];
     }
@@ -658,7 +658,7 @@ export class SyncEngine {
           status: 'failed',
           error: err instanceof Error ? err.message : String(err),
         });
-        console.warn(`[GetNote] Failed to fetch append note ${childId}:`, err);
+        console.warn(`[DedaoBrain] Failed to fetch append note ${childId}:`, err);
       }
     }
     return appendNotes;
@@ -888,6 +888,70 @@ export class SyncEngine {
         }
 
         if (fetchedCount >= noteIds.length) break;
+      }
+
+      this.onProgress?.({ percent: 100 });
+      return result;
+    } catch (err) {
+      cleanup();
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw new SyncCancelledError();
+      }
+      throw err;
+    } finally {
+      if (this.abortController === controller) {
+        this.abortController = null;
+      }
+    }
+  }
+
+  async syncSubscribedKnowledge(modal?: SyncModal, selectedNoteIds?: string[]): Promise<SyncResult> {
+    const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
+    const uidIndex = this.buildUidIndex();
+    const seenNoteIds = new Set<string>();
+    const controller = new AbortController();
+    this.abortController = controller;
+    this.cancelled = false;
+
+    const cleanup = () => {
+      this.cancelled = true;
+      this.onCancel?.();
+      if (!controller.signal.aborted) controller.abort();
+    };
+    modal?.setOnCancel(cleanup);
+
+    try {
+      const credentials = getAuthCredentials(this.settings);
+      const notes = await fetchSubscribedKnowledgeNotes({
+        token: credentials.token,
+        clientId: credentials.clientId,
+        signal: controller.signal,
+        authMode: credentials.authMode,
+      });
+      const recentNotes = this.filterRecentNotes(notes);
+      const filtered = this.filterNotesByDateRange(recentNotes);
+      const typeFiltered = this.filterNotesByType(filtered);
+      const noteIdFiltered = selectedNoteIds
+        ? typeFiltered.filter(n => selectedNoteIds.includes(n.note_id))
+        : typeFiltered;
+
+      for (const note of noteIdFiltered) {
+        if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
+        if (seenNoteIds.has(note.note_id)) continue;
+        seenNoteIds.add(note.note_id);
+        result.total++;
+        const writeResult = await this.writeNote(note, uidIndex);
+        this.applyWriteResult(result, writeResult);
+        this.recordItem(result, note, writeResult);
+        this.onProgress?.({
+          processed: result.total,
+          total: noteIdFiltered.length,
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: result.failed,
+          percent: noteIdFiltered.length ? Math.round((result.total / noteIdFiltered.length) * 100) : 100,
+        });
       }
 
       this.onProgress?.({ percent: 100 });
