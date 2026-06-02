@@ -140,6 +140,7 @@ export async function fetchTopicContentPreviewPage(
   return openapiFetchTopicContentPreviewPage(topicId, topicName, token, clientId, signal, cursor);
 }
 
+
 export interface CreateNoteOptions {
   token: string;
   clientId: string;

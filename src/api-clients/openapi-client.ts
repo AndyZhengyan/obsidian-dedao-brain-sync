@@ -178,6 +178,7 @@ interface BloggerContent {
   updated_at?: string;
 }
 
+
 export async function fetchNotes(options: FetchNotesOptions): Promise<{ notes: GetNoteNote[]; hasMore: boolean }> {
   const { token, clientId, sinceId = '0', signal } = options;
   const params = new URLSearchParams();
