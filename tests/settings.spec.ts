@@ -86,8 +86,8 @@ describe('SettingsComponent auth credentials', () => {
       reverseSync: { enabled: false },
     }), vi.fn(), openLocalUpload);
 
-    expect(container.textContent).toContain('从得到大脑同步到 Obsidian');
-    expect(container.textContent).toContain('从 Obsidian 上传到得到大脑');
+    expect(container.textContent).toContain('从得到大脑下载至 Obsidian');
+    expect(container.textContent).toContain('从 Obsidian 上传至得到大脑');
     expect(container.textContent).not.toContain('选择笔记上传');
     const uploadButton = Array.from(container.querySelectorAll('button'))
       .find((button): button is HTMLButtonElement => button.textContent === '按笔记上传');

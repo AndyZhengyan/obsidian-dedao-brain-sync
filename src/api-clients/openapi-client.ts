@@ -5,7 +5,7 @@ export const GETNOTE_LIST_LIMIT = 20;
 
 function safeJsonParse(text: string): unknown {
   let safe = text.replace(
-    /"(id|note_id|parent_id|follow_id|live_id)"\s*:\s*(\d+)/g,
+    /"(id|note_id|parent_id|follow_id|live_id|topic_id|post_id|post_id_alias)"\s*:\s*(\d+)/g,
     '"$1":"$2"'
   );
   safe = safe.replace(/"children_ids"\s*:\s*\[([^\]]*)\]/g, (_match, body: string) => {
@@ -152,6 +152,7 @@ export interface FetchNotesOptions {
   sinceId?: string;
   limit?: number;
   signal?: AbortSignal;
+  topicIds?: string[];
 }
 
 export interface CreateNoteOptions {

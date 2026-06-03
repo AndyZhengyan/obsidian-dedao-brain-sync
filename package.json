@@ -1,7 +1,7 @@
 {
   "name": "obsidian-getnote-importer",
-  "version": "1.0.12",
-  "description": "GetNote Importer for Obsidian",
+  "version": "1.1.0",
+  "description": "Dedao Brain Sync for Obsidian",
   "main": "main.js",
   "scripts": {
     "build": "node esbuild.config.mjs",
