@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { SyncHistoryEntry, SyncResult } from '../src/types';
 import { initI18n } from '../src/i18n';
 import { formatHistoryFilter, formatHistoryMode, formatHistoryNoteType, formatHistoryScope } from '../src/ui/sync-history-modal';
@@ -130,6 +132,16 @@ describe('recordSyncHistory', () => {
     }
 
     expect(h.length).toBe(10);
+  });
+});
+
+describe('sync history scrolling', () => {
+  it('keeps the history list in an independently scrollable container', () => {
+    const css = readFileSync(resolve(process.cwd(), 'styles.css'), 'utf8');
+    const match = css.match(/\.getnote-history-list\s*\{[^}]+\}/);
+
+    expect(match?.[0]).toContain('max-height');
+    expect(match?.[0]).toContain('overflow-y: auto');
   });
 });
 

@@ -1039,6 +1039,9 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: min(64vh, 620px);
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .getnote-history-pagination {

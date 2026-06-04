@@ -495,7 +495,15 @@ export default class GetNoteSyncPlugin extends Plugin {
     this.refreshSettingsTab();
 
     try {
-      const engine = new ReverseSyncEngine(this.app, this.settings);
+      const engine = new ReverseSyncEngine(this.app, this.settings, (progress) => {
+        const percent = progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0;
+        this.syncProgress = {
+          message: t('reverseSync.running'),
+          count: `${t('modal.countProgress', { processed: progress.processed })} ${progress.title}`,
+          percent,
+        };
+        this.refreshSettingsTab();
+      });
       this.currentSyncEngine = engine;
       const result = files ? await engine.syncFiles(files) : await engine.syncBack();
       await this.recordUploadHistory(result, startedAt, files?.map(file => file.path));

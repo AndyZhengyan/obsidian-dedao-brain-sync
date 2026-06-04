@@ -597,6 +597,43 @@ describe('ReverseSyncEngine', () => {
     expect(app.vault._getFile('得到大脑/b.md')?.content).toContain('uid: "selected-created"');
   });
 
+  it('reports progress after each selected local file is processed', async () => {
+    const app = makeMockApp();
+    app.vault._addFile('得到大脑/a.md', [
+      '---',
+      'title: "A"',
+      '---',
+      'Body A',
+    ].join('\n'));
+    app.vault._addFile('得到大脑/b.md', [
+      '---',
+      'title: "B"',
+      '---',
+      'Body B',
+    ].join('\n'));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ success: true, data: { note: { note_id: 'created' } } })
+    );
+    const progress = vi.fn();
+    const selectedFiles = app.vault.getMarkdownFiles();
+
+    await new ReverseSyncEngine(app as any, makeSettings(), progress).syncFiles(selectedFiles as any);
+
+    expect(progress).toHaveBeenCalledTimes(2);
+    expect(progress).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      processed: 1,
+      total: 2,
+      title: 'A',
+      status: 'created',
+    }));
+    expect(progress).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      processed: 2,
+      total: 2,
+      title: 'B',
+      status: 'created',
+    }));
+  });
+
   it('counts selected markdown files that cannot be uploaded as skipped', async () => {
     const app = makeMockApp();
     app.vault._addFile('得到大脑/empty.md', [
