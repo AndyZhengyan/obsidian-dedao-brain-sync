@@ -44,6 +44,18 @@ export function formatHistoryMode(entry: SyncHistoryEntry): string {
   return t('syncHistory.mode.time');
 }
 
+export function shouldRenderHistoryEntryError(entry: SyncHistoryEntry): entry is SyncHistoryEntry & { error: string } {
+  if (!entry.error) return false;
+
+  const failed = entry.result.failed;
+  const aggregateFailureMessages = [
+    `失败 ${failed} 篇`,
+    `${failed} failed`,
+  ];
+
+  return !aggregateFailureMessages.includes(entry.error.trim());
+}
+
 export function openSyncHistoryModal(app: App, history: SyncHistoryEntry[]) {
   const modal = new SyncHistoryModal(app, history);
   modal.open();
@@ -210,7 +222,7 @@ class SyncHistoryModal extends Modal {
           );
         }
 
-        if (entry.error) {
+        if (shouldRenderHistoryEntryError(entry)) {
           detailEl.createDiv('getnote-history-error').setText(entry.error);
         }
       };
