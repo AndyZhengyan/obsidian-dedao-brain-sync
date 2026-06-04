@@ -168,6 +168,111 @@ describe('ReverseSyncEngine', () => {
     ].join('\n'));
   });
 
+  it('limits uploaded tags to the OpenAPI create-note maximum', async () => {
+    const app = makeMockApp();
+    app.vault._addFile('得到大脑/many-tags.md', [
+      '---',
+      'title: "Many tags"',
+      'note_type: plain_text',
+      'tags: ["one", "two", "three", "four", "five", "six"]',
+      '---',
+      'Body',
+    ].join('\n'));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ success: true, data: { note: { note_id: 'many-tags-created' } } })
+    );
+
+    await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'https://openapi.biji.com/open/api/v1/resource/note/save',
+      expect.objectContaining({
+        body: JSON.stringify({
+          title: 'Many tags',
+          content: 'Body',
+          note_type: 'plain_text',
+          source: 'app',
+          tags: ['one', 'two', 'three', 'four'],
+        }),
+      })
+    );
+  });
+
+  it('uploads Markdown image embeds as plain links so create-note does not reject third-party images', async () => {
+    const app = makeMockApp();
+    app.vault._addFile('得到大脑/with-image.md', [
+      '---',
+      'title: "With image"',
+      'note_type: plain_text',
+      '---',
+      'Before',
+      '![](asset/local image.png)',
+      '![diagram](https://cdn.example.com/diagram.png)',
+      'After',
+    ].join('\n'));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ success: true, data: { note: { note_id: 'with-image-created' } } })
+    );
+
+    await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'https://openapi.biji.com/open/api/v1/resource/note/save',
+      expect.objectContaining({
+        body: JSON.stringify({
+          title: 'With image',
+          content: [
+            'Before',
+            '[asset/local image.png](asset/local image.png)',
+            '[diagram](https://cdn.example.com/diagram.png)',
+            'After',
+          ].join('\n'),
+          note_type: 'plain_text',
+          source: 'app',
+          tags: [],
+        }),
+      })
+    );
+  });
+
+  it('applies upload-safe tags and image links in Web API mode too', async () => {
+    const app = makeMockApp();
+    app.vault._addFile('得到大脑/web-safe.md', [
+      '---',
+      'title: "Web safe"',
+      'note_type: plain_text',
+      'tags: ["one", "two", "three", "four", "five"]',
+      '---',
+      'Before',
+      '![chart](https://cdn.example.com/chart.png)',
+      'After',
+    ].join('\n'));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ h: {}, c: { note_id: 'web-safe-created', prime_id: 'web-safe-prime' } })
+    );
+
+    await new ReverseSyncEngine(app as any, makeSettings({
+      authMode: 'web',
+      webApiToken: 'web-token',
+    })).syncBack();
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'https://get-notes.luojilab.com/voicenotes/web/notes',
+      expect.objectContaining({
+        method: 'POST',
+      })
+    );
+    const [, init] = vi.mocked(globalThis.fetch).mock.calls[0];
+    const payload = JSON.parse(String((init as RequestInit).body));
+    expect(payload).toEqual(expect.objectContaining({
+      title: 'Web safe',
+      note_type: 'plain_text',
+      tags: ['one', 'two', 'three', 'four'],
+    }));
+    expect(payload.content).toContain('[chart](https://cdn.example.com/chart.png)');
+    expect(payload.content).not.toContain('![chart]');
+  });
+
   it('skips notes whose uid still exists remotely', async () => {
     const app = makeMockApp();
     app.vault._addFile('得到大脑/imported.md', [
@@ -490,6 +595,43 @@ describe('ReverseSyncEngine', () => {
     );
     expect(app.vault._getFile('得到大脑/a.md')?.content).not.toContain('selected-created');
     expect(app.vault._getFile('得到大脑/b.md')?.content).toContain('uid: "selected-created"');
+  });
+
+  it('reports progress after each selected local file is processed', async () => {
+    const app = makeMockApp();
+    app.vault._addFile('得到大脑/a.md', [
+      '---',
+      'title: "A"',
+      '---',
+      'Body A',
+    ].join('\n'));
+    app.vault._addFile('得到大脑/b.md', [
+      '---',
+      'title: "B"',
+      '---',
+      'Body B',
+    ].join('\n'));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ success: true, data: { note: { note_id: 'created' } } })
+    );
+    const progress = vi.fn();
+    const selectedFiles = app.vault.getMarkdownFiles();
+
+    await new ReverseSyncEngine(app as any, makeSettings(), progress).syncFiles(selectedFiles as any);
+
+    expect(progress).toHaveBeenCalledTimes(2);
+    expect(progress).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      processed: 1,
+      total: 2,
+      title: 'A',
+      status: 'created',
+    }));
+    expect(progress).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      processed: 2,
+      total: 2,
+      title: 'B',
+      status: 'created',
+    }));
   });
 
   it('counts selected markdown files that cannot be uploaded as skipped', async () => {

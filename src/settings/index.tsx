@@ -256,6 +256,12 @@ export function SettingsComponent({
     : Boolean(apiTokenOpenapi.trim() && clientIdOpenapi.trim());
   const { scheduledSync } = settings;
   const currentSyncHistory = syncHistory.length > 0 ? syncHistory : settings.syncHistory;
+  const syncStatusRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isSyncing) return;
+    syncStatusRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [isSyncing, syncProgress?.message, syncProgress?.count, syncProgress?.percent]);
 
   // Format last sync time
   const formatLastSync = (timestamp?: number): string => {
@@ -584,7 +590,7 @@ export function SettingsComponent({
 
       {/* 同步进度条 */}
       {isSyncing && (
-        <div className="getnote-settings-sync-status">
+        <div className="getnote-settings-sync-status" ref={syncStatusRef}>
           <div className="getnote-settings-sync-status-header">
             <span className="getnote-mono-text">{syncProgress?.message || t('sync.syncing')}</span>
             <button className="mod-warning getnote-settings-cancel-button" onClick={cancelSync}>

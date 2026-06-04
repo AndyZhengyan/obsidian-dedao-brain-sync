@@ -26,7 +26,10 @@ function renderSettings(
   settings: Settings,
   updateSetting = vi.fn(),
   openLocalUpload = vi.fn(),
-  options: { isSyncing?: boolean } = {}
+  options: {
+    isSyncing?: boolean;
+    syncProgress?: { message: string; count: string; percent: number };
+  } = {}
 ) {
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -42,6 +45,7 @@ function renderSettings(
       stopAutoSync: vi.fn(),
       cancelSync: vi.fn(),
       app: new App(),
+      syncProgress: options.syncProgress,
     }),
     container
   );
@@ -143,6 +147,46 @@ describe('SettingsComponent auth credentials', () => {
       .find((button): button is HTMLButtonElement => button.textContent === '按笔记上传');
     expect(uploadButton).toBeTruthy();
     expect(uploadButton!.disabled).toBe(true);
+  });
+
+  it('keeps the syncing progress block visible when upload progress changes', async () => {
+    const scrollIntoView = vi.fn();
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      const settings = makeSettings({
+        authMode: 'web',
+        webApiToken: 'web-token',
+        apiToken: 'web-token',
+      });
+      const { container } = renderSettings(settings, vi.fn(), vi.fn(), {
+        isSyncing: true,
+        syncProgress: { message: '正在上传到得到大脑...', count: '处理中 1 条...', percent: 50 },
+      });
+
+      await act(async () => {
+        render(
+          h(SettingsComponent, {
+            settings,
+            updateSetting: vi.fn(),
+            startSync: vi.fn(),
+            isSyncing: true,
+            openNotePicker: vi.fn(),
+            openLocalUpload: vi.fn(),
+            startAutoSync: vi.fn(),
+            stopAutoSync: vi.fn(),
+            cancelSync: vi.fn(),
+            app: new App(),
+            syncProgress: { message: '正在上传到得到大脑...', count: '处理中 2 条...', percent: 100 },
+          }),
+          container
+        );
+      });
+
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', behavior: 'smooth' });
+    } finally {
+      Element.prototype.scrollIntoView = originalScrollIntoView;
+    }
   });
 
   it('writes the visible mode token back when switching auth modes', async () => {

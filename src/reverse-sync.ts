@@ -11,6 +11,13 @@ export interface ReverseSyncResult {
   items: SyncResultItem[];
 }
 
+export interface ReverseSyncProgress {
+  processed: number;
+  total: number;
+  title: string;
+  status: SyncResultItem['status'];
+}
+
 interface LocalMarkdownNote {
   file: TFile;
   content: string;
@@ -29,6 +36,7 @@ interface LocalReadResult {
 }
 
 const SUPPORTED_NOTE_TYPES = new Set(['plain_text', 'link']);
+const MAX_UPLOAD_TAGS = 4;
 
 interface ParsedFrontmatterBlock {
   frontmatter: Record<string, string>;
@@ -92,6 +100,20 @@ function readTags(frontmatter: Record<string, unknown>): string[] {
     .filter(Boolean);
 }
 
+function prepareUploadTags(tags: string[]): string[] {
+  return [...new Set(tags.map(tag => tag.trim()).filter(Boolean))].slice(0, MAX_UPLOAD_TAGS);
+}
+
+function markdownImageToPlainLink(_match: string, alt: string, rawTarget: string): string {
+  const target = rawTarget.trim().replace(/^<|>$/g, '');
+  const label = alt.trim() || target;
+  return `[${label}](${target})`;
+}
+
+function prepareUploadContent(content: string): string {
+  return content.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, markdownImageToPlainLink);
+}
+
 function fileBasename(file: TFile): string {
   return file.basename || file.path.split('/').pop()?.replace(/\.md$/i, '') || 'Untitled';
 }
@@ -137,7 +159,11 @@ function isInsideFolder(file: TFile, folderName: string): boolean {
 export class ReverseSyncEngine {
   private abortController = new AbortController();
 
-  constructor(private app: App, private settings: Settings) {}
+  constructor(
+    private app: App,
+    private settings: Settings,
+    private onProgress?: (progress: ReverseSyncProgress) => void
+  ) {}
 
   cancel(): void {
     this.abortController.abort();
@@ -229,9 +255,9 @@ export class ReverseSyncEngine {
       clientId: credentials.clientId,
       authMode: credentials.authMode,
       title: note.title,
-      content: note.body,
+      content: prepareUploadContent(note.body),
       noteType: note.noteType,
-      tags: note.tags,
+      tags: prepareUploadTags(note.tags),
       signal: this.abortController.signal,
     });
     const currentContent = await this.app.vault.read(note.file);
@@ -242,9 +268,19 @@ export class ReverseSyncEngine {
     return created;
   }
 
+  private reportProgress(item: SyncResultItem, processed: number, total: number): void {
+    this.onProgress?.({
+      processed,
+      total,
+      title: item.title,
+      status: item.status,
+    });
+  }
+
   async syncFiles(files: TFile[]): Promise<ReverseSyncResult> {
     const credentials = this.requireCredentials();
     const result: ReverseSyncResult = { created: 0, skipped: 0, failed: 0, total: 0, items: [] };
+    const totalFiles = files.length;
 
     for (const file of files) {
       if (this.abortController.signal.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -255,14 +291,17 @@ export class ReverseSyncEngine {
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') throw err;
         result.failed++;
-        result.items.push(this.createLocalItem(file, 'failed', {
+        const item = this.createLocalItem(file, 'failed', {
           error: err instanceof Error ? err.message : String(err),
-        }));
+        });
+        result.items.push(item);
+        this.reportProgress(item, result.total, totalFiles);
         continue;
       }
       if (local.skippedItem) {
         result.skipped++;
         result.items.push(local.skippedItem);
+        this.reportProgress(local.skippedItem, result.total, totalFiles);
         continue;
       }
       const note = local.note;
@@ -271,42 +310,50 @@ export class ReverseSyncEngine {
       try {
         if (credentials.authMode === 'web' && note.uid && !note.primeId) {
           result.skipped++;
-          result.items.push(this.createLocalItem(file, 'skipped', {
+          const item = this.createLocalItem(file, 'skipped', {
             noteId: note.uid,
             title: note.title,
             noteType: note.noteType,
             error: t('reverseSync.skip.missingWebDetailId'),
-          }));
+          });
+          result.items.push(item);
+          this.reportProgress(item, result.total, totalFiles);
           continue;
         }
         const detailId = credentials.authMode === 'web' ? note.primeId : note.uid;
         if (detailId && await this.remoteExists(detailId, credentials)) {
           result.skipped++;
-          result.items.push(this.createLocalItem(file, 'skipped', {
+          const item = this.createLocalItem(file, 'skipped', {
             noteId: note.uid,
             title: note.title,
             noteType: note.noteType,
             error: t('reverseSync.skip.remoteExists'),
-          }));
+          });
+          result.items.push(item);
+          this.reportProgress(item, result.total, totalFiles);
           continue;
         }
         const created = await this.createRemoteNote(note, credentials);
         result.created++;
-        result.items.push(this.createLocalItem(file, 'created', {
+        const item = this.createLocalItem(file, 'created', {
           noteId: created.noteId,
           title: note.title,
           noteType: note.noteType,
-        }));
+        });
+        result.items.push(item);
+        this.reportProgress(item, result.total, totalFiles);
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') throw err;
         console.error(`[DedaoBrain] Reverse sync failed [${file.path}]:`, err);
         result.failed++;
-        result.items.push(this.createLocalItem(file, 'failed', {
+        const item = this.createLocalItem(file, 'failed', {
           noteId: note.uid || file.path,
           title: note.title,
           noteType: note.noteType,
           error: err instanceof Error ? err.message : String(err),
-        }));
+        });
+        result.items.push(item);
+        this.reportProgress(item, result.total, totalFiles);
       }
     }
 
