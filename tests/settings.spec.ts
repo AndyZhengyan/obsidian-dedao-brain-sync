@@ -60,11 +60,20 @@ function getTestConnectionButton(container: HTMLElement): HTMLButtonElement {
   return button;
 }
 
+function mockOpenExternal() {
+  const openExternal = vi.fn();
+  (window as Window & {
+    require?: (moduleName: 'electron') => { shell: { openExternal: typeof openExternal } };
+  }).require = vi.fn(() => ({ shell: { openExternal } }));
+  return openExternal;
+}
+
 afterEach(() => {
   vi.mocked(fetchNotes).mockClear();
   initI18n('zh-CN');
   render(null, document.body);
   document.body.innerHTML = '';
+  delete (window as Window & { require?: unknown }).require;
 });
 
 describe('SettingsComponent auth credentials', () => {
@@ -272,6 +281,30 @@ describe('SettingsComponent auth credentials', () => {
     const links = Array.from(container.querySelectorAll('a')).map((link) => link.href);
     expect(links.some((href) => href.includes('README_zh.md#%E5%85%B3%E4%BA%8E%E4%BD%9C%E8%80%85') || href.includes('README_zh.md#关于作者'))).toBe(true);
     expect(links.some((href) => href.includes('docs/web-mode-manual-token_zh.md'))).toBe(true);
+  });
+
+  it('opens settings documentation links in the external browser', async () => {
+    initI18n('zh-CN');
+    const openExternal = mockOpenExternal();
+    const { container } = renderSettings(makeSettings({
+      authMode: 'web',
+      webApiToken: 'web-token',
+    }));
+
+    const communityLink = Array.from(container.querySelectorAll('a'))
+      .find((link): link is HTMLAnchorElement => link.textContent === '欢迎交流、留下star');
+    const helpLink = Array.from(container.querySelectorAll('a'))
+      .find((link): link is HTMLAnchorElement => link.textContent === '查看图文步骤');
+    expect(communityLink).toBeTruthy();
+    expect(helpLink).toBeTruthy();
+
+    await act(() => {
+      communityLink!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      helpLink!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    });
+
+    expect(openExternal).toHaveBeenCalledWith(expect.stringContaining('README_zh.md'));
+    expect(openExternal).toHaveBeenCalledWith(expect.stringContaining('docs/web-mode-manual-token_zh.md'));
   });
 
   it('uses English README links in English locale', () => {

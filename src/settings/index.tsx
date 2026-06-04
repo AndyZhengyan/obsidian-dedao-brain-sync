@@ -8,6 +8,7 @@ import { type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressD
 import { App, AbstractInputSuggest } from 'obsidian';
 import { fetchNotes } from '../api';
 import { t } from '../i18n';
+import { ExternalLink } from './external-link';
 
 class FolderSuggest extends AbstractInputSuggest<string> {
   private el: HTMLInputElement;
@@ -280,7 +281,7 @@ export function SettingsComponent({
       <div className="getnote-settings-header">
         <h2>{t('settings.title')} <span className="getnote-settings-author">by 关山的月儿</span></h2>
         <p className="getnote-settings-desc">
-          {t('settings.desc')} <a href={t('settings.communityUrl')} target="_blank" rel="noopener">{t('settings.community')}</a>
+          {t('settings.desc')} <ExternalLink href={t('settings.communityUrl')}>{t('settings.community')}</ExternalLink>
         </p>
       </div>
 
@@ -291,7 +292,7 @@ export function SettingsComponent({
         name={t('settings.credentials.label')}
         description={
           authMode === 'web'
-            ? <span>{t('settings.credentials.webTip')} <a href={t('settings.webTipHelpUrl')} target="_blank" rel="noopener">{t('settings.webTipHelp')}</a></span>
+            ? <span>{t('settings.credentials.webTip')} <ExternalLink href={t('settings.webTipHelpUrl')}>{t('settings.webTipHelp')}</ExternalLink></span>
             : t('settings.credentials.tip')
         }
       >
