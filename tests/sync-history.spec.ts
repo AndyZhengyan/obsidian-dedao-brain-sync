@@ -136,12 +136,12 @@ describe('recordSyncHistory', () => {
 });
 
 describe('sync history scrolling', () => {
-  it('keeps the history list in an independently scrollable container', () => {
+  it('lets expanded history entries render full details without nested clipping', () => {
     const css = readFileSync(resolve(process.cwd(), 'styles.css'), 'utf8');
     const match = css.match(/\.getnote-history-list\s*\{[^}]+\}/);
 
-    expect(match?.[0]).toContain('max-height');
-    expect(match?.[0]).toContain('overflow-y: auto');
+    expect(match?.[0]).not.toContain('max-height');
+    expect(match?.[0]).not.toContain('overflow-y: auto');
   });
 });
 
