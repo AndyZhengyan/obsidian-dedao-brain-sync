@@ -68,6 +68,13 @@ afterEach(() => {
 });
 
 describe('SettingsComponent auth credentials', () => {
+  it('does not show the knowledge-base sync entry in the 1.1.0 release UI', () => {
+    const { container } = renderSettings(makeSettings());
+
+    expect(container.textContent).not.toContain('按知识库同步');
+    expect(container.textContent).not.toContain('Sync by Knowledge Base');
+  });
+
   it('does not render a separate upload permission switch', () => {
     const { container } = renderSettings(makeSettings({
       reverseSync: { enabled: false },
