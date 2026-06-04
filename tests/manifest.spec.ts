@@ -27,7 +27,7 @@ describe('plugin manifest', () => {
   });
 
   it('points project documentation and settings links at the renamed GitHub repository', () => {
-    for (const path of ['README.md', 'README_zh.md', 'src/i18n.ts']) {
+    for (const path of ['README.md', 'README_EN.md', 'src/i18n.ts']) {
       const content = readFileSync(path, 'utf8');
       expect(content).toContain(NEW_REPO);
       expect(content).not.toContain(`github.com/AndyZhengyan/${OLD_REPO}`);

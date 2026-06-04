@@ -1,6 +1,6 @@
-# Dedao Brain Sync
+# 得到大脑（原Get笔记）Sync
 
-[English](./README.md) | [中文](./README_zh.md)
+[中文](./README.md) | [English](./README_EN.md)
 
 [![Community Plugin](https://img.shields.io/badge/Obsidian-Community%20Plugin-7c3aed?style=flat-square&logo=obsidian)](https://community.obsidian.md/plugins/dedao-brain-sync)
 [![Latest Release](https://img.shields.io/github/v/release/AndyZhengyan/obsidian-dedao-brain-sync?style=flat-square)](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases)
@@ -8,257 +8,254 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/AndyZhengyan/obsidian-dedao-brain-sync/ci.yml?branch=main&style=flat-square)](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/actions)
 [![License](https://img.shields.io/github/license/AndyZhengyan/obsidian-dedao-brain-sync?style=flat-square)](LICENSE)
 
-Bidirectionally sync your notes, highlights, links, recordings, and AI summaries from Dedao Brain (得到大脑, formerly GetNote / Get笔记) into Obsidian as local Markdown files you can organize, search, and link over the long term.
+把得到大脑（原Get笔记）里的灵感、摘录、链接、录音和 AI 总结与 Obsidian 双向同步，变成可长期整理、搜索和链接的本地 Markdown 知识库。
 
-> The Obsidian Community Plugin directory requires `manifest.name` to use Basic Latin characters, so the marketplace listing is shown as `Dedao Brain Sync`. The plugin settings page and Chinese copy use the primary brand `得到大脑（原Get笔记）Sync`.
+> Obsidian 社区插件目录要求 `manifest.name` 优先使用英文 Basic Latin 字符，所以插件市场显示名为 `Dedao Brain Sync`；插件设置页、README 和中文文案使用主品牌 `得到大脑（原Get笔记）Sync`。
 
-## Why it works
+## 为什么好用
 
-- **Not a one-shot export**: The official export is offline HTML. This plugin syncs each note into its own Markdown file.
-- **Stable, resumable downloads**: Supports incremental sync, scheduled sync, startup sync, and sync checkpoints.
-- **Precise selection**: Sync by date range, or pick specific notes from the remote list.
-- **Local-to-remote upload**: Push one or more Markdown files from Obsidian to Dedao Brain. Upload is manual and never triggered by scheduled sync.
-- **Readable files**: Notes are organized by type, named by title first, with optional date/time prefixes.
-- **Recording-friendly**: When the API returns audio and transcripts, both are saved.
-- **Mobile-compatible**: Network calls use Obsidian `requestUrl`, which works on both desktop and mobile Obsidian.
+- **真正双向同步**：从得到大脑拉取笔记到 Obsidian，也可以手动选择本地 Markdown 上传到得到大脑。
+- **不是一次性导出**：官方导出是离线 HTML；本插件把笔记同步成独立 Markdown 文件，并在后续同步中持续更新。
+- **同步稳定可续传**：支持增量同步、按时间同步、按笔记同步、按知识库同步、定时同步、启动时同步和同步断点。
+- **过滤器更丰富**：可按更新时间、同步起始日期、最大天数、笔记类型、手动选择的笔记或知识库范围控制本次同步。
+- **两种鉴权模式**：PRO 用户可用 OpenAPI 鉴权长期稳定同步；也支持临时鉴权复用网页版会话快速试用。
+- **详尽同步日志**：保留最近同步记录，展示方式、参数、过滤条件、耗时、状态和逐篇新增/更新/跳过/失败明细。
+- **文件可读**：按笔记类型归档，优先使用标题命名，支持日期时间前缀和 frontmatter 元数据。
+- **录音友好**：API 返回音频和转写时，会保存音频附件和转写内容。
+- **移动端兼容**：网络请求使用 Obsidian `requestUrl`，适合桌面端和移动端 Obsidian。
 
-## Features
+## 功能
 
-| Feature | Description |
+| 功能 | 说明 |
 | --- | --- |
-| Incremental sync | New notes are created, existing notes are updated, unchanged notes are skipped. |
-| Sync by date | Pull notes from Dedao Brain by start date or "last N days". |
-| Sync by note | Pick specific notes from the remote list. |
-| Scheduled sync | Pull from Dedao Brain at a configurable interval. |
-| Startup sync | Run a download sync once when Obsidian starts. |
-| Local upload | Choose a vault folder and one or more Markdown files to create in Dedao Brain. |
-| Type-based filing | Text, link, recording, local audio, and others are filed into separate folders. |
-| Sync history | Shows per-note added / updated / skipped / failed results. |
+| 增量同步 | 新增笔记、更新已有笔记、跳过未变化内容 |
+| 按时间同步 | 按起始日期或最近 N 天拉取得到大脑笔记 |
+| 按笔记同步 | 从远端列表中勾选要同步的笔记 |
+| 按知识库同步 | 手动选择订阅知识库，将该知识库下的内容同步到本地 |
+| 定时同步 | 按设定间隔从得到大脑同步到 Obsidian |
+| 启动时同步 | Obsidian 启动时自动执行一次下载同步 |
+| 本地上传 | 从 Obsidian 选择目录和 Markdown 文件，手动创建到得到大脑 |
+| 两种鉴权 | 支持 OpenAPI 鉴权和临时 Web 鉴权，覆盖长期使用与快速试用场景 |
+| 丰富过滤器 | 支持时间范围、最近天数、同步断点、笔记类型、手动选择笔记、知识库范围等过滤 |
+| 类型归档 | 纯文本、链接、录音、本地音频、其他分别归档 |
+| 同步日志 | 展示每次同步的方式、参数、过滤条件、处理数量、耗时和逐条结果 |
 
-## Screenshots
+## 截图
 
-Settings page: API credentials, target folder, filename prefix, scheduled sync, and upload entry.
+设置页面：选择鉴权模式、配置目标文件夹与自动同步，并从同一入口执行下载、上传和查看日志。
 
-![Settings page](docs/screenshots/settings.png)
+<img src="docs/screenshots/settings-overview.png" alt="设置页面" width="720">
 
-Manual sync dialog: sync notes by date or by day range.
+## 安装
 
-![Manual sync](docs/screenshots/manual-sync.png)
-
-Sync history dialog: review per-note results from each run.
-
-![Sync history](docs/screenshots/sync-history.png)
-
-Synced recording note: audio file, transcript, AI summary, and frontmatter metadata.
-
-![Synced recording](docs/screenshots/synced-recording.png)
-
-## Installation
-
-### From the Obsidian Community Plugins
+### 通过 Obsidian 社区插件
 
 [![Available on Obsidian](https://img.shields.io/badge/Obsidian-Community%20Plugin-7c3aed?style=flat-square&logo=obsidian)](https://community.obsidian.md/plugins/dedao-brain-sync)
 
-1. Open `Settings -> Third-party plugin -> Browse`.
-2. Search for `Dedao Brain Sync`, `得到大脑`, or the legacy name `GetNote` / `Get笔记`.
-3. Install and enable the plugin.
+1. 打开 `设置 -> 第三方插件 -> 浏览`。
+2. 搜索 `Dedao Brain Sync`、`得到大脑` 或原名 `GetNote` / `Get笔记`。
+3. 安装并启用插件。
 
-### Manual installation
+### 手动安装
 
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases/latest).
-2. Put them in:
+1. 从 [最新版本](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases/latest) 下载 `main.js`、`manifest.json`、`styles.css`。
+2. 放入：
 
 ```text
 <your-vault>/.obsidian/plugins/dedao-brain-sync/
 ```
 
-3. Restart Obsidian and enable `Dedao Brain Sync`.
+3. 重启 Obsidian 并启用 `Dedao Brain Sync`。
 
-> The plugin folder name is `getnote-importer` (matching the `id` in `manifest.json` for backward compatibility with the existing listing); the repository itself has been renamed to `obsidian-dedao-brain-sync`. Legacy GetNote Importer `data.json` is migrated automatically on first startup.
+> 插件目录名为 `getnote-importer`（与 `manifest.json` 中的 `id` 一致，保持与历史 listing 的兼容性），仓库本身已重命名为 `obsidian-dedao-brain-sync`。旧版 GetNote Importer 的本地 `data.json` 会在首次启动时自动迁移。
 
-## Getting API credentials
+## 获取 API 凭证
 
-> **Note**: The Dedao Brain (得到大脑, formerly GetNote) OpenAPI requires a **Dedao Brain PRO** membership. The OpenAPI has significant operational cost, so the Dedao Brain team confirmed it is currently available to paid members only. If you are on the free tier, the OpenAPI endpoints will not return data.
+> **注意**：得到大脑（原Get笔记）OpenAPI 需要 **得到大脑PRO** 会员。我们与 得到大脑团队确认过，OpenAPI 运营成本较高，目前仅对付费会员开放。如果你是免费用户，OpenAPI 接口不会返回数据。
 
-Credentials are stored only in your local Obsidian plugin data, and are used to access the auth mode you select.
+凭证只保存在本地 Obsidian 插件数据中，用于访问你选择的接口模式。
 
-### OpenAPI mode (recommended for long-term use)
+### OpenAPI 模式（推荐长期使用）
 
-1. Open the Dedao Brain app.
-2. Go to `Settings -> Open Platform`.
-3. Create an application, then copy the `Token` and `Client ID`.
-4. In `Settings -> Dedao Brain Sync`, choose `OpenAPI auth (members)` and paste both values.
-5. You can also use the OAuth button on the settings page to fetch credentials automatically.
+1. 打开得到大脑应用。
+2. 进入 `设置 -> 开放平台`。
+3. 创建应用，复制 `Token` 和 `Client ID`。
+4. 在 `设置 -> 得到大脑（原Get笔记）Sync` 中选择 `OpenAPI鉴权（会员）`，粘贴两个值。
+5. 也可以使用设置页的 OAuth 按钮自动获取凭证。
 
-### Web mode (manual token)
+### Web 模式（手动 Token）
 
-If your account cannot use OpenAPI, choose `Temporary auth`. This mode reuses your existing Dedao Brain web session in the browser and does not require a `Client ID`.
+如果你的账号无法使用 OpenAPI，可以选择 `临时鉴权`。这个模式复用浏览器里已经登录的得到大脑网页版会话，不需要 `Client ID`。
 
-Step-by-step English guide: [Web Mode Manual Token Guide](docs/web-mode-manual-token.md).
+独立图文步骤见：[Web 模式手动 Token 指南](docs/web-mode-manual-token_zh.md)。
 
-To copy the token:
+复制 Token 的步骤：
 
-1. Open `https://www.biji.com/note` in Chrome or Edge and sign in.
-2. Open browser DevTools: `F12` or `Ctrl + Shift + I` on Windows / Linux; `Command + Option + I` on Mac.
-3. Switch to the `Network` panel and filter by `Fetch/XHR`.
-4. Reload the web app, or open the note list / any note, to trigger API requests.
-5. In the request list, open one whose name looks like `notes?...` or `list?...`; the `Host` in the right-hand Headers is usually `get-notes.luojilab.com`.
-6. Under `Request Headers`, copy the full `Authorization` value.
-7. Paste it into the Token field under `Settings -> Dedao Brain Sync -> Temporary auth`.
-8. Click `Test connection`, then run `Sync by date` or `Sync by note` once it succeeds.
+1. 用 Chrome 或 Edge 打开 `https://www.biji.com/note` 并登录。
+2. 打开浏览器开发者工具：Windows/Linux 按 `F12` 或 `Ctrl + Shift + I`；Mac 按 `Command + Option + I`。
+3. 切到 `Network` 面板，并选择 `Fetch/XHR` 过滤。
+4. 刷新网页版，或打开笔记列表 / 任意一篇笔记，让页面发起接口请求。
+5. 在请求列表里点开名称类似 `notes?...` 或 `list?...` 的请求；右侧 Headers 里的 `Host` 通常是 `get-notes.luojilab.com`。
+6. 在 `Request Headers` 下复制完整的 `Authorization` 值。
+7. 粘贴到 `设置 -> 得到大脑（原Get笔记）Sync -> 临时鉴权` 的 Token 输入框。
+8. 点击 `测试连接`，成功后再执行 `按时间同步` 或 `按笔记同步`。
 
-The value usually starts with `Bearer eyJ...`. The plugin accepts a full `Bearer ...` string, or just the JWT token. Do not paste an OpenAPI `gk_...` token into Temporary auth. A Web token is a browser session credential and can expire; if you see `401`, `403`, or `Web Token expired`, refresh the web app and re-copy the `Authorization` header.
+这个值通常以 `Bearer eyJ...` 开头；插件支持粘贴完整 `Bearer ...`，也支持只粘贴 JWT token。不要把 OpenAPI 的 `gk_...` Token 粘贴到临时鉴权里。Web Token 是浏览器会话凭证，可能过期；如果返回 `401`、`403` 或 `Web Token 已过期`，请刷新网页版并重新复制 `Authorization` header。
 
-## Usage
+## 使用
 
-### Sync from Dedao Brain to Obsidian
+### 从得到大脑同步到 Obsidian
 
-Click `Sync by date` on the settings page, or run the command:
+在设置页点击 `按时间同步`，或在命令面板运行：
 
 ```text
-Dedao Brain Sync: Sync notes
+Dedao Brain Sync: 同步笔记
 ```
 
-### Pick specific remote notes
+### 选择远端笔记同步
 
-Click `Sync by note` and pick the notes you want from the remote list. Useful for topic cleanup, project reorganization, or one-off backfills.
+点击 `按笔记同步`，从远端列表中勾选需要同步的笔记。适合专题整理、项目清理或一次性补同步。
 
-### Scheduled sync
+### 按知识库同步
 
-When scheduled sync is enabled, the plugin pulls from Dedao Brain at the configured interval. Scheduled sync only downloads remote changes and never uploads local notes.
+点击 `按知识库同步`，选择具体知识库后同步该知识库下的内容。这个入口是手动触发，不会自动扩散到定时同步。
 
-### Upload from Obsidian to Dedao Brain
+### 定时同步
 
-In the `Upload from Obsidian to Dedao Brain` area of the settings page, click `Upload by note`, pick a local folder, and select one or more Markdown files.
+开启定时同步后，插件会按设定间隔从得到大脑同步到 Obsidian。定时同步只下载远端变化，不会上传本地笔记。
 
-Upload is **create-only sync**:
+### 从 Obsidian 上传到得到大脑
 
-- Notes with empty bodies are skipped.
-- Notes that already have a `uid` and are confirmed to exist remotely are skipped, to avoid duplicates.
-- Existing content in Dedao Brain is never overwritten.
-- Upload is never triggered automatically by scheduled sync.
+在设置页点击 `从 Obsidian 上传到得到大脑` 区域里的 `按笔记上传`，选择本地目录和一篇或多篇 Markdown 文件后上传。
 
-## Output layout
+上传是**创建型同步**：
 
-By default, notes are written into the target folder.
+- 没有正文的笔记会跳过。
+- 已有 `uid` 且能确认远端存在的笔记会跳过，避免重复创建。
+- 不会覆盖得到大脑里的已有内容。
+- 不会被定时同步自动触发。
+
+## 输出结构
+
+默认情况下，笔记写入目标文件夹。
 
 ```text
 vault/
 └── 得到大脑/
     ├── 纯文本/
-    │   └── Meeting Notes.md
+    │   └── 会议记录.md
     ├── 链接笔记/
-    │   └── 2026-04-30_Article Highlights.md
+    │   └── 2026-04-30_文章摘录.md
     ├── 录音长录/
-    │   ├── Recording Summary.md
+    │   ├── 录音摘要.md
     │   └── asset/
-    │       ├── Recording Summary.mp3
-    │       └── Recording Summary.md
+    │       ├── 录音摘要.mp3
+    │       └── 录音摘要.md
     └── 其他/
-        └── Unrecognized type.md
+        └── 未识别类型.md
 ```
 
-Each Markdown file is written with frontmatter; subsequent syncs use the `uid` field to recognize the same remote note.
+每个 Markdown 文件都会写入 frontmatter，后续同步会用其中的 `uid` 识别同一条远端笔记。
 
 ```yaml
 ---
 uid: "1908723638246504120"
-title: "Meeting Notes"
+title: "会议记录"
 created: 2026-04-30 12:45:24
 modified: 2026-04-30 13:00:07
-source: Dedao Brain
+source: 得到大脑
 note_type: recorder_audio
 tags: ["work"]
 ---
 ```
 
-## Filename rules
+## 文件命名规则
 
-| Case | Example |
+| 情况 | 示例 |
 | --- | --- |
-| Has a title | `Meeting Notes.md` |
-| No title | `This is the first paragraph.md` |
-| With date prefix | `2026-04-30_Meeting Notes.md` |
-| Same name, different notes | `Meeting Notes-2.md` |
+| 有标题 | `会议记录.md` |
+| 无标题 | `这是笔记的第一段文字.md` |
+| 加日期前缀 | `2026-04-30_会议记录.md` |
+| 同名不同笔记 | `会议记录-2.md` |
 
-Illegal characters (`\ / : * ? " < > |`) are stripped automatically.
+非法字符（`\ / : * ? " < > |`）会自动移除。
 
-## Filename prefix
+## 文件名前缀
 
-You can prepend a date/time pattern to every filename. Available placeholders:
+可以在文件名开头追加日期/时间模式。可用占位符：
 
-| Placeholder | Meaning | Example |
+| 占位符 | 含义 | 示例 |
 | --- | --- | --- |
-| `YYYY` | 4-digit year | `2026` |
-| `MM` | 2-digit month | `04` |
-| `DD` | 2-digit day | `30` |
-| `HH` | 2-digit hour (24h) | `14` |
-| `mm` | 2-digit minute | `30` |
-| `ss` | 2-digit second | `05` |
+| `YYYY` | 4 位年份 | `2026` |
+| `MM` | 2 位月份 | `04` |
+| `DD` | 2 位日期 | `30` |
+| `HH` | 2 位小时（24 小时制） | `14` |
+| `mm` | 2 位分钟 | `30` |
+| `ss` | 2 位秒 | `05` |
 
-Examples:
+示例：
 
-| Prefix | Generated filename |
+| 前缀 | 生成的文件名 |
 | --- | --- |
-| `YYYY-MM-DD` | `2026-04-30_Meeting Notes.md` |
-| `YYYYMMDD_HHmm` | `20260430_1430_Meeting Notes.md` |
-| `YYYY-MM-DD` | `2026-04-30_.md` (uses body text when no title) |
+| `YYYY-MM-DD` | `2026-04-30_会议记录.md` |
+| `YYYYMMDD_HHmm` | `20260430_1430_会议记录.md` |
+| `YYYY-MM-DD` | `2026-04-30_.md`（无标题时用正文前文） |
 
-The plugin substitutes placeholders with the note's `created_at` timestamp. Placeholders are case-sensitive: `mm` is minutes, `MM` is month.
+插件会用笔记 `created_at` 时间戳替换占位符。占位符大小写敏感：`mm` 表示分钟，`MM` 表示月份。
 
-## Settings
+## 设置项
 
-| Setting | Description | Default |
+| 设置项 | 说明 | 默认值 |
 | --- | --- | --- |
-| API Token | Dedao Brain Open Platform token | empty |
-| Client ID | Dedao Brain Open Platform client ID | empty |
-| Target folder | Sync target folder inside the vault | `得到大脑` |
-| Filename prefix | Date/time prefix format, e.g. `YYYY-MM-DD` | empty |
-| Auto sync range | Scheduled sync only pulls notes updated within the last N days; `0` means unlimited | `30` |
-| Sync start date | Absolute start date for manual sync | empty |
-| Scheduled sync | Background automatic sync toggle | off |
-| Sync interval | Scheduled sync interval in minutes | `30` |
-| Startup sync | Run a sync once when Obsidian starts | on |
-| Note types to sync | Restrict which note types this sync method handles | all types |
+| API Token | 得到大脑开放平台 Token | 空 |
+| Client ID | 得到大脑开放平台 Client ID | 空 |
+| 目标文件夹 | vault 内同步目标目录 | `得到大脑` |
+| 文件名前缀 | 日期时间前缀格式，如 `YYYY-MM-DD` | 空 |
+| 自动同步范围 | 定时同步只拉最近 N 天内更新的笔记，`0` 表示不限 | `30` |
+| 同步起始日期 | 手动同步的绝对起始日期 | 空 |
+| 定时同步 | 后台自动同步开关 | 关闭 |
+| 同步间隔 | 定时同步间隔（分钟） | `30` |
+| 启动时同步 | Obsidian 启动时自动同步一次 | 开启 |
+| 同步笔记类型 | 限制本同步方式处理的笔记类型 | 全部类型 |
 
-## Sync model
+## 同步模型
 
-The default download direction treats Dedao Brain as the source of truth:
+下载方向默认把得到大脑视为远端来源：
 
-1. Scan the target folder and build a `uid -> file` index from frontmatter.
-2. Fetch the note list from the OpenAPI or Web API.
-3. Filter by sync range and note type.
-4. Create files for new notes.
-5. Update files when `updated_at` changes.
-6. Rename files when the displayed title changes.
-7. Record every note's result in the sync history.
-8. Scheduled sync saves the last-processed note's timestamp as the next checkpoint.
+1. 扫描目标目录，从 frontmatter 构建 `uid -> file` 索引。
+2. 从 OpenAPI 或 Web API 获取笔记列表。
+3. 按更新时间、起始日期、最大天数、同步断点、笔记类型、手动选择范围或知识库范围过滤。
+4. 为新笔记创建文件。
+5. 当 `updated_at` 变化时更新文件。
+6. 当显示标题变化时重命名文件。
+7. 在同步日志中记录每条笔记的结果。
+8. 定时同步保存最后处理笔记的时间作为下次断点。
 
-The upload direction is manual, selective, and create-only:
+上传方向是手动、选择型、创建型同步：
 
-1. The user picks a local folder and Markdown files.
-2. The plugin parses the title, body, and frontmatter.
-3. Empty bodies, notes already confirmed to exist remotely, and unsupported types are skipped.
-4. Eligible content is created as a new note in Dedao Brain.
-5. Upload results are added to the sync history.
+1. 用户选择本地目录和 Markdown 文件。
+2. 插件解析标题、正文和 frontmatter。
+3. 空正文、已确认存在的远端笔记、不支持的类型会跳过。
+4. 可上传内容会在得到大脑创建为新笔记。
+5. 上传结果会进入同步日志。
 
-## Privacy
+## 隐私
 
-- The plugin does not depend on any extra backend service.
-- API credentials are stored in your local Obsidian plugin data.
-- On download, note data is fetched from Dedao Brain and written directly to your vault.
-- On manual upload, only the Markdown files you selected are sent to Dedao Brain.
-- Audio attachments are only downloaded from the HTTPS URLs returned by the API.
+- 插件不依赖额外后端服务。
+- API 凭证保存在本地 Obsidian 插件数据中。
+- 下载同步时，笔记数据从得到大脑获取后直接写入你的 vault。
+- 手动上传时，只有你选择的本地 Markdown 会发送到得到大脑。
+- 音频附件只会从 API 返回的 HTTPS 地址下载。
 
-## Known limitations
+## 已知限制
 
-- The plugin depends on the availability and response format of the Dedao Brain OpenAPI / Web API.
-- OpenAPI requires a PRO membership; Temporary auth relies on a browser session and can expire.
-- Audio downloads only work when the detail endpoint returns a valid HTTPS audio attachment.
-- Download sync may update already-synced files. If you plan heavy manual editing, write personal additions in a separate note or via backlinks.
-- Upload sync is currently create-only: it does not overwrite remote content, and it never runs automatically.
+- 插件依赖得到大脑 OpenAPI / Web API 的可用性和响应格式。
+- OpenAPI 需要 PRO 会员；临时鉴权依赖浏览器会话，可能过期。
+- 音频下载只有在详情接口返回有效 HTTPS 音频附件时才会生效。
+- 下载同步可能更新已同步文件；如果要大量手动编辑，建议把个人补充写到独立笔记或反向链接中。
+- 上传同步当前是创建型，不覆盖远端已有内容，也不会自动上传。
 
-## Development
+## 开发
 
 ```bash
 npm install
@@ -268,23 +265,30 @@ npm test
 npm run build
 ```
 
-Build artifacts are produced in the repository root:
+发布产物从仓库根目录生成：
 
 - `main.js`
 - `manifest.json`
 - `styles.css`
 
-The GitHub release workflow verifies typecheck, lint, tests, build, and tag / manifest version consistency before uploading artifacts.
+GitHub release workflow 会在上传产物前验证：类型检查、lint、测试、构建，以及 tag 和 manifest 版本一致性。
 
-## Support
+## 支持
 
-- Bug reports: [GitHub Issues](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/issues)
-- Feature requests: [GitHub Issues](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/issues/new/choose)
-- User feedback survey: [Dedao-Brain-Sync 需求问题收集问卷](https://ku3yh6njf4.feishu.cn/share/base/form/shrcnShw4NxSTbVx7P7bjTxqvPe) — scan or click to share what you'd like next
+- Bug 反馈：[GitHub Issues](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/issues)
+- 功能建议：[GitHub Issues](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/issues/new/choose)
+- 用户问题收集：[Dedao-Brain-Sync 需求问题收集问卷](https://ku3yh6njf4.feishu.cn/share/base/form/shrcnShw4NxSTbVx7P7bjTxqvPe)
 
-  ![Feedback QR](docs/screenshots/feedback-qr.png)
-- If this plugin helps you, a star is appreciated
+  <img src="docs/screenshots/feedback-qr.png" alt="需求问题收集问卷二维码" width="180">
 
-## License
+- 如果插件帮到了你，欢迎给项目一个 star
+
+## 关于作者
+
+企业 AI 从业者，野生 AI 博主，AGI 信徒，AI 发烧友。欢迎通过项目 issue、反馈问卷或公众号继续交流。
+
+<img src="docs/screenshots/wechat-qr.jpg" alt="微信公众号二维码" width="160">
+
+## 许可证
 
 [MIT](LICENSE)
