@@ -22,12 +22,7 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
   };
 }
 
-function renderSettings(
-  settings: Settings,
-  updateSetting = vi.fn(),
-  openLocalUpload = vi.fn(),
-  options: { isSyncing?: boolean } = {}
-) {
+function renderSettings(settings: Settings, updateSetting = vi.fn()) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   render(
@@ -35,9 +30,8 @@ function renderSettings(
       settings,
       updateSetting,
       startSync: vi.fn(),
-      isSyncing: options.isSyncing ?? false,
+      isSyncing: false,
       openNotePicker: vi.fn(),
-      openLocalUpload,
       startAutoSync: vi.fn(),
       stopAutoSync: vi.fn(),
       cancelSync: vi.fn(),
@@ -45,7 +39,7 @@ function renderSettings(
     }),
     container
   );
-  return { container, updateSetting, openLocalUpload };
+  return { container, updateSetting };
 }
 
 function inputValue(input: Element, value: string) {
@@ -60,91 +54,14 @@ function getTestConnectionButton(container: HTMLElement): HTMLButtonElement {
   return button;
 }
 
-function mockOpenExternal() {
-  const openExternal = vi.fn();
-  (window as Window & {
-    require?: (moduleName: 'electron') => { shell: { openExternal: typeof openExternal } };
-  }).require = vi.fn(() => ({ shell: { openExternal } }));
-  return openExternal;
-}
-
 afterEach(() => {
   vi.mocked(fetchNotes).mockClear();
   initI18n('zh-CN');
   render(null, document.body);
   document.body.innerHTML = '';
-  delete (window as Window & { require?: unknown }).require;
 });
 
 describe('SettingsComponent auth credentials', () => {
-  it('does not show the knowledge-base sync entry in the 1.1.0 release UI', () => {
-    const { container } = renderSettings(makeSettings());
-
-    expect(container.textContent).not.toContain('按知识库同步');
-    expect(container.textContent).not.toContain('Sync by Knowledge Base');
-  });
-
-  it('does not render a separate upload permission switch', () => {
-    const { container } = renderSettings(makeSettings({
-      reverseSync: { enabled: false },
-    }));
-
-    expect(container.textContent).not.toContain('允许上传本地笔记到得到大脑');
-    expect(container.textContent).not.toContain('启用上传');
-  });
-
-  it('opens the local upload picker from the manual sync upload button', async () => {
-    const openLocalUpload = vi.fn();
-    const { container } = renderSettings(makeSettings({
-      authMode: 'web',
-      webApiToken: 'web-token',
-      apiToken: 'web-token',
-      reverseSync: { enabled: false },
-    }), vi.fn(), openLocalUpload);
-
-    expect(container.textContent).toContain('从得到大脑下载至 Obsidian');
-    expect(container.textContent).toContain('从 Obsidian 上传至得到大脑');
-    expect(container.textContent).not.toContain('选择笔记上传');
-    const uploadButton = Array.from(container.querySelectorAll('button'))
-      .find((button): button is HTMLButtonElement => button.textContent === '按笔记上传');
-    expect(uploadButton).toBeTruthy();
-    expect(uploadButton!.disabled).toBe(false);
-    expect(uploadButton!.classList.contains('mod-secondary')).toBe(true);
-
-    await act(() => {
-      uploadButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-
-    expect(openLocalUpload).toHaveBeenCalledTimes(1);
-  });
-
-  it('disables the local upload button until credentials are configured', () => {
-    const { container } = renderSettings(makeSettings({
-      authMode: 'web',
-      webApiToken: '',
-      apiToken: '',
-      reverseSync: { enabled: true },
-    }));
-
-    const uploadButton = Array.from(container.querySelectorAll('button'))
-      .find((button): button is HTMLButtonElement => button.textContent === '按笔记上传');
-    expect(uploadButton).toBeTruthy();
-    expect(uploadButton!.disabled).toBe(true);
-  });
-
-  it('disables the local upload button while syncing', () => {
-    const { container } = renderSettings(makeSettings({
-      authMode: 'web',
-      webApiToken: 'web-token',
-      apiToken: 'web-token',
-    }), vi.fn(), vi.fn(), { isSyncing: true });
-
-    const uploadButton = Array.from(container.querySelectorAll('button'))
-      .find((button): button is HTMLButtonElement => button.textContent === '按笔记上传');
-    expect(uploadButton).toBeTruthy();
-    expect(uploadButton!.disabled).toBe(true);
-  });
-
   it('writes the visible mode token back when switching auth modes', async () => {
     const { container, updateSetting } = renderSettings(makeSettings({
       authMode: 'openapi',
@@ -283,30 +200,6 @@ describe('SettingsComponent auth credentials', () => {
     expect(links.some((href) => href.includes('docs/web-mode-manual-token_zh.md'))).toBe(true);
   });
 
-  it('opens settings documentation links in the external browser', async () => {
-    initI18n('zh-CN');
-    const openExternal = mockOpenExternal();
-    const { container } = renderSettings(makeSettings({
-      authMode: 'web',
-      webApiToken: 'web-token',
-    }));
-
-    const communityLink = Array.from(container.querySelectorAll('a'))
-      .find((link): link is HTMLAnchorElement => link.textContent === '欢迎交流、留下star');
-    const helpLink = Array.from(container.querySelectorAll('a'))
-      .find((link): link is HTMLAnchorElement => link.textContent === '查看图文步骤');
-    expect(communityLink).toBeTruthy();
-    expect(helpLink).toBeTruthy();
-
-    await act(() => {
-      communityLink!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-      helpLink!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    });
-
-    expect(openExternal).toHaveBeenCalledWith(expect.stringContaining('README_zh.md'));
-    expect(openExternal).toHaveBeenCalledWith(expect.stringContaining('docs/web-mode-manual-token_zh.md'));
-  });
-
   it('uses English README links in English locale', () => {
     initI18n('en-US');
     const { container } = renderSettings(makeSettings({
@@ -315,7 +208,7 @@ describe('SettingsComponent auth credentials', () => {
     }));
 
     const links = Array.from(container.querySelectorAll('a')).map((link) => link.href);
-    expect(links.some((href) => href.includes('README.md#%E5%85%B3%E4%BA%8E%E4%BD%9C%E8%80%85') || href.includes('README.md#关于作者'))).toBe(true);
+    expect(links.some((href) => href.includes('README.md#about-the-author'))).toBe(true);
     expect(links.some((href) => href.includes('docs/web-mode-manual-token.md'))).toBe(true);
   });
 
@@ -329,14 +222,14 @@ describe('SettingsComponent auth credentials', () => {
     }));
 
     const trigger = Array.from(container.querySelectorAll('button'))
-      .find(button => button.textContent === '全部笔记');
+      .find(button => button.textContent === '全部类型');
     expect(trigger).toBeTruthy();
     await act(() => {
       trigger!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
     const plainTextOption = Array.from(container.querySelectorAll('label'))
-      .find(label => label.textContent === '文字笔记');
+      .find(label => label.textContent === '纯文本');
     expect(plainTextOption).toBeTruthy();
     const checkbox = plainTextOption!.querySelector('input[type="checkbox"]') as HTMLInputElement;
     expect(checkbox.checked).toBe(true);
@@ -349,7 +242,7 @@ describe('SettingsComponent auth credentials', () => {
     expect(updateSetting).not.toHaveBeenCalledWith('enabledNoteTypes', expect.anything());
     expect(updateSetting).toHaveBeenCalledWith('scheduledSync', {
       ...scheduledSync,
-      enabledNoteTypes: ['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'link', 'img_text', 'recorder_flash_audio'],
+      enabledNoteTypes: ['link', 'immediate_audio', 'recorder_audio', 'recorder_flash_audio', 'audio_long', 'local_audio'],
     });
   });
 });

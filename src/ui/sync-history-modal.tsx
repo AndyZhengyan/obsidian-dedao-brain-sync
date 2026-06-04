@@ -37,13 +37,6 @@ export function formatHistoryFilter(entry: SyncHistoryEntry): string {
   });
 }
 
-export function formatHistoryMode(entry: SyncHistoryEntry): string {
-  if (entry.mode === 'local-upload' || entry.type === 'upload') return t('syncHistory.mode.upload');
-  if (entry.mode === 'auto' || entry.type === 'auto') return t('syncHistory.mode.auto');
-  if (entry.mode === 'selected' || entry.type === 'selective') return t('syncHistory.mode.selected');
-  return t('syncHistory.mode.time');
-}
-
 export function openSyncHistoryModal(app: App, history: SyncHistoryEntry[]) {
   const modal = new SyncHistoryModal(app, history);
   modal.open();
@@ -91,6 +84,12 @@ class SyncHistoryModal extends Modal {
         if (status === 'failed') return t('syncHistory.status.failed');
         if (status === 'cancelled') return t('syncHistory.status.cancelled');
         return t('syncHistory.status.success');
+      };
+
+      const formatMode = (entry: SyncHistoryEntry): string => {
+        if (entry.mode === 'auto' || entry.type === 'auto') return t('syncHistory.mode.auto');
+        if (entry.mode === 'selected' || entry.type === 'selective') return t('syncHistory.mode.selected');
+        return t('syncHistory.mode.time');
       };
 
       const formatItemCounts = (entry: SyncHistoryEntry): string => {
@@ -177,12 +176,12 @@ class SyncHistoryModal extends Modal {
         const headerEl = entryEl
           .createEl('summary', { cls: 'getnote-history-header' });
         const countsText = formatItemCounts(entry);
-        headerEl.setText(`${formatTime(entry.finishedAt)} · ${formatHistoryMode(entry)} · ${formatStatus(entry.status)}`);
+        headerEl.setText(`${formatTime(entry.finishedAt)} · ${formatMode(entry)} · ${formatStatus(entry.status)}`);
         headerEl.setAttribute('data-counts', countsText);
 
         const detailEl = entryEl.createDiv('getnote-history-entry-body');
         const metaEl = detailEl.createDiv('getnote-history-meta-grid');
-        renderMeta(metaEl, t('syncHistory.meta.method'), formatHistoryMode(entry));
+        renderMeta(metaEl, t('syncHistory.meta.method'), formatMode(entry));
         renderMeta(metaEl, t('syncHistory.meta.params'), formatHistoryScope(entry));
         renderMeta(metaEl, t('syncHistory.meta.filter'), formatHistoryFilter(entry));
         renderMeta(metaEl, t('syncHistory.meta.result'), `${formatStatus(entry.status)} · ${formatDuration(entry.durationMs)}`);

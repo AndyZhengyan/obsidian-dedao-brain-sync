@@ -102,16 +102,8 @@ export class Modal {
 }
 
 // ---- Notice ----
-export const issuedNotices: Array<{ message: string; timeout?: number }> = [];
-
-export function resetIssuedNotices(): void {
-  issuedNotices.length = 0;
-}
-
 export class Notice {
-  constructor(message: string, timeout?: number) {
-    issuedNotices.push({ message, timeout });
-  }
+  constructor(_message: string, _timeout?: number) {}
 }
 
 // ---- Setting ----

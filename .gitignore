@@ -4,11 +4,7 @@ main.js.map
 
 # Local agent/tooling state
 .superpowers/
-.agents/
-.claude/
 .claude-mem-context.md
-bun.lock
-skills-lock.json
 
 # Environment and local overrides
 .env

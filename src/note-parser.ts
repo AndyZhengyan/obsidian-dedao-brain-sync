@@ -85,16 +85,13 @@ function buildFrontmatter(note: GetNoteNote): string {
     `title: "${title}"`,
     `created: ${formatDateTime(note.created_at)}`,
     `modified: ${formatDateTime(note.updated_at)}`,
-    `source: 得到大脑`,
+    `source: Get笔记`,
     `note_type: ${note.note_type}`,
     `tags: ${tagBlock}`,
   ];
 
   if (note.parent_id) {
     lines.push(`parent_id: "${escapeYamlDoubleQuoted(note.parent_id)}"`);
-  }
-  if (note.prime_id) {
-    lines.push(`prime_id: "${escapeYamlDoubleQuoted(note.prime_id)}"`);
   }
   if (typeof note.is_child_note === 'boolean') {
     lines.push(`is_child_note: ${note.is_child_note}`);
@@ -131,28 +128,6 @@ function buildRelationLinks(note: GetNoteNote, parentFileName?: string, childFil
   return lines.join('');
 }
 
-function buildImageBlock(assetPaths: string[]): string {
-  if (!assetPaths.length) return '';
-  const markdownImageTarget = (path: string): string => /[\s()]/.test(path) ? `<${path}>` : path;
-  const imageLines = assetPaths
-    .map(p => {
-      // Reject any URL scheme (http/https/data/javascript) — only vault-relative paths allowed
-      if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(p)) return null;
-      // Reject paths with control characters or suspicious patterns
-      if (/[<>{}|\\`\x00-\x1f]/.test(p)) return null;
-      if (!/\.(png|jpg|jpeg|gif|webp|bmp|svg)(\?|$)/i.test(p)) return null;
-      const assetIndex = p.lastIndexOf('/asset/');
-      const relativePath = assetIndex >= 0 ? `asset/${p.slice(assetIndex + '/asset/'.length)}` : p;
-      if (!relativePath.startsWith('asset/')) return null;
-      if (relativePath.includes('../') || relativePath.includes('/..')) return null;
-      return relativePath;
-    })
-    .filter((p): p is string => Boolean(p))
-    .map(p => `> ![](${markdownImageTarget(p)})`)
-    .join('\n');
-  return `---\n> 📷 图片\n${imageLines}\n---\n`;
-}
-
 /**
  * 将 GetNoteNote 渲染为完整的 Markdown 字符串
  */
@@ -160,9 +135,7 @@ export function renderNote(note: GetNoteNote, assetFileName?: string, parentFile
   const frontmatter = buildFrontmatter(note);
   let body = note.content || '';
 
-  const hasAudio = note.attachments?.some(a => a.type === 'audio') && note.audio;
-
-  if (hasAudio) {
+  if (note.attachments?.some(a => a.type === 'audio') && note.audio) {
     const filename = assetFileName ?? generateDisplayTitle(note);
     const audioBlock =
       `---\n` +
@@ -173,12 +146,6 @@ export function renderNote(note: GetNoteNote, assetFileName?: string, parentFile
       `---\n`;
     const transcriptHeader = '\n### 原始录音转写\n\n';
     body = audioBlock + body + transcriptHeader + note.audio;
-  }
-
-  if (note.assetPaths?.length) {
-    body += '\n' + buildImageBlock(note.assetPaths);
-  } else if ((note.attachments ?? []).some(a => a.type === 'image')) {
-    body += '\n> 📷 图片\n> _(图片将在下次完整同步时显示)_\n';
   }
 
   // 添加主子文档互链

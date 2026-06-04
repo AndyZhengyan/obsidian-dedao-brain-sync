@@ -1,6 +1,6 @@
 import { Notice } from 'obsidian';
 
-const PREFIX = '[得到大脑]';
+const PREFIX = '[GetNote Importer]';
 
 export function showNotice(message: string, timeout = 5000): void {
   new Notice(`${PREFIX} ${message}`, timeout);

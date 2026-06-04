@@ -1,11 +1,11 @@
-import type { GetNoteNote, Attachment, SubscribedTopic } from '../types';
+import type { GetNoteNote, Attachment } from '../types';
 import { t } from '../i18n';
 
 export const GETNOTE_LIST_LIMIT = 20;
 
 function safeJsonParse(text: string): unknown {
   let safe = text.replace(
-    /"(id|note_id|parent_id|follow_id|live_id|topic_id|post_id|post_id_alias)"\s*:\s*(\d+)/g,
+    /"(id|note_id|parent_id|follow_id|live_id)"\s*:\s*(\d+)/g,
     '"$1":"$2"'
   );
   safe = safe.replace(/"children_ids"\s*:\s*\[([^\]]*)\]/g, (_match, body: string) => {
@@ -63,8 +63,8 @@ function normalizeNoteDetailData(value: unknown): Partial<GetNoteNote> | null {
   const nestedNote = isRecord(value.note) ? value.note : null;
   const source = nestedNote ?? value;
   const detail = { ...source } as Partial<GetNoteNote>;
-  const attachments = (source.attachments ?? nestedNote?.attachments ?? value.attachments) as Attachment[] | undefined;
-  const audio = normalizeAudio(value.audio ?? source.audio ?? nestedNote?.audio);
+  const attachments = (value.attachments ?? source.attachments) as Attachment[] | undefined;
+  const audio = normalizeAudio(value.audio ?? source.audio);
   const childrenIds = Array.isArray(source.children_ids)
     ? source.children_ids.map(id => String(id))
     : undefined;
@@ -152,33 +152,7 @@ export interface FetchNotesOptions {
   sinceId?: string;
   limit?: number;
   signal?: AbortSignal;
-  topicIds?: string[];
 }
-
-export interface CreateNoteOptions {
-  token: string;
-  clientId: string;
-  title: string;
-  content: string;
-  noteType: string;
-  tags?: string[];
-  signal?: AbortSignal;
-}
-
-export interface Blogger {
-  follow_id: string;
-  name?: string;
-}
-
-interface BloggerContent {
-  post_id_alias: string;
-  title?: string;
-  content?: string;
-  summary?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
 
 export async function fetchNotes(options: FetchNotesOptions): Promise<{ notes: GetNoteNote[]; hasMore: boolean }> {
   const { token, clientId, sinceId = '0', signal } = options;
@@ -189,232 +163,6 @@ export async function fetchNotes(options: FetchNotesOptions): Promise<{ notes: G
     url, { method: 'GET', headers: buildHeaders(token, clientId) }, 3, signal
   );
   return normalizeListData(data);
-}
-
-function readArray(value: Record<string, unknown>, keys: string[]): unknown[] {
-  for (const key of keys) {
-    const candidate = value[key];
-    if (Array.isArray(candidate)) return candidate;
-  }
-  return [];
-}
-
-function readHasMore(value: Record<string, unknown>): boolean {
-  return Boolean(value.has_more ?? value.hasMore);
-}
-
-function normalizeData(value: unknown): Record<string, unknown> {
-  if (!isRecord(value)) return {};
-  return isRecord(value.data) ? value.data : value;
-}
-
-function normalizeTopic(value: unknown): SubscribedTopic | null {
-  if (!isRecord(value)) return null;
-  const id = value.topic_id ?? value.id ?? value.id_alias;
-  if (typeof id !== 'string' && typeof id !== 'number') return null;
-  return {
-    topic_id: String(id),
-    name: typeof value.name === 'string' ? value.name : '',
-  };
-}
-
-function normalizeBlogger(value: unknown): Blogger | null {
-  if (!isRecord(value)) return null;
-  const id = value.follow_id ?? value.id ?? value.watch_id;
-  if (typeof id !== 'string' && typeof id !== 'number') return null;
-  return {
-    follow_id: String(id),
-    name: typeof value.name === 'string'
-      ? value.name
-      : typeof value.nickname === 'string'
-        ? value.nickname
-        : undefined,
-  };
-}
-
-function normalizeContent(value: unknown): BloggerContent | null {
-  if (!isRecord(value)) return null;
-  const id = value.post_id_alias ?? value.post_id ?? value.id_alias ?? value.id;
-  if (typeof id !== 'string' && typeof id !== 'number') return null;
-  return {
-    post_id_alias: String(id),
-    title: typeof value.title === 'string' ? value.title : typeof value.post_name === 'string' ? value.post_name : undefined,
-    content: typeof value.content === 'string' ? value.content : typeof value.post_cleaned_summary === 'string' ? value.post_cleaned_summary : undefined,
-    summary: typeof value.summary === 'string' ? value.summary : typeof value.post_summary === 'string' ? value.post_summary : undefined,
-    created_at: typeof value.created_at === 'string' ? value.created_at : typeof value.post_create_time === 'string' ? value.post_create_time : undefined,
-    updated_at: typeof value.updated_at === 'string' ? value.updated_at : typeof value.edit_time === 'string' ? value.edit_time : undefined,
-  };
-}
-
-function bloggerContentToNote(content: BloggerContent, topic: SubscribedTopic, blogger: Blogger): GetNoteNote {
-  const created = content.created_at ?? '';
-  const updated = content.updated_at ?? created;
-  const body = content.content || content.summary || '';
-  return {
-    id: `blogger:${topic.topic_id}:${content.post_id_alias}`,
-    note_id: `blogger_${content.post_id_alias}`,
-    title: content.title ?? '',
-    content: body,
-    note_type: 'blogger_post',
-    source: 'blogger',
-    tags: [
-      ...(topic.name ? [{ name: topic.name }] : []),
-      ...(blogger.name ? [{ name: blogger.name }] : []),
-    ],
-    created_at: created,
-    updated_at: updated,
-  };
-}
-
-export async function fetchSubscribedTopics(token: string, clientId: string, signal?: AbortSignal): Promise<SubscribedTopic[]> {
-  const topics: SubscribedTopic[] = [];
-  let page = 1;
-  while (true) {
-    const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/subscribe/list?page=${page}`;
-    const data = await apiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
-    const source = normalizeData(data);
-    topics.push(...readArray(source, ['topics', 'list', 'items']).map(normalizeTopic).filter((item): item is SubscribedTopic => Boolean(item)));
-    if (!readHasMore(source)) break;
-    page++;
-  }
-  return topics;
-}
-
-export async function fetchTopicBloggers(topicId: string, token: string, clientId: string, signal?: AbortSignal): Promise<Blogger[]> {
-  const bloggers: Blogger[] = [];
-  let page = 1;
-  while (true) {
-    const params = new URLSearchParams({ topic_id: topicId, page: String(page) });
-    const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/bloggers?${params.toString()}`;
-    const data = await apiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
-    const source = normalizeData(data);
-    bloggers.push(...readArray(source, ['bloggers', 'list', 'items']).map(normalizeBlogger).filter((item): item is Blogger => Boolean(item)));
-    if (!readHasMore(source)) break;
-    page++;
-  }
-  return bloggers;
-}
-
-export async function fetchTopicContentPreviews(
-  topicId: string,
-  _topicName: string | undefined,
-  token: string,
-  clientId: string,
-  signal?: AbortSignal,
-  options: { maxPages?: number; maxBloggers?: number } = {}
-): Promise<{ note_id: string; title: string; updated_at: string; blogger_name: string }[]> {
-  const items: { note_id: string; title: string; updated_at: string; blogger_name: string }[] = [];
-  const bloggers = await fetchTopicBloggers(topicId, token, clientId, signal);
-  const maxPages = options.maxPages ?? Number.POSITIVE_INFINITY;
-  const maxBloggers = options.maxBloggers ?? Number.POSITIVE_INFINITY;
-  for (const blogger of bloggers.slice(0, maxBloggers)) {
-    let page = 1;
-    while (page <= maxPages) {
-      const params = new URLSearchParams({ topic_id: topicId, follow_id: blogger.follow_id, page: String(page) });
-      const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/contents?${params.toString()}`;
-      const data = await apiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
-      const source = normalizeData(data);
-      const contents = readArray(source, ['contents', 'posts', 'list', 'items']).map(normalizeContent).filter((item): item is BloggerContent => Boolean(item));
-      for (const content of contents) {
-        const created = content.created_at ?? '';
-        const updated = content.updated_at ?? created;
-        items.push({
-          note_id: `blogger_${content.post_id_alias}`,
-          title: content.title ?? '',
-          updated_at: updated,
-          blogger_name: blogger.name ?? '',
-        });
-      }
-      if (!readHasMore(source) || contents.length === 0) break;
-      page++;
-    }
-  }
-  return items;
-}
-
-export async function fetchTopicContentPreviewPage(
-  topicId: string,
-  _topicName: string | undefined,
-  token: string,
-  clientId: string,
-  signal?: AbortSignal,
-  cursor: { bloggerIndex: number; page: number } = { bloggerIndex: 0, page: 1 }
-): Promise<{
-  items: { note_id: string; title: string; updated_at: string; blogger_name: string }[];
-  nextCursor?: { bloggerIndex: number; page: number };
-}> {
-  const bloggers = await fetchTopicBloggers(topicId, token, clientId, signal);
-  const blogger = bloggers[cursor.bloggerIndex];
-  if (!blogger) return { items: [] };
-
-  const params = new URLSearchParams({
-    topic_id: topicId,
-    follow_id: blogger.follow_id,
-    page: String(cursor.page),
-  });
-  const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/contents?${params.toString()}`;
-  const data = await apiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
-  const source = normalizeData(data);
-  const contents = readArray(source, ['contents', 'posts', 'list', 'items'])
-    .map(normalizeContent)
-    .filter((item): item is BloggerContent => Boolean(item));
-  const items = contents.map(content => {
-    const created = content.created_at ?? '';
-    const updated = content.updated_at ?? created;
-    return {
-      note_id: `blogger_${content.post_id_alias}`,
-      title: content.title ?? '',
-      updated_at: updated,
-      blogger_name: blogger.name ?? '',
-    };
-  });
-  const nextCursor = readHasMore(source) && contents.length > 0
-    ? { bloggerIndex: cursor.bloggerIndex, page: cursor.page + 1 }
-    : cursor.bloggerIndex + 1 < bloggers.length
-      ? { bloggerIndex: cursor.bloggerIndex + 1, page: 1 }
-      : undefined;
-
-  return nextCursor ? { items, nextCursor } : { items };
-}
-
-async function fetchBloggerContents(topicId: string, blogger: Blogger, token: string, clientId: string, signal?: AbortSignal): Promise<BloggerContent[]> {
-  const contents: BloggerContent[] = [];
-  let page = 1;
-  while (true) {
-    const params = new URLSearchParams({ topic_id: topicId, follow_id: blogger.follow_id, page: String(page) });
-    const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/contents?${params.toString()}`;
-    const data = await apiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
-    const source = normalizeData(data);
-    contents.push(...readArray(source, ['contents', 'posts', 'list', 'items']).map(normalizeContent).filter((item): item is BloggerContent => Boolean(item)));
-    if (!readHasMore(source)) break;
-    page++;
-  }
-  return contents;
-}
-
-async function fetchBloggerContentDetail(topicId: string, content: BloggerContent, token: string, clientId: string, signal?: AbortSignal): Promise<BloggerContent> {
-  const params = new URLSearchParams({ topic_id: topicId, post_id: content.post_id_alias });
-  const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/content/detail?${params.toString()}`;
-  const data = await apiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
-  const detail = normalizeContent(normalizeData(data));
-  return detail ? { ...content, ...detail } : content;
-}
-
-export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions): Promise<GetNoteNote[]> {
-  const { token, clientId, signal } = options;
-  const notes: GetNoteNote[] = [];
-  const topics = await fetchSubscribedTopics(token, clientId, signal);
-  for (const topic of topics) {
-    const bloggers = await fetchTopicBloggers(topic.topic_id, token, clientId, signal);
-    for (const blogger of bloggers) {
-      const contents = await fetchBloggerContents(topic.topic_id, blogger, token, clientId, signal);
-      for (const content of contents) {
-        const detail = await fetchBloggerContentDetail(topic.topic_id, content, token, clientId, signal);
-        notes.push(bloggerContentToNote(detail, topic, blogger));
-      }
-    }
-  }
-  return notes;
 }
 
 export async function fetchNoteDetail(
@@ -436,38 +184,4 @@ export async function fetchNoteDetail(
   const noteDetail = normalizeNoteDetailData(detailData);
   if (!noteDetail) throw new Error(t('error.fetchNoteDetailFailed'));
   return noteDetail;
-}
-
-function extractCreatedNoteId(value: unknown): string {
-  if (!isRecord(value)) return '';
-  const data = isRecord(value.data) ? value.data : value;
-  const note = isRecord(data.note) ? data.note : data;
-  const id = note.note_id ?? note.id;
-  return typeof id === 'string' || typeof id === 'number' ? String(id) : '';
-}
-
-export async function createNote(options: CreateNoteOptions): Promise<{ noteId: string; detailId?: string }> {
-  const url = 'https://openapi.biji.com/open/api/v1/resource/note/save';
-  const data = await apiRequest<Record<string, unknown>>(
-    url,
-    {
-      method: 'POST',
-      headers: {
-        ...buildHeaders(options.token, options.clientId),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        title: options.title,
-        content: options.content,
-        note_type: options.noteType,
-        source: 'app',
-        tags: options.tags ?? [],
-      }),
-    },
-    1,
-    options.signal
-  );
-  const noteId = extractCreatedNoteId(data);
-  if (!noteId) throw new Error(t('error.createNoteFailed'));
-  return { noteId };
 }

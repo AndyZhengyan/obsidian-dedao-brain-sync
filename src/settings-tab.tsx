@@ -26,7 +26,6 @@ export class GetNoteSettingsTab extends PluginSettingTab {
         isSyncing={this.plugin.isSyncing}
         syncProgress={this.plugin.syncProgress}
         openNotePicker={() => this.plugin.openNotePicker()}
-        openLocalUpload={() => this.plugin.openLocalUploadModal()}
         startAutoSync={() => this.plugin.startAutoSync()}
         stopAutoSync={() => this.plugin.stopAutoSync()}
         cancelSync={() => this.plugin.cancelSync()}
