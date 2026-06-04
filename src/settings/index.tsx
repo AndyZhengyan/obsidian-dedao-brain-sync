@@ -8,6 +8,7 @@ import { type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressD
 import { App, AbstractInputSuggest } from 'obsidian';
 import { fetchNotes } from '../api';
 import { t } from '../i18n';
+import { ExternalLink } from './external-link';
 
 class FolderSuggest extends AbstractInputSuggest<string> {
   private el: HTMLInputElement;
@@ -42,6 +43,7 @@ interface SettingsComponentProps {
   startSync: () => void;
   isSyncing: boolean;
   openNotePicker: () => void;
+  openLocalUpload: () => void;
   startAutoSync: () => void;
   stopAutoSync: () => void;
   cancelSync: () => void;
@@ -57,6 +59,7 @@ export function SettingsComponent({
   startSync,
   isSyncing,
   openNotePicker,
+  openLocalUpload,
   startAutoSync,
   stopAutoSync,
   cancelSync,
@@ -278,7 +281,7 @@ export function SettingsComponent({
       <div className="getnote-settings-header">
         <h2>{t('settings.title')} <span className="getnote-settings-author">by 关山的月儿</span></h2>
         <p className="getnote-settings-desc">
-          {t('settings.desc')} <a href={t('settings.communityUrl')} target="_blank" rel="noopener">{t('settings.community')}</a>
+          {t('settings.desc')} <ExternalLink href={t('settings.communityUrl')}>{t('settings.community')}</ExternalLink>
         </p>
       </div>
 
@@ -289,7 +292,7 @@ export function SettingsComponent({
         name={t('settings.credentials.label')}
         description={
           authMode === 'web'
-            ? <span>{t('settings.credentials.webTip')} <a href={t('settings.webTipHelpUrl')} target="_blank" rel="noopener">{t('settings.webTipHelp')}</a></span>
+            ? <span>{t('settings.credentials.webTip')} <ExternalLink href={t('settings.webTipHelpUrl')}>{t('settings.webTipHelp')}</ExternalLink></span>
             : t('settings.credentials.tip')
         }
       >
@@ -522,19 +525,36 @@ export function SettingsComponent({
       </SettingItem>
 
       <SettingItem name={t('settings.manualSync')}>
-        <div className="getnote-actions-row">
-          <SyncButton
-            hasCredentials={hasCredentials}
-            isSyncing={isSyncing}
-            onClick={startSync}
-          />
-          <button
-            className="mod-secondary getnote-sync-action-button"
-            disabled={!hasCredentials || isSyncing}
-            onClick={openNotePicker}
-          >
-            {t('settings.syncPicker.button')}
-          </button>
+        <div className="getnote-manual-actions">
+          <div className="getnote-manual-action-group">
+            <div className="getnote-manual-action-title">{t('settings.manualSync.download')}</div>
+            <div className="getnote-actions-row">
+              <SyncButton
+                hasCredentials={hasCredentials}
+                isSyncing={isSyncing}
+                onClick={startSync}
+              />
+              <button
+                className="mod-secondary getnote-sync-action-button"
+                disabled={!hasCredentials || isSyncing}
+                onClick={openNotePicker}
+              >
+                {t('settings.syncPicker.button')}
+              </button>
+            </div>
+          </div>
+          <div className="getnote-manual-action-group">
+            <div className="getnote-manual-action-title">{t('settings.manualSync.upload')}</div>
+            <div className="getnote-actions-row">
+              <button
+                className="mod-secondary getnote-sync-action-button"
+                disabled={!hasCredentials || isSyncing}
+                onClick={openLocalUpload}
+              >
+                {t('settings.reverseSync.uploadButton')}
+              </button>
+            </div>
+          </div>
         </div>
       </SettingItem>
 

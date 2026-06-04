@@ -155,24 +155,11 @@
 .getnote-authmode-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   cursor: pointer;
   font-size: 13px;
   color: var(--text-muted);
   transition: color 0.15s;
-}
-
-.getnote-authmode-btn input[type="radio"] {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--background-modifier-border);
-  border-radius: 50%;
-  background: var(--background-primary);
-  cursor: pointer;
-  transition: all 0.15s;
-  flex-shrink: 0;
 }
 
 .getnote-authmode-btn:hover {
@@ -181,12 +168,6 @@
 
 .getnote-authmode-btn.active {
   color: var(--text-normal);
-}
-
-.getnote-authmode-btn input[type="radio"]:checked {
-  border-color: var(--accent);
-  background: var(--accent);
-  box-shadow: inset 0 0 0 3px var(--background-primary);
 }
 
 .getnote-credential-action-button {
@@ -259,6 +240,27 @@
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.getnote-manual-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: var(--getnote-primary-input-width);
+}
+
+.getnote-manual-action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.getnote-manual-action-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: right;
 }
 
 .getnote-secondary-button {
@@ -560,6 +562,29 @@
   background: var(--background-modifier-hover);
 }
 
+.getnote-local-upload {
+  display: flex;
+  flex-direction: column;
+  max-height: 64vh;
+}
+
+.getnote-local-upload-folder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.getnote-local-upload-folder span {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.getnote-local-upload-folder select {
+  max-width: 260px;
+}
+
 .getnote-picker-search {
   padding: 0 0 8px;
 }
@@ -706,6 +731,53 @@
 
 .getnote-picker-error {
   color: var(--text-error);
+}
+
+/* === Topic Picker === */
+.getnote-topic-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-normal);
+  text-align: left;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.getnote-topic-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.getnote-topic-row:last-child {
+  border-bottom: none;
+}
+
+.getnote-topic-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.getnote-topic-row-meta,
+.getnote-topic-arrow {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.getnote-topic-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
 /* === Note Row === */

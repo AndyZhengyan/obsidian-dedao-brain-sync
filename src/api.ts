@@ -1,7 +1,8 @@
 // Central API entry point - delegates to client implementations based on authMode
-import { fetchNotes as openapiFetchNotes, fetchNoteDetail as openapiFetchNoteDetail } from './api-clients/openapi-client';
-import { fetchNotes as webapiFetchNotes, fetchNoteChildren as webapiFetchNoteChildren, fetchNoteDetail as webapiFetchNoteDetail } from './api-clients/webapi-client';
-import type { GetNoteNote, AuthMode } from './types';
+import { createNote as openapiCreateNote, fetchNotes as openapiFetchNotes, fetchNoteDetail as openapiFetchNoteDetail, fetchSubscribedKnowledgeNotes as openapiFetchSubscribedKnowledgeNotes, fetchTopicBloggers as openapiFetchTopicBloggers, fetchTopicContentPreviewPage as openapiFetchTopicContentPreviewPage, fetchTopicContentPreviews as openapiFetchTopicContentPreviews, fetchSubscribedTopics as openapiFetchSubscribedTopics } from './api-clients/openapi-client';
+import { createNote as webapiCreateNote, fetchNotes as webapiFetchNotes, fetchNoteChildren as webapiFetchNoteChildren, fetchNoteDetail as webapiFetchNoteDetail, fetchSubscribedKnowledgeNotes as webapiFetchSubscribedKnowledgeNotes, fetchTopicContentPreviewPage as webapiFetchTopicContentPreviewPage, fetchTopicContentPreviews as webapiFetchTopicContentPreviews, fetchSubscribedTopics as webapiFetchSubscribedTopics } from './api-clients/webapi-client';
+import type { GetNoteNote, AuthMode, SubscribedTopic } from './types';
+import type { Blogger } from './api-clients/openapi-client';
 import { t } from './i18n';
 
 export const GETNOTE_LIST_LIMIT = 20;
@@ -49,6 +50,133 @@ export async function fetchNoteChildren(
 ): Promise<GetNoteNote[]> {
   if (authMode !== 'web') return [];
   return webapiFetchNoteChildren(parentPrimeId, token, signal);
+}
+
+export async function fetchSubscribedTopics(options: { token: string; clientId: string; authMode?: AuthMode; signal?: AbortSignal }): Promise<SubscribedTopic[]> {
+  if (options.authMode === 'web') {
+    return webapiFetchSubscribedTopics(options.token, options.signal);
+  }
+  return openapiFetchSubscribedTopics(options.token, options.clientId, options.signal);
+}
+
+export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions): Promise<GetNoteNote[]> {
+  if (options.authMode === 'web') {
+    return webapiFetchSubscribedKnowledgeNotes({
+      token: options.token,
+      sinceId: options.sinceId,
+      limit: options.limit,
+      signal: options.signal,
+    });
+  }
+  return openapiFetchSubscribedKnowledgeNotes({
+    token: options.token,
+    clientId: options.clientId,
+    sinceId: options.sinceId,
+    limit: options.limit,
+    signal: options.signal,
+  });
+}
+
+export interface ContentPreview {
+  note_id: string;
+  title: string;
+  updated_at: string;
+  blogger_name?: string;
+}
+
+export interface TopicContentPreviewOptions {
+  maxPages?: number;
+  maxBloggers?: number;
+}
+
+export interface TopicContentPreviewCursor {
+  bloggerIndex: number;
+  page: number;
+}
+
+export interface TopicContentPreviewPage {
+  items: ContentPreview[];
+  nextCursor?: TopicContentPreviewCursor;
+}
+
+export async function fetchTopicBloggers(
+  topicId: string,
+  token: string,
+  clientId: string,
+  authMode?: AuthMode,
+  signal?: AbortSignal
+): Promise<Blogger[]> {
+  if (authMode !== 'openapi') return [];
+  return openapiFetchTopicBloggers(topicId, token, clientId, signal);
+}
+
+export async function fetchTopicContentPreviews(
+  topicId: string,
+  topicName: string | undefined,
+  token: string,
+  clientId: string,
+  authMode?: AuthMode,
+  signal?: AbortSignal,
+  options?: TopicContentPreviewOptions
+): Promise<ContentPreview[]> {
+  if (authMode === 'web') {
+    return webapiFetchTopicContentPreviews(topicId, token, signal, options);
+  }
+  return openapiFetchTopicContentPreviews(topicId, topicName, token, clientId, signal, options);
+}
+
+export async function fetchTopicContentPreviewPage(
+  topicId: string,
+  topicName: string | undefined,
+  token: string,
+  clientId: string,
+  authMode?: AuthMode,
+  signal?: AbortSignal,
+  cursor?: TopicContentPreviewCursor
+): Promise<TopicContentPreviewPage> {
+  if (authMode === 'web') {
+    return webapiFetchTopicContentPreviewPage(topicId, token, signal, cursor);
+  }
+  return openapiFetchTopicContentPreviewPage(topicId, topicName, token, clientId, signal, cursor);
+}
+
+
+export interface CreateNoteOptions {
+  token: string;
+  clientId: string;
+  authMode?: AuthMode;
+  title: string;
+  content: string;
+  noteType: string;
+  tags?: string[];
+  signal?: AbortSignal;
+}
+
+export interface CreateNoteResult {
+  noteId: string;
+  detailId?: string;
+}
+
+export async function createNote(options: CreateNoteOptions): Promise<CreateNoteResult> {
+  if (options.authMode === 'web') {
+    return webapiCreateNote({
+      token: options.token,
+      title: options.title,
+      content: options.content,
+      noteType: options.noteType,
+      tags: options.tags,
+      signal: options.signal,
+    });
+  }
+  return openapiCreateNote({
+    token: options.token,
+    clientId: options.clientId,
+    title: options.title,
+    content: options.content,
+    noteType: options.noteType,
+    tags: options.tags,
+    signal: options.signal,
+  });
 }
 
 export async function* fetchAllNotes(

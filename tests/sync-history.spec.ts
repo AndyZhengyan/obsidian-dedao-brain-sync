@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { SyncHistoryEntry, SyncResult } from '../src/types';
 import { initI18n } from '../src/i18n';
-import { formatHistoryFilter, formatHistoryNoteType, formatHistoryScope } from '../src/ui/sync-history-modal';
+import { formatHistoryFilter, formatHistoryMode, formatHistoryNoteType, formatHistoryScope } from '../src/ui/sync-history-modal';
 
 function makeResult(overrides: Partial<SyncResult> = {}): SyncResult {
   return { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, ...overrides };
@@ -10,7 +10,7 @@ function makeResult(overrides: Partial<SyncResult> = {}): SyncResult {
 function recordSyncHistory(
   history: SyncHistoryEntry[],
   result: SyncResult,
-  type: 'full' | 'selective' | 'auto',
+  type: SyncHistoryEntry['type'],
   status: SyncHistoryEntry['status'] = 'success',
   maxEntries = 20
 ): SyncHistoryEntry[] {
@@ -72,6 +72,12 @@ describe('SyncHistoryEntry', () => {
   it('records auto sync type', () => {
     const entry = makeEntry({ type: 'auto' });
     expect(entry.type).toBe('auto');
+  });
+
+  it('records upload sync type', () => {
+    const entry = makeEntry({ type: 'upload', mode: 'local-upload' });
+    expect(entry.type).toBe('upload');
+    expect(entry.mode).toBe('local-upload');
   });
 
   it('records failed sync error', () => {
@@ -157,12 +163,21 @@ describe('sync history note type display', () => {
   it('localizes note type labels in the detail list', () => {
     initI18n('zh-CN');
 
-    expect(formatHistoryNoteType('recorder_audio')).toBe('录音长录');
+    expect(formatHistoryNoteType('recorder_audio')).toBe('录音笔记');
     expect(formatHistoryNoteType('unknown_remote_type')).toBe('其他');
   });
 });
 
 describe('sync history scope display', () => {
+  it('shows upload mode as manual local upload', () => {
+    initI18n('zh-CN');
+
+    expect(formatHistoryMode(makeEntry({
+      type: 'upload',
+      mode: 'local-upload',
+    }))).toBe('手动 · 上传本地笔记');
+  });
+
   it('hides maxDays when a start date is present', () => {
     initI18n('zh-CN');
 
@@ -194,7 +209,7 @@ describe('sync history scope display', () => {
         maxDays: 0,
         enabledNoteTypes: ['plain_text', 'link'],
       },
-    }))).toBe('仅同步：纯文本、链接笔记');
+    }))).toBe('仅同步：文字笔记、链接笔记');
   });
 
   it('shows an explicit empty filter when no note types are selected', () => {

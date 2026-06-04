@@ -1,14 +1,53 @@
-import { App, Modal, Plugin, getLanguage } from 'obsidian';
+import { App, Modal, Notice, Plugin, getLanguage, type DataAdapter, type TFile } from 'obsidian';
 import ReactDOM from 'react-dom';
 import { DEFAULT_SETTINGS, getAuthCredentials, type Settings, type SyncHistoryScope, type SyncProgressDetail, type SyncHistoryEntry, type SyncResult, type SyncScopeOptions } from './types';
 import { GetNoteSettingsTab } from './settings-tab';
 import { SyncEngine, SyncCancelledError } from './sync';
 import { showError, showNotice, showSuccess } from './ui/notice';
 import { NotePickerModal } from './ui/note-picker-modal';
+import { TopicPickerModal } from './ui/topic-picker-modal';
 import { ManualSyncModal } from './ui/manual-sync-modal';
+import { LocalUploadModal } from './ui/local-upload-modal';
 import { initI18n, t } from './i18n';
+import { ReverseSyncEngine, type ReverseSyncResult } from './reverse-sync';
 
 const MAX_SYNC_HISTORY = 20;
+const LEGACY_PLUGIN_IDS = ['obsidian-getnote-importer', 'getnote-importer'] as const;
+const PLUGIN_DATA_FILE = 'data.json';
+const LEGACY_PLUGIN_MIGRATION_NOTICE = '已经从旧的 GetNote Importer 迁移成功，请手动停止和卸载 GetNote Importer';
+
+type PluginDataMigrationAdapter = Pick<DataAdapter, 'exists' | 'mkdir' | 'copy'>;
+
+export async function migrateLegacyPluginData(adapter: PluginDataMigrationAdapter, currentPluginId: string): Promise<boolean> {
+  if (!currentPluginId || LEGACY_PLUGIN_IDS.includes(currentPluginId as typeof LEGACY_PLUGIN_IDS[number])) return false;
+
+  const currentDir = `.obsidian/plugins/${currentPluginId}`;
+  const currentDataPath = `${currentDir}/${PLUGIN_DATA_FILE}`;
+
+  if (await adapter.exists(currentDataPath)) return false;
+
+  const legacyDataPath = await findExistingLegacyDataPath(adapter);
+  if (!legacyDataPath) return false;
+
+  if (!(await adapter.exists(currentDir))) {
+    await adapter.mkdir(currentDir);
+  }
+  await adapter.copy(legacyDataPath, currentDataPath);
+  return true;
+}
+
+export function notifyLegacyPluginDataMigrated(migrated: boolean): void {
+  if (!migrated) return;
+  new Notice(LEGACY_PLUGIN_MIGRATION_NOTICE, 10000);
+}
+
+async function findExistingLegacyDataPath(adapter: PluginDataMigrationAdapter): Promise<string | null> {
+  for (const legacyPluginId of LEGACY_PLUGIN_IDS) {
+    const legacyDataPath = `.obsidian/plugins/${legacyPluginId}/${PLUGIN_DATA_FILE}`;
+    if (await adapter.exists(legacyDataPath)) return legacyDataPath;
+  }
+  return null;
+}
 
 function emptySyncResult(): SyncResult {
   return { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
@@ -27,10 +66,13 @@ function normalizeSyncHistory(value: unknown): SyncHistoryEntry[] {
       const startedAt = typeof entry.startedAt === 'number' ? entry.startedAt : timestamp;
       const finishedAt = typeof entry.finishedAt === 'number' ? entry.finishedAt : timestamp;
       const result = entry.result ?? emptySyncResult();
-      const type: SyncHistoryEntry['type'] = entry.type === 'selective' || entry.type === 'auto' ? entry.type : 'full';
+      const type: SyncHistoryEntry['type'] =
+        entry.type === 'selective' || entry.type === 'auto' || entry.type === 'upload' ? entry.type : 'full';
       const mode: SyncHistoryEntry['mode'] =
-        entry.mode === 'selected' || entry.mode === 'auto' || entry.mode === 'time'
+        entry.mode === 'selected' || entry.mode === 'auto' || entry.mode === 'time' || entry.mode === 'local-upload'
           ? entry.mode
+          : type === 'upload'
+            ? 'local-upload'
           : type === 'selective'
             ? 'selected'
             : type === 'auto'
@@ -73,12 +115,12 @@ function normalizeSyncHistory(value: unknown): SyncHistoryEntry[] {
 }
 
 export default class GetNoteSyncPlugin extends Plugin {
-  settings!: Settings;
+  declare settings: Settings;
   isSyncing = false;
   syncProgress: SyncProgressDetail = { message: '', count: '', percent: 0 };
   syncHistory: SyncHistoryEntry[] = [];
   lastSyncResult: SyncHistoryEntry | null = null;
-  private currentSyncEngine: SyncEngine | null = null;
+  private currentSyncEngine: { cancel(): void } | null = null;
   private autoSyncIntervalId: number | undefined;
   private settingsTab?: GetNoteSettingsTab;
   private lastProgressUpdate = 0;
@@ -86,6 +128,13 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   async onload(): Promise<void> {
     initI18n(getLanguage());
+
+    try {
+      const migratedLegacyData = await migrateLegacyPluginData(this.app.vault.adapter, this.manifest.id);
+      notifyLegacyPluginDataMigrated(migratedLegacyData);
+    } catch {
+      // Migration is best-effort; startup should continue even if the vault adapter refuses the copy.
+    }
 
     const loaded = (await this.loadData()) as Partial<Settings> | null;
     const migratedOpenApiToken = loaded?.openApiToken ?? (loaded?.authMode === 'openapi' ? loaded?.apiToken : '') ?? '';
@@ -104,6 +153,7 @@ export default class GetNoteSyncPlugin extends Plugin {
           ? loaded.scheduledSync.enabledNoteTypes.filter((type): type is string => typeof type === 'string')
           : undefined,
       },
+      reverseSync: { ...DEFAULT_SETTINGS.reverseSync, ...loaded?.reverseSync },
       syncHistory: normalizeSyncHistory(loaded?.syncHistory),
     };
     this.syncHistory = this.settings.syncHistory;
@@ -116,6 +166,12 @@ export default class GetNoteSyncPlugin extends Plugin {
       id: 'sync-notes',
       name: t('command.sync'),
       callback: () => this.openManualSyncModal(),
+    });
+
+    this.addCommand({
+      id: 'upload-local-notes',
+      name: t('command.uploadLocal'),
+      callback: () => this.openLocalUploadModal(),
     });
 
     this.addRibbonIcon('book-lock', t('ribbon.tooltip'), () => this.openManualSyncModal());
@@ -177,7 +233,7 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   private async recordSyncHistory(
     result: SyncResult,
-    type: 'full' | 'selective' | 'auto',
+    type: SyncHistoryEntry['type'],
     startedAt: number,
     scope: SyncHistoryScope,
     status: SyncHistoryEntry['status'] = 'success',
@@ -192,7 +248,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       timestamp: finishedAt,
       result,
       type,
-      mode: type === 'selective' ? 'selected' : type === 'auto' ? 'auto' : 'time',
+      mode: type === 'selective' ? 'selected' : type === 'auto' ? 'auto' : type === 'upload' ? 'local-upload' : 'time',
       scope,
       status,
       error,
@@ -351,6 +407,170 @@ export default class GetNoteSyncPlugin extends Plugin {
   syncSelectedNotes(noteIds: string[], enabledNoteTypes?: string[]): void {
     void this.runSync('selective', { maxDays: 0, syncStartDate: '', ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}) }, noteIds);
   }
+
+  syncSubscribedKnowledge(): void {
+    const wrapper = new TopicPickerModalWrapper(this.app, this);
+    wrapper.open();
+  }
+
+  syncSubscribedKnowledgeNotes(noteIds: string[]): void {
+    void this.runSubscribedKnowledgeSync(noteIds);
+  }
+
+  private async runSubscribedKnowledgeSync(selectedNoteIds?: string[]): Promise<void> {
+    if (this.isSyncing) return;
+    const credentials = getAuthCredentials(this.settings);
+    if (!credentials.token || (credentials.authMode !== 'web' && !credentials.clientId)) {
+      showError(t('notice.fillCredentials'));
+      return;
+    }
+
+    const startedAt = Date.now();
+    this.isSyncing = true;
+    this.syncProgress = { message: t('sync.subscribedKnowledge.fetching'), count: '', percent: 0 };
+    this.currentSyncEngine = null;
+    this.refreshSettingsTab();
+    showNotice(t('sync.subscribedKnowledge.started'));
+
+    const engine = new SyncEngine(this.app, this.settings, (info) => this.setProgress(info));
+    this.currentSyncEngine = engine;
+    engine.setOnCancel(() => this.cancelSync());
+
+    try {
+      const result = await engine.syncSubscribedKnowledge(undefined, selectedNoteIds);
+      await this.recordSyncHistory(result, 'full', startedAt, {
+        maxDays: this.settings.maxDays,
+        syncStartDate: this.settings.syncStartDate,
+      });
+      showSuccess(t('notice.syncComplete', {
+        created: result.created,
+        updated: result.updated,
+        skipped: result.skipped,
+        failed: result.failed > 0 ? ` · ${t('modal.failed', { failed: result.failed })}` : '',
+      }), 8000);
+    } catch (err) {
+      if (err instanceof SyncCancelledError) {
+        await this.recordSyncHistory(emptySyncResult(), 'full', startedAt, {
+          maxDays: this.settings.maxDays,
+          syncStartDate: this.settings.syncStartDate,
+        }, 'cancelled');
+        this.syncProgress = { message: t('modal.cancelled'), count: '', percent: 0 };
+        return;
+      }
+      const error = err instanceof Error ? err.message : String(err);
+      await this.recordSyncHistory(emptySyncResult(), 'full', startedAt, {
+        maxDays: this.settings.maxDays,
+        syncStartDate: this.settings.syncStartDate,
+      }, 'failed', error);
+      this.syncProgress = { message: t('notice.syncFailed', { msg: error }), count: '', percent: 0 };
+      console.error(t('console.syncError'), err);
+      showError(t('notice.syncFailed', { msg: error }));
+    } finally {
+      this.isSyncing = false;
+      this.currentSyncEngine = null;
+      this.syncProgress = { message: '', count: '', percent: 0 };
+      this.refreshSettingsTab();
+    }
+  }
+
+  openLocalUploadModal(): void {
+    const credentials = getAuthCredentials(this.settings);
+    if (!credentials.token || (credentials.authMode !== 'web' && !credentials.clientId)) {
+      showError(t('notice.fillCredentials'));
+      return;
+    }
+    const wrapper = new LocalUploadModalWrapper(this.app, this);
+    wrapper.open();
+  }
+
+  uploadSelectedLocalNotes(files: TFile[]): void {
+    void this.reverseSyncToGetNote(files);
+  }
+
+  private async reverseSyncToGetNote(files?: TFile[]): Promise<void> {
+    if (this.isSyncing) return;
+    const startedAt = Date.now();
+    this.isSyncing = true;
+    this.syncProgress = { message: t('reverseSync.running'), count: '', percent: 0 };
+    this.refreshSettingsTab();
+
+    try {
+      const engine = new ReverseSyncEngine(this.app, this.settings);
+      this.currentSyncEngine = engine;
+      const result = files ? await engine.syncFiles(files) : await engine.syncBack();
+      await this.recordUploadHistory(result, startedAt, files?.map(file => file.path));
+      showSuccess(t('reverseSync.complete', {
+        created: result.created,
+        skipped: result.skipped,
+        failed: result.failed,
+      }), 8000);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        await this.recordUploadHistory({
+          created: 0,
+          skipped: 0,
+          failed: 0,
+          total: files?.length ?? 0,
+          items: [],
+        }, startedAt, files?.map(file => file.path), t('modal.cancelled'), 'cancelled');
+        this.syncProgress = { message: t('modal.cancelled'), count: '', percent: 0 };
+        return;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      await this.recordUploadHistory({
+        created: 0,
+        skipped: 0,
+        failed: files?.length ?? 0,
+        total: files?.length ?? 0,
+        items: (files ?? []).map(file => ({
+          noteId: file.path,
+          title: file.basename || file.path.split('/').pop()?.replace(/\.md$/i, '') || file.path,
+          noteType: 'plain_text',
+          updatedAt: new Date().toISOString(),
+          status: 'failed',
+          error: message,
+        })),
+      }, startedAt, files?.map(file => file.path), message);
+      this.syncProgress = { message: t('reverseSync.failed', { msg: message }), count: '', percent: 0 };
+      showError(t('reverseSync.failed', { msg: message }));
+      return;
+    } finally {
+      this.isSyncing = false;
+      this.currentSyncEngine = null;
+      this.syncProgress = { message: '', count: '', percent: 0 };
+      this.refreshSettingsTab();
+    }
+  }
+
+  private async recordUploadHistory(
+    result: ReverseSyncResult,
+    startedAt: number,
+    selectedIds?: string[],
+    error?: string,
+    status?: SyncHistoryEntry['status']
+  ): Promise<void> {
+    const syncResult: SyncResult = {
+      created: result.created,
+      updated: 0,
+      skipped: result.skipped,
+      failed: result.failed,
+      total: result.total,
+      items: result.items,
+    };
+    await this.recordSyncHistory(
+      syncResult,
+      'upload',
+      startedAt,
+      {
+        maxDays: 0,
+        syncStartDate: '',
+        selectedCount: selectedIds?.length,
+        selectedIds,
+      },
+      status ?? (error || result.failed > 0 ? 'failed' : 'success'),
+      error ?? (result.failed > 0 ? t('reverseSync.failedCount', { failed: result.failed }) : undefined)
+    );
+  }
 }
 
 class ManualSyncModalWrapper extends Modal {
@@ -412,6 +632,67 @@ class NotePickerModalWrapper extends Modal {
 
   onClose() {
     this.abortController.abort();
+    ReactDOM.unmountComponentAtNode(this.contentEl);
+  }
+}
+
+class TopicPickerModalWrapper extends Modal {
+  private abortController = new AbortController();
+
+  constructor(app: App, private plugin: GetNoteSyncPlugin) {
+    super(app);
+    this.titleEl.setText(t('topicPicker.title'));
+  }
+
+  onOpen() {
+    ReactDOM.render(
+      <TopicPickerModal
+        token={getAuthCredentials(this.plugin.settings).token}
+        clientId={getAuthCredentials(this.plugin.settings).clientId}
+        authMode={getAuthCredentials(this.plugin.settings).authMode}
+        abortSignal={this.abortController.signal}
+        onConfirm={async (noteIds) => {
+          this.abortController.abort();
+          this.close();
+          this.plugin.syncSubscribedKnowledgeNotes(noteIds);
+        }}
+        onCancel={() => {
+          this.abortController.abort();
+          this.close();
+        }}
+      />,
+      this.contentEl
+    );
+  }
+
+  onClose() {
+    this.abortController.abort();
+    ReactDOM.unmountComponentAtNode(this.contentEl);
+  }
+}
+
+class LocalUploadModalWrapper extends Modal {
+  constructor(app: App, private plugin: GetNoteSyncPlugin) {
+    super(app);
+    this.titleEl.setText(t('upload.title'));
+  }
+
+  onOpen() {
+    ReactDOM.render(
+      <LocalUploadModal
+        files={this.app.vault.getMarkdownFiles()}
+        initialFolder={this.plugin.settings.folderName}
+        onConfirm={(files) => {
+          this.close();
+          this.plugin.uploadSelectedLocalNotes(files);
+        }}
+        onCancel={() => this.close()}
+      />,
+      this.contentEl
+    );
+  }
+
+  onClose() {
     ReactDOM.unmountComponentAtNode(this.contentEl);
   }
 }
