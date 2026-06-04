@@ -129,7 +129,7 @@ describe('SyncEngine — filterRecentNotes', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings(), undefined, { enabledNoteTypes: ['link'] });
+      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }), undefined, { enabledNoteTypes: ['link'] });
 
       const result = await engine.sync();
 
@@ -988,7 +988,7 @@ describe('SyncEngine — audio note sync', () => {
     });
 
     try {
-      const engine = new SyncEngine(mockApp as any, makeSettings());
+      const engine = new SyncEngine(mockApp as any, makeSettings({ maxDays: 0 }));
       const result = await engine.sync();
 
       // 验证 asset 目录被创建/写入
@@ -1115,7 +1115,7 @@ describe('SyncEngine — audio note sync', () => {
     });
 
     try {
-      const engine = new SyncEngine(mockApp as any, makeSettings());
+      const engine = new SyncEngine(mockApp as any, makeSettings({ maxDays: 0 }));
       const result = await engine.sync();
 
       expect(result.failed).toBe(0);
