@@ -323,7 +323,7 @@ describe('SettingsComponent auth credentials', () => {
     }));
 
     const links = Array.from(container.querySelectorAll('a')).map((link) => link.href);
-    expect(links.some((href) => href.includes('README_zh.md#%E5%85%B3%E4%BA%8E%E4%BD%9C%E8%80%85') || href.includes('README_zh.md#关于作者'))).toBe(true);
+    expect(links.some((href) => href.includes('README.md#%E5%85%B3%E4%BA%8E%E4%BD%9C%E8%80%85') || href.includes('README.md#关于作者'))).toBe(true);
     expect(links.some((href) => href.includes('docs/web-mode-manual-token_zh.md'))).toBe(true);
   });
 
@@ -347,7 +347,7 @@ describe('SettingsComponent auth credentials', () => {
       helpLink!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     });
 
-    expect(openExternal).toHaveBeenCalledWith(expect.stringContaining('README_zh.md'));
+    expect(openExternal).toHaveBeenCalledWith(expect.stringContaining('README.md'));
     expect(openExternal).toHaveBeenCalledWith(expect.stringContaining('docs/web-mode-manual-token_zh.md'));
   });
 
@@ -359,7 +359,7 @@ describe('SettingsComponent auth credentials', () => {
     }));
 
     const links = Array.from(container.querySelectorAll('a')).map((link) => link.href);
-    expect(links.some((href) => href.includes('README.md#%E5%85%B3%E4%BA%8E%E4%BD%9C%E8%80%85') || href.includes('README.md#关于作者'))).toBe(true);
+    expect(links.some((href) => href.includes('README_EN.md#about-the-author'))).toBe(true);
     expect(links.some((href) => href.includes('docs/web-mode-manual-token.md'))).toBe(true);
   });
 
