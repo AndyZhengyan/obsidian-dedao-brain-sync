@@ -29,6 +29,7 @@ interface LocalReadResult {
 }
 
 const SUPPORTED_NOTE_TYPES = new Set(['plain_text', 'link']);
+const MAX_UPLOAD_TAGS = 4;
 
 interface ParsedFrontmatterBlock {
   frontmatter: Record<string, string>;
@@ -90,6 +91,20 @@ function readTags(frontmatter: Record<string, unknown>): string[] {
     .split(',')
     .map(stripQuotes)
     .filter(Boolean);
+}
+
+function prepareUploadTags(tags: string[]): string[] {
+  return [...new Set(tags.map(tag => tag.trim()).filter(Boolean))].slice(0, MAX_UPLOAD_TAGS);
+}
+
+function markdownImageToPlainLink(_match: string, alt: string, rawTarget: string): string {
+  const target = rawTarget.trim().replace(/^<|>$/g, '');
+  const label = alt.trim() || target;
+  return `[${label}](${target})`;
+}
+
+function prepareUploadContent(content: string): string {
+  return content.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, markdownImageToPlainLink);
 }
 
 function fileBasename(file: TFile): string {
@@ -229,9 +244,9 @@ export class ReverseSyncEngine {
       clientId: credentials.clientId,
       authMode: credentials.authMode,
       title: note.title,
-      content: note.body,
+      content: prepareUploadContent(note.body),
       noteType: note.noteType,
-      tags: note.tags,
+      tags: prepareUploadTags(note.tags),
       signal: this.abortController.signal,
     });
     const currentContent = await this.app.vault.read(note.file);
