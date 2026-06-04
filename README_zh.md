@@ -74,7 +74,7 @@
 
 3. 重启 Obsidian 并启用 `Dedao Brain Sync`。
 
-> 插件目录名为 `dedao-brain-sync`，需与 `manifest.json` 中的 `id` 一致。旧版 GetNote Importer 的本地 `data.json` 会在首次启动时自动迁移。
+> 插件目录名为 `getnote-importer`（与 `manifest.json` 中的 `id` 一致，保持与历史 listing 的兼容性），仓库本身已重命名为 `obsidian-dedao-brain-sync`。旧版 GetNote Importer 的本地 `data.json` 会在首次启动时自动迁移。
 
 ## 获取 API 凭证
 
@@ -260,7 +260,7 @@ tags: ["work"]
 
 ## English Summary
 
-`Dedao Brain Sync` is an Obsidian plugin for bidirectional sync with Dedao Brain / 得到大脑（原Get笔记）. It syncs remote notes into local Markdown files, supports selective and scheduled sync, downloads audio assets when available, and can manually upload selected local Markdown notes back to Dedao Brain. The plugin id is `dedao-brain-sync`, and legacy GetNote Importer data is migrated on first startup.
+`Dedao Brain Sync` is an Obsidian plugin for bidirectional sync with Dedao Brain / 得到大脑（原Get笔记）. It syncs remote notes into local Markdown files, supports selective and scheduled sync, downloads audio assets when available, and can manually upload selected local Markdown notes back to Dedao Brain. The plugin id is `getnote-importer` (kept for compatibility with the existing community-plugin listing), while the repository has been renamed to `obsidian-dedao-brain-sync`. Legacy GetNote Importer data is migrated on first startup.
 
 ## 开发
 
