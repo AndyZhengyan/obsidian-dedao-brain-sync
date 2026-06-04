@@ -1,4 +1,4 @@
-import { App, Modal, Plugin, getLanguage, type TFile } from 'obsidian';
+import { App, Modal, Notice, Plugin, getLanguage, type DataAdapter, type TFile } from 'obsidian';
 import ReactDOM from 'react-dom';
 import { DEFAULT_SETTINGS, getAuthCredentials, type Settings, type SyncHistoryScope, type SyncProgressDetail, type SyncHistoryEntry, type SyncResult, type SyncScopeOptions } from './types';
 import { GetNoteSettingsTab } from './settings-tab';
@@ -12,6 +12,42 @@ import { initI18n, t } from './i18n';
 import { ReverseSyncEngine, type ReverseSyncResult } from './reverse-sync';
 
 const MAX_SYNC_HISTORY = 20;
+const LEGACY_PLUGIN_IDS = ['obsidian-getnote-importer', 'getnote-importer'] as const;
+const PLUGIN_DATA_FILE = 'data.json';
+const LEGACY_PLUGIN_MIGRATION_NOTICE = '已经从旧的 GetNote Importer 迁移成功，请手动停止和卸载 GetNote Importer';
+
+type PluginDataMigrationAdapter = Pick<DataAdapter, 'exists' | 'mkdir' | 'copy'>;
+
+export async function migrateLegacyPluginData(adapter: PluginDataMigrationAdapter, currentPluginId: string): Promise<boolean> {
+  if (!currentPluginId || LEGACY_PLUGIN_IDS.includes(currentPluginId as typeof LEGACY_PLUGIN_IDS[number])) return false;
+
+  const currentDir = `.obsidian/plugins/${currentPluginId}`;
+  const currentDataPath = `${currentDir}/${PLUGIN_DATA_FILE}`;
+
+  if (await adapter.exists(currentDataPath)) return false;
+
+  const legacyDataPath = await findExistingLegacyDataPath(adapter);
+  if (!legacyDataPath) return false;
+
+  if (!(await adapter.exists(currentDir))) {
+    await adapter.mkdir(currentDir);
+  }
+  await adapter.copy(legacyDataPath, currentDataPath);
+  return true;
+}
+
+export function notifyLegacyPluginDataMigrated(migrated: boolean): void {
+  if (!migrated) return;
+  new Notice(LEGACY_PLUGIN_MIGRATION_NOTICE, 10000);
+}
+
+async function findExistingLegacyDataPath(adapter: PluginDataMigrationAdapter): Promise<string | null> {
+  for (const legacyPluginId of LEGACY_PLUGIN_IDS) {
+    const legacyDataPath = `.obsidian/plugins/${legacyPluginId}/${PLUGIN_DATA_FILE}`;
+    if (await adapter.exists(legacyDataPath)) return legacyDataPath;
+  }
+  return null;
+}
 
 function emptySyncResult(): SyncResult {
   return { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
@@ -92,6 +128,13 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   async onload(): Promise<void> {
     initI18n(getLanguage());
+
+    try {
+      const migratedLegacyData = await migrateLegacyPluginData(this.app.vault.adapter, this.manifest.id);
+      notifyLegacyPluginDataMigrated(migratedLegacyData);
+    } catch {
+      // Migration is best-effort; startup should continue even if the vault adapter refuses the copy.
+    }
 
     const loaded = (await this.loadData()) as Partial<Settings> | null;
     const migratedOpenApiToken = loaded?.openApiToken ?? (loaded?.authMode === 'openapi' ? loaded?.apiToken : '') ?? '';
