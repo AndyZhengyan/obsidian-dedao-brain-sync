@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { SyncHistoryEntry, SyncResult } from '../src/types';
 import { initI18n } from '../src/i18n';
-import { formatHistoryFilter, formatHistoryMode, formatHistoryNoteType, formatHistoryScope } from '../src/ui/sync-history-modal';
+import { formatHistoryFilter, formatHistoryMode, formatHistoryNoteType, formatHistoryScope, shouldRenderHistoryEntryError } from '../src/ui/sync-history-modal';
 
 function makeResult(overrides: Partial<SyncResult> = {}): SyncResult {
   return { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, ...overrides };
@@ -142,6 +142,28 @@ describe('sync history scrolling', () => {
 
     expect(match?.[0]).not.toContain('max-height');
     expect(match?.[0]).not.toContain('overflow-y: auto');
+  });
+});
+
+describe('sync history entry error display', () => {
+  it('hides aggregate failed-count errors after per-note details are shown', () => {
+    const entry = makeEntry({
+      status: 'failed',
+      error: '失败 1 篇',
+      result: makeResult({ failed: 1 }),
+    });
+
+    expect(shouldRenderHistoryEntryError(entry)).toBe(false);
+  });
+
+  it('keeps actionable entry-level errors visible', () => {
+    const entry = makeEntry({
+      status: 'failed',
+      error: 'network error',
+      result: makeResult({ failed: 1 }),
+    });
+
+    expect(shouldRenderHistoryEntryError(entry)).toBe(true);
   });
 });
 
