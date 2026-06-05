@@ -33,16 +33,21 @@ afterEach(() => {
 
 function filterNotes(notes: GetNoteNote[], query: string): GetNoteNote[] {
   if (!query) return notes;
-  return notes.filter(n =>
-    generateDisplayTitle(n).toLowerCase().includes(query.toLowerCase())
-  );
+  const normalizedQuery = query.toLowerCase();
+  return notes.filter(n => {
+    const haystacks = [
+      generateDisplayTitle(n),
+      ...n.tags.map(tag => tag.name),
+    ];
+    return haystacks.some(value => value.toLowerCase().includes(normalizedQuery));
+  });
 }
 
 describe('filterNotes (note picker search)', () => {
   const notes = [
     makeNote({ note_id: '1', title: '周报 2026' }),
     makeNote({ note_id: '2', title: '会议纪要' }),
-    makeNote({ note_id: '3', title: '项目规划' }),
+    makeNote({ note_id: '3', title: '项目规划', tags: [{ name: 'work' }, { name: '知识库' }] }),
     makeNote({ note_id: '4', title: '', content: '这是关于周报的笔记没有标题' }),
   ];
 
@@ -66,6 +71,19 @@ describe('filterNotes (note picker search)', () => {
   it('returns empty when no match', () => {
     const result = filterNotes(notes, '不存在');
     expect(result).toHaveLength(0);
+  });
+
+  it('filters by tag (case-insensitive)', () => {
+    const result = filterNotes(notes, 'knowledge');
+    expect(result).toHaveLength(0);
+
+    const chineseResult = filterNotes(notes, '知识');
+    expect(chineseResult).toHaveLength(1);
+    expect(chineseResult[0].note_id).toBe('3');
+
+    const englishResult = filterNotes(notes, 'WORK');
+    expect(englishResult).toHaveLength(1);
+    expect(englishResult[0].note_id).toBe('3');
   });
 
   it('filters by content when title is empty (generateDisplayTitle fallback)', () => {
@@ -168,5 +186,42 @@ describe('NotePickerModal auth chains', () => {
     });
 
     expect(onConfirm).toHaveBeenCalledWith(['link'], ['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'link', 'img_text', 'recorder_flash_audio']);
+  });
+
+  it('filters the picker list by tags and selects the visible matches', async () => {
+    const onConfirm = vi.fn();
+    vi.mocked(fetchNotes).mockResolvedValueOnce({
+      notes: [
+        makeNote({ note_id: 'tagged', title: '项目规划', tags: [{ name: '知识库' }] }),
+        makeNote({ note_id: 'plain', title: '日常记录', tags: [{ name: 'daily' }] }),
+      ],
+      hasMore: false,
+    });
+
+    const container = await renderPicker({
+      token: 'web-token',
+      clientId: '',
+      authMode: 'web',
+    }, onConfirm);
+
+    const searchInput = container.querySelector('.getnote-picker-search input') as HTMLInputElement;
+    await act(() => {
+      searchInput.value = '知识';
+      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain('项目规划');
+    expect(container.textContent).not.toContain('日常记录');
+
+    await act(() => {
+      Array.from(container.querySelectorAll('button'))
+        .find(button => button.textContent === '全选')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await act(() => {
+      container.querySelector('.mod-cta')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith(['tagged'], undefined);
   });
 });

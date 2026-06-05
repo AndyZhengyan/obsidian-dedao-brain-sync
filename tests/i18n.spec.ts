@@ -225,7 +225,7 @@ describe('t() - New picker keys', () => {
   });
 
   it('picker.search', () => {
-    expect(i18n.t('picker.search')).toBe('搜索笔记...');
+    expect(i18n.t('picker.search')).toBe('搜索笔记标题或标签...');
   });
 
   it('picker.noMatch', () => {
@@ -239,7 +239,7 @@ describe('t() - New picker keys', () => {
 
   it('picker.search in English', () => {
     i18n.initI18n('en');
-    expect(i18n.t('picker.search')).toBe('Search notes...');
+    expect(i18n.t('picker.search')).toBe('Search note titles or tags...');
   });
 
   it('picker.noMatch in English', () => {
