@@ -204,6 +204,9 @@ describe('TopicPickerModal', () => {
       selectedNoteIds: ['blogger_note-1'],
       topicIds: ['luo'],
       bloggerIds: ['follow_luo'],
+      knowledgeBaseNames: {
+        'blogger_note-1': '罗振宇学习笔记',
+      },
     });
   });
 
@@ -256,6 +259,9 @@ describe('TopicPickerModal', () => {
     expect(onConfirm).toHaveBeenCalledWith({
       selectedNoteIds: ['blogger_note-1'],
       topicIds: ['luo'],
+      knowledgeBaseNames: {
+        'blogger_note-1': '罗振宇学习笔记',
+      },
     });
   });
 });

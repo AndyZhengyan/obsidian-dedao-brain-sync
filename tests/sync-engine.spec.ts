@@ -565,6 +565,9 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
         selectedNoteIds: ['blogger_old_post'],
         topicIds: [],
         bloggerIds: [],
+        knowledgeBaseNames: {
+          blogger_old_post: '长期专题',
+        },
       });
 
       expect(result.total).toBe(1);
@@ -576,6 +579,10 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
         }),
       ]);
       expect(app.vault.create).toHaveBeenCalledTimes(1);
+      expect(app.vault.create).toHaveBeenCalledWith(
+        expect.stringMatching(/^得到大脑\/知识库\/长期专题\//),
+        expect.any(String)
+      );
       expect(vi.mocked(globalThis.fetch).mock.calls.map(call => String(call[0]))).not.toContain(
         'https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/contents?topic_id=topic_1&follow_id=blogger_1&page=2'
       );

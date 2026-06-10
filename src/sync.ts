@@ -113,6 +113,7 @@ export interface SubscribedKnowledgeSyncOptions {
   selectedNoteIds?: string[];
   topicIds?: string[];
   bloggerIds?: string[];
+  knowledgeBaseNames?: Record<string, string>;
 }
 
 type WriteStatus = SyncResultItem['status'];
@@ -153,6 +154,11 @@ export class SyncEngine {
       await this.app.vault.createFolder(fullPath);
     }
     return fullPath;
+  }
+
+  private getKnowledgeBaseDir(name: string): string {
+    const safeName = name.replace(/[\\/:*?"<>|]/g, '_').trim() || t('picker.noTitle');
+    return `知识库/${safeName}`;
   }
 
   private buildBaseName(note: GetNoteNote): string {
@@ -382,10 +388,11 @@ export class SyncEngine {
     uidIndex: Map<string, TFile>,
     parentBaseName?: string,
     parentFileName?: string,
-    childFileNames?: string[]
+    childFileNames?: string[],
+    categoryOverride?: string
   ): Promise<WriteNoteResult> {
     try {
-      const categoryDir = await this.ensureCategoryDir(getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
       let targetPath = `${categoryDir}/${this.getFileName(note, parentBaseName)}.md`;
       const existingByUid = uidIndex.get(note.note_id);
       const existingAtTarget = this.app.vault.getAbstractFileByPath(targetPath);
@@ -953,7 +960,15 @@ export class SyncEngine {
         if (seenNoteIds.has(note.note_id)) continue;
         seenNoteIds.add(note.note_id);
         result.total++;
-        const writeResult = await this.writeNote(note, uidIndex);
+        const knowledgeBaseName = syncOptions.knowledgeBaseNames?.[note.note_id];
+        const writeResult = await this.writeNote(
+          note,
+          uidIndex,
+          undefined,
+          undefined,
+          undefined,
+          knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined
+        );
         this.applyWriteResult(result, writeResult);
         this.recordItem(result, note, writeResult);
         this.onProgress?.({

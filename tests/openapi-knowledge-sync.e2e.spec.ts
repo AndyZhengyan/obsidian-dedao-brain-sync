@@ -79,7 +79,7 @@ describe.skipIf(!runE2E)('OpenAPI knowledge-base sync E2E', () => {
     expect(topics.length).toBeGreaterThan(0);
 
     let selection:
-      | { selectedNoteIds: string[]; topicIds: string[]; bloggerIds: string[] }
+      | { selectedNoteIds: string[]; topicIds: string[]; bloggerIds: string[]; knowledgeBaseNames: Record<string, string> }
       | undefined;
     for (const topic of topics) {
       const page = await fetchTopicContentPreviewPage(
@@ -95,6 +95,9 @@ describe.skipIf(!runE2E)('OpenAPI knowledge-base sync E2E', () => {
           selectedNoteIds: [article.note_id],
           topicIds: [topic.topic_id],
           bloggerIds: [article.blogger_id],
+          knowledgeBaseNames: {
+            [article.note_id]: topic.name,
+          },
         };
         break;
       }
@@ -113,6 +116,7 @@ describe.skipIf(!runE2E)('OpenAPI knowledge-base sync E2E', () => {
     expect(result.items).toHaveLength(1);
     expect(result.items[0]?.noteId).toBe(selection?.selectedNoteIds[0]);
     expect(files.size).toBeGreaterThan(0);
+    expect([...files.keys()].some(path => path.startsWith('E2E Knowledge Sync/知识库/'))).toBe(true);
   }, 60_000);
 
   it('syncs exactly one article selected through the live topic picker UI', async () => {
@@ -167,5 +171,6 @@ describe.skipIf(!runE2E)('OpenAPI knowledge-base sync E2E', () => {
     });
     expect(result.items[0]?.noteId).toBe(selection?.selectedNoteIds[0]);
     expect(files.size).toBeGreaterThan(0);
+    expect([...files.keys()].some(path => path.startsWith('E2E Knowledge Sync/知识库/'))).toBe(true);
   }, 60_000);
 });

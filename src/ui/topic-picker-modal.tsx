@@ -17,6 +17,7 @@ export interface TopicPickerSelection {
   selectedNoteIds: string[];
   topicIds?: string[];
   bloggerIds?: string[];
+  knowledgeBaseNames?: Record<string, string>;
 }
 
 interface TopicPickerModalProps {
@@ -175,11 +176,17 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
     const selected = Array.from(selectedItems.values());
     const topicIds = Array.from(new Set(selected.map(item => item.topic_id).filter((id): id is string => Boolean(id))));
     const bloggerIds = Array.from(new Set(selected.map(item => item.blogger_id).filter((id): id is string => Boolean(id))));
+    const knowledgeBaseNames = Object.fromEntries(selected.map(item => {
+      const topicId = item.topic_id ?? activeTopicId;
+      const topicName = topicId ? topicData[topicId]?.topic.name : undefined;
+      return [item.note_id, topicName ?? topicId ?? t('picker.noTitle')];
+    }));
     if (topicIds.length === 0 && activeTopicId) topicIds.push(activeTopicId);
     onConfirm({
       selectedNoteIds: Array.from(selectedNoteIds),
       ...(topicIds.length > 0 ? { topicIds } : {}),
       ...(bloggerIds.length > 0 ? { bloggerIds } : {}),
+      ...(Object.keys(knowledgeBaseNames).length > 0 ? { knowledgeBaseNames } : {}),
     });
   };
 
