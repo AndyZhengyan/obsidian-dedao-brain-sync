@@ -605,7 +605,7 @@
 .getnote-manual-sync-modal {
   display: flex;
   flex-direction: column;
-  width: min(420px, 100%);
+  width: 100%;
   min-width: 0;
 }
 
