@@ -537,7 +537,7 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
       if (requestUrl.includes('/resource/knowledge/blogger/content/detail')) {
         return mockFetchResponse({
           data: {
-            post_id_alias: 'old_post',
+            post_id: 'detail_numeric_id',
             title: '旧文章',
             content: '用户手动勾选的旧内容详情',
             created_at: '2026-01-01T10:00:00+08:00',
@@ -578,6 +578,66 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
       expect(app.vault.create).toHaveBeenCalledTimes(1);
       expect(vi.mocked(globalThis.fetch).mock.calls.map(call => String(call[0]))).not.toContain(
         'https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/contents?topic_id=topic_1&follow_id=blogger_1&page=2'
+      );
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('falls back to the OpenAPI content preview when the detail request times out', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const requestUrl = String(url);
+      if (requestUrl.includes('/resource/knowledge/subscribe/list')) {
+        return mockFetchResponse({
+          data: { topics: [{ topic_id: 'topic_1', name: '长期专题' }], has_more: false },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/bloggers')) {
+        return mockFetchResponse({
+          data: { bloggers: [{ follow_id: 'blogger_1', name: '主理人' }], has_more: false },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/blogger/contents')) {
+        return mockFetchResponse({
+          data: {
+            contents: [{
+              post_id_alias: 'old_post',
+              title: '旧文章',
+              summary: '详情接口不可用时仍应同步的摘要',
+              created_at: '2026-01-01T10:00:00+08:00',
+              updated_at: '2026-01-01T10:00:00+08:00',
+            }],
+            has_more: false,
+          },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/blogger/content/detail')) {
+        return new Promise<Response>(() => {});
+      }
+      throw new Error(`Unexpected request: ${requestUrl}`);
+    });
+
+    try {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings({
+        authMode: 'openapi',
+        openApiToken: 'openapi-token',
+        openApiClientId: 'openapi-client',
+      }));
+
+      const resultPromise = engine.syncSubscribedKnowledge(undefined, {
+        selectedNoteIds: ['blogger_old_post'],
+      });
+      await vi.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(result.total).toBe(1);
+      expect(result.created).toBe(1);
+      expect(app.vault.create).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('详情接口不可用时仍应同步的摘要')
       );
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();

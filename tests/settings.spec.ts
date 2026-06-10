@@ -83,12 +83,14 @@ afterEach(() => {
 });
 
 describe('SettingsComponent auth credentials', () => {
-  it('opens knowledge-base sync from the manual download actions', async () => {
+  it('opens knowledge-base sync from the OpenAPI manual download actions', async () => {
     const startSubscribedKnowledgeSync = vi.fn();
     const { container } = renderSettings(makeSettings({
-      authMode: 'web',
-      webApiToken: 'web-token',
-      apiToken: 'web-token',
+      authMode: 'openapi',
+      openApiToken: 'openapi-token',
+      openApiClientId: 'openapi-client',
+      apiToken: 'openapi-token',
+      clientId: 'openapi-client',
     }), vi.fn(), vi.fn(), { startSubscribedKnowledgeSync });
 
     const button = Array.from(container.querySelectorAll('button'))
@@ -101,6 +103,16 @@ describe('SettingsComponent auth credentials', () => {
     });
 
     expect(startSubscribedKnowledgeSync).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides knowledge-base sync in Web API mode', () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'web',
+      webApiToken: 'web-token',
+      apiToken: 'web-token',
+    }));
+
+    expect(container.textContent).not.toContain('按知识库同步');
   });
 
   it('does not render a separate upload permission switch', () => {

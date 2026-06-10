@@ -84,6 +84,33 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     expect(plugin.syncProgress).toEqual({ message: '', count: '', percent: 0 });
   });
 
+  it('records knowledge-base sync mode and selected count', async () => {
+    vi.spyOn(SyncEngine.prototype, 'syncSubscribedKnowledge').mockResolvedValue({
+      created: 1,
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+      total: 1,
+      items: [],
+    });
+    const plugin = makePlugin();
+
+    await plugin['runSubscribedKnowledgeSync']({
+      selectedNoteIds: ['blogger_old_post'],
+      topicIds: ['topic_1'],
+      bloggerIds: ['blogger_1'],
+    });
+
+    expect(plugin.syncHistory.at(-1)).toMatchObject({
+      type: 'full',
+      mode: 'knowledge-base',
+      scope: {
+        selectedCount: 1,
+        selectedIds: ['blogger_old_post'],
+      },
+    });
+  });
+
   it('records only start date when scope contains both date and maxDays', async () => {
     vi.spyOn(SyncEngine.prototype, 'sync').mockResolvedValue({
       created: 0,

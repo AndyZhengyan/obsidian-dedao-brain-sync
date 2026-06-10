@@ -549,13 +549,15 @@ export function SettingsComponent({
               >
                 {t('settings.syncPicker.button')}
               </button>
-              <button
-                className="mod-secondary getnote-sync-action-button"
-                disabled={!hasCredentials || isSyncing}
-                onClick={startSubscribedKnowledgeSync}
-              >
-                {t('settings.subscribedKnowledge.button')}
-              </button>
+              {authMode === 'openapi' && (
+                <button
+                  className="mod-secondary getnote-sync-action-button"
+                  disabled={!hasCredentials || isSyncing}
+                  onClick={startSubscribedKnowledgeSync}
+                >
+                  {t('settings.subscribedKnowledge.button')}
+                </button>
+              )}
             </div>
           </div>
           <div className="getnote-manual-action-group">

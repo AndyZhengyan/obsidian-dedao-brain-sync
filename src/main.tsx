@@ -69,7 +69,7 @@ function normalizeSyncHistory(value: unknown): SyncHistoryEntry[] {
       const type: SyncHistoryEntry['type'] =
         entry.type === 'selective' || entry.type === 'auto' || entry.type === 'upload' ? entry.type : 'full';
       const mode: SyncHistoryEntry['mode'] =
-        entry.mode === 'selected' || entry.mode === 'auto' || entry.mode === 'time' || entry.mode === 'local-upload'
+        entry.mode === 'selected' || entry.mode === 'knowledge-base' || entry.mode === 'auto' || entry.mode === 'time' || entry.mode === 'local-upload'
           ? entry.mode
           : type === 'upload'
             ? 'local-upload'
@@ -237,7 +237,8 @@ export default class GetNoteSyncPlugin extends Plugin {
     startedAt: number,
     scope: SyncHistoryScope,
     status: SyncHistoryEntry['status'] = 'success',
-    error?: string
+    error?: string,
+    mode?: SyncHistoryEntry['mode']
   ): Promise<void> {
     const finishedAt = Date.now();
     const entry: SyncHistoryEntry = {
@@ -248,7 +249,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       timestamp: finishedAt,
       result,
       type,
-      mode: type === 'selective' ? 'selected' : type === 'auto' ? 'auto' : type === 'upload' ? 'local-upload' : 'time',
+      mode: mode ?? (type === 'selective' ? 'selected' : type === 'auto' ? 'auto' : type === 'upload' ? 'local-upload' : 'time'),
       scope,
       status,
       error,
@@ -442,9 +443,11 @@ export default class GetNoteSyncPlugin extends Plugin {
     try {
       const result = await engine.syncSubscribedKnowledge(undefined, syncOptions);
       await this.recordSyncHistory(result, 'full', startedAt, {
-        maxDays: this.settings.maxDays,
-        syncStartDate: this.settings.syncStartDate,
-      });
+        maxDays: 0,
+        syncStartDate: '',
+        selectedCount: syncOptions?.selectedNoteIds.length,
+        selectedIds: syncOptions?.selectedNoteIds,
+      }, 'success', undefined, 'knowledge-base');
       showSuccess(t('notice.syncComplete', {
         created: result.created,
         updated: result.updated,
@@ -454,17 +457,21 @@ export default class GetNoteSyncPlugin extends Plugin {
     } catch (err) {
       if (err instanceof SyncCancelledError) {
         await this.recordSyncHistory(emptySyncResult(), 'full', startedAt, {
-          maxDays: this.settings.maxDays,
-          syncStartDate: this.settings.syncStartDate,
-        }, 'cancelled');
+          maxDays: 0,
+          syncStartDate: '',
+          selectedCount: syncOptions?.selectedNoteIds.length,
+          selectedIds: syncOptions?.selectedNoteIds,
+        }, 'cancelled', undefined, 'knowledge-base');
         this.syncProgress = { message: t('modal.cancelled'), count: '', percent: 0 };
         return;
       }
       const error = err instanceof Error ? err.message : String(err);
       await this.recordSyncHistory(emptySyncResult(), 'full', startedAt, {
-        maxDays: this.settings.maxDays,
-        syncStartDate: this.settings.syncStartDate,
-      }, 'failed', error);
+        maxDays: 0,
+        syncStartDate: '',
+        selectedCount: syncOptions?.selectedNoteIds.length,
+        selectedIds: syncOptions?.selectedNoteIds,
+      }, 'failed', error, 'knowledge-base');
       this.syncProgress = { message: t('notice.syncFailed', { msg: error }), count: '', percent: 0 };
       console.error(t('console.syncError'), err);
       showError(t('notice.syncFailed', { msg: error }));

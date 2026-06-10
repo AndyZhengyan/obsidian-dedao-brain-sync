@@ -181,6 +181,35 @@ interface BloggerContent {
   updated_at?: string;
 }
 
+const KNOWLEDGE_API_TIMEOUT_MS = 10_000;
+
+async function knowledgeApiRequest<T>(
+  url: string,
+  options: RequestInit,
+  retries: number,
+  signal?: AbortSignal
+): Promise<T> {
+  const timeoutController = new AbortController();
+  let timeoutId: number | undefined;
+  const abortRequest = () => timeoutController.abort();
+  signal?.addEventListener('abort', abortRequest, { once: true });
+  try {
+    const timeout = new Promise<never>((_resolve, reject) => {
+      timeoutId = window.setTimeout(() => {
+        timeoutController.abort();
+        reject(new DOMException('Timed out', 'TimeoutError'));
+      }, KNOWLEDGE_API_TIMEOUT_MS);
+    });
+    return await Promise.race([
+      apiRequest<T>(url, options, retries, timeoutController.signal),
+      timeout,
+    ]);
+  } finally {
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    signal?.removeEventListener('abort', abortRequest);
+  }
+}
+
 
 export async function fetchNotes(options: FetchNotesOptions): Promise<{ notes: GetNoteNote[]; hasMore: boolean }> {
   const { token, clientId, sinceId = '0', signal } = options;
@@ -273,7 +302,7 @@ export async function fetchSubscribedTopics(token: string, clientId: string, sig
   let page = 1;
   while (true) {
     const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/subscribe/list?page=${page}`;
-    const data = await apiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
+    const data = await knowledgeApiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
     const source = normalizeData(data);
     topics.push(...readArray(source, ['topics', 'list', 'items']).map(normalizeTopic).filter((item): item is SubscribedTopic => Boolean(item)));
     if (!readHasMore(source)) break;
@@ -288,7 +317,7 @@ export async function fetchTopicBloggers(topicId: string, token: string, clientI
   while (true) {
     const params = new URLSearchParams({ topic_id: topicId, page: String(page) });
     const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/bloggers?${params.toString()}`;
-    const data = await apiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
+    const data = await knowledgeApiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
     const source = normalizeData(data);
     bloggers.push(...readArray(source, ['bloggers', 'list', 'items']).map(normalizeBlogger).filter((item): item is Blogger => Boolean(item)));
     if (!readHasMore(source)) break;
@@ -314,7 +343,7 @@ export async function fetchTopicContentPreviews(
     while (page <= maxPages) {
       const params = new URLSearchParams({ topic_id: topicId, follow_id: blogger.follow_id, page: String(page) });
       const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/contents?${params.toString()}`;
-      const data = await apiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
+      const data = await knowledgeApiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
       const source = normalizeData(data);
       const contents = readArray(source, ['contents', 'posts', 'list', 'items']).map(normalizeContent).filter((item): item is BloggerContent => Boolean(item));
       for (const content of contents) {
@@ -357,7 +386,7 @@ export async function fetchTopicContentPreviewPage(
     page: String(cursor.page),
   });
   const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/contents?${params.toString()}`;
-  const data = await apiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
+  const data = await knowledgeApiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
   const source = normalizeData(data);
   const contents = readArray(source, ['contents', 'posts', 'list', 'items'])
     .map(normalizeContent)
@@ -389,7 +418,7 @@ async function fetchBloggerContents(topicId: string, blogger: Blogger, token: st
   while (true) {
     const params = new URLSearchParams({ topic_id: topicId, follow_id: blogger.follow_id, page: String(page) });
     const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/contents?${params.toString()}`;
-    const data = await apiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
+    const data = await knowledgeApiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
     const source = normalizeData(data);
     const pageContents = readArray(source, ['contents', 'posts', 'list', 'items']).map(normalizeContent).filter((item): item is BloggerContent => Boolean(item));
     for (const content of pageContents) {
@@ -408,9 +437,19 @@ async function fetchBloggerContents(topicId: string, blogger: Blogger, token: st
 async function fetchBloggerContentDetail(topicId: string, content: BloggerContent, token: string, clientId: string, signal?: AbortSignal): Promise<BloggerContent> {
   const params = new URLSearchParams({ topic_id: topicId, post_id: content.post_id_alias });
   const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/content/detail?${params.toString()}`;
-  const data = await apiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
-  const detail = normalizeContent(normalizeData(data));
-  return detail ? { ...content, ...detail } : content;
+  try {
+    const data = await knowledgeApiRequest<Record<string, unknown>>(
+      url,
+      { method: 'GET', headers: buildHeaders(token, clientId) },
+      2,
+      signal
+    );
+    const detail = normalizeContent(normalizeData(data));
+    return detail ? { ...content, ...detail, post_id_alias: content.post_id_alias } : content;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return content;
+  }
 }
 
 export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions): Promise<GetNoteNote[]> {
