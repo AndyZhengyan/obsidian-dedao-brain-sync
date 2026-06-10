@@ -13,8 +13,14 @@ interface TopicData {
   error?: string;
 }
 
+export interface TopicPickerSelection {
+  selectedNoteIds: string[];
+  topicIds?: string[];
+  bloggerIds?: string[];
+}
+
 interface TopicPickerModalProps {
-  onConfirm: (selectedNoteIds: string[]) => void;
+  onConfirm: (selection: TopicPickerSelection) => void;
   onCancel: () => void;
   token: string;
   clientId: string;
@@ -63,6 +69,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   const [topicsError, setTopicsError] = useState<string | null>(null);
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
   const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(new Set());
+  const [selectedItems, setSelectedItems] = useState<Map<string, ContentPreview>>(new Map());
 
   const loadTopics = useCallback(() => {
     setTopicsLoading(true);
@@ -150,9 +157,31 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
       else next.delete(noteId);
       return next;
     });
+    setSelectedItems(prev => {
+      const next = new Map(prev);
+      if (!checked) {
+        next.delete(noteId);
+        return next;
+      }
+      const item = Object.values(topicData)
+        .flatMap(data => data.contents)
+        .find(content => content.note_id === noteId);
+      if (item) next.set(noteId, item);
+      return next;
+    });
   };
 
-  const handleConfirm = () => onConfirm(Array.from(selectedNoteIds));
+  const handleConfirm = () => {
+    const selected = Array.from(selectedItems.values());
+    const topicIds = Array.from(new Set(selected.map(item => item.topic_id).filter((id): id is string => Boolean(id))));
+    const bloggerIds = Array.from(new Set(selected.map(item => item.blogger_id).filter((id): id is string => Boolean(id))));
+    if (topicIds.length === 0 && activeTopicId) topicIds.push(activeTopicId);
+    onConfirm({
+      selectedNoteIds: Array.from(selectedNoteIds),
+      ...(topicIds.length > 0 ? { topicIds } : {}),
+      ...(bloggerIds.length > 0 ? { bloggerIds } : {}),
+    });
+  };
 
   const totalItems = Object.values(topicData).reduce((sum, d) => sum + d.contents.length, 0);
   const activeTopic = activeTopicId ? topicData[activeTopicId] : null;

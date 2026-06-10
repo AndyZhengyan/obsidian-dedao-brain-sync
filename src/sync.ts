@@ -109,6 +109,12 @@ export interface SyncProgressCallback {
   (info: { page?: number; processed?: number; total?: number; created?: number; updated?: number; skipped?: number; failed?: number; percent?: number }): void;
 }
 
+export interface SubscribedKnowledgeSyncOptions {
+  selectedNoteIds?: string[];
+  topicIds?: string[];
+  bloggerIds?: string[];
+}
+
 type WriteStatus = SyncResultItem['status'];
 
 interface WriteNoteResult {
@@ -905,7 +911,7 @@ export class SyncEngine {
     }
   }
 
-  async syncSubscribedKnowledge(modal?: SyncModal, selectedNoteIds?: string[]): Promise<SyncResult> {
+  async syncSubscribedKnowledge(modal?: SyncModal, options?: string[] | SubscribedKnowledgeSyncOptions): Promise<SyncResult> {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
     const uidIndex = this.buildUidIndex();
     const seenNoteIds = new Set<string>();
@@ -922,20 +928,27 @@ export class SyncEngine {
 
     try {
       const credentials = getAuthCredentials(this.settings);
+      const syncOptions: SubscribedKnowledgeSyncOptions = Array.isArray(options)
+        ? { selectedNoteIds: options }
+        : options ?? {};
+      const selectedNoteIds = syncOptions.selectedNoteIds;
       const notes = await fetchSubscribedKnowledgeNotes({
         token: credentials.token,
         clientId: credentials.clientId,
         signal: controller.signal,
         authMode: credentials.authMode,
+        topicIds: syncOptions.topicIds,
+        bloggerIds: syncOptions.bloggerIds,
+        selectedNoteIds,
       });
-      const recentNotes = this.filterRecentNotes(notes);
-      const filtered = this.filterNotesByDateRange(recentNotes);
-      const typeFiltered = this.filterNotesByType(filtered);
       const noteIdFiltered = selectedNoteIds
-        ? typeFiltered.filter(n => selectedNoteIds.includes(n.note_id))
-        : typeFiltered;
+        ? notes.filter(n => selectedNoteIds.includes(n.note_id))
+        : notes;
+      const filteredNotes = selectedNoteIds
+        ? noteIdFiltered
+        : this.filterNotesByType(this.filterNotesByDateRange(this.filterRecentNotes(noteIdFiltered)));
 
-      for (const note of noteIdFiltered) {
+      for (const note of filteredNotes) {
         if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
         if (seenNoteIds.has(note.note_id)) continue;
         seenNoteIds.add(note.note_id);
@@ -945,12 +958,12 @@ export class SyncEngine {
         this.recordItem(result, note, writeResult);
         this.onProgress?.({
           processed: result.total,
-          total: noteIdFiltered.length,
+          total: filteredNotes.length,
           created: result.created,
           updated: result.updated,
           skipped: result.skipped,
           failed: result.failed,
-          percent: noteIdFiltered.length ? Math.round((result.total / noteIdFiltered.length) * 100) : 100,
+          percent: filteredNotes.length ? Math.round((result.total / filteredNotes.length) * 100) : 100,
         });
       }
 

@@ -151,4 +151,111 @@ describe('TopicPickerModal', () => {
     expect(container.textContent).toContain('第二页内容');
     expect(container.textContent).not.toContain('加载更多');
   });
+
+  it('confirms selected note ids with topic and blogger scope', async () => {
+    const onConfirm = vi.fn();
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([
+      { topic_id: 'luo', name: '罗振宇学习笔记' },
+    ]);
+    vi.mocked(fetchTopicContentPreviewPage).mockResolvedValue({
+      items: [
+        {
+          note_id: 'blogger_note-1',
+          title: '第一篇内容',
+          updated_at: '2026-06-01T10:00:00+08:00',
+          blogger_name: '罗振宇',
+          topic_id: 'luo',
+          blogger_id: 'follow_luo',
+        },
+      ],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(
+        h(TopicPickerModal, {
+          token: 'token',
+          clientId: 'client',
+          authMode: 'openapi',
+          onConfirm,
+          onCancel: vi.fn(),
+        }),
+        container
+      );
+      await Promise.resolve();
+    });
+    await flush();
+
+    await act(async () => {
+      (container.querySelector('[data-topic-id="luo"]') as HTMLButtonElement).click();
+    });
+    await flush();
+
+    await act(async () => {
+      (container.querySelector('input[type="checkbox"]') as HTMLInputElement).click();
+    });
+
+    await act(async () => {
+      (container.querySelector('.mod-cta') as HTMLButtonElement).click();
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith({
+      selectedNoteIds: ['blogger_note-1'],
+      topicIds: ['luo'],
+      bloggerIds: ['follow_luo'],
+    });
+  });
+
+  it('falls back to the active topic when selected content has no topic metadata', async () => {
+    const onConfirm = vi.fn();
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([
+      { topic_id: 'luo', name: '罗振宇学习笔记' },
+    ]);
+    vi.mocked(fetchTopicContentPreviewPage).mockResolvedValue({
+      items: [
+        {
+          note_id: 'blogger_note-1',
+          title: '第一篇内容',
+          updated_at: '2026-06-01T10:00:00+08:00',
+          blogger_name: '罗振宇',
+        },
+      ],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(
+        h(TopicPickerModal, {
+          token: 'token',
+          clientId: 'client',
+          authMode: 'openapi',
+          onConfirm,
+          onCancel: vi.fn(),
+        }),
+        container
+      );
+      await Promise.resolve();
+    });
+    await flush();
+
+    await act(async () => {
+      (container.querySelector('[data-topic-id="luo"]') as HTMLButtonElement).click();
+    });
+    await flush();
+
+    await act(async () => {
+      (container.querySelector('input[type="checkbox"]') as HTMLInputElement).click();
+    });
+
+    await act(async () => {
+      (container.querySelector('.mod-cta') as HTMLButtonElement).click();
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith({
+      selectedNoteIds: ['blogger_note-1'],
+      topicIds: ['luo'],
+    });
+  });
 });
