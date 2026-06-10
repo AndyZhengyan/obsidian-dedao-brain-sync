@@ -480,6 +480,26 @@ describe('SyncEngine — filterNotesByDateRange', () => {
 });
 
 describe('SyncEngine — subscribed knowledge selected notes', () => {
+  it('does not sync the whole knowledge base when the explicit selection is empty', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'openapi-token',
+      openApiClientId: 'openapi-client',
+    }));
+
+    const result = await engine.syncSubscribedKnowledge(undefined, {
+      selectedNoteIds: [],
+      topicIds: ['topic_1'],
+    });
+
+    expect(result.total).toBe(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(app.vault.create).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
   it('syncs exactly the selected subscribed-knowledge note regardless of manual sync filters', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-06-04T12:00:00+08:00'));

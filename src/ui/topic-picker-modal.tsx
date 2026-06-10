@@ -74,6 +74,9 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   const [searchQuery, setSearchQuery] = useState('');
   const [bloggerFilter, setBloggerFilter] = useState('');
   const [selectAllActive, setSelectAllActive] = useState(false);
+  const matchesActiveFilters = (item: ContentPreview) =>
+    (!bloggerFilter || item.blogger_name === bloggerFilter) &&
+    (!searchQuery || item.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const loadTopics = useCallback(() => {
     setTopicsLoading(true);
@@ -121,7 +124,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
         abortSignal,
         cursor
       );
-      if (selectAllActive) setItemsSelected(page.items, true);
+      if (selectAllActive) setItemsSelected(page.items.filter(matchesActiveFilters), true);
       setTopicData(prev => ({
         ...prev,
         [topic.topic_id]: {
@@ -225,10 +228,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
     ? Array.from(new Set(activeTopic.contents.map(item => item.blogger_name).filter((name): name is string => Boolean(name))))
     : [];
   const visibleItems = activeTopic
-    ? activeTopic.contents.filter(item =>
-      (!bloggerFilter || item.blogger_name === bloggerFilter) &&
-      (!searchQuery || item.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
+    ? activeTopic.contents.filter(matchesActiveFilters)
     : [];
 
   return (
@@ -266,33 +266,33 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
           <span className="getnote-picker-header-title">{t('topicPicker.title')}</span>
         )}
       </div>
+      {activeTopic && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length > 0 && (
+        <div className="getnote-topic-filter-bar">
+          <select
+            data-topic-blogger-filter
+            value={bloggerFilter}
+            onChange={(event) => {
+              setSelectAllActive(false);
+              setBloggerFilter((event.target as HTMLSelectElement).value);
+            }}
+          >
+            <option value="">{t('topicPicker.allBloggers')}</option>
+            {bloggers.map(blogger => <option key={blogger} value={blogger}>{blogger}</option>)}
+          </select>
+          <input
+            data-topic-search
+            type="text"
+            className="getnote-input"
+            placeholder={t('picker.search')}
+            value={searchQuery}
+            onInput={(event) => {
+              setSelectAllActive(false);
+              setSearchQuery((event.target as HTMLInputElement).value);
+            }}
+          />
+        </div>
+      )}
       <div className="getnote-picker-body">
-        {activeTopic && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length > 0 && (
-          <div className="getnote-topic-filter-bar">
-            <select
-              data-topic-blogger-filter
-              value={bloggerFilter}
-              onChange={(event) => {
-                setSelectAllActive(false);
-                setBloggerFilter((event.target as HTMLSelectElement).value);
-              }}
-            >
-              <option value="">{t('topicPicker.allBloggers')}</option>
-              {bloggers.map(blogger => <option key={blogger} value={blogger}>{blogger}</option>)}
-            </select>
-            <input
-              data-topic-search
-              type="text"
-              className="getnote-input"
-              placeholder={t('picker.search')}
-              value={searchQuery}
-              onInput={(event) => {
-                setSelectAllActive(false);
-                setSearchQuery((event.target as HTMLInputElement).value);
-              }}
-            />
-          </div>
-        )}
         {!activeTopic && topicsLoading && (
           <div className="getnote-picker-skeleton">
             {[1, 2, 3, 4].map(i => (

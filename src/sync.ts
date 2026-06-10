@@ -939,6 +939,10 @@ export class SyncEngine {
         ? { selectedNoteIds: options }
         : options ?? {};
       const selectedNoteIds = syncOptions.selectedNoteIds;
+      if (selectedNoteIds?.length === 0) {
+        this.onProgress?.({ percent: 100 });
+        return result;
+      }
       const notes = await fetchSubscribedKnowledgeNotes({
         token: credentials.token,
         clientId: credentials.clientId,
