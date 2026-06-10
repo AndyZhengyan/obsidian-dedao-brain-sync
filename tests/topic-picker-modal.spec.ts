@@ -152,6 +152,49 @@ describe('TopicPickerModal', () => {
     expect(container.textContent).not.toContain('加载更多');
   });
 
+  it('keeps newly loaded contents selected after selecting all', async () => {
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([
+      { topic_id: 'luo', name: '罗振宇学习笔记' },
+    ]);
+    vi.mocked(fetchTopicContentPreviewPage)
+      .mockResolvedValueOnce({
+        items: [{ note_id: 'note-1', title: '第一页内容', updated_at: '2026-06-01T10:00:00+08:00' }],
+        nextCursor: { bloggerIndex: 0, page: 2 },
+      })
+      .mockResolvedValueOnce({
+        items: [{ note_id: 'note-2', title: '第二页内容', updated_at: '2026-06-01T11:00:00+08:00' }],
+      });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(h(TopicPickerModal, {
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+      }), container);
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-id="luo"]') as HTMLButtonElement).click();
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-select-all]') as HTMLButtonElement).click();
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-load-more]') as HTMLButtonElement).click();
+    });
+    await flush();
+
+    expect(container.textContent).toContain('已选 2 个');
+    expect(Array.from(container.querySelectorAll('input[type="checkbox"]'))
+      .every(input => (input as HTMLInputElement).checked)).toBe(true);
+  });
+
   it('searches, filters by blogger, and selects all visible topic contents', async () => {
     const onConfirm = vi.fn();
     vi.mocked(fetchSubscribedTopics).mockResolvedValue([

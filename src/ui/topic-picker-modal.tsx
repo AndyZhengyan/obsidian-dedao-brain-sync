@@ -73,6 +73,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   const [selectedItems, setSelectedItems] = useState<Map<string, ContentPreview>>(new Map());
   const [searchQuery, setSearchQuery] = useState('');
   const [bloggerFilter, setBloggerFilter] = useState('');
+  const [selectAllActive, setSelectAllActive] = useState(false);
 
   const loadTopics = useCallback(() => {
     setTopicsLoading(true);
@@ -120,6 +121,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
         abortSignal,
         cursor
       );
+      if (selectAllActive) setItemsSelected(page.items, true);
       setTopicData(prev => ({
         ...prev,
         [topic.topic_id]: {
@@ -149,6 +151,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   const openTopic = async (topic: SubscribedTopic) => {
     setSearchQuery('');
     setBloggerFilter('');
+    setSelectAllActive(false);
     setActiveTopicId(topic.topic_id);
     const data = topicData[topic.topic_id];
     if (!data || data.contents.length > 0) return;
@@ -156,6 +159,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   };
 
   const handleCheck = (noteId: string, checked: boolean) => {
+    if (!checked) setSelectAllActive(false);
     setSelectedNoteIds(prev => {
       const next = new Set(prev);
       if (checked) next.add(noteId);
@@ -236,8 +240,24 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
             </button>
             <span className="getnote-picker-header-title">{activeTopic.topic.name || activeTopic.topic.topic_id}</span>
             <div className="getnote-picker-actions">
-              <button data-topic-select-all onClick={() => setItemsSelected(visibleItems, true)}>{t('picker.selectAll')}</button>
-              <button data-topic-select-none onClick={() => setItemsSelected(visibleItems, false)}>{t('picker.selectNone')}</button>
+              <button
+                data-topic-select-all
+                onClick={() => {
+                  setSelectAllActive(true);
+                  setItemsSelected(visibleItems, true);
+                }}
+              >
+                {t('picker.selectAll')}
+              </button>
+              <button
+                data-topic-select-none
+                onClick={() => {
+                  setSelectAllActive(false);
+                  setItemsSelected(Array.from(selectedItems.values()), false);
+                }}
+              >
+                {t('picker.selectNone')}
+              </button>
             </div>
           </>
         ) : (
@@ -250,7 +270,10 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
             <select
               data-topic-blogger-filter
               value={bloggerFilter}
-              onChange={(event) => setBloggerFilter((event.target as HTMLSelectElement).value)}
+              onChange={(event) => {
+                setSelectAllActive(false);
+                setBloggerFilter((event.target as HTMLSelectElement).value);
+              }}
             >
               <option value="">{t('topicPicker.allBloggers')}</option>
               {bloggers.map(blogger => <option key={blogger} value={blogger}>{blogger}</option>)}
@@ -261,7 +284,10 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
               className="getnote-input"
               placeholder={t('picker.search')}
               value={searchQuery}
-              onInput={(event) => setSearchQuery((event.target as HTMLInputElement).value)}
+              onInput={(event) => {
+                setSelectAllActive(false);
+                setSearchQuery((event.target as HTMLInputElement).value);
+              }}
             />
           </div>
         )}
