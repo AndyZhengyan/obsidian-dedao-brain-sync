@@ -479,6 +479,113 @@ describe('SyncEngine — filterNotesByDateRange', () => {
   });
 });
 
+describe('SyncEngine — subscribed knowledge selected notes', () => {
+  it('syncs exactly the selected subscribed-knowledge note regardless of manual sync filters', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-04T12:00:00+08:00'));
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const requestUrl = String(url);
+      if (requestUrl.includes('/resource/knowledge/subscribe/list')) {
+        return mockFetchResponse({
+          data: {
+            topics: [{ topic_id: 'topic_1', name: '长期专题' }],
+            has_more: false,
+          },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/bloggers')) {
+        return mockFetchResponse({
+          data: {
+            bloggers: [{ follow_id: 'blogger_1', name: '主理人' }],
+            has_more: false,
+          },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/blogger/contents')) {
+        const url = new URL(requestUrl);
+        if (url.searchParams.get('page') === '2') {
+          return mockFetchResponse({
+            data: {
+              contents: [
+                {
+                  post_id_alias: 'should_not_fetch',
+                  title: '不应该继续翻页',
+                  summary: '已经找到勾选文章后不应继续请求',
+                  created_at: '2026-06-01T10:00:00+08:00',
+                  updated_at: '2026-06-01T10:00:00+08:00',
+                },
+              ],
+              has_more: false,
+            },
+          }) as Response;
+        }
+        return mockFetchResponse({
+          data: {
+            contents: [
+              {
+                post_id_alias: 'old_post',
+                title: '旧文章',
+                summary: '用户手动勾选的旧内容',
+                created_at: '2026-01-01T10:00:00+08:00',
+                updated_at: '2026-01-01T10:00:00+08:00',
+              },
+            ],
+            has_more: true,
+          },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/blogger/content/detail')) {
+        return mockFetchResponse({
+          data: {
+            post_id_alias: 'old_post',
+            title: '旧文章',
+            content: '用户手动勾选的旧内容详情',
+            created_at: '2026-01-01T10:00:00+08:00',
+            updated_at: '2026-01-01T10:00:00+08:00',
+          },
+        }) as Response;
+      }
+      throw new Error(`Unexpected request: ${requestUrl}`);
+    });
+
+    try {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings({
+        authMode: 'openapi',
+        openApiToken: 'openapi-token',
+        openApiClientId: 'openapi-client',
+        maxDays: 30,
+      }), undefined, {
+        maxDays: 30,
+        syncStartDate: '2026-05-01',
+        enabledNoteTypes: ['plain_text'],
+      });
+
+      const result = await engine.syncSubscribedKnowledge(undefined, {
+        selectedNoteIds: ['blogger_old_post'],
+        topicIds: [],
+        bloggerIds: [],
+      });
+
+      expect(result.total).toBe(1);
+      expect(result.created).toBe(1);
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          noteId: 'blogger_old_post',
+          status: 'created',
+        }),
+      ]);
+      expect(app.vault.create).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(globalThis.fetch).mock.calls.map(call => String(call[0]))).not.toContain(
+        'https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/contents?topic_id=topic_1&follow_id=blogger_1&page=2'
+      );
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('SyncEngine — sync lastNoteTimestamp tracking', () => {
   it('records the newest updated_at as lastNoteTimestamp', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(

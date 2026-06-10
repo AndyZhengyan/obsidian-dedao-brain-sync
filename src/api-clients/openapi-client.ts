@@ -153,6 +153,8 @@ export interface FetchNotesOptions {
   limit?: number;
   signal?: AbortSignal;
   topicIds?: string[];
+  bloggerIds?: string[];
+  selectedNoteIds?: string[];
 }
 
 export interface CreateNoteOptions {
@@ -302,8 +304,8 @@ export async function fetchTopicContentPreviews(
   clientId: string,
   signal?: AbortSignal,
   options: { maxPages?: number; maxBloggers?: number } = {}
-): Promise<{ note_id: string; title: string; updated_at: string; blogger_name: string }[]> {
-  const items: { note_id: string; title: string; updated_at: string; blogger_name: string }[] = [];
+): Promise<{ note_id: string; title: string; updated_at: string; blogger_name: string; topic_id: string; blogger_id: string }[]> {
+  const items: { note_id: string; title: string; updated_at: string; blogger_name: string; topic_id: string; blogger_id: string }[] = [];
   const bloggers = await fetchTopicBloggers(topicId, token, clientId, signal);
   const maxPages = options.maxPages ?? Number.POSITIVE_INFINITY;
   const maxBloggers = options.maxBloggers ?? Number.POSITIVE_INFINITY;
@@ -323,6 +325,8 @@ export async function fetchTopicContentPreviews(
           title: content.title ?? '',
           updated_at: updated,
           blogger_name: blogger.name ?? '',
+          topic_id: topicId,
+          blogger_id: blogger.follow_id,
         });
       }
       if (!readHasMore(source) || contents.length === 0) break;
@@ -340,7 +344,7 @@ export async function fetchTopicContentPreviewPage(
   signal?: AbortSignal,
   cursor: { bloggerIndex: number; page: number } = { bloggerIndex: 0, page: 1 }
 ): Promise<{
-  items: { note_id: string; title: string; updated_at: string; blogger_name: string }[];
+  items: { note_id: string; title: string; updated_at: string; blogger_name: string; topic_id: string; blogger_id: string }[];
   nextCursor?: { bloggerIndex: number; page: number };
 }> {
   const bloggers = await fetchTopicBloggers(topicId, token, clientId, signal);
@@ -366,6 +370,8 @@ export async function fetchTopicContentPreviewPage(
       title: content.title ?? '',
       updated_at: updated,
       blogger_name: blogger.name ?? '',
+      topic_id: topicId,
+      blogger_id: blogger.follow_id,
     };
   });
   const nextCursor = readHasMore(source) && contents.length > 0
@@ -377,7 +383,7 @@ export async function fetchTopicContentPreviewPage(
   return nextCursor ? { items, nextCursor } : { items };
 }
 
-async function fetchBloggerContents(topicId: string, blogger: Blogger, token: string, clientId: string, signal?: AbortSignal): Promise<BloggerContent[]> {
+async function fetchBloggerContents(topicId: string, blogger: Blogger, token: string, clientId: string, signal?: AbortSignal, remainingNoteIds?: Set<string>): Promise<BloggerContent[]> {
   const contents: BloggerContent[] = [];
   let page = 1;
   while (true) {
@@ -385,7 +391,14 @@ async function fetchBloggerContents(topicId: string, blogger: Blogger, token: st
     const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/contents?${params.toString()}`;
     const data = await apiRequest<Record<string, unknown>>(url, { method: 'GET', headers: buildHeaders(token, clientId) }, 2, signal);
     const source = normalizeData(data);
-    contents.push(...readArray(source, ['contents', 'posts', 'list', 'items']).map(normalizeContent).filter((item): item is BloggerContent => Boolean(item)));
+    const pageContents = readArray(source, ['contents', 'posts', 'list', 'items']).map(normalizeContent).filter((item): item is BloggerContent => Boolean(item));
+    for (const content of pageContents) {
+      const noteId = `blogger_${content.post_id_alias}`;
+      if (remainingNoteIds && !remainingNoteIds.has(noteId)) continue;
+      contents.push(content);
+      remainingNoteIds?.delete(noteId);
+    }
+    if (remainingNoteIds?.size === 0) break;
     if (!readHasMore(source)) break;
     page++;
   }
@@ -403,15 +416,21 @@ async function fetchBloggerContentDetail(topicId: string, content: BloggerConten
 export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions): Promise<GetNoteNote[]> {
   const { token, clientId, signal } = options;
   const notes: GetNoteNote[] = [];
+  const topicIdSet = options.topicIds?.length ? new Set(options.topicIds) : undefined;
+  const bloggerIdSet = options.bloggerIds?.length ? new Set(options.bloggerIds) : undefined;
+  const remainingNoteIds = options.selectedNoteIds?.length ? new Set(options.selectedNoteIds) : undefined;
   const topics = await fetchSubscribedTopics(token, clientId, signal);
   for (const topic of topics) {
+    if (topicIdSet && !topicIdSet.has(topic.topic_id)) continue;
     const bloggers = await fetchTopicBloggers(topic.topic_id, token, clientId, signal);
     for (const blogger of bloggers) {
-      const contents = await fetchBloggerContents(topic.topic_id, blogger, token, clientId, signal);
+      if (bloggerIdSet && !bloggerIdSet.has(blogger.follow_id)) continue;
+      const contents = await fetchBloggerContents(topic.topic_id, blogger, token, clientId, signal, remainingNoteIds);
       for (const content of contents) {
         const detail = await fetchBloggerContentDetail(topic.topic_id, content, token, clientId, signal);
         notes.push(bloggerContentToNote(detail, topic, blogger));
       }
+      if (remainingNoteIds?.size === 0) return notes;
     }
   }
   return notes;

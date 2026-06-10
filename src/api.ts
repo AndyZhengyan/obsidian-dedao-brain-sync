@@ -15,6 +15,9 @@ export interface FetchNotesOptions {
   signal?: AbortSignal;
   authMode?: AuthMode;
   webCsrfToken?: string;
+  topicIds?: string[];
+  bloggerIds?: string[];
+  selectedNoteIds?: string[];
 }
 
 export async function fetchNotes(options: FetchNotesOptions): Promise<{
@@ -66,6 +69,8 @@ export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions):
       sinceId: options.sinceId,
       limit: options.limit,
       signal: options.signal,
+      topicIds: options.topicIds,
+      selectedNoteIds: options.selectedNoteIds,
     });
   }
   return openapiFetchSubscribedKnowledgeNotes({
@@ -74,6 +79,9 @@ export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions):
     sinceId: options.sinceId,
     limit: options.limit,
     signal: options.signal,
+    topicIds: options.topicIds,
+    bloggerIds: options.bloggerIds,
+    selectedNoteIds: options.selectedNoteIds,
   });
 }
 
@@ -82,6 +90,8 @@ export interface ContentPreview {
   title: string;
   updated_at: string;
   blogger_name?: string;
+  topic_id?: string;
+  blogger_id?: string;
 }
 
 export interface TopicContentPreviewOptions {

@@ -5,7 +5,7 @@ import { GetNoteSettingsTab } from './settings-tab';
 import { SyncEngine, SyncCancelledError } from './sync';
 import { showError, showNotice, showSuccess } from './ui/notice';
 import { NotePickerModal } from './ui/note-picker-modal';
-import { TopicPickerModal } from './ui/topic-picker-modal';
+import { TopicPickerModal, type TopicPickerSelection } from './ui/topic-picker-modal';
 import { ManualSyncModal } from './ui/manual-sync-modal';
 import { LocalUploadModal } from './ui/local-upload-modal';
 import { initI18n, t } from './i18n';
@@ -413,11 +413,14 @@ export default class GetNoteSyncPlugin extends Plugin {
     wrapper.open();
   }
 
-  syncSubscribedKnowledgeNotes(noteIds: string[]): void {
-    void this.runSubscribedKnowledgeSync(noteIds);
+  syncSubscribedKnowledgeNotes(selection: string[] | TopicPickerSelection): void {
+    const syncOptions = Array.isArray(selection)
+      ? { selectedNoteIds: selection }
+      : selection;
+    void this.runSubscribedKnowledgeSync(syncOptions);
   }
 
-  private async runSubscribedKnowledgeSync(selectedNoteIds?: string[]): Promise<void> {
+  private async runSubscribedKnowledgeSync(syncOptions?: TopicPickerSelection): Promise<void> {
     if (this.isSyncing) return;
     const credentials = getAuthCredentials(this.settings);
     if (!credentials.token || (credentials.authMode !== 'web' && !credentials.clientId)) {
@@ -437,7 +440,7 @@ export default class GetNoteSyncPlugin extends Plugin {
     engine.setOnCancel(() => this.cancelSync());
 
     try {
-      const result = await engine.syncSubscribedKnowledge(undefined, selectedNoteIds);
+      const result = await engine.syncSubscribedKnowledge(undefined, syncOptions);
       await this.recordSyncHistory(result, 'full', startedAt, {
         maxDays: this.settings.maxDays,
         syncStartDate: this.settings.syncStartDate,
@@ -659,10 +662,10 @@ class TopicPickerModalWrapper extends Modal {
         clientId={getAuthCredentials(this.plugin.settings).clientId}
         authMode={getAuthCredentials(this.plugin.settings).authMode}
         abortSignal={this.abortController.signal}
-        onConfirm={async (noteIds) => {
+        onConfirm={async (selection) => {
           this.abortController.abort();
           this.close();
-          this.plugin.syncSubscribedKnowledgeNotes(noteIds);
+          this.plugin.syncSubscribedKnowledgeNotes(selection);
         }}
         onCancel={() => {
           this.abortController.abort();

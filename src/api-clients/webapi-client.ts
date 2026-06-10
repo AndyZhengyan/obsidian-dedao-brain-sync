@@ -157,6 +157,8 @@ export interface FetchNotesOptions {
   sinceId?: string;
   limit?: number;
   signal?: AbortSignal;
+  topicIds?: string[];
+  selectedNoteIds?: string[];
 }
 
 export interface CreateNoteOptions {
@@ -266,6 +268,8 @@ export async function fetchSubscribedTopics(token: string, signal?: AbortSignal)
 
 export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions): Promise<GetNoteNote[]> {
   const notes: GetNoteNote[] = [];
+  const topicIdSet = options.topicIds?.length ? new Set(options.topicIds) : undefined;
+  const remainingNoteIds = options.selectedNoteIds?.length ? new Set(options.selectedNoteIds) : undefined;
   const listUrl = 'https://knowledge-api.trytalks.com/v1/web/subscribe/topic/list?page=1&size=200&exclude_mine=true';
   const listData = await apiRequest<Record<string, unknown>>(listUrl, {
     method: 'GET',
@@ -276,6 +280,7 @@ export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions):
   for (const topic of topics) {
     if (!isRecord(topic)) continue;
     const topicAlias = topic.id_alias ?? topic.id;
+    if (topicIdSet && !topicIdSet.has(String(topicAlias))) continue;
     const rootDir = isRecord(topic.root_dir) ? topic.root_dir : {};
     const directoryId = rootDir.id;
     if ((typeof topicAlias !== 'string' && typeof topicAlias !== 'number') || (typeof directoryId !== 'string' && typeof directoryId !== 'number')) {
@@ -300,8 +305,12 @@ export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions):
       const resources = Array.isArray(source.resources) ? source.resources : [];
       for (const resource of resources) {
         const note = noteFromKnowledgeResource(resource, typeof topic.name === 'string' ? topic.name : undefined);
-        if (note) notes.push(note);
+        if (!note) continue;
+        if (remainingNoteIds && !remainingNoteIds.has(note.note_id)) continue;
+        notes.push(note);
+        remainingNoteIds?.delete(note.note_id);
       }
+      if (remainingNoteIds?.size === 0) return notes;
       if (!source.has_next || resources.length === 0) break;
       page++;
     }
@@ -314,8 +323,8 @@ export async function fetchTopicContentPreviews(
   token: string,
   signal?: AbortSignal,
   options: { maxPages?: number; maxBloggers?: number } = {}
-): Promise<{ note_id: string; title: string; updated_at: string }[]> {
-  const items: { note_id: string; title: string; updated_at: string }[] = [];
+): Promise<{ note_id: string; title: string; updated_at: string; topic_id: string }[]> {
+  const items: { note_id: string; title: string; updated_at: string; topic_id: string }[] = [];
   const listUrl = 'https://knowledge-api.trytalks.com/v1/web/subscribe/topic/list?page=1&size=200&exclude_mine=true';
   const listData = await apiRequest<Record<string, unknown>>(listUrl, { method: 'GET', headers: buildKnowledgeHeaders(token) }, 2, signal);
   const topicsData = normalizeWebData(listData);
@@ -343,7 +352,7 @@ export async function fetchTopicContentPreviews(
     const resources = Array.isArray(source.resources) ? source.resources : [];
     for (const resource of resources) {
       const note = noteFromKnowledgeResource(resource, typeof rawTopic.name === 'string' ? rawTopic.name : undefined);
-      if (note) items.push({ note_id: note.note_id, title: note.title, updated_at: note.updated_at });
+      if (note) items.push({ note_id: note.note_id, title: note.title, updated_at: note.updated_at, topic_id: topicId });
     }
     if (!source.has_next || resources.length === 0) break;
     page++;
@@ -357,7 +366,7 @@ export async function fetchTopicContentPreviewPage(
   signal?: AbortSignal,
   cursor: { bloggerIndex: number; page: number } = { bloggerIndex: 0, page: 1 }
 ): Promise<{
-  items: { note_id: string; title: string; updated_at: string }[];
+  items: { note_id: string; title: string; updated_at: string; topic_id: string }[];
   nextCursor?: { bloggerIndex: number; page: number };
 }> {
   const listUrl = 'https://knowledge-api.trytalks.com/v1/web/subscribe/topic/list?page=1&size=200&exclude_mine=true';
@@ -388,7 +397,7 @@ export async function fetchTopicContentPreviewPage(
   const items = resources
     .map(resource => noteFromKnowledgeResource(resource, typeof rawTopic.name === 'string' ? rawTopic.name : undefined))
     .filter((note): note is GetNoteNote => Boolean(note))
-    .map(note => ({ note_id: note.note_id, title: note.title, updated_at: note.updated_at }));
+    .map(note => ({ note_id: note.note_id, title: note.title, updated_at: note.updated_at, topic_id: topicId }));
   const nextCursor = source.has_next && resources.length > 0
     ? { bloggerIndex: 0, page: cursor.page + 1 }
     : undefined;
