@@ -152,6 +152,8 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
     setSearchQuery('');
     setBloggerFilter('');
     setSelectAllActive(false);
+    setSelectedNoteIds(new Set());
+    setSelectedItems(new Map());
     setActiveTopicId(topic.topic_id);
     const data = topicData[topic.topic_id];
     if (!data || data.contents.length > 0) return;
@@ -217,8 +219,8 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
     });
   };
 
-  const totalItems = Object.values(topicData).reduce((sum, d) => sum + d.contents.length, 0);
   const activeTopic = activeTopicId ? topicData[activeTopicId] : null;
+  const totalItems = activeTopic?.contents.length ?? 0;
   const bloggers = activeTopic
     ? Array.from(new Set(activeTopic.contents.map(item => item.blogger_name).filter((name): name is string => Boolean(name))))
     : [];

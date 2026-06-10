@@ -195,6 +195,50 @@ describe('TopicPickerModal', () => {
       .every(input => (input as HTMLInputElement).checked)).toBe(true);
   });
 
+  it('resets selection and loaded count when switching knowledge bases', async () => {
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([
+      { topic_id: 'first', name: '第一个知识库' },
+      { topic_id: 'second', name: '第二个知识库' },
+    ]);
+    vi.mocked(fetchTopicContentPreviewPage).mockImplementation(async (topicId) => ({
+      items: topicId === 'first'
+        ? [{ note_id: 'note-1', title: '第一篇', updated_at: '2026-06-01T10:00:00+08:00' }]
+        : [
+          { note_id: 'note-2', title: '第二篇', updated_at: '2026-06-01T11:00:00+08:00' },
+          { note_id: 'note-3', title: '第三篇', updated_at: '2026-06-01T12:00:00+08:00' },
+        ],
+    }));
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(h(TopicPickerModal, {
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+      }), container);
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-id="first"]') as HTMLButtonElement).click();
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('input[type="checkbox"]') as HTMLInputElement).click();
+      (container.querySelector('[data-topic-back]') as HTMLButtonElement).click();
+    });
+    await act(async () => {
+      (container.querySelector('[data-topic-id="second"]') as HTMLButtonElement).click();
+    });
+    await flush();
+
+    expect(container.textContent).toContain('已选 0 个');
+    expect(container.textContent).toContain('已加载 2 条');
+    expect(container.textContent).not.toContain('已加载 3 条');
+  });
+
   it('searches, filters by blogger, and selects all visible topic contents', async () => {
     const onConfirm = vi.fn();
     vi.mocked(fetchSubscribedTopics).mockResolvedValue([
