@@ -589,6 +589,20 @@
   padding: 0 0 8px;
 }
 
+.getnote-topic-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.38fr) minmax(0, 1fr);
+  gap: 8px;
+  padding: 0 0 8px;
+}
+
+.getnote-topic-filter-bar select,
+.getnote-topic-filter-bar input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .getnote-picker-search input {
   width: 100%;
   box-sizing: border-box;

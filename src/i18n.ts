@@ -187,6 +187,7 @@ export const translations: Record<string, Record<string, string>> = {
     'topicPicker.back': '返回专题',
     'topicPicker.loadMore': '加载更多',
     'topicPicker.loadingMore': '加载中...',
+    'topicPicker.allBloggers': '全部主理人',
     'topicPicker.cancel': '取消',
     'topicPicker.confirm': '同步',
 
@@ -465,6 +466,7 @@ export const translations: Record<string, Record<string, string>> = {
     'topicPicker.back': 'Back to topics',
     'topicPicker.loadMore': 'Load more',
     'topicPicker.loadingMore': 'Loading...',
+    'topicPicker.allBloggers': 'All bloggers',
     'topicPicker.cancel': 'Cancel',
     'topicPicker.confirm': 'Sync',
 
