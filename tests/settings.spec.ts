@@ -29,6 +29,7 @@ function renderSettings(
   options: {
     isSyncing?: boolean;
     syncProgress?: { message: string; count: string; percent: number };
+    startSubscribedKnowledgeSync?: () => void;
   } = {}
 ) {
   const container = document.createElement('div');
@@ -40,6 +41,7 @@ function renderSettings(
       startSync: vi.fn(),
       isSyncing: options.isSyncing ?? false,
       openNotePicker: vi.fn(),
+      startSubscribedKnowledgeSync: options.startSubscribedKnowledgeSync ?? vi.fn(),
       openLocalUpload,
       startAutoSync: vi.fn(),
       stopAutoSync: vi.fn(),
@@ -81,11 +83,24 @@ afterEach(() => {
 });
 
 describe('SettingsComponent auth credentials', () => {
-  it('does not show the knowledge-base sync entry in the 1.1.0 release UI', () => {
-    const { container } = renderSettings(makeSettings());
+  it('opens knowledge-base sync from the manual download actions', async () => {
+    const startSubscribedKnowledgeSync = vi.fn();
+    const { container } = renderSettings(makeSettings({
+      authMode: 'web',
+      webApiToken: 'web-token',
+      apiToken: 'web-token',
+    }), vi.fn(), vi.fn(), { startSubscribedKnowledgeSync });
 
-    expect(container.textContent).not.toContain('按知识库同步');
-    expect(container.textContent).not.toContain('Sync by Knowledge Base');
+    const button = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '按知识库同步');
+    expect(button).toBeTruthy();
+    expect(button!.disabled).toBe(false);
+
+    await act(() => {
+      button!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(startSubscribedKnowledgeSync).toHaveBeenCalledTimes(1);
   });
 
   it('does not render a separate upload permission switch', () => {
@@ -172,6 +187,7 @@ describe('SettingsComponent auth credentials', () => {
             startSync: vi.fn(),
             isSyncing: true,
             openNotePicker: vi.fn(),
+            startSubscribedKnowledgeSync: vi.fn(),
             openLocalUpload: vi.fn(),
             startAutoSync: vi.fn(),
             stopAutoSync: vi.fn(),

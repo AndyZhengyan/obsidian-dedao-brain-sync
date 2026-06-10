@@ -584,6 +584,97 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
       vi.useRealTimers();
     }
   });
+
+  it('syncs exactly the selected Web API knowledge-base note and skips unrelated topics', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-04T12:00:00+08:00'));
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const requestUrl = String(url);
+      if (requestUrl.includes('/subscribe/topic/list')) {
+        return mockFetchResponse({
+          c: {
+            list: [
+              { id_alias: 'other_topic', name: '其他知识库', root_dir: { id: 'other_dir' } },
+              { id_alias: 'selected_topic', name: '选中的知识库', root_dir: { id: 'selected_dir' } },
+            ],
+          },
+        }) as Response;
+      }
+      if (requestUrl.includes('/topic/resource/list/mix')) {
+        const request = new URL(requestUrl);
+        if (request.searchParams.get('topic_id_alias') !== 'selected_topic') {
+          throw new Error(`Unexpected topic request: ${requestUrl}`);
+        }
+        if (request.searchParams.get('page') === '2') {
+          throw new Error(`Unexpected second page request: ${requestUrl}`);
+        }
+        return mockFetchResponse({
+          c: {
+            resources: [
+              {
+                resource_type: 'BLOGGER_POST',
+                resource_note_meta_data: {
+                  note_id: 'blogger_old_web_post',
+                  title: 'Web API 旧文章',
+                  content: '用户明确选择的旧文章',
+                  note_type: 'blogger_post',
+                  source: 'blogger',
+                  created_at: '2026-01-01T10:00:00+08:00',
+                  edit_time: '2026-01-01T10:00:00+08:00',
+                },
+              },
+              {
+                resource_type: 'BLOGGER_POST',
+                resource_note_meta_data: {
+                  note_id: 'blogger_unselected_post',
+                  title: '未选择文章',
+                  content: '不应写入',
+                  note_type: 'blogger_post',
+                  source: 'blogger',
+                  created_at: '2026-06-01T10:00:00+08:00',
+                  edit_time: '2026-06-01T10:00:00+08:00',
+                },
+              },
+            ],
+            has_next: 1,
+          },
+        }) as Response;
+      }
+      throw new Error(`Unexpected request: ${requestUrl}`);
+    });
+
+    try {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings({
+        authMode: 'web',
+        webApiToken: 'web-token',
+        apiToken: 'web-token',
+        maxDays: 30,
+      }), undefined, {
+        maxDays: 30,
+        syncStartDate: '2026-05-01',
+        enabledNoteTypes: ['plain_text'],
+      });
+
+      const result = await engine.syncSubscribedKnowledge(undefined, {
+        selectedNoteIds: ['blogger_old_web_post'],
+        topicIds: ['selected_topic'],
+      });
+
+      expect(result.total).toBe(1);
+      expect(result.created).toBe(1);
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          noteId: 'blogger_old_web_post',
+          status: 'created',
+        }),
+      ]);
+      expect(app.vault.create).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('SyncEngine — sync lastNoteTimestamp tracking', () => {
