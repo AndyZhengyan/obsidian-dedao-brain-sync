@@ -232,10 +232,13 @@ export function SettingsComponent({
       if (authMode === 'web') {
         try {
           const tokenStr = token.replace(/^Bearer\s+/i, '');
-          const payload = JSON.parse(atob(tokenStr.split('.')[1]));
-          if (payload.exp) {
-            const remaining = Math.round((payload.exp - Date.now() / 1000) / 60);
-            if (remaining > 0) setConnectionExpiryMin(remaining);
+          const payload: unknown = JSON.parse(atob(tokenStr.split('.')[1]));
+          if (payload && typeof payload === 'object' && 'exp' in payload) {
+            const exp = (payload as { exp: unknown }).exp;
+            if (typeof exp === 'number') {
+              const remaining = Math.round((exp - Date.now() / 1000) / 60);
+              if (remaining > 0) setConnectionExpiryMin(remaining);
+            }
           }
         } catch { /* ignore */ }
       }

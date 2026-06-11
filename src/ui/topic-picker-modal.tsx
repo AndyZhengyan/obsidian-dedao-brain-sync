@@ -349,7 +349,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
               className="getnote-topic-row"
               data-topic-id={topic.topic_id}
               data-topic-source={topic.source}
-              onClick={() => openTopic(topic)}
+              onClick={() => void openTopic(topic)}
             >
               <span className="getnote-topic-name">{topic.name || topic.topic_id}</span>
               <span className="getnote-topic-row-meta">
@@ -382,7 +382,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
         {activeTopic?.error && !activeTopic.loading && (
           <div className="getnote-picker-error">
             {activeTopic.error}{' '}
-            <button onClick={() => openTopic(activeTopic.topic)}>{t('topicPicker.retry')}</button>
+            <button onClick={() => void openTopic(activeTopic.topic)}>{t('topicPicker.retry')}</button>
           </div>
         )}
         {activeTopic && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length === 0 && (
@@ -399,7 +399,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
             <button
               data-topic-load-more
               disabled={activeTopic.loadingMore}
-              onClick={() => loadTopicPage(activeTopic.topic, activeTopic.nextCursor)}
+              onClick={() => void loadTopicPage(activeTopic.topic, activeTopic.nextCursor)}
             >
               {activeTopic.loadingMore ? t('topicPicker.loadingMore') : t('topicPicker.loadMore')}
             </button>

@@ -108,7 +108,14 @@ export function resetIssuedNotices(): void {
   issuedNotices.length = 0;
 }
 
+class MockHTMLElement {
+  addClass(_className: string): void {}
+  removeClass(_className: string): void {}
+  hasClass(_className: string): boolean { return false; }
+}
+
 export class Notice {
+  messageEl: MockHTMLElement = new MockHTMLElement();
   constructor(message: string, timeout?: number) {
     issuedNotices.push({ message, timeout });
   }

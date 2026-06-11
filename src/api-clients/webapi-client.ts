@@ -33,35 +33,41 @@ function parseWebApiListResponse(value: unknown): { notes: GetNoteNote[]; hasMor
   if (!Array.isArray(list)) return { notes: [], hasMore: false };
   const hasMore = Boolean(c.has_more);
   // Map Web API fields to GetNoteNote
-  const notes: GetNoteNote[] = list.map((n): GetNoteNote => ({
-    id: n.id as string,
-    note_id: n.note_id as string,
-    parent_id: (n.parent_id as string) ?? undefined,
-    children_count: typeof n.children_count === 'number'
-      ? n.children_count
-      : typeof n.sub_note_count === 'number'
-        ? n.sub_note_count
-        : undefined,
-    children_ids: Array.isArray(n.children_ids) ? n.children_ids.map((id: unknown) => String(id)) : undefined,
-    is_child_note: typeof n.is_child_note === 'boolean' ? n.is_child_note : undefined,
-    title: (n.title as string) ?? '',
-    content: (n.content as string) ?? '',
-    note_type: (n.note_type as string) ?? 'plain_text',
-    source: (n.source as string) ?? 'web',
-    tags: (n.tags as { name: string }[]) ?? [],
-    created_at: (n.created_at as string) ?? '',
-    updated_at: (n.updated_at as string) ?? '',
-    attachments: (n.attachments as Attachment[]) ?? [],
-    audio: (n.audio as string) ?? undefined,
-    prime_id: (n.prime_id as string) ?? undefined,
-  }));
+  const notes: GetNoteNote[] = list.map((raw): GetNoteNote => {
+    const n: Record<string, unknown> = isRecord(raw) ? raw : {};
+    const stringField = (key: string): string => (typeof n[key] === 'string' ? (n[key] as string) : '');
+    const childCountRaw = n.children_count;
+    const subNoteCountRaw = n.sub_note_count;
+    return {
+      id: stringField('id'),
+      note_id: stringField('note_id'),
+      parent_id: stringField('parent_id') || undefined,
+      children_count: typeof childCountRaw === 'number'
+        ? childCountRaw
+        : typeof subNoteCountRaw === 'number'
+          ? subNoteCountRaw
+          : undefined,
+      children_ids: Array.isArray(n.children_ids) ? n.children_ids.map((id: unknown) => String(id)) : undefined,
+      is_child_note: typeof n.is_child_note === 'boolean' ? n.is_child_note : undefined,
+      title: stringField('title'),
+      content: stringField('content'),
+      note_type: stringField('note_type') || 'plain_text',
+      source: stringField('source') || 'web',
+      tags: Array.isArray(n.tags) ? (n.tags as { name: string }[]) : [],
+      created_at: stringField('created_at'),
+      updated_at: stringField('updated_at'),
+      attachments: Array.isArray(n.attachments) ? (n.attachments as Attachment[]) : [],
+      audio: stringField('audio') || undefined,
+      prime_id: stringField('prime_id') || undefined,
+    };
+  });
   return { notes, hasMore };
 }
 
 function normalizeNoteDetailData(value: unknown): Partial<GetNoteNote> | null {
   if (!isRecord(value)) return null;
   // Guard: if value has a list property it is a list response, not a note detail.
-  if ('list' in (value as Record<string, unknown>)) return null;
+  if ('list' in value) return null;
   const nestedNote = isRecord(value.note) ? value.note : null;
   const source = nestedNote ?? value;
   const detail = { ...source } as Partial<GetNoteNote>;
@@ -75,7 +81,7 @@ function normalizeNoteDetailData(value: unknown): Partial<GetNoteNote> | null {
 
 function tryParseJsonObject(text: string): Record<string, unknown> {
   try {
-    const value = safeJsonParse(text || '{}') as unknown;
+    const value = safeJsonParse(text || '{}');
     return isRecord(value) ? value : {};
   } catch {
     return {};
@@ -187,6 +193,15 @@ export async function fetchNotes(options: FetchNotesOptions): Promise<{ notes: G
 function normalizeWebData(value: unknown): Record<string, unknown> {
   if (!isRecord(value)) return {};
   return isRecord(value.c) ? value.c : value;
+}
+
+function findTopicByAlias(rawTopics: unknown[], topicId: string): Record<string, unknown> | null {
+  for (const t of rawTopics) {
+    if (!isRecord(t)) continue;
+    const alias = t.id_alias ?? t.id;
+    if (String(alias ?? '') === topicId) return t;
+  }
+  return null;
 }
 
 function noteFromKnowledgeResource(resource: unknown, topicName?: string): GetNoteNote | null {
@@ -329,8 +344,8 @@ export async function fetchTopicContentPreviews(
   const listData = await apiRequest<Record<string, unknown>>(listUrl, { method: 'GET', headers: buildKnowledgeHeaders(token) }, 2, signal);
   const topicsData = normalizeWebData(listData);
   const rawTopics = Array.isArray(topicsData.list) ? topicsData.list : [];
-  const rawTopic = rawTopics.find((t: unknown) => String((t as Record<string, unknown>).id_alias ?? '') === topicId);
-  if (!isRecord(rawTopic)) return items;
+  const rawTopic = findTopicByAlias(rawTopics, topicId);
+  if (!rawTopic) return items;
   const topicAlias = rawTopic.id_alias ?? rawTopic.id;
   const rootDir = isRecord(rawTopic.root_dir) ? rawTopic.root_dir : {};
   const directoryId = rootDir.id;
@@ -373,8 +388,8 @@ export async function fetchTopicContentPreviewPage(
   const listData = await apiRequest<Record<string, unknown>>(listUrl, { method: 'GET', headers: buildKnowledgeHeaders(token) }, 2, signal);
   const topicsData = normalizeWebData(listData);
   const rawTopics = Array.isArray(topicsData.list) ? topicsData.list : [];
-  const rawTopic = rawTopics.find((t: unknown) => String((t as Record<string, unknown>).id_alias ?? '') === topicId);
-  if (!isRecord(rawTopic)) return { items: [] };
+  const rawTopic = findTopicByAlias(rawTopics, topicId);
+  if (!rawTopic) return { items: [] };
   const topicAlias = rawTopic.id_alias ?? rawTopic.id;
   const rootDir = isRecord(rawTopic.root_dir) ? rawTopic.root_dir : {};
   const directoryId = rootDir.id;
@@ -417,8 +432,7 @@ export async function fetchNoteDetail(
   // Web API detail: data is in .c, not .data
   if (data.message) {
     if (data.message === 'LoginRequired') throw new Error(t('error.webApiLoginRequired'));
-    const rawMsg = data.message as string;
-    throw new Error(rawMsg ? t('error.apiGenericWithMsg', { msg: rawMsg }) : t('error.apiGeneric'));
+    throw new Error(data.message ? t('error.apiGenericWithMsg', { msg: data.message }) : t('error.apiGeneric'));
   }
   const c = data.c;
   if (!isRecord(c)) throw new Error(t('error.fetchNoteDetailFailed'));

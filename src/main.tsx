@@ -688,7 +688,7 @@ class TopicPickerModalWrapper extends Modal {
         clientId={getAuthCredentials(this.plugin.settings).clientId}
         authMode={getAuthCredentials(this.plugin.settings).authMode}
         abortSignal={this.abortController.signal}
-        onConfirm={async (selection) => {
+        onConfirm={(selection) => {
           this.abortController.abort();
           this.close();
           this.plugin.syncSubscribedKnowledgeNotes(selection);

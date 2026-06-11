@@ -147,7 +147,7 @@ function buildImageBlock(assetPaths: string[]): string {
       // Reject any URL scheme (http/https/data/javascript) — only vault-relative paths allowed
       if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(p)) return null;
       // Reject paths with control characters or suspicious patterns
-      if (/[<>{}|\\`\x00-\x1f]/.test(p)) return null;
+      if (/[<>{}|\\`\u0000-\u001f]/.test(p)) return null;
       if (!/\.(png|jpg|jpeg|gif|webp|bmp|svg)(\?|$)/i.test(p)) return null;
       const assetIndex = p.lastIndexOf('/asset/');
       const relativePath = assetIndex >= 0 ? `asset/${p.slice(assetIndex + '/asset/'.length)}` : p;

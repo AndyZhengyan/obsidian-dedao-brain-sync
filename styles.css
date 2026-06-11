@@ -1298,8 +1298,12 @@
 }
 
 /* === Notice === */
-.getnote-notice-success .notice-content,
-.notice:not(.getnote-notice-error) .notice-content {
+.getnote-notice-success .notice-content {
   color: var(--color-green);
+  font-weight: 500;
+}
+
+.getnote-notice-error .notice-content {
+  color: #e55353;
   font-weight: 500;
 }

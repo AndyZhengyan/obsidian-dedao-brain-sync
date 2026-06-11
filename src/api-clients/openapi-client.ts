@@ -83,7 +83,7 @@ async function waitForRetry(signal?: AbortSignal): Promise<void> {
 
 function parseErrorBody(text: string): Record<string, unknown> {
   try {
-    const value = safeJsonParse(text) as unknown;
+    const value = safeJsonParse(text);
     return isRecord(value) ? value : {};
   } catch {
     return {};
