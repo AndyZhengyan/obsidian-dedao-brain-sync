@@ -33,6 +33,18 @@ function getTypeLabel(noteType: string): string {
   return t(key);
 }
 
+function matchesSearchQuery(note: GetNoteNote, searchQuery: string): boolean {
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  if (!normalizedQuery) return true;
+
+  const haystacks = [
+    generateDisplayTitle(note),
+    ...note.tags.map(tag => tag.name),
+  ];
+
+  return haystacks.some(value => value.toLowerCase().includes(normalizedQuery));
+}
+
 function NoteRow({ note, checked, onChange }: { note: GetNoteNote; checked: boolean; onChange: (id: string, v: boolean) => void }) {
   const title = generateDisplayTitle(note);
   const displayTitle = title || t('picker.noTitle');
@@ -120,7 +132,7 @@ export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel
     ? notes.filter(note => enabledNoteTypes.includes(note.note_type))
     : [];
   const filteredNotes = searchQuery
-    ? typeFilteredNotes.filter(n => generateDisplayTitle(n).toLowerCase().includes(searchQuery.toLowerCase()))
+    ? typeFilteredNotes.filter(note => matchesSearchQuery(note, searchQuery))
     : typeFilteredNotes;
   const visibleSelectedIds = filteredNotes.filter(note => selected.has(note.note_id)).map(note => note.note_id);
 
