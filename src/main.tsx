@@ -10,8 +10,10 @@ import { ManualSyncModal } from './ui/manual-sync-modal';
 import { LocalUploadModal } from './ui/local-upload-modal';
 import { initI18n, t } from './i18n';
 import { ReverseSyncEngine, type ReverseSyncResult } from './reverse-sync';
+import { migrateSyncedNoteTags } from './tag-migration';
 
 const MAX_SYNC_HISTORY = 20;
+const TAG_MIGRATION_VERSION = 1;
 const LEGACY_PLUGIN_IDS = ['obsidian-getnote-importer', 'getnote-importer'] as const;
 const PLUGIN_DATA_FILE = 'data.json';
 const LEGACY_PLUGIN_MIGRATION_NOTICE = '已经从旧的 GetNote Importer 迁移成功，请手动停止和卸载 GetNote Importer';
@@ -158,6 +160,16 @@ export default class GetNoteSyncPlugin extends Plugin {
     };
     this.syncHistory = this.settings.syncHistory;
     this.lastSyncResult = this.syncHistory.at(-1) ?? null;
+
+    if (this.settings.tagMigrationVersion < TAG_MIGRATION_VERSION) {
+      try {
+        await migrateSyncedNoteTags(this.app.vault, this.settings.folderName);
+        this.settings.tagMigrationVersion = TAG_MIGRATION_VERSION;
+        await this.saveSettings();
+      } catch (error) {
+        console.error('[DedaoBrain] Failed to migrate synced note tags', error);
+      }
+    }
 
     this.settingsTab = new GetNoteSettingsTab(this.app, this);
     this.addSettingTab(this.settingsTab);
