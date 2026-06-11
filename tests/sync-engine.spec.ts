@@ -480,6 +480,138 @@ describe('SyncEngine — filterNotesByDateRange', () => {
 });
 
 describe('SyncEngine — subscribed knowledge selected notes', () => {
+  it.each([
+    {
+      noteId: 'created_image_note',
+      title: '知识库图片笔记',
+      noteType: 'img_text',
+      attachment: { type: 'image', url: 'https://cdn.example.com/knowledge.png', title: 'knowledge.png' },
+      detailExtra: {},
+      expectedAssets: ['得到大脑/知识库/我的知识库/asset/知识库图片笔记_image.png'],
+      expectedMarkdown: 'asset/知识库图片笔记_image.png',
+    },
+    {
+      noteId: 'created_audio_note',
+      title: '知识库音频笔记',
+      noteType: 'recorder_audio',
+      attachment: { type: 'audio', url: 'https://cdn.example.com/knowledge.mp3', title: '' },
+      detailExtra: { audio: '知识库音频转写' },
+      expectedAssets: [
+        '得到大脑/知识库/我的知识库/asset/知识库音频笔记_audio.mp3',
+        '得到大脑/知识库/我的知识库/asset/知识库音频笔记_transcript.md',
+      ],
+      expectedMarkdown: '知识库音频笔记_audio.mp3',
+    },
+  ])('reuses ordinary note enrichment for $noteType notes in a created knowledge base', async ({
+    noteId,
+    title,
+    noteType,
+    attachment,
+    detailExtra,
+    expectedAssets,
+    expectedMarkdown,
+  }) => {
+    const createdFiles: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const requestUrl = String(url);
+      if (requestUrl.includes('/resource/knowledge/list')) {
+        return mockFetchResponse({
+          data: { topics: [{ topic_id: 'created_topic', name: '我的知识库' }], has_more: false },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/subscribe/list')) {
+        return mockFetchResponse({ data: { topics: [], has_more: false } }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/notes')) {
+        return mockFetchResponse({
+          data: {
+            notes: [{
+              note_id: noteId,
+              title,
+              content: '知识库正文',
+              note_type: noteType,
+              created_at: '2026-06-01T10:00:00+08:00',
+              updated_at: '2026-06-01T10:00:00+08:00',
+            }],
+            has_more: false,
+          },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/note/detail')) {
+        return mockFetchResponse({
+          data: {
+            note: {
+              note_id: noteId,
+              title,
+              content: '知识库正文',
+              note_type: noteType,
+              attachments: [attachment],
+              created_at: '2026-06-01T10:00:00+08:00',
+              updated_at: '2026-06-01T10:00:00+08:00',
+              ...detailExtra,
+            },
+          },
+        }) as Response;
+      }
+      if (requestUrl.startsWith('https://cdn.example.com/')) {
+        return {
+          status: 200,
+          arrayBuffer: async () => new ArrayBuffer(32),
+        } as Response;
+      }
+      throw new Error(`Unexpected request: ${requestUrl}`);
+    });
+
+    const app = makeMockApp();
+    app.vault.create = vi.fn().mockImplementation(async (path: string, data: string) => {
+      createdFiles.push(path, data);
+      return { path };
+    });
+    app.vault.createBinary = vi.fn().mockImplementation(async (path: string) => {
+      createdFiles.push(path);
+      return { path };
+    });
+
+    try {
+      const engine = new SyncEngine(app as any, makeSettings({
+        authMode: 'openapi',
+        openApiToken: 'openapi-token',
+        openApiClientId: 'openapi-client',
+      }));
+      const result = await engine.syncSubscribedKnowledge(undefined, {
+        selectedNoteIds: [noteId],
+        createdTopicIds: ['created_topic'],
+        knowledgeBaseNames: { [noteId]: '我的知识库' },
+      });
+
+      expect(result.created).toBe(1);
+      for (const asset of expectedAssets) expect(createdFiles).toContain(asset);
+      expect(createdFiles.find(item => item.includes('知识库正文'))).toContain(expectedMarkdown);
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('does not sync the whole knowledge base when the explicit selection is empty', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'openapi-token',
+      openApiClientId: 'openapi-client',
+    }));
+
+    const result = await engine.syncSubscribedKnowledge(undefined, {
+      selectedNoteIds: [],
+      topicIds: ['topic_1'],
+    });
+
+    expect(result.total).toBe(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(app.vault.create).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
   it('syncs exactly the selected subscribed-knowledge note regardless of manual sync filters', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-06-04T12:00:00+08:00'));
@@ -537,7 +669,7 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
       if (requestUrl.includes('/resource/knowledge/blogger/content/detail')) {
         return mockFetchResponse({
           data: {
-            post_id_alias: 'old_post',
+            post_id: 'detail_numeric_id',
             title: '旧文章',
             content: '用户手动勾选的旧内容详情',
             created_at: '2026-01-01T10:00:00+08:00',
@@ -565,6 +697,9 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
         selectedNoteIds: ['blogger_old_post'],
         topicIds: [],
         bloggerIds: [],
+        knowledgeBaseNames: {
+          blogger_old_post: '长期专题',
+        },
       });
 
       expect(result.total).toBe(1);
@@ -576,8 +711,72 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
         }),
       ]);
       expect(app.vault.create).toHaveBeenCalledTimes(1);
+      expect(app.vault.create).toHaveBeenCalledWith(
+        expect.stringMatching(/^得到大脑\/知识库\/长期专题\//),
+        expect.any(String)
+      );
       expect(vi.mocked(globalThis.fetch).mock.calls.map(call => String(call[0]))).not.toContain(
         'https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/contents?topic_id=topic_1&follow_id=blogger_1&page=2'
+      );
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('falls back to the OpenAPI content preview when the detail request times out', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const requestUrl = String(url);
+      if (requestUrl.includes('/resource/knowledge/subscribe/list')) {
+        return mockFetchResponse({
+          data: { topics: [{ topic_id: 'topic_1', name: '长期专题' }], has_more: false },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/bloggers')) {
+        return mockFetchResponse({
+          data: { bloggers: [{ follow_id: 'blogger_1', name: '主理人' }], has_more: false },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/blogger/contents')) {
+        return mockFetchResponse({
+          data: {
+            contents: [{
+              post_id_alias: 'old_post',
+              title: '旧文章',
+              summary: '详情接口不可用时仍应同步的摘要',
+              created_at: '2026-01-01T10:00:00+08:00',
+              updated_at: '2026-01-01T10:00:00+08:00',
+            }],
+            has_more: false,
+          },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/blogger/content/detail')) {
+        return new Promise<Response>(() => {});
+      }
+      throw new Error(`Unexpected request: ${requestUrl}`);
+    });
+
+    try {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings({
+        authMode: 'openapi',
+        openApiToken: 'openapi-token',
+        openApiClientId: 'openapi-client',
+      }));
+
+      const resultPromise = engine.syncSubscribedKnowledge(undefined, {
+        selectedNoteIds: ['blogger_old_post'],
+      });
+      await vi.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(result.total).toBe(1);
+      expect(result.created).toBe(1);
+      expect(app.vault.create).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('详情接口不可用时仍应同步的摘要')
       );
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();

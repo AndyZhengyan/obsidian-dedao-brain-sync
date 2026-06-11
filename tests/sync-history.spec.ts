@@ -212,6 +212,16 @@ describe('sync history scope display', () => {
     }))).toBe('手动 · 上传本地笔记');
   });
 
+  it('shows knowledge-base sync as its own manual mode', () => {
+    initI18n('zh-CN');
+
+    expect(formatHistoryMode(makeEntry({
+      type: 'full',
+      mode: 'knowledge-base',
+      scope: { selectedCount: 1 },
+    }))).toBe('手动 · 按知识库同步');
+  });
+
   it('hides maxDays when a start date is present', () => {
     initI18n('zh-CN');
 

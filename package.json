@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "test": "vitest run",
+    "test:e2e:openapi": "vitest run tests/openapi-knowledge-sync.e2e.spec.ts",
     "smoke:getnote": "node scripts/smoke-getnote-api.mjs"
   },
   "keywords": [

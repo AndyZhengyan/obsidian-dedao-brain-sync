@@ -16,7 +16,9 @@ interface TopicData {
 export interface TopicPickerSelection {
   selectedNoteIds: string[];
   topicIds?: string[];
+  createdTopicIds?: string[];
   bloggerIds?: string[];
+  knowledgeBaseNames?: Record<string, string>;
 }
 
 interface TopicPickerModalProps {
@@ -70,6 +72,13 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
   const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(new Set());
   const [selectedItems, setSelectedItems] = useState<Map<string, ContentPreview>>(new Map());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [bloggerFilter, setBloggerFilter] = useState('');
+  const [selectAllActive, setSelectAllActive] = useState(false);
+  const [topicSearchQuery, setTopicSearchQuery] = useState('');
+  const matchesActiveFilters = (item: ContentPreview) =>
+    (!bloggerFilter || item.blogger_name === bloggerFilter) &&
+    (!searchQuery || item.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const loadTopics = useCallback(() => {
     setTopicsLoading(true);
@@ -115,8 +124,10 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
         clientId,
         authMode,
         abortSignal,
-        cursor
+        cursor,
+        topic.source
       );
+      if (selectAllActive) setItemsSelected(page.items.filter(matchesActiveFilters), true);
       setTopicData(prev => ({
         ...prev,
         [topic.topic_id]: {
@@ -144,6 +155,11 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   };
 
   const openTopic = async (topic: SubscribedTopic) => {
+    setSearchQuery('');
+    setBloggerFilter('');
+    setSelectAllActive(false);
+    setSelectedNoteIds(new Set());
+    setSelectedItems(new Map());
     setActiveTopicId(topic.topic_id);
     const data = topicData[topic.topic_id];
     if (!data || data.contents.length > 0) return;
@@ -151,6 +167,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   };
 
   const handleCheck = (noteId: string, checked: boolean) => {
+    if (!checked) setSelectAllActive(false);
     setSelectedNoteIds(prev => {
       const next = new Set(prev);
       if (checked) next.add(noteId);
@@ -171,36 +188,135 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
     });
   };
 
-  const handleConfirm = () => {
-    const selected = Array.from(selectedItems.values());
-    const topicIds = Array.from(new Set(selected.map(item => item.topic_id).filter((id): id is string => Boolean(id))));
-    const bloggerIds = Array.from(new Set(selected.map(item => item.blogger_id).filter((id): id is string => Boolean(id))));
-    if (topicIds.length === 0 && activeTopicId) topicIds.push(activeTopicId);
-    onConfirm({
-      selectedNoteIds: Array.from(selectedNoteIds),
-      ...(topicIds.length > 0 ? { topicIds } : {}),
-      ...(bloggerIds.length > 0 ? { bloggerIds } : {}),
+  const setItemsSelected = (items: ContentPreview[], checked: boolean) => {
+    setSelectedNoteIds(prev => {
+      const next = new Set(prev);
+      for (const item of items) {
+        if (checked) next.add(item.note_id);
+        else next.delete(item.note_id);
+      }
+      return next;
+    });
+    setSelectedItems(prev => {
+      const next = new Map(prev);
+      for (const item of items) {
+        if (checked) next.set(item.note_id, item);
+        else next.delete(item.note_id);
+      }
+      return next;
     });
   };
 
-  const totalItems = Object.values(topicData).reduce((sum, d) => sum + d.contents.length, 0);
+  const handleConfirm = () => {
+    const selected = Array.from(selectedItems.values());
+    const topicIds = Array.from(new Set(selected.map(item => item.topic_id).filter((id): id is string => Boolean(id))));
+    if (topicIds.length === 0 && activeTopicId) topicIds.push(activeTopicId);
+    const createdTopicIds = topicIds.filter(id => topicData[id]?.topic.source === 'created');
+    const subscribedTopicIds = topicIds.filter(id => topicData[id]?.topic.source !== 'created');
+    const bloggerIds = Array.from(new Set(selected.map(item => item.blogger_id).filter((id): id is string => Boolean(id))));
+    const knowledgeBaseNames = Object.fromEntries(selected.map(item => {
+      const topicId = item.topic_id ?? activeTopicId;
+      const topicName = topicId ? topicData[topicId]?.topic.name : undefined;
+      return [item.note_id, topicName ?? topicId ?? t('picker.noTitle')];
+    }));
+    onConfirm({
+      selectedNoteIds: Array.from(selectedNoteIds),
+      ...(subscribedTopicIds.length > 0 ? { topicIds: subscribedTopicIds } : {}),
+      ...(createdTopicIds.length > 0 ? { createdTopicIds } : {}),
+      ...(bloggerIds.length > 0 ? { bloggerIds } : {}),
+      ...(Object.keys(knowledgeBaseNames).length > 0 ? { knowledgeBaseNames } : {}),
+    });
+  };
+
   const activeTopic = activeTopicId ? topicData[activeTopicId] : null;
+  const totalItems = activeTopic?.contents.length ?? 0;
+  const filteredTopics = topicSearchQuery
+    ? topics.filter(topic => topic.name.toLowerCase().includes(topicSearchQuery.toLowerCase()))
+    : topics;
+  const createdTopics = filteredTopics.filter(topic => topic.source === 'created');
+  const subscribedTopics = filteredTopics.filter(topic => topic.source !== 'created');
+  const bloggers = activeTopic
+    ? Array.from(new Set(activeTopic.contents.map(item => item.blogger_name).filter((name): name is string => Boolean(name))))
+    : [];
+  const visibleItems = activeTopic
+    ? activeTopic.contents.filter(matchesActiveFilters)
+    : [];
 
   return (
     <div className="getnote-picker">
       <div className="getnote-picker-header">
         {activeTopic ? (
-          <button className="getnote-topic-back" data-topic-back onClick={() => setActiveTopicId(null)}>
-            <span aria-hidden="true">←</span>
-            <span>{t('topicPicker.back')}</span>
-          </button>
+          <>
+            <button className="getnote-topic-back" data-topic-back onClick={() => setActiveTopicId(null)}>
+              <span aria-hidden="true">←</span>
+              <span>{t('topicPicker.back')}</span>
+            </button>
+            <span className="getnote-picker-header-title">{activeTopic.topic.name || activeTopic.topic.topic_id}</span>
+            <div className="getnote-picker-actions">
+              <button
+                data-topic-select-all
+                onClick={() => {
+                  setSelectAllActive(true);
+                  setItemsSelected(visibleItems, true);
+                }}
+              >
+                {t('picker.selectAll')}
+              </button>
+              <button
+                data-topic-select-none
+                onClick={() => {
+                  setSelectAllActive(false);
+                  setItemsSelected(Array.from(selectedItems.values()), false);
+                }}
+              >
+                {t('picker.selectNone')}
+              </button>
+            </div>
+          </>
         ) : (
           <span className="getnote-picker-header-title">{t('topicPicker.title')}</span>
         )}
-        {activeTopic && (
-          <span className="getnote-picker-header-title">{activeTopic.topic.name || activeTopic.topic.topic_id}</span>
-        )}
       </div>
+      {activeTopic && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length > 0 && (
+        <div className="getnote-topic-filter-bar">
+          {bloggers.length > 0 && (
+            <select
+              data-topic-blogger-filter
+              value={bloggerFilter}
+              onChange={(event) => {
+                setSelectAllActive(false);
+                setBloggerFilter((event.target as HTMLSelectElement).value);
+              }}
+            >
+              <option value="">{t('topicPicker.allBloggers')}</option>
+              {bloggers.map(blogger => <option key={blogger} value={blogger}>{blogger}</option>)}
+            </select>
+          )}
+          <input
+            data-topic-search
+            type="text"
+            className="getnote-input"
+            placeholder={t('picker.search')}
+            value={searchQuery}
+            onInput={(event) => {
+              setSelectAllActive(false);
+              setSearchQuery((event.target as HTMLInputElement).value);
+            }}
+          />
+        </div>
+      )}
+      {!activeTopic && !topicsLoading && !topicsError && topics.length > 0 && (
+        <div className="getnote-topic-list-search">
+          <input
+            data-topic-list-search
+            type="text"
+            className="getnote-input"
+            placeholder={t('topicPicker.search')}
+            value={topicSearchQuery}
+            onInput={(event) => setTopicSearchQuery((event.target as HTMLInputElement).value)}
+          />
+        </div>
+      )}
       <div className="getnote-picker-body">
         {!activeTopic && topicsLoading && (
           <div className="getnote-picker-skeleton">
@@ -219,13 +335,20 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
             {topicsError} <button onClick={loadTopics}>{t('topicPicker.retry')}</button>
           </div>
         )}
-        {!activeTopic && !topicsLoading && !topicsError && topics.map(topic => {
+        {!activeTopic && !topicsLoading && !topicsError && [
+          { label: t('topicPicker.created'), topics: createdTopics },
+          { label: t('topicPicker.subscribed'), topics: subscribedTopics },
+        ].map(group => group.topics.length > 0 && (
+          <div className="getnote-topic-group" key={group.label}>
+            <div className="getnote-topic-group-title">{group.label}</div>
+            {group.topics.map(topic => {
           const data = topicData[topic.topic_id];
           return (
             <button
               key={topic.topic_id}
               className="getnote-topic-row"
               data-topic-id={topic.topic_id}
+              data-topic-source={topic.source}
               onClick={() => openTopic(topic)}
             >
               <span className="getnote-topic-name">{topic.name || topic.topic_id}</span>
@@ -237,7 +360,9 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
               <span className="getnote-topic-arrow" aria-hidden="true">›</span>
             </button>
           );
-        })}
+            })}
+          </div>
+        ))}
         {!activeTopic && !topicsLoading && !topicsError && topics.length === 0 && (
           <div className="getnote-picker-empty">{t('topicPicker.empty')}</div>
         )}
@@ -263,9 +388,12 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
         {activeTopic && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length === 0 && (
           <div className="getnote-picker-empty">{t('topicPicker.emptyContent')}</div>
         )}
-        {activeTopic && !activeTopic.loading && !activeTopic.error && activeTopic.contents.map(item => (
+        {activeTopic && !activeTopic.loading && !activeTopic.error && visibleItems.map(item => (
           <ContentRow key={item.note_id} item={item} checked={selectedNoteIds.has(item.note_id)} onChange={handleCheck} />
         ))}
+        {activeTopic && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length > 0 && visibleItems.length === 0 && (
+          <div className="getnote-picker-empty">{t('picker.noMatch')}</div>
+        )}
         {activeTopic && !activeTopic.loading && !activeTopic.error && activeTopic.nextCursor && (
           <div className="getnote-picker-loadmore">
             <button

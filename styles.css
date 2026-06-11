@@ -589,6 +589,44 @@
   padding: 0 0 8px;
 }
 
+.getnote-topic-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.38fr) minmax(0, 1fr);
+  gap: 8px;
+  padding: 0 0 8px;
+}
+
+.getnote-topic-filter-bar > input:only-child {
+  grid-column: 1 / -1;
+}
+
+.getnote-topic-list-search {
+  padding: 10px 0 2px;
+}
+
+.getnote-topic-list-search input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.getnote-topic-group + .getnote-topic-group {
+  margin-top: 14px;
+}
+
+.getnote-topic-group-title {
+  padding: 4px 2px 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.getnote-topic-filter-bar select,
+.getnote-topic-filter-bar input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .getnote-picker-search input {
   width: 100%;
   box-sizing: border-box;
@@ -605,7 +643,7 @@
 .getnote-manual-sync-modal {
   display: flex;
   flex-direction: column;
-  width: min(420px, 100%);
+  width: 100%;
   min-width: 0;
 }
 

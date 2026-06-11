@@ -28,6 +28,7 @@ export interface Tag {
 export interface SubscribedTopic {
   topic_id: string;
   name: string;
+  source?: 'subscribed' | 'created';
 }
 
 export type KnownNoteType =
@@ -151,7 +152,7 @@ export interface SyncHistoryEntry {
   timestamp: number;
   result: SyncResult;
   type: 'full' | 'selective' | 'auto' | 'upload';
-  mode?: 'time' | 'selected' | 'auto' | 'local-upload';
+  mode?: 'time' | 'selected' | 'knowledge-base' | 'auto' | 'local-upload';
   scope?: SyncHistoryScope;
   status: 'success' | 'failed' | 'cancelled';
   error?: string;
