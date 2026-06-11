@@ -82,6 +82,7 @@ export interface Settings {
   scheduledSync: ScheduledSyncSettings;
   reverseSync: ReverseSyncSettings;
   syncHistory: SyncHistoryEntry[];
+  tagMigrationVersion: number;
 }
 
 export interface SyncScopeOptions {
@@ -119,6 +120,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reverseSync: {
     enabled: false,
   },
+  tagMigrationVersion: 0,
   syncHistory: [],
 };
 

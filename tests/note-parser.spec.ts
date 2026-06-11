@@ -70,6 +70,11 @@ describe('renderNote', () => {
     expect(result).toContain('tags: []');
   });
 
+  it('将包含空格的标签转换为 Obsidian 支持的标签名', () => {
+    const result = renderNote(makeNote({ tags: [{ name: '本体 is all you need' }] }));
+    expect(result).toContain('tags: ["本体-is-all-you-need"]');
+  });
+
   it('附加笔记输出 parent_id 与 child 标识', () => {
     const result = renderNote(makeNote({
       note_id: '1909246675068292528',
