@@ -24,6 +24,10 @@ function escapeYamlDoubleQuoted(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ');
 }
 
+function sanitizeObsidianTag(tag: string): string {
+  return tag.trim().replace(/\s+/g, '-');
+}
+
 /**
  * 从笔记内容生成回退标题（取第一个标点前的文字，不超过20字）
  */
@@ -72,7 +76,11 @@ export function formatTimestampPrefix(format: string, isoDate: string): string {
  * 生成 frontmatter
  */
 function buildFrontmatter(note: GetNoteNote): string {
-  const tags = note.tags.map(t => `"${t.name}"`).join(', ');
+  const tags = note.tags
+    .map(t => sanitizeObsidianTag(t.name))
+    .filter(Boolean)
+    .map(tag => `"${escapeYamlDoubleQuoted(tag)}"`)
+    .join(', ');
   const tagBlock = tags ? `[${tags}]` : '[]';
   const childrenIds = note.children_ids?.map(id => `"${escapeYamlDoubleQuoted(id)}"`).join(', ');
 
