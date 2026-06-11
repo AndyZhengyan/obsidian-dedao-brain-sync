@@ -74,6 +74,7 @@ describe('TopicPickerModal', () => {
       'client',
       'openapi',
       undefined,
+      undefined,
       undefined
     );
     expect(container.textContent).toContain('罗振宇学习笔记');
@@ -145,7 +146,8 @@ describe('TopicPickerModal', () => {
       'client',
       'openapi',
       undefined,
-      { bloggerIndex: 0, page: 2 }
+      { bloggerIndex: 0, page: 2 },
+      undefined
     );
     expect(container.textContent).toContain('第一页内容');
     expect(container.textContent).toContain('第二页内容');

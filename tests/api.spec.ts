@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createNote, fetchNoteChildren, fetchNotes, fetchNoteDetail } from '../src/api';
+import { createNote, fetchNoteChildren, fetchNotes, fetchNoteDetail, fetchSubscribedTopics, fetchTopicContentPreviewPage } from '../src/api';
 import type { ListResponse } from '../src/types';
 
 // Extract the internal safeJsonParse for direct testing
@@ -510,6 +510,61 @@ describe('web auth mode', () => {
         authMode: 'web',
         sinceId: '0',
       })).rejects.toThrow('Web Token 无效，请检查设置');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+});
+
+describe('OpenAPI knowledge previews', () => {
+  it('merges created and subscribed knowledge bases', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(mockFetchResponse({
+        data: { topics: [{ topic_id: 'created-1', name: '我创建的' }], has_more: false },
+      }) as Response)
+      .mockResolvedValueOnce(mockFetchResponse({
+        data: { topics: [{ topic_id: 'subscribed-1', name: '我订阅的' }], has_more: false },
+      }) as Response);
+
+    try {
+      await expect(fetchSubscribedTopics({
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+      })).resolves.toEqual([
+        { topic_id: 'created-1', name: '我创建的', source: 'created' },
+        { topic_id: 'subscribed-1', name: '我订阅的', source: 'subscribed' },
+      ]);
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('uses account_name as the blogger display name', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(mockFetchResponse({
+        data: {
+          bloggers: [{ follow_id: 2113, account_name: '抖音诗词' }],
+          has_more: false,
+        },
+      }) as Response)
+      .mockResolvedValueOnce(mockFetchResponse({
+        data: {
+          contents: [{ post_id_alias: 'post-1', title: '古诗词', updated_at: '2026-06-01 10:00:00' }],
+          has_more: false,
+        },
+      }) as Response);
+
+    try {
+      const page = await fetchTopicContentPreviewPage(
+        'topic-1',
+        '金句名言',
+        'token',
+        'client',
+        'openapi'
+      );
+
+      expect(page.items[0]?.blogger_name).toBe('抖音诗词');
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
     }

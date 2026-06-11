@@ -188,6 +188,9 @@ export const translations: Record<string, Record<string, string>> = {
     'topicPicker.loadMore': '加载更多',
     'topicPicker.loadingMore': '加载中...',
     'topicPicker.allBloggers': '全部主理人',
+    'topicPicker.created': '我创建的',
+    'topicPicker.subscribed': '我订阅的',
+    'topicPicker.search': '搜索知识库...',
     'topicPicker.cancel': '取消',
     'topicPicker.confirm': '同步',
 
@@ -467,6 +470,9 @@ export const translations: Record<string, Record<string, string>> = {
     'topicPicker.loadMore': 'Load more',
     'topicPicker.loadingMore': 'Loading...',
     'topicPicker.allBloggers': 'All bloggers',
+    'topicPicker.created': 'Created by me',
+    'topicPicker.subscribed': 'Subscribed',
+    'topicPicker.search': 'Search knowledge bases...',
     'topicPicker.cancel': 'Cancel',
     'topicPicker.confirm': 'Sync',
 

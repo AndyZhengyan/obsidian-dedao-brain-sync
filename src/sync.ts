@@ -112,6 +112,7 @@ export interface SyncProgressCallback {
 export interface SubscribedKnowledgeSyncOptions {
   selectedNoteIds?: string[];
   topicIds?: string[];
+  createdTopicIds?: string[];
   bloggerIds?: string[];
   knowledgeBaseNames?: Record<string, string>;
 }
@@ -949,6 +950,7 @@ export class SyncEngine {
         signal: controller.signal,
         authMode: credentials.authMode,
         topicIds: syncOptions.topicIds,
+        createdTopicIds: syncOptions.createdTopicIds,
         bloggerIds: syncOptions.bloggerIds,
         selectedNoteIds,
       });

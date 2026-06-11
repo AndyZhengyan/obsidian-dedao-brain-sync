@@ -28,6 +28,7 @@ export interface Tag {
 export interface SubscribedTopic {
   topic_id: string;
   name: string;
+  source?: 'subscribed' | 'created';
 }
 
 export type KnownNoteType =

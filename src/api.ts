@@ -16,6 +16,7 @@ export interface FetchNotesOptions {
   authMode?: AuthMode;
   webCsrfToken?: string;
   topicIds?: string[];
+  createdTopicIds?: string[];
   bloggerIds?: string[];
   selectedNoteIds?: string[];
 }
@@ -80,6 +81,7 @@ export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions):
     limit: options.limit,
     signal: options.signal,
     topicIds: options.topicIds,
+    createdTopicIds: options.createdTopicIds,
     bloggerIds: options.bloggerIds,
     selectedNoteIds: options.selectedNoteIds,
   });
@@ -142,12 +144,13 @@ export async function fetchTopicContentPreviewPage(
   clientId: string,
   authMode?: AuthMode,
   signal?: AbortSignal,
-  cursor?: TopicContentPreviewCursor
+  cursor?: TopicContentPreviewCursor,
+  topicSource?: SubscribedTopic['source']
 ): Promise<TopicContentPreviewPage> {
   if (authMode === 'web') {
     return webapiFetchTopicContentPreviewPage(topicId, token, signal, cursor);
   }
-  return openapiFetchTopicContentPreviewPage(topicId, topicName, token, clientId, signal, cursor);
+  return openapiFetchTopicContentPreviewPage(topicId, topicName, token, clientId, signal, cursor, topicSource);
 }
 
 

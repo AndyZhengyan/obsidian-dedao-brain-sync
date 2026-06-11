@@ -139,15 +139,26 @@ describe.skipIf(!runE2E)('OpenAPI knowledge-base sync E2E', () => {
       );
     });
     await vi.waitFor(() => {
-      expect(container.querySelector('[data-topic-id]')).not.toBeNull();
+      expect(container.querySelector('[data-topic-source="subscribed"]')).not.toBeNull();
     }, { timeout: 20_000 });
 
-    await act(async () => {
-      (container.querySelector('[data-topic-id]') as HTMLButtonElement).click();
-    });
-    await vi.waitFor(() => {
-      expect(container.querySelector('input[type="checkbox"]')).not.toBeNull();
-    }, { timeout: 20_000 });
+    const subscribedButtons = Array.from(container.querySelectorAll('[data-topic-source="subscribed"]')) as HTMLButtonElement[];
+    for (const button of subscribedButtons) {
+      await act(async () => {
+        button.click();
+      });
+      try {
+        await vi.waitFor(() => {
+          expect(container.querySelector('input[type="checkbox"]')).not.toBeNull();
+        }, { timeout: 20_000 });
+        break;
+      } catch {
+        await act(async () => {
+          (container.querySelector('[data-topic-back]') as HTMLButtonElement).click();
+        });
+      }
+    }
+    expect(container.querySelector('input[type="checkbox"]')).not.toBeNull();
 
     await act(async () => {
       (container.querySelector('input[type="checkbox"]') as HTMLInputElement).click();
