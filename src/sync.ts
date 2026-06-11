@@ -5,6 +5,7 @@ import { getCategoryDir } from './types';
 import { getAuthCredentials, type GetNoteNote, type Settings, type SyncResult, type SyncResultItem, type SyncScopeOptions } from './types';
 import type { SyncModal } from './ui/sync-modal';
 import { t } from './i18n';
+import { tryWriteBinary } from './utils/vault-fs';
 
 const AUDIO_NOTE_TYPES = new Set([
   'recorder_audio',
@@ -244,7 +245,7 @@ export class SyncEngine {
         return null;
       }
       const arrayBuffer = await res.arrayBuffer();
-      await this.app.vault.createBinary(targetPath, arrayBuffer);
+      await tryWriteBinary(this.app, targetPath, arrayBuffer);
       return targetPath;
     } catch (err) {
       console.error(`[DedaoBrain] Audio download error:`, err);
@@ -282,7 +283,7 @@ export class SyncEngine {
         return null;
       }
       const arrayBuffer = await res.arrayBuffer();
-      await this.app.vault.createBinary(targetPath, arrayBuffer);
+      await tryWriteBinary(this.app, targetPath, arrayBuffer);
       return targetPath;
     } catch (err) {
       console.error(`[DedaoBrain] Image download error:`, err);
