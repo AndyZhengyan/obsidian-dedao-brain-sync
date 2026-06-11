@@ -58,4 +58,12 @@ describe('migrateSyncedNoteTags', () => {
     expect(result).toEqual({ scanned: 1, updated: 0 });
     expect(vault.modify).not.toHaveBeenCalled();
   });
+
+  it('reports zero scanned files so startup does not mark an early migration complete', async () => {
+    const vault = makeVault({});
+
+    const result = await migrateSyncedNoteTags(vault, '得到大脑');
+
+    expect(result).toEqual({ scanned: 0, updated: 0 });
+  });
 });
