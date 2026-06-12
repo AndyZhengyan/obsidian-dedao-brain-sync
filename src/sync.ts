@@ -97,8 +97,13 @@ function genericAssetFilename(baseFilename: string, url: string, index: number, 
   const ext = dot > 0 && dot < filename.length - 1 ? filename.slice(dot + 1).toLowerCase() : 'bin';
   const safeName = filename.split('/').pop()!.split('\\').pop()!.replace(/[^A-Za-z0-9._-]/g, '_');
   // If the API's filename is empty, synthesize one
-  const sourceName = safeName && safeName !== '.' ? safeName : `${kind}_${index + 1}.${ext}`;
-  return `${baseFilename}_${sourceName}`;
+  const sourceName = safeName && safeName !== '.' ? safeName : `${kind}.${ext}`;
+  const suffix = index === 0 ? '' : `_${index + 1}`;
+  const sourceDot = sourceName.lastIndexOf('.');
+  if (sourceDot > 0) {
+    return `${baseFilename}_${sourceName.slice(0, sourceDot)}${suffix}${sourceName.slice(sourceDot)}`;
+  }
+  return `${baseFilename}_${sourceName}${suffix}`;
 }
 
 function isDownloadableAttachment(
@@ -616,7 +621,13 @@ export class SyncEngine {
       return note;
     }
     const credentials = getAuthCredentials(this.settings);
-    if (credentials.authMode === 'web' && !needsAudioDetail && !hasImageAttachments && !needsImageDetail) {
+    if (
+      credentials.authMode === 'web' &&
+      !needsAudioDetail &&
+      !hasImageAttachments &&
+      !hasDownloadableAttachments &&
+      !needsImageDetail
+    ) {
       return note;
     }
 
@@ -632,6 +643,13 @@ export class SyncEngine {
           credentials.authMode
         );
         enrichedNote = this.mergeNoteDetail(note, noteDetail);
+      }
+      if (needsAudioDetail && !isAttachmentTypeEnabled(this.settings.attachmentImport, 'audio')) {
+        enrichedNote = {
+          ...enrichedNote,
+          audio: undefined,
+          attachments: enrichedNote.attachments?.filter(attachment => attachment.type !== 'audio'),
+        };
       }
       const assetPaths: string[] = [];
 
