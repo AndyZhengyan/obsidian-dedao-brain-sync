@@ -1,7 +1,17 @@
-import type { GetNoteNote, Attachment, SubscribedTopic } from '../types';
+import type { GetNoteNote, Attachment, SubscribedTopic, ApiQuotaState } from '../types';
 import { t } from '../i18n';
 
 export const GETNOTE_LIST_LIMIT = 20;
+
+// Module-level quota tracker. Updated before throwing quota-day/month errors so
+// the calling layer can persist it via Settings.lastQuotaState.
+let lastQuota: ApiQuotaState = { exhausted: false };
+export function getLastQuotaState(): ApiQuotaState {
+  return lastQuota;
+}
+export function resetQuotaState(): void {
+  lastQuota = { exhausted: false };
+}
 
 function safeJsonParse(text: string): unknown {
   let safe = text.replace(
@@ -102,6 +112,7 @@ async function handleRateLimit<T>(
   const errObj = (json.error ?? json) as Record<string, unknown>;
   const reason = errObj.reason as string | undefined;
   if (reason === 'quota_day' || reason === 'quota_month') {
+    lastQuota = { exhausted: true, reason, checkedAt: Date.now() };
     throw new Error(t('error.quotaExceeded'));
   }
   if (retries > 0) {

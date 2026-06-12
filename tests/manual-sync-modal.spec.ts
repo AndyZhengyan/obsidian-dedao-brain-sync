@@ -119,7 +119,7 @@ describe('ManualSyncModal filters', () => {
     expect(onConfirm).toHaveBeenCalledWith({
       syncStartDate: '',
       maxDays: 30,
-      enabledNoteTypes: ['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'link', 'img_text', 'recorder_flash_audio'],
+      enabledNoteTypes: ['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'audio', 'class_audio', 'link', 'img_text', 'recorder_flash_audio', 'internal_record', 'meeting', 'blogger_post'],
     });
   });
 

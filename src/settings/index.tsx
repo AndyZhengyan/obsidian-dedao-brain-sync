@@ -532,6 +532,16 @@ export function SettingsComponent({
               <div className="getnote-input-hint">{t('settings.syncStartDate.desc')}</div>
             )}
           </div>
+          {settings.lastQuotaState?.exhausted && (
+            <div className="getnote-quota-banner">
+              <div className="getnote-quota-banner-title">
+                {t(settings.lastQuotaState.reason === 'quota_month' ? 'settings.quotaMonthExhausted' : 'settings.quotaExhausted')}
+              </div>
+              <div className="getnote-quota-banner-detail">
+                {t(settings.lastQuotaState.reason === 'quota_month' ? 'settings.quotaMonthRetry' : 'settings.quotaRetry')}
+              </div>
+            </div>
+          )}
         </div>
       </SettingItem>
 

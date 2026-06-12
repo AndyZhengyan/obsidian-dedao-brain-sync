@@ -65,8 +65,28 @@ export interface ScheduledSyncSettings {
   enabledNoteTypes?: string[];  // undefined = all types, empty array = no types
 }
 
+export interface AttachmentImportSettings {
+  image: boolean;
+  audio: boolean;
+  video: boolean;
+  document: boolean;
+}
+
+export const DEFAULT_ATTACHMENT_IMPORT: AttachmentImportSettings = {
+  image: true,
+  audio: true,
+  video: true,
+  document: true,
+};
+
 export interface ReverseSyncSettings {
   enabled: boolean;
+}
+
+export interface ApiQuotaState {
+  exhausted: boolean;
+  reason?: string;
+  checkedAt?: number;
 }
 
 export type AuthMode = 'openapi' | 'web';
@@ -86,6 +106,8 @@ export interface Settings {
   lastSyncEndTimestamp: string;  // ISO datetime of last synced note's updated_at
   scheduledSync: ScheduledSyncSettings;
   reverseSync: ReverseSyncSettings;
+  attachmentImport: AttachmentImportSettings;
+  lastQuotaState?: ApiQuotaState;
   syncHistory: SyncHistoryEntry[];
   tagMigrationVersion: number;
 }
@@ -125,6 +147,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reverseSync: {
     enabled: false,
   },
+  attachmentImport: { ...DEFAULT_ATTACHMENT_IMPORT },
   tagMigrationVersion: 0,
   syncHistory: [],
 };
