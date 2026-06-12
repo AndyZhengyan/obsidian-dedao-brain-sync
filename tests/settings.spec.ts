@@ -83,6 +83,16 @@ afterEach(() => {
 });
 
 describe('SettingsComponent auth credentials', () => {
+  it('renders the exhausted quota warning inside the scheduled sync controls', () => {
+    const { container } = renderSettings(makeSettings({
+      lastQuotaState: { exhausted: true, reason: 'quota_day', checkedAt: Date.now() },
+    }));
+
+    const banner = container.querySelector('.getnote-quota-banner');
+    expect(banner).not.toBeNull();
+    expect(banner!.closest('.setting-item-control')).not.toBeNull();
+  });
+
   it('opens knowledge-base sync from the OpenAPI manual download actions', async () => {
     const startSubscribedKnowledgeSync = vi.fn();
     const { container } = renderSettings(makeSettings({

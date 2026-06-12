@@ -1307,3 +1307,25 @@
   color: #e55353;
   font-weight: 500;
 }
+
+.getnote-quota-banner {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--color-red);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-top: 12px;
+  background-color: var(--background-modifier-error-rgb, rgba(255, 0, 0, 0.05));
+  color: var(--text-error);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.getnote-quota-banner-title {
+  font-weight: 500;
+}
+
+.getnote-quota-banner-detail {
+  margin-top: 4px;
+  color: var(--text-muted);
+}

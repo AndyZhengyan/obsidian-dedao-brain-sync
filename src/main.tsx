@@ -125,6 +125,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   lastSyncResult: SyncHistoryEntry | null = null;
   private currentSyncEngine: { cancel(): void } | null = null;
   private autoSyncIntervalId: number | undefined;
+  private quotaTickIntervalId: number | undefined;
   private settingsTab?: GetNoteSettingsTab;
   private lastProgressUpdate = 0;
   private autoSyncFailCount = 0;
@@ -183,6 +184,16 @@ export default class GetNoteSyncPlugin extends Plugin {
 
     this.addRibbonIcon('book-lock', t('ribbon.tooltip'), () => this.openManualSyncModal());
 
+    // Clear stale quota-exhausted state if it's from a prior UTC+8 day
+    await this.clearStaleQuotaState();
+
+    // Always run the hourly quota check so the banner clears at UTC+8 midnight
+    // even for users who never enable auto-sync.
+    if (this.quotaTickIntervalId === undefined) {
+      this.quotaTickIntervalId = window.setInterval(() => this.clearStaleQuotaState(), 60 * 60 * 1000);
+      this.registerInterval(this.quotaTickIntervalId);
+    }
+
     if (this.settings.scheduledSync.enabled) {
       if (this.settings.scheduledSync.syncOnStart) {
         void this.doAutoSync();
@@ -198,6 +209,30 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+  }
+
+  /**
+   * If a previously recorded quota check happened on a prior calendar day in
+   * UTC+8, the daily quota has since reset — clear the exhausted state so the
+   * banner goes away without requiring a successful sync first.
+   */
+  private async clearStaleQuotaState(): Promise<void> {
+    const state = this.settings.lastQuotaState;
+    if (!state?.exhausted || state.reason !== 'quota_day' || !state.checkedAt) return;
+    const checkedAt = new Date(state.checkedAt);
+    if (Number.isNaN(checkedAt.getTime())) return;
+    // Compute the UTC+8 day boundary at the moment the check happened
+    const tzOffsetMin = checkedAt.getTimezoneOffset() + (-8 * 60);
+    const localDate = new Date(checkedAt.getTime() - tzOffsetMin * 60 * 1000);
+    const checkedDay = localDate.toISOString().slice(0, 10);
+    const nowLocal = new Date(Date.now() - (new Date().getTimezoneOffset() + -8 * 60) * 60 * 1000);
+    const today = nowLocal.toISOString().slice(0, 10);
+    if (checkedDay !== today) {
+      this.settings.lastQuotaState = undefined;
+      resetQuotaState();
+      await this.saveSettings();
+      this.refreshSettingsTab();
+    }
   }
 
   private async migrateExistingTags(): Promise<void> {
@@ -330,7 +365,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       await this.recordSyncHistory(result, type, startedAt, resolvedScope);
 
         // Clear exhausted quota state on successful sync
-        if (this.settings.lastQuotaState?.exhausted) {
+        if (credentials.authMode === 'openapi' && this.settings.lastQuotaState?.exhausted) {
           this.settings.lastQuotaState = undefined;
           resetQuotaState();
           await this.saveSettings();
@@ -360,15 +395,18 @@ export default class GetNoteSyncPlugin extends Plugin {
         const error = err instanceof Error ? err.message : String(err);
         await this.recordSyncHistory(emptySyncResult(), type, startedAt, resolvedScope, 'failed', error);
 
+        const isQuotaExceeded = error.includes('配额') || error.includes('quota') || error.includes('429');
+        if (credentials.authMode === 'openapi' && isQuotaExceeded) {
+          this.settings.lastQuotaState = getLastQuotaState();
+          await this.saveSettings();
+        }
+
         if (type === 'auto') {
           this.autoSyncFailCount++;
-          const isQuotaExceeded = error.includes('配额') || error.includes('quota') || error.includes('429');
           const isAuthError = error.includes('401') || error.includes('鉴权') || error.includes('Token 无效') || error.includes('Invalid') || error.includes('unauthorized') || error.includes('expired');
           if (isQuotaExceeded) {
             this.stopAutoSync();
             this.settings.scheduledSync.enabled = false;
-            this.settings.lastQuotaState = getLastQuotaState();
-            await this.saveSettings();
             showError(t('notice.quotaExceededStop'));
           } else if (isAuthError) {
             showError(t('notice.autoSyncAuthFailed', { msg: error }));

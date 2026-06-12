@@ -532,19 +532,17 @@ export function SettingsComponent({
               <div className="getnote-input-hint">{t('settings.syncStartDate.desc')}</div>
             )}
           </div>
+          {settings.lastQuotaState?.exhausted && (
+            <div className="getnote-quota-banner">
+              <div className="getnote-quota-banner-title">
+                {t(settings.lastQuotaState.reason === 'quota_month' ? 'settings.quotaMonthExhausted' : 'settings.quotaExhausted')}
+              </div>
+              <div className="getnote-quota-banner-detail">
+                {t(settings.lastQuotaState.reason === 'quota_month' ? 'settings.quotaMonthRetry' : 'settings.quotaRetry')}
+              </div>
+            </div>
+          )}
         </div>
-        {settings.lastQuotaState?.exhausted && (
-          <div className="getnote-scheduled-options" style={{ border: '1px solid var(--color-red)', borderRadius: '6px', padding: '10px', marginTop: '8px', backgroundColor: 'var(--background-modifier-error-rgb, rgba(255,0,0,0.05))' }}>
-            <div className="getnote-scheduled-row">
-              <span className="getnote-scheduled-row-label" style={{ color: 'var(--text-error)' }}>
-                {t('settings.quotaExhausted')}
-              </span>
-            </div>
-            <div className="getnote-scheduled-row">
-              <span className="getnote-muted-text">{t('settings.quotaRetry')}</span>
-            </div>
-          </div>
-        )}
       </SettingItem>
 
       <SettingItem name={t('settings.manualSync')}>
