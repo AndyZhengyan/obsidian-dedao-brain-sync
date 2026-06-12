@@ -97,8 +97,8 @@ function genericAssetFilename(baseFilename: string, url: string, index: number, 
   const ext = dot > 0 && dot < filename.length - 1 ? filename.slice(dot + 1).toLowerCase() : 'bin';
   const safeName = filename.split('/').pop()!.split('\\').pop()!.replace(/[^A-Za-z0-9._-]/g, '_');
   // If the API's filename is empty, synthesize one
-  const finalName = safeName && safeName !== '.' ? safeName : `${baseFilename}_${kind}_${index + 1}.${ext}`;
-  return finalName;
+  const sourceName = safeName && safeName !== '.' ? safeName : `${kind}_${index + 1}.${ext}`;
+  return `${baseFilename}_${sourceName}`;
 }
 
 function isDownloadableAttachment(
@@ -334,8 +334,6 @@ export class SyncEngine {
       }
 
       const kind = classifyAttachmentUrl(attachment.url);
-      if (kind === 'other') return null; // truly unknown — skip
-
       const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
       const assetDir = `${categoryDir}/asset`;
       if (!this.app.vault.getAbstractFileByPath(assetDir)) {
@@ -401,7 +399,7 @@ export class SyncEngine {
     if (contentChanged) return { exists: false, file: existingFile };
     if (hasImageAssetPaths(note)) return { exists: false, file: existingFile };
 
-    if (AUDIO_NOTE_TYPES.has(note.note_type)) {
+    if (AUDIO_NOTE_TYPES.has(note.note_type) && isAttachmentTypeEnabled(this.settings.attachmentImport, 'audio')) {
       const categoryDir = getCategoryDir(note.note_type);
       const basePath = `${this.settings.folderName}/${categoryDir}`;
       const assetDir = `${basePath}/asset`;
@@ -416,7 +414,7 @@ export class SyncEngine {
     }
 
     const imageAttachments = (note.attachments ?? []).filter(isImageAttachment);
-    if (imageAttachments.length > 0) {
+    if (isAttachmentTypeEnabled(this.settings.attachmentImport, 'image') && imageAttachments.length > 0) {
       const categoryDir = getCategoryDir(note.note_type);
       const basePath = `${this.settings.folderName}/${categoryDir}`;
       const assetDir = `${basePath}/asset`;
@@ -424,6 +422,21 @@ export class SyncEngine {
       if (!hasDownloadedImageAssets(this.app.vault, assetDir, baseFilename, imageAttachments.length)) {
         return { exists: false, file: existingFile };
       }
+    }
+
+    const genericAttachments = (note.attachments ?? []).filter(
+      a => !isImageAttachment(a) && a.type !== 'audio' && isDownloadableAttachment(a, this.settings)
+    );
+    if (genericAttachments.length > 0) {
+      const categoryDir = getCategoryDir(note.note_type);
+      const assetDir = `${this.settings.folderName}/${categoryDir}/asset`;
+      const baseFilename = this.getFileName(note);
+      const missingGenericAsset = genericAttachments.some((attachment, index) => {
+        const kind = classifyAttachmentUrl(attachment.url);
+        const filename = genericAssetFilename(baseFilename, attachment.url, index, kind);
+        return !this.app.vault.getAbstractFileByPath(`${assetDir}/${filename}`);
+      });
+      if (missingGenericAsset) return { exists: false, file: existingFile };
     }
 
     return { exists: true, file: existingFile };
@@ -597,8 +610,9 @@ export class SyncEngine {
     const needsAudioDetail = AUDIO_NOTE_TYPES.has(note.note_type);
     const needsRelationDetail = this.needsRelationDetail(note);
     const hasImageAttachments = (note.attachments ?? []).some(isImageAttachment);
+    const hasDownloadableAttachments = (note.attachments ?? []).some(a => isDownloadableAttachment(a, this.settings));
     const needsImageDetail = this.needsImageDetail(note);
-    if (!needsAudioDetail && !needsRelationDetail && !hasImageAttachments && !needsImageDetail) {
+    if (!needsAudioDetail && !needsRelationDetail && !hasDownloadableAttachments && !needsImageDetail) {
       return note;
     }
     const credentials = getAuthCredentials(this.settings);
@@ -621,7 +635,7 @@ export class SyncEngine {
       }
       const assetPaths: string[] = [];
 
-      if (needsAudioDetail) {
+      if (needsAudioDetail && isAttachmentTypeEnabled(this.settings.attachmentImport, 'audio')) {
         const audioAttachment = enrichedNote.attachments?.find(a => a.type === 'audio');
         if (audioAttachment) {
           const audioPath = await this.downloadAudioAsset(enrichedNote, audioAttachment, categoryOverride);
@@ -637,7 +651,9 @@ export class SyncEngine {
       // Image attachments keep their dedicated downloader (legacy naming scheme).
       // Video / document / unknown attachments go through a generic downloader
       // gated by the per-type settings.
-      const imageAttachments = (enrichedNote.attachments ?? []).filter(isImageAttachment);
+      const imageAttachments = isAttachmentTypeEnabled(this.settings.attachmentImport, 'image')
+        ? (enrichedNote.attachments ?? []).filter(isImageAttachment)
+        : [];
       for (const [index, img] of imageAttachments.entries()) {
         const imgPath = await this.downloadImageAsset(enrichedNote, img, index, categoryOverride);
         if (imgPath) assetPaths.push(imgPath);
