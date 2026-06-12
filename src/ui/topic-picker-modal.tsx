@@ -14,10 +14,12 @@ interface TopicData {
 }
 
 export interface TopicPickerSelection {
-  selectedNoteIds: string[];
+  selectedNoteIds?: string[];
+  syncAll?: boolean;
   topicIds?: string[];
   createdTopicIds?: string[];
   bloggerIds?: string[];
+  knowledgeBaseName?: string;
   knowledgeBaseNames?: Record<string, string>;
 }
 
@@ -75,6 +77,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   const [searchQuery, setSearchQuery] = useState('');
   const [bloggerFilter, setBloggerFilter] = useState('');
   const [selectAllActive, setSelectAllActive] = useState(false);
+  const [syncAllActive, setSyncAllActive] = useState(false);
   const [topicSearchQuery, setTopicSearchQuery] = useState('');
   const matchesActiveFilters = (item: ContentPreview) =>
     (!bloggerFilter || item.blogger_name === bloggerFilter) &&
@@ -158,6 +161,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
     setSearchQuery('');
     setBloggerFilter('');
     setSelectAllActive(false);
+    setSyncAllActive(false);
     setSelectedNoteIds(new Set());
     setSelectedItems(new Map());
     setActiveTopicId(topic.topic_id);
@@ -208,6 +212,16 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   };
 
   const handleConfirm = () => {
+    if (syncAllActive && activeTopic) {
+      onConfirm({
+        syncAll: true,
+        ...(activeTopic.topic.source === 'created'
+          ? { createdTopicIds: [activeTopic.topic.topic_id] }
+          : { topicIds: [activeTopic.topic.topic_id] }),
+        knowledgeBaseName: activeTopic.topic.name || activeTopic.topic.topic_id,
+      });
+      return;
+    }
     const selected = Array.from(selectedItems.values());
     const topicIds = Array.from(new Set(selected.map(item => item.topic_id).filter((id): id is string => Boolean(id))));
     if (topicIds.length === 0 && activeTopicId) topicIds.push(activeTopicId);
@@ -252,7 +266,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
               <span>{t('topicPicker.back')}</span>
             </button>
             <span className="getnote-picker-header-title">{activeTopic.topic.name || activeTopic.topic.topic_id}</span>
-            <div className="getnote-picker-actions">
+            {!syncAllActive && <div className="getnote-picker-actions">
               <button
                 data-topic-select-all
                 onClick={() => {
@@ -271,13 +285,40 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
               >
                 {t('picker.selectNone')}
               </button>
-            </div>
+            </div>}
           </>
         ) : (
           <span className="getnote-picker-header-title">{t('topicPicker.title')}</span>
         )}
       </div>
-      {activeTopic && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length > 0 && (
+      {activeTopic && !activeTopic.loading && !activeTopic.error && (
+        <div className="getnote-topic-scope-selector" role="group" aria-label={t('topicPicker.scope')}>
+          <label>
+            <input
+              data-topic-scope-all
+              type="radio"
+              name="topicSyncScope"
+              checked={syncAllActive}
+              onChange={() => setSyncAllActive(true)}
+            />
+            <span>{t('topicPicker.scope.all')}</span>
+          </label>
+          <label>
+            <input
+              data-topic-scope-selected
+              type="radio"
+              name="topicSyncScope"
+              checked={!syncAllActive}
+              onChange={() => setSyncAllActive(false)}
+            />
+            <span>{t('topicPicker.scope.selected')}</span>
+          </label>
+        </div>
+      )}
+      {activeTopic && syncAllActive && (
+        <div className="getnote-input-hint getnote-topic-scope-hint">{t('topicPicker.scope.allHint')}</div>
+      )}
+      {activeTopic && !syncAllActive && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length > 0 && (
         <div className="getnote-topic-filter-bar">
           {bloggers.length > 0 && (
             <select
@@ -388,13 +429,13 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
         {activeTopic && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length === 0 && (
           <div className="getnote-picker-empty">{t('topicPicker.emptyContent')}</div>
         )}
-        {activeTopic && !activeTopic.loading && !activeTopic.error && visibleItems.map(item => (
+        {activeTopic && !syncAllActive && !activeTopic.loading && !activeTopic.error && visibleItems.map(item => (
           <ContentRow key={item.note_id} item={item} checked={selectedNoteIds.has(item.note_id)} onChange={handleCheck} />
         ))}
-        {activeTopic && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length > 0 && visibleItems.length === 0 && (
+        {activeTopic && !syncAllActive && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length > 0 && visibleItems.length === 0 && (
           <div className="getnote-picker-empty">{t('picker.noMatch')}</div>
         )}
-        {activeTopic && !activeTopic.loading && !activeTopic.error && activeTopic.nextCursor && (
+        {activeTopic && !syncAllActive && !activeTopic.loading && !activeTopic.error && activeTopic.nextCursor && (
           <div className="getnote-picker-loadmore">
             <button
               data-topic-load-more
@@ -408,12 +449,12 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
       </div>
       <div className="getnote-picker-footer">
         <span className="getnote-picker-count">
-          {t('topicPicker.selected', { count: selectedNoteIds.size })}
-          {totalItems > 0 && <span style="margin-left: 12px;">{t('topicPicker.loaded', { count: totalItems })}</span>}
+          {syncAllActive ? t('topicPicker.scope.allSelected') : t('topicPicker.selected', { count: selectedNoteIds.size })}
+          {!syncAllActive && totalItems > 0 && <span style="margin-left: 12px;">{t('topicPicker.loaded', { count: totalItems })}</span>}
         </span>
         <div className="getnote-picker-btns">
           <button className="mod-cancel" onClick={onCancel}>{t('topicPicker.cancel')}</button>
-          <button className="mod-cta" disabled={selectedNoteIds.size === 0} onClick={handleConfirm}>
+          <button className="mod-cta" disabled={!syncAllActive && selectedNoteIds.size === 0} onClick={handleConfirm}>
             {t('topicPicker.confirm')}
           </button>
         </div>

@@ -199,6 +199,11 @@ export const translations: Record<string, Record<string, string>> = {
     'topicPicker.created': '我创建的',
     'topicPicker.subscribed': '我订阅的',
     'topicPicker.search': '搜索知识库...',
+    'topicPicker.scope': '同步范围',
+    'topicPicker.scope.all': '全部内容',
+    'topicPicker.scope.selected': '选择内容',
+    'topicPicker.scope.allHint': '同步该知识库的全部内容，无需逐篇加载或勾选。',
+    'topicPicker.scope.allSelected': '将同步全部内容',
     'topicPicker.cancel': '取消',
     'topicPicker.confirm': '同步',
 
@@ -489,6 +494,11 @@ export const translations: Record<string, Record<string, string>> = {
     'topicPicker.created': 'Created by me',
     'topicPicker.subscribed': 'Subscribed',
     'topicPicker.search': 'Search knowledge bases...',
+    'topicPicker.scope': 'Sync scope',
+    'topicPicker.scope.all': 'All contents',
+    'topicPicker.scope.selected': 'Selected contents',
+    'topicPicker.scope.allHint': 'Sync all contents in this knowledge base without loading or selecting each item.',
+    'topicPicker.scope.allSelected': 'All contents will be synced',
     'topicPicker.cancel': 'Cancel',
     'topicPicker.confirm': 'Sync',
 

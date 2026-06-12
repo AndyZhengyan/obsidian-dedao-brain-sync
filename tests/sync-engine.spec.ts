@@ -612,6 +612,69 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
     fetchSpy.mockRestore();
   });
 
+  it('syncs all contents in one knowledge base without applying manual time filters', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const requestUrl = String(url);
+      if (requestUrl.includes('/resource/knowledge/subscribe/list')) {
+        return mockFetchResponse({
+          data: { topics: [{ topic_id: 'topic_1', name: '长期专题' }], has_more: false },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/list')) {
+        return mockFetchResponse({ data: { topics: [], has_more: false } }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/bloggers')) {
+        return mockFetchResponse({
+          data: { bloggers: [{ follow_id: 'blogger_1', name: '主理人' }], has_more: false },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/blogger/contents')) {
+        return mockFetchResponse({
+          data: {
+            contents: [{
+              post_id_alias: 'old_post',
+              title: '旧文章',
+              summary: '全部同步仍包含旧内容',
+              created_at: '2025-01-01T10:00:00+08:00',
+              updated_at: '2025-01-01T10:00:00+08:00',
+            }],
+            has_more: false,
+          },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/blogger/content/detail')) {
+        return mockFetchResponse({
+          data: {
+            post_id: 'old_post',
+            title: '旧文章',
+            content: '全部同步仍包含旧内容',
+            created_at: '2025-01-01T10:00:00+08:00',
+            updated_at: '2025-01-01T10:00:00+08:00',
+          },
+        }) as Response;
+      }
+      throw new Error(`Unexpected request: ${requestUrl}`);
+    });
+
+    try {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 1 }));
+      const result = await engine.syncSubscribedKnowledge(undefined, {
+        syncAll: true,
+        topicIds: ['topic_1'],
+        knowledgeBaseName: '长期专题',
+      });
+
+      expect(result.created).toBe(1);
+      expect(app.vault.create).toHaveBeenCalledWith(
+        expect.stringMatching(/^得到大脑\/知识库\/长期专题\//),
+        expect.any(String)
+      );
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
   it('syncs exactly the selected subscribed-knowledge note regardless of manual sync filters', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-06-04T12:00:00+08:00'));

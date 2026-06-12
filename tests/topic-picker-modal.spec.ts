@@ -269,7 +269,7 @@ describe('TopicPickerModal', () => {
     await flush();
 
     expect(container.querySelector('.getnote-picker-body > .getnote-topic-filter-bar')).toBeNull();
-    expect(container.querySelector('.getnote-picker-header + .getnote-topic-filter-bar')).not.toBeNull();
+    expect(container.querySelector('.getnote-picker > .getnote-topic-filter-bar')).not.toBeNull();
   });
 
   it('resets selection and loaded count when switching knowledge bases', async () => {
@@ -427,6 +427,87 @@ describe('TopicPickerModal', () => {
         'blogger_note-1': '罗振宇学习笔记',
       },
     });
+  });
+
+  it('confirms the active knowledge base as an all-content sync without selecting loaded notes', async () => {
+    const onConfirm = vi.fn();
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([
+      { topic_id: 'luo', name: '罗振宇学习笔记' },
+    ]);
+    vi.mocked(fetchTopicContentPreviewPage).mockResolvedValue({
+      items: [
+        {
+          note_id: 'blogger_note-1',
+          title: '第一篇内容',
+          updated_at: '2026-06-01T10:00:00+08:00',
+          topic_id: 'luo',
+        },
+      ],
+      nextCursor: { bloggerIndex: 0, page: 2 },
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(h(TopicPickerModal, {
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        onConfirm,
+        onCancel: vi.fn(),
+      }), container);
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-id="luo"]') as HTMLButtonElement).click();
+    });
+    await flush();
+
+    const allScope = container.querySelector('[data-topic-scope-all]') as HTMLInputElement;
+    expect(allScope).toBeTruthy();
+    await act(async () => {
+      allScope.click();
+    });
+
+    expect(container.textContent).toContain('同步该知识库的全部内容');
+    expect(container.textContent).toContain('将同步全部内容');
+    expect(container.querySelector('[data-topic-select-all]')).toBeNull();
+    expect((container.querySelector('.mod-cta') as HTMLButtonElement).disabled).toBe(false);
+    await act(async () => {
+      (container.querySelector('.mod-cta') as HTMLButtonElement).click();
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith({
+      syncAll: true,
+      topicIds: ['luo'],
+      knowledgeBaseName: '罗振宇学习笔记',
+    });
+  });
+
+  it('allows all-content sync when the knowledge-base preview is empty', async () => {
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([
+      { topic_id: 'empty', name: '待完整同步的知识库' },
+    ]);
+    vi.mocked(fetchTopicContentPreviewPage).mockResolvedValue({ items: [] });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(h(TopicPickerModal, {
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+      }), container);
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-id="empty"]') as HTMLButtonElement).click();
+    });
+    await flush();
+
+    expect(container.querySelector('[data-topic-scope-all]')).not.toBeNull();
   });
 
   it('falls back to the active topic when selected content has no topic metadata', async () => {

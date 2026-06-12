@@ -818,6 +818,23 @@
   min-width: 0;
 }
 
+.getnote-topic-scope-selector {
+  display: flex;
+  gap: 16px;
+  padding: 10px 0 2px;
+}
+
+.getnote-topic-scope-selector label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.getnote-topic-scope-hint {
+  padding: 8px 0;
+}
+
 /* === Note Row === */
 .getnote-picker-row {
   display: flex;
