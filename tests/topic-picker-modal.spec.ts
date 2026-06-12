@@ -510,6 +510,37 @@ describe('TopicPickerModal', () => {
     expect(container.querySelector('[data-topic-scope-all]')).not.toBeNull();
   });
 
+  it('disables all-content confirmation after returning to the knowledge-base list', async () => {
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([
+      { topic_id: 'luo', name: '罗振宇学习笔记' },
+    ]);
+    vi.mocked(fetchTopicContentPreviewPage).mockResolvedValue({ items: [] });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(h(TopicPickerModal, {
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+      }), container);
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-id="luo"]') as HTMLButtonElement).click();
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-scope-all]') as HTMLInputElement).click();
+      (container.querySelector('[data-topic-back]') as HTMLButtonElement).click();
+    });
+
+    expect(container.textContent).not.toContain('将同步全部内容');
+    expect((container.querySelector('.mod-cta') as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('falls back to the active topic when selected content has no topic metadata', async () => {
     const onConfirm = vi.fn();
     vi.mocked(fetchSubscribedTopics).mockResolvedValue([

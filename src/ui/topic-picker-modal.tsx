@@ -170,6 +170,11 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
     await loadTopicPage(topic);
   };
 
+  const closeTopic = () => {
+    setSyncAllActive(false);
+    setActiveTopicId(null);
+  };
+
   const handleCheck = (noteId: string, checked: boolean) => {
     if (!checked) setSelectAllActive(false);
     setSelectedNoteIds(prev => {
@@ -261,7 +266,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
       <div className="getnote-picker-header">
         {activeTopic ? (
           <>
-            <button className="getnote-topic-back" data-topic-back onClick={() => setActiveTopicId(null)}>
+            <button className="getnote-topic-back" data-topic-back onClick={closeTopic}>
               <span aria-hidden="true">←</span>
               <span>{t('topicPicker.back')}</span>
             </button>
