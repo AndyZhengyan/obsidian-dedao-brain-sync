@@ -32,6 +32,9 @@ describe('NoteTypeSelect', () => {
       '链接笔记',
       '图片笔记',
       '录音卡笔记',
+      '内部记录',
+      '会议记录',
+      '订阅博主',
     ]);
   });
 
@@ -52,6 +55,6 @@ describe('NoteTypeSelect', () => {
       checkbox.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
-    expect(onChange).toHaveBeenCalledWith(['plain_text', 'link', 'img_text', 'recorder_flash_audio']);
+    expect(onChange).toHaveBeenCalledWith(['plain_text', 'link', 'img_text', 'recorder_flash_audio', 'internal_record', 'meeting', 'blogger_post']);
   });
 });

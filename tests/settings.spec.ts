@@ -431,7 +431,7 @@ describe('SettingsComponent auth credentials', () => {
     expect(updateSetting).not.toHaveBeenCalledWith('enabledNoteTypes', expect.anything());
     expect(updateSetting).toHaveBeenCalledWith('scheduledSync', {
       ...scheduledSync,
-      enabledNoteTypes: ['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'link', 'img_text', 'recorder_flash_audio'],
+      enabledNoteTypes: ['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'audio', 'class_audio', 'link', 'img_text', 'recorder_flash_audio', 'internal_record', 'meeting', 'blogger_post'],
     });
   });
 });
