@@ -82,8 +82,10 @@ export const translations: Record<string, Record<string, string>> = {
     'manualSync.title': '按时间同步',
     'manualSync.startDate': '同步起始日期',
     'manualSync.maxDays': '最大同步天数',
-    'manualSync.hint': '本次同步临时生效；起始日期留空表示不限制，最大天数填 0 表示不限制。',
+    'manualSync.hint': '本次同步范围仅临时生效，不会改变定时同步设置。',
+    'manualSync.allHint': '扫描全部历史笔记，可恢复在 Obsidian 中误删的已同步笔记。笔记较多时可能需要较长时间。',
     'manualSync.once': '仅本次同步',
+    'manualSync.mode.all': '全部笔记',
     'manualSync.mode.date': '按日期',
     'manualSync.mode.days': '按天数',
 
@@ -372,8 +374,10 @@ export const translations: Record<string, Record<string, string>> = {
     'manualSync.title': 'Sync by Time',
     'manualSync.startDate': 'Sync start date',
     'manualSync.maxDays': 'Max sync days',
-    'manualSync.hint': 'Applies only to this sync. Leave start date empty for no limit; use 0 max days for no limit.',
+    'manualSync.hint': 'This scope applies only to this run and does not change scheduled sync settings.',
+    'manualSync.allHint': 'Scans all historical notes and restores synced notes deleted from Obsidian. Large libraries may take longer.',
     'manualSync.once': 'This sync only',
+    'manualSync.mode.all': 'All notes',
     'manualSync.mode.date': 'By Date',
     'manualSync.mode.days': 'By Days',
 

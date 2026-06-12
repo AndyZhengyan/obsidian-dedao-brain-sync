@@ -23,18 +23,37 @@ afterEach(() => {
 });
 
 describe('ManualSyncModal filters', () => {
-  it('defaults to days mode and submits maxDays >= 1', async () => {
+  it('uses all-notes mode when no time limit is configured', async () => {
     const { container, onConfirm } = renderModal({ syncStartDate: '', maxDays: 0 });
 
-    const daysInput = container.querySelector('input[type="number"]') as HTMLInputElement;
-    expect(daysInput).toBeTruthy();
-    expect(daysInput.value).toBe('0');
+    const allOption = Array.from(container.querySelectorAll('.getnote-sync-mode-option'))
+      .find(option => option.textContent === '全部笔记');
+    expect(allOption).toBeTruthy();
+    expect((allOption!.querySelector('input') as HTMLInputElement).checked).toBe(true);
+    expect(container.querySelector('input[type="number"]')).toBeNull();
+    expect(container.querySelector('input[type="date"]')).toBeNull();
 
     await act(() => {
       container.querySelector('.mod-cta')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    expect(onConfirm).toHaveBeenCalledWith({ syncStartDate: '', maxDays: 1 });
+    expect(onConfirm).toHaveBeenCalledWith({ syncStartDate: '', maxDays: 0 });
+  });
+
+  it('lets users choose all-notes mode to restore deleted older notes', async () => {
+    const { container, onConfirm } = renderModal({ syncStartDate: '', maxDays: 30 });
+    const allOption = Array.from(container.querySelectorAll('.getnote-sync-mode-option'))
+      .find(option => option.textContent === '全部笔记');
+    expect(allOption).toBeTruthy();
+
+    await act(() => {
+      allOption!.querySelector('input')!.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(() => {
+      container.querySelector('.mod-cta')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith({ syncStartDate: '', maxDays: 0 });
   });
 
   it('submits configured maxDays in days mode', async () => {
@@ -134,7 +153,7 @@ describe('ManualSyncModal filters', () => {
       trigger!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    const allOption = Array.from(container.querySelectorAll('label'))
+    const allOption = Array.from(container.querySelectorAll('.getnote-note-type-select-option'))
       .find(label => label.textContent === '全部笔记');
     expect(allOption).toBeTruthy();
     const allCheckbox = allOption!.querySelector('input[type="checkbox"]') as HTMLInputElement;
