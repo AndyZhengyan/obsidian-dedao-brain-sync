@@ -3,7 +3,7 @@ import type { SyncScopeOptions } from '../types';
 import { t } from '../i18n';
 import { NoteTypeSelect } from './note-type-select';
 
-type SyncMode = 'all' | 'date' | 'days';
+type SyncMode = 'date' | 'days';
 
 interface ManualSyncModalProps {
   initialOptions: SyncScopeOptions;
@@ -14,7 +14,7 @@ interface ManualSyncModalProps {
 function resolveInitialSyncMode(initialOptions: SyncScopeOptions): SyncMode {
   const hasDate = Boolean(initialOptions.syncStartDate);
   const hasDays = initialOptions.maxDays > 0;
-  if (!hasDate && !hasDays) return 'all';
+  if (!hasDate && !hasDays) return 'days';
   if (hasDate && !hasDays) return 'date';
   if (!hasDate && hasDays) return 'days';
 
@@ -32,9 +32,7 @@ export function ManualSyncModal({ initialOptions, onConfirm, onCancel }: ManualS
   const [enabledNoteTypes, setEnabledNoteTypes] = useState<string[] | undefined>(initialOptions.enabledNoteTypes);
 
   const handleConfirm = () => {
-    if (syncMode === 'all') {
-      onConfirm({ syncStartDate: '', maxDays: 0, ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}) });
-    } else if (syncMode === 'date') {
+    if (syncMode === 'date') {
       onConfirm({ syncStartDate, maxDays: 0, ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}) });
     } else {
       const parsedMaxDays = parseInt(maxDays, 10);
@@ -51,15 +49,6 @@ export function ManualSyncModal({ initialOptions, onConfirm, onCancel }: ManualS
       <div className="getnote-manual-sync-body">
         <div className="getnote-manual-sync-card">
           <div className="getnote-sync-mode-selector" role="group" aria-label={t('manualSync.title')}>
-            <label className="getnote-sync-mode-option">
-              <input
-                type="radio"
-                name="syncMode"
-                checked={syncMode === 'all'}
-                onChange={() => setSyncMode('all')}
-              />
-              <span>{t('manualSync.mode.all')}</span>
-            </label>
             <label className="getnote-sync-mode-option">
               <input
                 type="radio"
@@ -81,9 +70,7 @@ export function ManualSyncModal({ initialOptions, onConfirm, onCancel }: ManualS
           </div>
 
           <div className="getnote-manual-sync-fields">
-            {syncMode === 'all' ? (
-              <div className="getnote-input-hint">{t('manualSync.allHint')}</div>
-            ) : syncMode === 'date' ? (
+            {syncMode === 'date' ? (
               <label className="getnote-manual-sync-field">
                 <span>{t('manualSync.startDate')}</span>
                 <input
