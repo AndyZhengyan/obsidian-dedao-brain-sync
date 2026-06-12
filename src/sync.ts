@@ -91,8 +91,9 @@ function imageAssetFilename(baseFilename: string, ext: string, index: number): s
  * `imageAssetFilename()` so existing vault files don't get renamed.
  */
 function genericAssetFilename(baseFilename: string, url: string, index: number, kind: string): string {
-  const lastSlash = url.split('?')[0].lastIndexOf('/');
-  const filename = lastSlash >= 0 ? url.split('?')[0].slice(lastSlash + 1) : url;
+  const cleanUrl = url.split(/[?#]/)[0];
+  const lastSlash = cleanUrl.lastIndexOf('/');
+  const filename = lastSlash >= 0 ? cleanUrl.slice(lastSlash + 1) : cleanUrl;
   const dot = filename.lastIndexOf('.');
   const ext = dot > 0 && dot < filename.length - 1 ? filename.slice(dot + 1).toLowerCase() : 'bin';
   const safeName = filename.split('/').pop()!.split('\\').pop()!.replace(/[^A-Za-z0-9._-]/g, '_');
@@ -358,7 +359,7 @@ export class SyncEngine {
         return null;
       }
       const arrayBuffer = await res.arrayBuffer();
-      await this.app.vault.createBinary(targetPath, arrayBuffer);
+      await tryWriteBinary(this.app, targetPath, arrayBuffer);
       return targetPath;
     } catch (err) {
       console.error(`[DedaoBrain] Generic asset download error:`, err);

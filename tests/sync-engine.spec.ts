@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SyncEngine } from '../src/sync';
 import type { Settings, GetNoteNote } from '../src/types';
+import { mkdtemp, readFile, rm } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 // Minimal mock app for SyncEngine tests
 function makeMockApp() {
@@ -1953,6 +1956,60 @@ describe('SyncEngine — selective sync cancellation', () => {
         expect(enriched.assetPaths).toEqual([
           '得到大脑/纯文本/asset/测试笔记_attachment.pdf',
           '得到大脑/纯文本/asset/测试笔记_attachment_2.pdf',
+        ]);
+      } finally {
+        vi.mocked(globalThis.fetch).mockRestore();
+      }
+    });
+
+    it('通用附件在本地 vault 使用文件系统快速写入路径', async () => {
+      const basePath = await mkdtemp(join(tmpdir(), 'dedao-generic-asset-'));
+      const app = makeMockApp();
+      app.vault.adapter = { getBasePath: () => basePath };
+      const engine = new SyncEngine(app as any, makeSettings());
+      const note = makeNote({
+        note_id: 'local_fast_path',
+        title: '测试笔记',
+        attachments: [
+          { type: 'file', url: 'https://cdn.example.com/handout.pdf', title: 'handout' },
+        ],
+      });
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ...mockFetchResponse({}),
+        arrayBuffer: () => Promise.resolve(new Uint8Array([1, 2, 3]).buffer),
+      } as Response);
+
+      try {
+        // @ts-ignore
+        await engine['enrichAudioNote'](note, new AbortController().signal);
+
+        expect(app.vault.createBinary).not.toHaveBeenCalled();
+        await expect(readFile(join(basePath, '得到大脑/纯文本/asset/测试笔记_handout.pdf')))
+          .resolves.toEqual(Buffer.from([1, 2, 3]));
+      } finally {
+        vi.mocked(globalThis.fetch).mockRestore();
+        await rm(basePath, { recursive: true, force: true });
+      }
+    });
+
+    it('通用附件文件名会忽略 URL fragment', async () => {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings());
+      const note = makeNote({
+        note_id: 'fragment_generic_name',
+        title: '测试笔记',
+        attachments: [
+          { type: 'file', url: 'https://cdn.example.com/clip.mp4#t=10', title: 'clip' },
+        ],
+      });
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({}) as Response);
+
+      try {
+        // @ts-ignore
+        const enriched = await engine['enrichAudioNote'](note, new AbortController().signal);
+
+        expect(enriched.assetPaths).toEqual([
+          '得到大脑/纯文本/asset/测试笔记_clip.mp4',
         ]);
       } finally {
         vi.mocked(globalThis.fetch).mockRestore();
