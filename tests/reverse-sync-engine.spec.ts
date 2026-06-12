@@ -500,6 +500,68 @@ describe('ReverseSyncEngine', () => {
     expect(app.vault._getFile('得到大脑/crlf.md')?.content).toContain('uid: "crlf-created"');
   });
 
+  it('keeps valid fields when a closed frontmatter block contains malformed lines', async () => {
+    const app = makeMockApp();
+    app.vault._addFile('得到大脑/partial-frontmatter.md', [
+      '---',
+      'title: "Partial frontmatter"',
+      'this line is not valid yaml',
+      'note_type: plain_text',
+      '---',
+      'Body survives',
+    ].join('\n'));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ success: true, data: { note: { note_id: 'partial-created' } } })
+    );
+
+    await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'https://openapi.biji.com/open/api/v1/resource/note/save',
+      expect.objectContaining({
+        body: JSON.stringify({
+          title: 'Partial frontmatter',
+          content: 'Body survives',
+          note_type: 'plain_text',
+          source: 'app',
+          tags: [],
+        }),
+      })
+    );
+    expect(app.vault._getFile('得到大脑/partial-frontmatter.md')?.content.match(/^---/g)?.length).toBe(1);
+    expect(app.vault._getFile('得到大脑/partial-frontmatter.md')?.content).toContain('uid: "partial-created"');
+  });
+
+  it('ignores malformed object-shaped tags while keeping the note uploadable', async () => {
+    const app = makeMockApp();
+    app.vault._addFile('得到大脑/object-tags.md', [
+      '---',
+      'title: "Object tags"',
+      'note_type: plain_text',
+      'tags: {"unexpected":"shape"}',
+      '---',
+      'Body survives',
+    ].join('\n'));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ success: true, data: { note: { note_id: 'object-tags-created' } } })
+    );
+
+    await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'https://openapi.biji.com/open/api/v1/resource/note/save',
+      expect.objectContaining({
+        body: JSON.stringify({
+          title: 'Object tags',
+          content: 'Body survives',
+          note_type: 'plain_text',
+          source: 'app',
+          tags: [],
+        }),
+      })
+    );
+  });
+
   it('does not treat a leading markdown divider block as frontmatter', async () => {
     const app = makeMockApp();
     const content = [

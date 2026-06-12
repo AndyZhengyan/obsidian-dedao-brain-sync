@@ -53,7 +53,7 @@ function parseSimpleFrontmatter(raw: string): Record<string, string> | null {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
     const match = line.match(/^\s*([A-Za-z0-9_-]+)\s*:\s*(.*)\s*$/);
-    if (!match) return null;
+    if (!match) continue;
     hasYamlLine = true;
     result[match[1]] = stripQuotes(match[2].trim());
   }
@@ -93,6 +93,7 @@ function readTags(frontmatter: Record<string, unknown>): string[] {
   if (typeof value !== 'string') return [];
   const trimmed = value.trim();
   if (!trimmed || trimmed === '[]') return [];
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) return [];
   return trimmed
     .replace(/^\[|\]$/g, '')
     .split(',')
