@@ -11,6 +11,7 @@ import { LocalUploadModal } from './ui/local-upload-modal';
 import { initI18n, t } from './i18n';
 import { ReverseSyncEngine, type ReverseSyncResult } from './reverse-sync';
 import { migrateSyncedNoteTags } from './tag-migration';
+import { getLastQuotaState, resetQuotaState } from './api-clients/openapi-client';
 
 const MAX_SYNC_HISTORY = 20;
 const TAG_MIGRATION_VERSION = 2;
@@ -328,6 +329,13 @@ export default class GetNoteSyncPlugin extends Plugin {
 
       await this.recordSyncHistory(result, type, startedAt, resolvedScope);
 
+        // Clear exhausted quota state on successful sync
+        if (this.settings.lastQuotaState?.exhausted) {
+          this.settings.lastQuotaState = undefined;
+          resetQuotaState();
+          await this.saveSettings();
+        }
+
       if (type === 'auto') {
         this.autoSyncFailCount = 0;
         if (result.created > 0 || result.updated > 0) {
@@ -359,6 +367,7 @@ export default class GetNoteSyncPlugin extends Plugin {
           if (isQuotaExceeded) {
             this.stopAutoSync();
             this.settings.scheduledSync.enabled = false;
+            this.settings.lastQuotaState = getLastQuotaState();
             await this.saveSettings();
             showError(t('notice.quotaExceededStop'));
           } else if (isAuthError) {
