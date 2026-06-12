@@ -511,7 +511,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       await this.recordSyncHistory(result, 'full', startedAt, {
         maxDays: 0,
         syncStartDate: '',
-        selectedCount: syncOptions?.selectedNoteIds.length,
+        selectedCount: syncOptions?.selectedNoteIds?.length,
         selectedIds: syncOptions?.selectedNoteIds,
       }, 'success', undefined, 'knowledge-base');
       showSuccess(t('notice.syncComplete', {
@@ -525,7 +525,7 @@ export default class GetNoteSyncPlugin extends Plugin {
         await this.recordSyncHistory(emptySyncResult(), 'full', startedAt, {
           maxDays: 0,
           syncStartDate: '',
-          selectedCount: syncOptions?.selectedNoteIds.length,
+          selectedCount: syncOptions?.selectedNoteIds?.length,
           selectedIds: syncOptions?.selectedNoteIds,
         }, 'cancelled', undefined, 'knowledge-base');
         this.syncProgress = { message: t('modal.cancelled'), count: '', percent: 0 };
@@ -535,7 +535,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       await this.recordSyncHistory(emptySyncResult(), 'full', startedAt, {
         maxDays: 0,
         syncStartDate: '',
-        selectedCount: syncOptions?.selectedNoteIds.length,
+        selectedCount: syncOptions?.selectedNoteIds?.length,
         selectedIds: syncOptions?.selectedNoteIds,
       }, 'failed', error, 'knowledge-base');
       this.syncProgress = { message: t('notice.syncFailed', { msg: error }), count: '', percent: 0 };

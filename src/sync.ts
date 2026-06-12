@@ -116,9 +116,11 @@ export interface SyncProgressCallback {
 
 export interface SubscribedKnowledgeSyncOptions {
   selectedNoteIds?: string[];
+  syncAll?: boolean;
   topicIds?: string[];
   createdTopicIds?: string[];
   bloggerIds?: string[];
+  knowledgeBaseName?: string;
   knowledgeBaseNames?: Record<string, string>;
 }
 
@@ -973,7 +975,7 @@ export class SyncEngine {
       const noteIdFiltered = selectedNoteIds
         ? notes.filter(n => selectedNoteIds.includes(n.note_id))
         : notes;
-      const filteredNotes = selectedNoteIds
+      const filteredNotes = selectedNoteIds || syncOptions.syncAll
         ? noteIdFiltered
         : this.filterNotesByType(this.filterNotesByDateRange(this.filterRecentNotes(noteIdFiltered)));
 
@@ -982,7 +984,7 @@ export class SyncEngine {
         if (seenNoteIds.has(note.note_id)) continue;
         seenNoteIds.add(note.note_id);
         result.total++;
-        const knowledgeBaseName = syncOptions.knowledgeBaseNames?.[note.note_id];
+        const knowledgeBaseName = syncOptions.knowledgeBaseNames?.[note.note_id] ?? syncOptions.knowledgeBaseName;
         const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;
         const noteToWrite = await this.enrichAudioNote(note, controller.signal, categoryOverride);
         const appendNotes = await this.fetchAppendNotes(noteToWrite, controller.signal, result, categoryOverride);
