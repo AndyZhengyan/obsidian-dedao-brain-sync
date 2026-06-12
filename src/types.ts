@@ -35,11 +35,16 @@ export type KnownNoteType =
   | 'plain_text'
   | 'img_text'
   | 'link'
+  | 'immediate_audio'
   | 'recorder_audio'
   | 'recorder_flash_audio'
-  | 'immediate_audio'
   | 'audio_long'
-  | 'local_audio';
+  | 'local_audio'
+  | 'audio'
+  | 'class_audio'
+  | 'internal_record'
+  | 'meeting'
+  | 'blogger_post';
 
 export type NoteType = KnownNoteType | (string & {});
 
@@ -200,6 +205,11 @@ export const NOTE_CATEGORIES: NoteCategory[] = [
   { dirName: '录音长录', noteType: 'recorder_flash_audio' },
   { dirName: '录音长录', noteType: 'audio_long' },
   { dirName: '本地音频', noteType: 'local_audio' },
+  { dirName: '录音笔记', noteType: 'audio' },
+  { dirName: '录音笔记', noteType: 'class_audio' },
+  { dirName: '录音笔记', noteType: 'internal_record' },
+  { dirName: '录音笔记', noteType: 'meeting' },
+  { dirName: '订阅博主', noteType: 'blogger_post' },
 ];
 
 export function getCategoryDir(noteType: string): string {

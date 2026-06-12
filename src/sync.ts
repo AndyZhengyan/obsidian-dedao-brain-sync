@@ -13,6 +13,10 @@ const AUDIO_NOTE_TYPES = new Set([
   'immediate_audio',
   'audio_long',
   'local_audio',
+  'audio',
+  'class_audio',
+  'internal_record',
+  'meeting',
 ]);
 
 const IMAGE_NOTE_TYPES = new Set([

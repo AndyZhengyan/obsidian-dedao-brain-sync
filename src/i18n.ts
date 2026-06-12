@@ -173,6 +173,9 @@ export const translations: Record<string, Record<string, string>> = {
     'picker.type.immediate_audio': '录音笔记',
     'picker.type.audio_long': '录音笔记',
     'picker.type.local_audio': '录音笔记',
+    'picker.type.blogger_post': '订阅博主',
+    'picker.type.internal_record': '内部记录',
+    'picker.type.meeting': '会议记录',
     'picker.type.unknown': '其他',
 
     // === Topic Picker ===
@@ -455,6 +458,9 @@ export const translations: Record<string, Record<string, string>> = {
     'picker.type.immediate_audio': 'Audio Note',
     'picker.type.audio_long': 'Audio Note',
     'picker.type.local_audio': 'Audio Note',
+    'picker.type.blogger_post': 'Subscribed Blogger',
+    'picker.type.internal_record': 'Internal Record',
+    'picker.type.meeting': 'Meeting',
     'picker.type.unknown': 'Other',
 
     // === Topic Picker ===
