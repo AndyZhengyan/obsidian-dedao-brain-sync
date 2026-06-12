@@ -1932,6 +1932,91 @@ describe('SyncEngine — selective sync cancellation', () => {
         vi.mocked(globalThis.fetch).mockRestore();
       }
     });
+
+    it('同一笔记的同名通用附件会下载到不同文件', async () => {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings());
+      const note = makeNote({
+        note_id: 'duplicate_generic_names',
+        title: '测试笔记',
+        attachments: [
+          { type: 'file', url: 'https://cdn-a.example.com/attachment.pdf', title: 'first' },
+          { type: 'file', url: 'https://cdn-b.example.com/attachment.pdf', title: 'second' },
+        ],
+      });
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({}) as Response);
+
+      try {
+        // @ts-ignore
+        const enriched = await engine['enrichAudioNote'](note, new AbortController().signal);
+
+        expect(enriched.assetPaths).toEqual([
+          '得到大脑/纯文本/asset/测试笔记_attachment.pdf',
+          '得到大脑/纯文本/asset/测试笔记_attachment_2.pdf',
+        ]);
+      } finally {
+        vi.mocked(globalThis.fetch).mockRestore();
+      }
+    });
+
+    it('Web API 模式会处理列表响应中已有的通用附件', async () => {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings({
+        authMode: 'web',
+        webApiToken: 'web-token',
+      }));
+      const note = makeNote({
+        note_id: 'web_generic_attachment',
+        title: '测试笔记',
+        attachments: [
+          { type: 'file', url: 'https://cdn.example.com/handout.pdf', title: 'handout' },
+        ],
+      });
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({}) as Response);
+
+      try {
+        // @ts-ignore
+        const enriched = await engine['enrichAudioNote'](note, new AbortController().signal);
+
+        expect(enriched.assetPaths).toEqual([
+          '得到大脑/纯文本/asset/测试笔记_handout.pdf',
+        ]);
+      } finally {
+        vi.mocked(globalThis.fetch).mockRestore();
+      }
+    });
+
+    it('禁用音频导入时不会保留会渲染成断链的音频字段', async () => {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings({
+        attachmentImport: { image: true, audio: false, video: true, document: true },
+      }));
+      const note = makeNote({
+        note_id: 'audio_disabled',
+        title: '测试笔记',
+        note_type: 'recorder_audio',
+      });
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({
+        data: {
+          ...note,
+          audio: { duration: 10 },
+          attachments: [
+            { type: 'audio', url: 'https://cdn.example.com/audio.mp3', title: 'audio' },
+          ],
+        },
+      }) as Response);
+
+      try {
+        // @ts-ignore
+        const enriched = await engine['enrichAudioNote'](note, new AbortController().signal);
+
+        expect(enriched.audio).toBeUndefined();
+        expect(enriched.attachments).not.toContainEqual(expect.objectContaining({ type: 'audio' }));
+        expect(enriched.assetFileName).toBeUndefined();
+      } finally {
+        vi.mocked(globalThis.fetch).mockRestore();
+      }
+    });
   });
 
   describe('SyncEngine — syncNoteIds pre-check integration', () => {
