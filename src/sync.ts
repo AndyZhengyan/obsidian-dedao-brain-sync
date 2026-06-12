@@ -6,6 +6,7 @@ import { getAuthCredentials, type GetNoteNote, type Settings, type SyncResult, t
 import type { SyncModal } from './ui/sync-modal';
 import { t } from './i18n';
 import { tryWriteBinary } from './utils/vault-fs';
+import { classifyAttachmentUrl, isAttachmentTypeEnabled } from './utils/attachments';
 
 const AUDIO_NOTE_TYPES = new Set([
   'recorder_audio',
@@ -82,6 +83,31 @@ function imageAssetFilename(baseFilename: string, ext: string, index: number): s
   const suffix = index === 0 ? '' : `_${index + 1}`;
   const rawFilename = `${baseFilename}_image${suffix}.${ext}`;
   return rawFilename.split('/').pop()!.split('\\').pop()!;
+}
+
+/**
+ * Pick the download path for a non-image attachment based on its URL extension.
+ * Image attachments keep the legacy `<base>_image<N>.<ext>` naming used by
+ * `imageAssetFilename()` so existing vault files don't get renamed.
+ */
+function genericAssetFilename(baseFilename: string, url: string, index: number, kind: string): string {
+  const lastSlash = url.split('?')[0].lastIndexOf('/');
+  const filename = lastSlash >= 0 ? url.split('?')[0].slice(lastSlash + 1) : url;
+  const dot = filename.lastIndexOf('.');
+  const ext = dot > 0 && dot < filename.length - 1 ? filename.slice(dot + 1).toLowerCase() : 'bin';
+  const safeName = filename.split('/').pop()!.split('\\').pop()!.replace(/[^A-Za-z0-9._-]/g, '_');
+  // If the API's filename is empty, synthesize one
+  const finalName = safeName && safeName !== '.' ? safeName : `${baseFilename}_${kind}_${index + 1}.${ext}`;
+  return finalName;
+}
+
+function isDownloadableAttachment(
+  attachment: { type: string; url: string },
+  settings: Settings
+): boolean {
+  const kind = classifyAttachmentUrl(attachment.url);
+  if (kind === 'other') return true; // never silently drop unrecognized
+  return isAttachmentTypeEnabled(settings.attachmentImport, kind);
 }
 
 function hasDownloadedImageAssets(
@@ -291,6 +317,46 @@ export class SyncEngine {
       return targetPath;
     } catch (err) {
       console.error(`[DedaoBrain] Image download error:`, err);
+      return null;
+    }
+  }
+
+  private async downloadGenericAsset(
+    note: GetNoteNote,
+    attachment: { type: string; url: string; title: string },
+    index: number,
+    categoryOverride?: string
+  ): Promise<string | null> {
+    try {
+      if (!isSafeAttachmentUrl(attachment.url)) {
+        console.warn('[DedaoBrain] Skipped unsafe generic attachment URL');
+        return null;
+      }
+
+      const kind = classifyAttachmentUrl(attachment.url);
+      if (kind === 'other') return null; // truly unknown — skip
+
+      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const assetDir = `${categoryDir}/asset`;
+      if (!this.app.vault.getAbstractFileByPath(assetDir)) {
+        await this.app.vault.createFolder(assetDir);
+      }
+
+      const filename = genericAssetFilename(this.getFileName(note), attachment.url, index, kind);
+      const targetPath = `${assetDir}/${filename}`;
+
+      if (this.app.vault.getAbstractFileByPath(targetPath)) return targetPath;
+
+      const res = await fetch(attachment.url);
+      if (res.status < 200 || res.status >= 300) {
+        console.error(`[DedaoBrain] Generic asset download failed (${kind}): ${res.status}`);
+        return null;
+      }
+      const arrayBuffer = await res.arrayBuffer();
+      await this.app.vault.createBinary(targetPath, arrayBuffer);
+      return targetPath;
+    } catch (err) {
+      console.error(`[DedaoBrain] Generic asset download error:`, err);
       return null;
     }
   }
@@ -568,10 +634,21 @@ export class SyncEngine {
         enrichedNote.assetFileName = this.getFileName(enrichedNote);
       }
 
+      // Image attachments keep their dedicated downloader (legacy naming scheme).
+      // Video / document / unknown attachments go through a generic downloader
+      // gated by the per-type settings.
       const imageAttachments = (enrichedNote.attachments ?? []).filter(isImageAttachment);
       for (const [index, img] of imageAttachments.entries()) {
         const imgPath = await this.downloadImageAsset(enrichedNote, img, index, categoryOverride);
         if (imgPath) assetPaths.push(imgPath);
+      }
+
+      const genericAttachments = (enrichedNote.attachments ?? []).filter(
+        a => !isImageAttachment(a) && a.type !== 'audio' && isDownloadableAttachment(a, this.settings)
+      );
+      for (const [index, att] of genericAttachments.entries()) {
+        const path = await this.downloadGenericAsset(enrichedNote, att, index, categoryOverride);
+        if (path) assetPaths.push(path);
       }
 
       if (assetPaths.length > 0) {

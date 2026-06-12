@@ -65,6 +65,12 @@ export interface ScheduledSyncSettings {
   enabledNoteTypes?: string[];  // undefined = all types, empty array = no types
 }
 
+export interface ReverseSyncSettings {
+  enabled: boolean;
+}
+
+export type AttachmentKind = 'image' | 'audio' | 'video' | 'document' | 'other';
+
 export interface AttachmentImportSettings {
   image: boolean;
   audio: boolean;
@@ -78,10 +84,6 @@ export const DEFAULT_ATTACHMENT_IMPORT: AttachmentImportSettings = {
   video: true,
   document: true,
 };
-
-export interface ReverseSyncSettings {
-  enabled: boolean;
-}
 
 export interface ApiQuotaState {
   exhausted: boolean;

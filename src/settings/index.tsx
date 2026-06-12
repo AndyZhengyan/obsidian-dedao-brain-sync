@@ -545,6 +545,26 @@ export function SettingsComponent({
         </div>
       </SettingItem>
 
+      <SettingItem name={t('settings.attachment.section')}>
+        <div className="getnote-scheduled-options">
+          {(['image', 'audio', 'video', 'document'] as const).map(kind => (
+            <div className="getnote-scheduled-row" key={kind}>
+              <span className="getnote-scheduled-row-label">{t(`settings.attachment.${kind}`)}</span>
+              <span className="getnote-scheduled-row-control">
+                <input
+                  type="checkbox"
+                  checked={settings.attachmentImport?.[kind] !== false}
+                  onChange={(e) => updateSetting('attachmentImport', {
+                    ...settings.attachmentImport,
+                    [kind]: (e.target as HTMLInputElement).checked,
+                  })}
+                />
+              </span>
+            </div>
+          ))}
+        </div>
+      </SettingItem>
+
       <SettingItem name={t('settings.manualSync')}>
         <div className="getnote-manual-actions">
           <div className="getnote-manual-action-group">
