@@ -596,3 +596,82 @@ describe('TopicPickerModal', () => {
     });
   });
 });
+
+describe('TopicPickerModal card layout (#138)', () => {
+  it('renders knowledge-base contents as cards with title, summary, preview, tags and timestamp', async () => {
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([
+      { topic_id: 'luo', name: '罗振宇学习笔记' },
+    ]);
+    vi.mocked(fetchTopicContentPreviewPage).mockResolvedValue({
+      items: [
+        {
+          note_id: 'kb-card-1',
+          title: 'AI 知识库卡片化测试',
+          updated_at: '2026-06-10T15:30:00+08:00',
+          blogger_name: '罗振宇',
+          topic_id: 'luo',
+          summary: '这是一段 AI 生成的摘要，用于验证卡片显示摘要区域。',
+        } as never,
+      ],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(h(TopicPickerModal, {
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+      }), container);
+      await Promise.resolve();
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-id="luo"]') as HTMLButtonElement).click();
+    });
+    await flush();
+
+    const card = container.querySelector('.getnote-note-card');
+    expect(card).not.toBeNull();
+
+    expect(card!.querySelector('.getnote-note-card-title')).not.toBeNull();
+    expect(card!.querySelector('.getnote-note-card-summary')).not.toBeNull();
+    expect(card!.querySelector('.getnote-note-card-time')).not.toBeNull();
+  });
+
+  it('renders multiple knowledge-base contents as a single-column vertical stack of cards', async () => {
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([
+      { topic_id: 'luo', name: '罗振宇学习笔记' },
+    ]);
+    vi.mocked(fetchTopicContentPreviewPage).mockResolvedValue({
+      items: [
+        { note_id: 'kb-1', title: '内容 1', updated_at: '2026-06-01T10:00:00+08:00', topic_id: 'luo' },
+        { note_id: 'kb-2', title: '内容 2', updated_at: '2026-06-02T10:00:00+08:00', topic_id: 'luo' },
+        { note_id: 'kb-3', title: '内容 3', updated_at: '2026-06-03T10:00:00+08:00', topic_id: 'luo' },
+      ],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(h(TopicPickerModal, {
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+      }), container);
+      await Promise.resolve();
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-id="luo"]') as HTMLButtonElement).click();
+    });
+    await flush();
+
+    const cards = Array.from(container.querySelectorAll('.getnote-note-card'));
+    expect(cards.length).toBe(3);
+  });
+});
