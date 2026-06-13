@@ -2,11 +2,13 @@ import { useState } from 'preact/hooks';
 import type { SyncScopeOptions } from '../types';
 import { t } from '../i18n';
 import { NoteTypeSelect } from './note-type-select';
+import { TagSelect } from './tag-select';
 
 type SyncMode = 'date' | 'days';
 
 interface ManualSyncModalProps {
   initialOptions: SyncScopeOptions;
+  tagOptions?: string[];
   onConfirm: (options: SyncScopeOptions) => void;
   onCancel: () => void;
 }
@@ -25,21 +27,28 @@ function resolveInitialSyncMode(initialOptions: SyncScopeOptions): SyncMode {
   return daysCutoff >= startTime ? 'days' : 'date';
 }
 
-export function ManualSyncModal({ initialOptions, onConfirm, onCancel }: ManualSyncModalProps) {
+export function ManualSyncModal({ initialOptions, tagOptions = [], onConfirm, onCancel }: ManualSyncModalProps) {
   const [syncMode, setSyncMode] = useState<SyncMode>(resolveInitialSyncMode(initialOptions));
   const [syncStartDate, setSyncStartDate] = useState(initialOptions.syncStartDate);
   const [maxDays, setMaxDays] = useState(String(initialOptions.maxDays));
   const [enabledNoteTypes, setEnabledNoteTypes] = useState<string[] | undefined>(initialOptions.enabledNoteTypes);
+  const [syncTags, setSyncTags] = useState<string[]>(initialOptions.syncTags ?? []);
 
   const handleConfirm = () => {
     if (syncMode === 'date') {
-      onConfirm({ syncStartDate, maxDays: 0, ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}) });
+      onConfirm({
+        syncStartDate,
+        maxDays: 0,
+        ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}),
+        ...(syncTags.length > 0 ? { syncTags } : {}),
+      });
     } else {
       const parsedMaxDays = parseInt(maxDays, 10);
       onConfirm({
         syncStartDate: '',
         maxDays: Number.isNaN(parsedMaxDays) || parsedMaxDays < 1 ? 1 : parsedMaxDays,
         ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}),
+        ...(syncTags.length > 0 ? { syncTags } : {}),
       });
     }
   };
@@ -95,6 +104,14 @@ export function ManualSyncModal({ initialOptions, onConfirm, onCancel }: ManualS
             <label className="getnote-manual-sync-field">
               <span>{t('settings.noteTypes.label')}</span>
               <NoteTypeSelect value={enabledNoteTypes} onChange={setEnabledNoteTypes} />
+            </label>
+            <label className="getnote-manual-sync-field">
+              <span>{t('settings.syncTags.label')}</span>
+              <TagSelect
+                value={syncTags}
+                options={tagOptions}
+                onChange={setSyncTags}
+              />
             </label>
           </div>
         </div>

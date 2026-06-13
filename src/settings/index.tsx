@@ -4,6 +4,7 @@ import { SyncButton } from './sync-button';
 import { OAuthButton } from './oauth-button';
 import { openSyncHistoryModal } from '../ui/sync-history-modal';
 import { NoteTypeSelect } from '../ui/note-type-select';
+import { TagSelect } from '../ui/tag-select';
 import { type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressDetail } from '../types';
 import { App, AbstractInputSuggest } from 'obsidian';
 import { fetchNotes } from '../api';
@@ -456,6 +457,18 @@ export function SettingsComponent({
           placeholder={t('settings.prefix.placeholder')}
           value={filenamePrefix}
           onInput={(e) => handleFilenamePrefixChange((e.target as HTMLInputElement).value)}
+        />
+      </SettingItem>
+
+      {/* 同步范围（标签白名单） */}
+      <SettingItem
+        name={t('settings.syncTags.label')}
+        description={t('settings.syncTags.desc')}
+      >
+        <TagSelect
+          value={settings.syncTags ?? []}
+          options={settings.tagCache?.tags ?? []}
+          onChange={(value) => updateSetting('syncTags', value)}
         />
       </SettingItem>
 

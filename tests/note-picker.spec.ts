@@ -185,7 +185,7 @@ describe('NotePickerModal auth chains', () => {
       container.querySelector('.mod-cta')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    expect(onConfirm).toHaveBeenCalledWith(['link'], ['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'audio', 'class_audio', 'link', 'img_text', 'recorder_flash_audio', 'internal_record', 'meeting', 'blogger_post']);
+    expect(onConfirm).toHaveBeenCalledWith(['link'], ['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'audio', 'class_audio', 'link', 'img_text', 'recorder_flash_audio', 'internal_record', 'meeting', 'blogger_post'], []);
   });
 
   it('filters the picker list by tags and selects the visible matches', async () => {
@@ -222,6 +222,57 @@ describe('NotePickerModal auth chains', () => {
       container.querySelector('.mod-cta')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    expect(onConfirm).toHaveBeenCalledWith(['tagged'], undefined);
+    expect(onConfirm).toHaveBeenCalledWith(['tagged'], undefined, []);
+  });
+
+  it('filters picker list by the tag whitelist dropdown', async () => {
+    const onConfirm = vi.fn();
+    vi.mocked(fetchNotes).mockResolvedValueOnce({
+      notes: [
+        makeNote({ note_id: 'work_note', title: '工作笔记', tags: [{ name: 'work' }, { name: 'daily' }] }),
+        makeNote({ note_id: 'home_note', title: '生活笔记', tags: [{ name: 'home' }] }),
+        makeNote({ note_id: 'no_tag_note', title: '无标签笔记', tags: [] }),
+      ],
+      hasMore: false,
+    });
+
+    const container = await renderPicker({
+      token: 'web-token',
+      clientId: '',
+      authMode: 'web',
+    }, onConfirm);
+
+    // Open the tag dropdown (trigger shows "All tags" by default)
+    const tagTrigger = Array.from(container.querySelectorAll('button'))
+      .find(button => button.textContent === '全部标签');
+    expect(tagTrigger).toBeTruthy();
+    await act(() => {
+      tagTrigger!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const workOption = Array.from(container.querySelectorAll('label'))
+      .find(label => label.textContent === 'work');
+    expect(workOption).toBeTruthy();
+    const workCheckbox = workOption!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    await act(() => {
+      workCheckbox.checked = true;
+      workCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain('工作笔记');
+    expect(container.textContent).not.toContain('生活笔记');
+    expect(container.textContent).not.toContain('无标签笔记');
+
+    // submit and verify tag whitelist is forwarded
+    await act(() => {
+      Array.from(container.querySelectorAll('button'))
+        .find(button => button.textContent === '全选')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await act(() => {
+      container.querySelector('.mod-cta')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith(['work_note'], undefined, ['work']);
   });
 });
