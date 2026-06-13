@@ -1,8 +1,15 @@
 import { App, Modal } from 'obsidian';
 import type { SyncHistoryEntry, SyncResultItem } from '../types';
+import { INTERNAL_AUDIO_NOTE_TYPES } from '../types';
 import { t } from '../i18n';
 
 export function formatHistoryNoteType(noteType: string): string {
+  if (INTERNAL_AUDIO_NOTE_TYPES.includes(noteType)) {
+    return t('picker.type.audio_note');
+  }
+  if (noteType === 'blogger_post') {
+    return t('picker.type.unknown');
+  }
   const key = `picker.type.${noteType}`;
   const label = t(key);
   return label === key ? t('picker.type.unknown') : label;

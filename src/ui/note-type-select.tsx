@@ -1,15 +1,15 @@
 import { useState } from 'preact/hooks';
 import { t } from '../i18n';
+import { INTERNAL_AUDIO_NOTE_TYPES } from '../types';
 
+// 顶层 UI 仅 5 个 group。订阅博主（blogger_post）从 UI 选项移除但仍默认同步。
+// 9 种内部 audio 类型合并到"录音笔记"组；sync.ts 的 AUDIO_NOTE_TYPES 保持 9 种不变以解耦。
 const NOTE_TYPE_OPTIONS = [
-  { labelKey: 'picker.type.audio_note', noteTypes: ['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'audio', 'class_audio'] },
   { labelKey: 'picker.type.plain_text', noteTypes: ['plain_text'] },
-  { labelKey: 'picker.type.link', noteTypes: ['link'] },
   { labelKey: 'picker.type.img_text', noteTypes: ['img_text'] },
-  { labelKey: 'picker.type.recorder_flash_audio', noteTypes: ['recorder_flash_audio'] },
-  { labelKey: 'picker.type.internal_record', noteTypes: ['internal_record'] },
-  { labelKey: 'picker.type.meeting', noteTypes: ['meeting'] },
-  { labelKey: 'picker.type.blogger_post', noteTypes: ['blogger_post'] },
+  { labelKey: 'picker.type.link', noteTypes: ['link'] },
+  { labelKey: 'picker.type.audio_note', noteTypes: [...INTERNAL_AUDIO_NOTE_TYPES] },
+  { labelKey: 'picker.type.unknown', noteTypes: ['blogger_post'] },
 ];
 
 function getTypeLabel(labelKey: string): string {
