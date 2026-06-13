@@ -2803,3 +2803,125 @@ describe('SyncEngine — fixture-based sync integration', () => {
     expect(createdPaths).not.toContain('得到大脑/纯文本/未选择的 OpenAPI 笔记.md');
   });
 });
+
+describe('SyncEngine — tag whitelist filter', () => {
+  it('keeps all notes when syncTags is empty (no filter applied)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        data: {
+          notes: [
+            makeNote({ note_id: 'plain', note_type: 'plain_text', tags: [] }),
+            makeNote({ note_id: 'tagged', note_type: 'plain_text', tags: [{ name: 'work' }] }),
+          ],
+          has_more: false,
+          next_cursor: '',
+        },
+      }) as Response
+    );
+
+    try {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }), undefined, { syncTags: [] });
+      const result = await engine.sync();
+      expect(result.total).toBe(2);
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('keeps only notes that have at least one tag in the whitelist', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        data: {
+          notes: [
+            makeNote({ note_id: 'a', note_type: 'plain_text', tags: [{ name: 'work' }] }),
+            makeNote({ note_id: 'b', note_type: 'plain_text', tags: [{ name: 'daily' }] }),
+            makeNote({ note_id: 'c', note_type: 'plain_text', tags: [] }),
+          ],
+          has_more: false,
+          next_cursor: '',
+        },
+      }) as Response
+    );
+
+    try {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }), undefined, { syncTags: ['work'] });
+      const result = await engine.sync();
+      expect(result.total).toBe(1);
+      expect(result.items?.map(i => i.noteId)).toEqual(['a']);
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('matches tags case-insensitively for whitelist filter', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        data: {
+          notes: [
+            makeNote({ note_id: 'a', note_type: 'plain_text', tags: [{ name: 'Work' }] }),
+          ],
+          has_more: false,
+          next_cursor: '',
+        },
+      }) as Response
+    );
+
+    try {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }), undefined, { syncTags: ['work'] });
+      const result = await engine.sync();
+      expect(result.total).toBe(1);
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('returns no notes when whitelist tags do not exist', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        data: {
+          notes: [
+            makeNote({ note_id: 'a', note_type: 'plain_text', tags: [{ name: 'work' }] }),
+          ],
+          has_more: false,
+          next_cursor: '',
+        },
+      }) as Response
+    );
+
+    try {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }), undefined, { syncTags: ['nope'] });
+      const result = await engine.sync();
+      expect(result.total).toBe(0);
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('filterNotesByTags private method returns all notes when whitelist is undefined', () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings());
+    const notes = [
+      makeNote({ note_id: 'a', tags: [{ name: 'work' }] }),
+      makeNote({ note_id: 'b', tags: [] }),
+    ];
+    // @ts-ignore accessing private method
+    expect(engine['filterNotesByTags'](notes)).toHaveLength(2);
+  });
+
+  it('filterNotesByTags private method returns matching notes for non-empty whitelist', () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings());
+    const notes = [
+      makeNote({ note_id: 'a', tags: [{ name: 'work' }, { name: 'project' }] }),
+      makeNote({ note_id: 'b', tags: [{ name: 'daily' }] }),
+      makeNote({ note_id: 'c', tags: [{ name: 'project' }] }),
+    ];
+    // @ts-ignore accessing private method
+    const result = engine['filterNotesByTags'](notes, ['work', 'project']);
+    expect(result.map(n => n.note_id).sort()).toEqual(['a', 'c']);
+  });
+});

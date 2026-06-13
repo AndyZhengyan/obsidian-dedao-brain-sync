@@ -3,6 +3,7 @@ import { fetchAllNotes, fetchNoteChildren, fetchNoteDetail, fetchSubscribedKnowl
 import { formatDateTime, formatTimestampPrefix, renderNote, generateDisplayTitle } from './note-parser';
 import { getCategoryDir } from './types';
 import { getAuthCredentials, type GetNoteNote, type Settings, type SyncResult, type SyncResultItem, type SyncScopeOptions } from './types';
+import { applyTagFilter } from './utils/tag-aggregator';
 import type { SyncModal } from './ui/sync-modal';
 import { t } from './i18n';
 import { tryWriteBinary } from './utils/vault-fs';
@@ -154,6 +155,7 @@ export interface SubscribedKnowledgeSyncOptions {
   bloggerIds?: string[];
   knowledgeBaseName?: string;
   knowledgeBaseNames?: Record<string, string>;
+  syncTags?: string[];
 }
 
 type WriteStatus = SyncResultItem['status'];
@@ -178,10 +180,12 @@ export class SyncEngine {
     this.settings = settings;
     const syncStartDate = scopeOptions?.syncStartDate ?? settings.syncStartDate;
     const enabledNoteTypes = scopeOptions?.enabledNoteTypes;
+    const syncTags = scopeOptions?.syncTags;
     this.scopeOptions = {
       maxDays: syncStartDate ? 0 : scopeOptions?.maxDays ?? settings.maxDays,
       syncStartDate,
       ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}),
+      ...(syncTags !== undefined && syncTags.length > 0 ? { syncTags } : {}),
     };
     this.onProgress = onProgress;
   }
@@ -828,6 +832,10 @@ export class SyncEngine {
     return notes.filter(note => enabledNoteTypes.includes(note.note_type));
   }
 
+  private filterNotesByTags(notes: GetNoteNote[], whitelist?: string[]): GetNoteNote[] {
+    return applyTagFilter(notes, whitelist ?? this.scopeOptions.syncTags);
+  }
+
   private filterRecentNotes(notes: GetNoteNote[]): GetNoteNote[] {
     const { maxDays } = this.scopeOptions;
     if (!maxDays || maxDays <= 0) return notes;
@@ -843,6 +851,7 @@ export class SyncEngine {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
     const uidIndex = this.buildUidIndex();
     const seenNoteIds = new Set<string>();
+    const observedTagNames = new Set<string>();
     const controller = new AbortController();
     this.abortController = controller;
     let pageCount = 0;
@@ -879,12 +888,16 @@ export class SyncEngine {
         const recentNotes = this.filterRecentNotes(notes);
         const filtered = this.filterNotesByDateRange(recentNotes);
         const typeFiltered = this.filterNotesByType(filtered);
+        const tagFiltered = this.filterNotesByTags(typeFiltered);
 
-        for (const note of typeFiltered) {
+        for (const note of tagFiltered) {
           if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
           if (seenNoteIds.has(note.note_id)) continue;
           seenNoteIds.add(note.note_id);
           result.total++;
+          for (const tag of note.tags ?? []) {
+            if (tag?.name) observedTagNames.add(tag.name);
+          }
           const noteToWrite = await this.enrichAudioNote(note, controller.signal);
 
           const appendNotes = await this.fetchAppendNotes(noteToWrite, controller.signal, result);
@@ -903,6 +916,9 @@ export class SyncEngine {
             if (seenNoteIds.has(appendNote.note_id)) continue;
             seenNoteIds.add(appendNote.note_id);
             result.total++;
+            for (const tag of appendNote.tags ?? []) {
+              if (tag?.name) observedTagNames.add(tag.name);
+            }
             const appendWriteResult = await this.writeNote(appendNote, uidIndex, parentBaseName, parentFileName);
             this.applyWriteResult(result, appendWriteResult);
             this.recordItem(result, appendNote, appendWriteResult);
@@ -941,6 +957,9 @@ export class SyncEngine {
       }
 
       this.onProgress?.({ percent: 100 });
+      if (observedTagNames.size > 0) {
+        result.observedTags = Array.from(observedTagNames);
+      }
       return result;
     } catch (err) {
       cleanup();
@@ -959,6 +978,7 @@ export class SyncEngine {
     const idSet = new Set(noteIds);
     const uidIndex = this.buildUidIndex();
     const seenNoteIds = new Set<string>();
+    const observedTagNames = new Set<string>();
     const controller = new AbortController();
     this.abortController = controller;
     this.cancelled = false;
@@ -977,11 +997,15 @@ export class SyncEngine {
 
         const matched = batch.filter(n => idSet.has(n.note_id));
         const typeFiltered = this.filterNotesByType(matched);
+        const tagFiltered = this.filterNotesByTags(typeFiltered);
 
-        for (const note of typeFiltered) {
+        for (const note of tagFiltered) {
           if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
           if (seenNoteIds.has(note.note_id)) continue;
           seenNoteIds.add(note.note_id);
+          for (const tag of note.tags ?? []) {
+            if (tag?.name) observedTagNames.add(tag.name);
+          }
 
           fetchedCount++;
           result.total++;
@@ -1025,6 +1049,9 @@ export class SyncEngine {
             if (seenNoteIds.has(appendNote.note_id)) continue;
             seenNoteIds.add(appendNote.note_id);
             result.total++;
+            for (const tag of appendNote.tags ?? []) {
+              if (tag?.name) observedTagNames.add(tag.name);
+            }
             const appendWriteResult = await this.writeNote(appendNote, uidIndex, parentBaseName, parentFileName);
             this.applyWriteResult(result, appendWriteResult);
             this.recordItem(result, appendNote, appendWriteResult);
@@ -1035,6 +1062,9 @@ export class SyncEngine {
       }
 
       this.onProgress?.({ percent: 100 });
+      if (observedTagNames.size > 0) {
+        result.observedTags = Array.from(observedTagNames);
+      }
       return result;
     } catch (err) {
       cleanup();
@@ -1053,6 +1083,7 @@ export class SyncEngine {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
     const uidIndex = this.buildUidIndex();
     const seenNoteIds = new Set<string>();
+    const observedTagNames = new Set<string>();
     const controller = new AbortController();
     this.abortController = controller;
     this.cancelled = false;
@@ -1088,13 +1119,16 @@ export class SyncEngine {
         ? notes.filter(n => selectedNoteIds.includes(n.note_id))
         : notes;
       const filteredNotes = selectedNoteIds || syncOptions.syncAll
-        ? noteIdFiltered
-        : this.filterNotesByType(this.filterNotesByDateRange(this.filterRecentNotes(noteIdFiltered)));
+        ? this.filterNotesByTags(noteIdFiltered)
+        : this.filterNotesByTags(this.filterNotesByType(this.filterNotesByDateRange(this.filterRecentNotes(noteIdFiltered))));
 
       for (const note of filteredNotes) {
         if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
         if (seenNoteIds.has(note.note_id)) continue;
         seenNoteIds.add(note.note_id);
+        for (const tag of note.tags ?? []) {
+          if (tag?.name) observedTagNames.add(tag.name);
+        }
         result.total++;
         const knowledgeBaseName = syncOptions.knowledgeBaseNames?.[note.note_id] ?? syncOptions.knowledgeBaseName;
         const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;
@@ -1114,6 +1148,9 @@ export class SyncEngine {
         this.applyWriteResult(result, writeResult);
         this.recordItem(result, noteToWrite, writeResult);
         for (const appendNote of appendNotes) {
+          for (const tag of appendNote.tags ?? []) {
+            if (tag?.name) observedTagNames.add(tag.name);
+          }
           const appendWriteResult = await this.writeNote(
             appendNote,
             uidIndex,
@@ -1137,6 +1174,9 @@ export class SyncEngine {
       }
 
       this.onProgress?.({ percent: 100 });
+      if (observedTagNames.size > 0) {
+        result.observedTags = Array.from(observedTagNames);
+      }
       return result;
     } catch (err) {
       cleanup();

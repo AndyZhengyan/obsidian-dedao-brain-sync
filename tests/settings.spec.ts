@@ -435,3 +435,80 @@ describe('SettingsComponent auth credentials', () => {
     });
   });
 });
+
+describe('SettingsComponent — syncTags (tag whitelist) dropdown', () => {
+  it('renders the sync range setting with the tag whitelist dropdown', () => {
+    const { container } = renderSettings(makeSettings({
+      syncTags: ['work', 'project'],
+      tagCache: { tags: ['work', 'project', 'daily'], lastUpdated: Date.now() },
+    }));
+
+    expect(container.textContent).toContain('同步范围');
+    const tagTrigger = Array.from(container.querySelectorAll('button'))
+      .find(button => button.textContent === '已选 2 项');
+    expect(tagTrigger).toBeTruthy();
+  });
+
+  it('shows "All tags" label when syncTags is empty', () => {
+    const { container } = renderSettings(makeSettings({
+      syncTags: [],
+      tagCache: { tags: ['work', 'daily'], lastUpdated: Date.now() },
+    }));
+
+    const tagTrigger = Array.from(container.querySelectorAll('button'))
+      .find(button => button.textContent === '全部标签');
+    expect(tagTrigger).toBeTruthy();
+  });
+
+  it('calls updateSetting with syncTags when the dropdown selection changes', async () => {
+    const updateSetting = vi.fn();
+    const { container } = renderSettings(makeSettings({
+      syncTags: [],
+      tagCache: { tags: ['work', 'daily'], lastUpdated: Date.now() },
+    }), updateSetting);
+
+    const tagTrigger = Array.from(container.querySelectorAll('button'))
+      .find(button => button.textContent === '全部标签');
+    expect(tagTrigger).toBeTruthy();
+    await act(() => {
+      tagTrigger!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const workOption = Array.from(container.querySelectorAll('label'))
+      .find(label => label.textContent === 'work');
+    expect(workOption).toBeTruthy();
+    const workCheckbox = workOption!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    await act(() => {
+      workCheckbox.checked = true;
+      workCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('syncTags', ['work']);
+  });
+
+  it('supports fuzzy search in the dropdown to filter options', async () => {
+    const { container } = renderSettings(makeSettings({
+      syncTags: [],
+      tagCache: { tags: ['work', 'project', 'personal', 'health'], lastUpdated: Date.now() },
+    }));
+
+    const tagTrigger = Array.from(container.querySelectorAll('button'))
+      .find(button => button.textContent === '全部标签');
+    expect(tagTrigger).toBeTruthy();
+    await act(() => {
+      tagTrigger!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const searchInput = container.querySelector('.getnote-tag-select-search input') as HTMLInputElement;
+    expect(searchInput).toBeTruthy();
+    await act(() => {
+      searchInput.value = 'wo';
+      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain('work');
+    expect(container.textContent).not.toContain('project');
+    expect(container.textContent).not.toContain('personal');
+    expect(container.textContent).not.toContain('health');
+  });
+});
