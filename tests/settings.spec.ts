@@ -401,6 +401,137 @@ describe('SettingsComponent auth credentials', () => {
     expect(links.some((href) => href.includes('docs/web-mode-manual-token.md'))).toBe(true);
   });
 
+  it('renders a reset button next to the last sync checkpoint', () => {
+    const { container } = renderSettings(makeSettings({
+      syncStartDate: '2026-01-01',
+      lastSyncEndTimestamp: '2026-06-12T15:30:00+08:00',
+    }));
+
+    const row = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('上次同步断点'));
+    expect(row).toBeTruthy();
+    expect(row!.textContent).toContain('2026-06-12 15:30');
+
+    const resetButton = Array.from(row!.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '重置');
+    expect(resetButton).toBeTruthy();
+  });
+
+  it('reveals the inline start date editor when the reset button is clicked', async () => {
+    const { container } = renderSettings(makeSettings({
+      syncStartDate: '2026-01-01',
+      lastSyncEndTimestamp: '2026-06-12T15:30:00+08:00',
+    }));
+
+    const resetButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '重置');
+    expect(resetButton).toBeTruthy();
+
+    await act(() => {
+      resetButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    // Label switches to "同步起始日期", date input becomes editable, and Save/Cancel buttons appear
+    const editorRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('同步起始日期'));
+    expect(editorRow).toBeTruthy();
+    const dateInput = editorRow!.querySelector('input[type="date"]') as HTMLInputElement;
+    expect(dateInput).toBeTruthy();
+    expect(dateInput.value).toBe('2026-01-01');
+    expect(dateInput.readOnly).toBe(false);
+
+    const saveButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '保存');
+    const cancelButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '取消');
+    expect(saveButton).toBeTruthy();
+    expect(cancelButton).toBeTruthy();
+  });
+
+  it('clears lastSyncEndTimestamp and updates syncStartDate when the reset editor saves', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      syncStartDate: '2026-01-01',
+      lastSyncEndTimestamp: '2026-06-12T15:30:00+08:00',
+    }));
+
+    const resetButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '重置');
+    await act(() => {
+      resetButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const editorRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('同步起始日期'));
+    const dateInput = editorRow!.querySelector('input[type="date"]') as HTMLInputElement;
+    await act(() => {
+      dateInput.value = '2025-08-01';
+      dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    const saveButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '保存');
+    await act(() => {
+      saveButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('lastSyncEndTimestamp', '');
+    expect(updateSetting).toHaveBeenCalledWith('syncStartDate', '2025-08-01');
+  });
+
+  it('discards changes when the reset editor is cancelled', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      syncStartDate: '2026-01-01',
+      lastSyncEndTimestamp: '2026-06-12T15:30:00+08:00',
+    }));
+
+    const resetButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '重置');
+    await act(() => {
+      resetButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const editorRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('同步起始日期'));
+    const dateInput = editorRow!.querySelector('input[type="date"]') as HTMLInputElement;
+    await act(() => {
+      dateInput.value = '2025-08-01';
+      dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    const cancelButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '取消');
+    await act(() => {
+      cancelButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).not.toHaveBeenCalledWith('lastSyncEndTimestamp', '');
+    expect(updateSetting).not.toHaveBeenCalledWith('syncStartDate', '2025-08-01');
+
+    // UI returns to state A
+    const checkpointRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('上次同步断点'));
+    expect(checkpointRow).toBeTruthy();
+    expect(checkpointRow!.textContent).toContain('2026-06-12 15:30');
+  });
+
+  it('uses the previous syncStartDate as the default value when reset is clicked', async () => {
+    const { container } = renderSettings(makeSettings({
+      syncStartDate: '2025-12-15',
+      lastSyncEndTimestamp: '2026-06-12T15:30:00+08:00',
+    }));
+
+    const resetButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '重置');
+    await act(() => {
+      resetButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const editorRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('同步起始日期'));
+    const dateInput = editorRow!.querySelector('input[type="date"]') as HTMLInputElement;
+    expect(dateInput.value).toBe('2025-12-15');
+  });
+
   it('stores note type filters inside scheduled sync settings', async () => {
     const scheduledSync = {
       ...DEFAULT_SETTINGS.scheduledSync,
