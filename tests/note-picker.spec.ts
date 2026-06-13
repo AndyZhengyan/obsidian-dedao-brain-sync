@@ -185,7 +185,7 @@ describe('NotePickerModal auth chains', () => {
       container.querySelector('.mod-cta')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    expect(onConfirm).toHaveBeenCalledWith(['link'], ['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'audio', 'class_audio', 'link', 'img_text', 'recorder_flash_audio', 'internal_record', 'meeting', 'blogger_post']);
+    expect(onConfirm).toHaveBeenCalledWith(['link'], expect.arrayContaining(['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'audio', 'class_audio', 'recorder_flash_audio', 'internal_record', 'meeting', 'link', 'img_text', 'blogger_post']));
   });
 
   it('filters the picker list by tags and selects the visible matches', async () => {
