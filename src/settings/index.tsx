@@ -4,6 +4,7 @@ import { SyncButton } from './sync-button';
 import { OAuthButton } from './oauth-button';
 import { openSyncHistoryModal } from '../ui/sync-history-modal';
 import { NoteTypeSelect } from '../ui/note-type-select';
+import { KnowledgeBaseSelect } from '../ui/knowledge-base-select';
 import { type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressDetail } from '../types';
 import { App, AbstractInputSuggest } from 'obsidian';
 import { fetchNotes } from '../api';
@@ -52,6 +53,7 @@ interface SettingsComponentProps {
   syncProgress?: SyncProgressDetail;
   lastSyncTime?: number;
   syncHistory?: SyncHistoryEntry[];
+  initialKnowledgeBaseCache?: { entries: Array<{ topicId: string; name: string; source?: 'subscribed' | 'created' }>; cacheUpdatedAt?: number };
 }
 
 export function SettingsComponent({
@@ -69,6 +71,7 @@ export function SettingsComponent({
   syncProgress,
   lastSyncTime,
   syncHistory = [],
+  initialKnowledgeBaseCache,
 }: SettingsComponentProps) {
   const [authMode, setAuthMode] = useState<AuthMode>(settings.authMode);
   const initialOpenApiToken = settings.openApiToken || (settings.authMode === 'openapi' ? settings.apiToken : '');
@@ -86,6 +89,7 @@ export function SettingsComponent({
   const lastSyncedTo = settings.lastSyncEndTimestamp || '';
   const [scheduledEnabled, setScheduledEnabled] = useState(settings.scheduledSync.enabled);
   const [scheduledNoteTypes, setScheduledNoteTypes] = useState<string[] | undefined>(settings.scheduledSync.enabledNoteTypes);
+  const [scheduledKnowledgeBases, setScheduledKnowledgeBases] = useState<string[]>(settings.scheduledSync.syncKnowledgeBases ?? []);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [connectionErrorMsg, setConnectionErrorMsg] = useState('');
@@ -178,7 +182,12 @@ export function SettingsComponent({
 
   const handleScheduledEnabled = (checked: boolean) => {
     setScheduledEnabled(checked);
-    updateSetting('scheduledSync', { ...settings.scheduledSync, enabledNoteTypes: scheduledNoteTypes, enabled: checked });
+    updateSetting('scheduledSync', {
+      ...settings.scheduledSync,
+      enabledNoteTypes: scheduledNoteTypes,
+      syncKnowledgeBases: scheduledKnowledgeBases,
+      enabled: checked,
+    });
     if (checked) {
       startAutoSync();
     } else {
@@ -193,6 +202,7 @@ export function SettingsComponent({
       updateSetting('scheduledSync', {
         ...settings.scheduledSync,
         enabledNoteTypes: scheduledNoteTypes,
+        syncKnowledgeBases: scheduledKnowledgeBases,
         intervalMinutes: 5,
       });
       window.setTimeout(() => setIntervalWarning(false), 3000);
@@ -200,18 +210,33 @@ export function SettingsComponent({
       updateSetting('scheduledSync', {
         ...settings.scheduledSync,
         enabledNoteTypes: scheduledNoteTypes,
+        syncKnowledgeBases: scheduledKnowledgeBases,
         intervalMinutes: n,
       });
     }
   };
 
   const handleScheduledOnStart = (checked: boolean) => {
-    updateSetting('scheduledSync', { ...settings.scheduledSync, enabledNoteTypes: scheduledNoteTypes, syncOnStart: checked });
+    updateSetting('scheduledSync', {
+      ...settings.scheduledSync,
+      enabledNoteTypes: scheduledNoteTypes,
+      syncKnowledgeBases: scheduledKnowledgeBases,
+      syncOnStart: checked,
+    });
   };
 
   const handleScheduledNoteTypes = (value: string[] | undefined) => {
     setScheduledNoteTypes(value);
-    updateSetting('scheduledSync', { ...settings.scheduledSync, enabledNoteTypes: value });
+    updateSetting('scheduledSync', { ...settings.scheduledSync, enabledNoteTypes: value, syncKnowledgeBases: scheduledKnowledgeBases });
+  };
+
+  const handleScheduledKnowledgeBases = (value: string[]) => {
+    setScheduledKnowledgeBases(value);
+    updateSetting('scheduledSync', {
+      ...settings.scheduledSync,
+      enabledNoteTypes: scheduledNoteTypes,
+      syncKnowledgeBases: value,
+    });
   };
 
   const handleTestConnection = async () => {
@@ -509,6 +534,19 @@ export function SettingsComponent({
                 <NoteTypeSelect value={scheduledNoteTypes} onChange={handleScheduledNoteTypes} />
               </span>
             </div>
+            <div className="getnote-scheduled-row">
+              <span className="getnote-scheduled-row-label">{t('settings.scheduled.syncKnowledgeBases')}</span>
+              <span className="getnote-scheduled-row-control">
+                <KnowledgeBaseSelect
+                  value={scheduledKnowledgeBases}
+                  onChange={handleScheduledKnowledgeBases}
+                  hasCredentials={hasCredentials}
+                  initialCache={initialKnowledgeBaseCache ?? settings.knowledgeBaseCache}
+                  onCacheUpdate={(snapshot) => updateSetting('knowledgeBaseCache', snapshot)}
+                />
+              </span>
+            </div>
+            <div className="getnote-input-hint">{t('settings.scheduled.syncKnowledgeBases.hint')}</div>
             <div className="getnote-scheduled-row getnote-scheduled-date-row">
               <span className="getnote-scheduled-row-label">
                 {lastSyncedTo ? t('settings.syncStartDate.lastSyncedTo') : t('settings.syncStartDate.label')}

@@ -1,9 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SyncEngine } from '../src/sync';
 import type { Settings, GetNoteNote } from '../src/types';
+import { DEFAULT_SETTINGS } from '../src/types';
 import { mkdtemp, readFile, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
+
+const DEFAULT_SCHEDULED_SYNC = { ...DEFAULT_SETTINGS.scheduledSync };
 
 // Minimal mock app for SyncEngine tests
 function makeMockApp() {
@@ -2801,5 +2804,191 @@ describe('SyncEngine — fixture-based sync integration', () => {
     expect(createdPaths).toContain('得到大脑/纯文本/主笔记.md');
     expect(createdPaths).toContain('得到大脑/纯文本/主笔记__附加笔记正文.md');
     expect(createdPaths).not.toContain('得到大脑/纯文本/未选择的 OpenAPI 笔记.md');
+  });
+});
+
+describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
+  const fetchSubscribedSpy = vi.fn();
+
+  beforeEach(() => {
+    fetchSubscribedSpy.mockReset();
+  });
+
+  it('syncKnowledgeBases=[] 时不调用 fetchSubscribedKnowledgeNotes（关闭跨库同步）', async () => {
+    fetchSubscribedSpy.mockResolvedValue([]);
+    vi.doMock('../src/api', async () => {
+      const actual = await vi.importActual<typeof import('../src/api')>('../src/api');
+      return {
+        ...actual,
+        fetchSubscribedKnowledgeNotes: fetchSubscribedSpy,
+      };
+    });
+    vi.resetModules();
+    const { SyncEngine: EngineReloaded } = await import('../src/sync');
+
+    try {
+      const app = makeMockApp();
+      const settings = makeSettings({
+        scheduledSync: {
+          ...DEFAULT_SCHEDULED_SYNC,
+          enabled: true,
+          syncKnowledgeBases: [],
+        },
+      });
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({
+        success: true,
+        data: { notes: [], has_more: false, next_cursor: '0' },
+      }) as any);
+
+      const engine = new EngineReloaded(app as any, settings, undefined, {
+        maxDays: 0,
+        syncStartDate: '2026-04-27',
+      });
+
+      await engine.sync();
+
+      expect(fetchSubscribedSpy).not.toHaveBeenCalled();
+    } finally {
+      vi.doUnmock('../src/api');
+      vi.resetModules();
+    }
+  });
+
+  it('syncKnowledgeBases 非空时拉取并按 note_id + 内容比对跳过未变更的笔记', async () => {
+    const fakeNotes = [
+      {
+        id: 'blogger:kb-1:1',
+        note_id: 'blogger_kb-1',
+        title: '已有博主笔记',
+        content: '新内容',
+        note_type: 'blogger_post',
+        source: 'blogger',
+        tags: [{ name: '测试博主' }],
+        created_at: '2026-04-27T22:26:17+08:00',
+        updated_at: '2026-04-29T10:00:00+08:00', // 比旧 modified 更新
+      },
+      {
+        id: 'blogger:kb-1:2',
+        note_id: 'blogger_kb-2',
+        title: '新博主笔记',
+        content: '全新内容',
+        note_type: 'blogger_post',
+        source: 'blogger',
+        tags: [{ name: '测试博主' }],
+        created_at: '2026-04-27T22:26:17+08:00',
+        updated_at: '2026-04-28T10:00:00+08:00',
+      },
+    ];
+    fetchSubscribedSpy.mockResolvedValue(fakeNotes);
+    vi.doMock('../src/api', async () => {
+      const actual = await vi.importActual<typeof import('../src/api')>('../src/api');
+      return {
+        ...actual,
+        fetchSubscribedKnowledgeNotes: fetchSubscribedSpy,
+      };
+    });
+    vi.resetModules();
+    const { SyncEngine: EngineReloaded } = await import('../src/sync');
+
+    try {
+      const app = makeMockApp();
+      app.vault._addFile(
+        '得到大脑/订阅博主/已有博主笔记.md',
+        '---\nuid: "blogger_kb-1"\nmodified: "2026-04-28 10:00:00"\n---\n旧内容',
+        { uid: 'blogger_kb-1', modified: '2026-04-28 10:00:00' }
+      );
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({
+        success: true,
+        data: { notes: [], has_more: false, next_cursor: '0' },
+      }) as any);
+
+      const settings = makeSettings({
+        scheduledSync: {
+          ...DEFAULT_SCHEDULED_SYNC,
+          enabled: true,
+          syncKnowledgeBases: ['kb-1'],
+        },
+      });
+
+      const engine = new EngineReloaded(app as any, settings, undefined, {
+        maxDays: 0,
+        syncStartDate: '2026-04-27',
+        syncKnowledgeBases: ['kb-1'],
+      });
+
+      const result = await engine.sync();
+
+      // 跨库路径被触发
+      expect(fetchSubscribedSpy).toHaveBeenCalled();
+      // 修改后的 kb-1 应被标记为 updated
+      expect(result.items?.some(item => item.noteId === 'blogger_kb-1' && item.status === 'updated')).toBe(true);
+      // kb-2 应被标记为 created
+      expect(result.items?.some(item => item.noteId === 'blogger_kb-2' && item.status === 'created')).toBe(true);
+    } finally {
+      vi.doUnmock('../src/api');
+      vi.resetModules();
+    }
+  });
+
+  it('跨库同步时，本地存在且内容相同则跳过', async () => {
+    const sameContent = '相同内容';
+    const fakeNotes = [
+      {
+        id: 'blogger:kb-3:1',
+        note_id: 'blogger_kb-3',
+        title: '未变博主笔记',
+        content: sameContent,
+        note_type: 'blogger_post',
+        source: 'blogger',
+        tags: [],
+        created_at: '2026-04-27T22:26:17+08:00',
+        updated_at: '2026-04-28T10:00:00+08:00',
+      },
+    ];
+    fetchSubscribedSpy.mockResolvedValue(fakeNotes);
+    vi.doMock('../src/api', async () => {
+      const actual = await vi.importActual<typeof import('../src/api')>('../src/api');
+      return {
+        ...actual,
+        fetchSubscribedKnowledgeNotes: fetchSubscribedSpy,
+      };
+    });
+    vi.resetModules();
+    const { SyncEngine: EngineReloaded } = await import('../src/sync');
+
+    try {
+      const app = makeMockApp();
+      app.vault._addFile(
+        '得到大脑/订阅博主/未变博主笔记.md',
+        '---\nuid: "blogger_kb-3"\nmodified: "2026-04-28 10:00:00"\n---\n相同内容',
+        { uid: 'blogger_kb-3', modified: '2026-04-28 10:00:00' }
+      );
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({
+        success: true,
+        data: { notes: [], has_more: false, next_cursor: '0' },
+      }) as any);
+
+      const settings = makeSettings({
+        scheduledSync: {
+          ...DEFAULT_SCHEDULED_SYNC,
+          enabled: true,
+          syncKnowledgeBases: ['kb-3'],
+        },
+      });
+
+      const engine = new EngineReloaded(app as any, settings, undefined, {
+        maxDays: 0,
+        syncStartDate: '2026-04-27',
+        syncKnowledgeBases: ['kb-3'],
+      });
+
+      const result = await engine.sync();
+
+      expect(fetchSubscribedSpy).toHaveBeenCalled();
+      expect(result.items?.some(item => item.noteId === 'blogger_kb-3' && item.status === 'skipped')).toBe(true);
+    } finally {
+      vi.doUnmock('../src/api');
+      vi.resetModules();
+    }
   });
 });
