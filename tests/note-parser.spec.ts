@@ -241,6 +241,34 @@ describe('renderNote — audio note', () => {
     expect(result).not.toContain('asset/');
     expect(result).toContain('正文内容');
   });
+
+  it('有音频附件但无转写时仍嵌入录音链接', () => {
+    const note: GetNoteNote = {
+      id: 1,
+      note_id: 'note_audio_no_transcript',
+      title: '仅录音笔记',
+      content: '### 📑 智能总结\n这是AI摘要',
+      note_type: 'recorder_audio',
+      source: 'app',
+      tags: [],
+      created_at: '2026-04-30T12:45:24+08:00',
+      updated_at: '2026-04-30T13:00:07+08:00',
+      attachments: [
+        { type: 'audio', url: 'https://example.com/test.mp3', title: '', duration: 883920 },
+      ],
+      // 注意：未提供 audio（转写文本）
+    };
+
+    const result = renderNote(note);
+
+    // 仍嵌入录音链接
+    expect(result).toContain('> ![[仅录音笔记_audio.mp3]]');
+    // 不应追加转写标题或转写块
+    expect(result).not.toContain('### 原始录音转写');
+    expect(result).not.toContain('> [[仅录音笔记_transcript]]');
+    // 原有正文保留
+    expect(result).toContain('这是AI摘要');
+  });
 });
 
 // ---- renderNote — image note ----
