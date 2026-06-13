@@ -4,6 +4,7 @@ import { SyncButton } from './sync-button';
 import { OAuthButton } from './oauth-button';
 import { openSyncHistoryModal } from '../ui/sync-history-modal';
 import { NoteTypeSelect } from '../ui/note-type-select';
+import { Toggle } from './toggle';
 import { type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressDetail } from '../types';
 import { App, AbstractInputSuggest } from 'obsidian';
 import { fetchNotes } from '../api';
@@ -468,10 +469,9 @@ export function SettingsComponent({
         <div className="getnote-scheduled-control">
           <div className="getnote-scheduled-row">
             <span>{t('settings.scheduled.enabled')}</span>
-            <input
-              type="checkbox"
-              checked={scheduledEnabled}
-              onChange={(e) => handleScheduledEnabled((e.target as HTMLInputElement).checked)}
+            <Toggle
+              value={scheduledEnabled}
+              onChange={handleScheduledEnabled}
             />
           </div>
           <div
@@ -496,10 +496,9 @@ export function SettingsComponent({
             <div className="getnote-scheduled-row">
               <span className="getnote-scheduled-row-label">{t('settings.scheduled.onStart')}</span>
               <span className="getnote-scheduled-row-control">
-                <input
-                  type="checkbox"
-                  checked={scheduledSync.syncOnStart}
-                  onChange={(e) => handleScheduledOnStart((e.target as HTMLInputElement).checked)}
+                <Toggle
+                  value={scheduledSync.syncOnStart}
+                  onChange={handleScheduledOnStart}
                 />
               </span>
             </div>
