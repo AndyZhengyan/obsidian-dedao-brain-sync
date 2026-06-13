@@ -45,21 +45,50 @@ function matchesSearchQuery(note: GetNoteNote, searchQuery: string): boolean {
   return haystacks.some(value => value.toLowerCase().includes(normalizedQuery));
 }
 
-function NoteRow({ note, checked, onChange }: { note: GetNoteNote; checked: boolean; onChange: (id: string, v: boolean) => void }) {
+function NoteRow({ note, checked, onChange, onTagClick }: { note: GetNoteNote; checked: boolean; onChange: (id: string, v: boolean) => void; onTagClick?: (tagName: string) => void }) {
   const title = generateDisplayTitle(note);
   const displayTitle = title || t('picker.noTitle');
+  const summaryText = (note.content || '').replace(/\n+/g, ' ').slice(0, 80);
+  const previewText = (note.content || '').replace(/\n+/g, ' ').slice(0, 150);
   return (
-    <div className="getnote-picker-row">
+    <div className="getnote-note-card">
       <input
         type="checkbox"
+        className="getnote-note-card-checkbox"
         checked={checked}
         onChange={(e) => onChange(note.note_id, (e.target as HTMLInputElement).checked)}
       />
-      <div className="getnote-picker-row-info">
-        <div className="getnote-picker-title">{displayTitle}</div>
-        <div className="getnote-picker-meta">
-          <span className="getnote-picker-type">{getTypeLabel(note.note_type)}</span>
-          <span className="getnote-picker-time">{formatRelativeTime(note.updated_at)}</span>
+      <div className="getnote-note-card-body">
+        <div className="getnote-note-card-header">
+          <div className="getnote-note-card-title">{displayTitle}</div>
+          <span className="getnote-note-card-type">{getTypeLabel(note.note_type)}</span>
+        </div>
+        {summaryText && (
+          <blockquote className="getnote-note-card-summary">{summaryText}</blockquote>
+        )}
+        {previewText && (
+          <div className="getnote-note-card-preview">{previewText}</div>
+        )}
+        <div className="getnote-note-card-footer">
+          {note.tags.length > 0 && (
+            <div className="getnote-note-card-tags">
+              {note.tags.map((tag, index) => (
+                <button
+                  key={`${tag.name}-${index}`}
+                  type="button"
+                  className="getnote-note-card-tag"
+                  data-tag-name={tag.name}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTagClick?.(tag.name);
+                  }}
+                >
+                  #{tag.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <span className="getnote-note-card-time">{formatRelativeTime(note.updated_at)}</span>
         </div>
       </div>
     </div>
@@ -139,6 +168,13 @@ export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel
   const handleSelectAll = () => setSelected(new Set(filteredNotes.map(n => n.note_id)));
   const handleSelectNone = () => setSelected(new Set());
   const handleConfirm = () => onConfirm(visibleSelectedIds, enabledNoteTypes);
+  const handleTagClick = (tagName: string) => {
+    setSearchQuery((prev) => {
+      const tag = tagName.trim();
+      if (!tag) return prev;
+      return prev.includes(tag) ? prev : (prev ? `${prev} ${tag}` : tag);
+    });
+  };
 
   return (
     <div className="getnote-picker">
@@ -176,7 +212,13 @@ export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel
         )}
         {error && !loading && <div className="getnote-picker-error">{error} <button onClick={loadFirstPage}>{t('picker.retry')}</button></div>}
         {!loading && !error && filteredNotes.map(note => (
-          <NoteRow key={note.note_id} note={note} checked={selected.has(note.note_id)} onChange={handleCheck} />
+          <NoteRow
+            key={note.note_id}
+            note={note}
+            checked={selected.has(note.note_id)}
+            onChange={handleCheck}
+            onTagClick={handleTagClick}
+          />
         ))}
         {!loading && !error && !loadingMore && hasMore && notes.length > 0 && (
           <div className="getnote-picker-loadmore">
