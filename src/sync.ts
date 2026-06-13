@@ -178,10 +178,13 @@ export class SyncEngine {
     this.settings = settings;
     const syncStartDate = scopeOptions?.syncStartDate ?? settings.syncStartDate;
     const enabledNoteTypes = scopeOptions?.enabledNoteTypes;
+    const syncKnowledgeBases = scopeOptions?.syncKnowledgeBases;
     this.scopeOptions = {
       maxDays: syncStartDate ? 0 : scopeOptions?.maxDays ?? settings.maxDays,
       syncStartDate,
       ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}),
+      ...(syncKnowledgeBases !== undefined ? { syncKnowledgeBases } : {}),
+      ...(scopeOptions?.knowledgeBaseNames ? { knowledgeBaseNames: scopeOptions.knowledgeBaseNames } : {}),
     };
     this.onProgress = onProgress;
   }
@@ -941,6 +944,14 @@ export class SyncEngine {
       }
 
       this.onProgress?.({ percent: 100 });
+
+      // Cross-KB path: only run when the user has explicitly selected at least
+      // one knowledge base. Empty array / undefined = cross-KB sync disabled.
+      const selectedKnowledgeBases = this.scopeOptions.syncKnowledgeBases ?? [];
+      if (selectedKnowledgeBases.length > 0) {
+        await this.runCrossKnowledgeBaseSync(result, controller.signal);
+      }
+
       return result;
     } catch (err) {
       cleanup();
@@ -948,6 +959,89 @@ export class SyncEngine {
         throw new SyncCancelledError();
       }
       throw err;
+    }
+  }
+
+  private async runCrossKnowledgeBaseSync(result: SyncResult, signal: AbortSignal): Promise<void> {
+    const selectedKnowledgeBases = this.scopeOptions.syncKnowledgeBases ?? [];
+    if (selectedKnowledgeBases.length === 0) return;
+
+    const credentials = getAuthCredentials(this.settings);
+    const topicIds = selectedKnowledgeBases;
+    const createdTopicIds: string[] = [];
+    const bloggerIds: string[] = [];
+
+    const knowledgeNotes = await fetchSubscribedKnowledgeNotes({
+      token: credentials.token,
+      clientId: credentials.clientId,
+      signal,
+      authMode: credentials.authMode,
+      topicIds,
+      createdTopicIds,
+      bloggerIds,
+    });
+
+    const cutoffTime = this.scopeOptions.syncStartDate
+      ? parseSyncBoundaryTime(this.scopeOptions.syncStartDate)
+      : null;
+
+    const filteredNotes = knowledgeNotes.filter(note => {
+      if (cutoffTime === null) return true;
+      const updated = parseNoteUpdatedTime(note);
+      return updated !== null && updated >= cutoffTime;
+    });
+
+    const uidIndex = this.buildUidIndex();
+    const seenNoteIds = new Set<string>();
+    const knowledgeBaseNames = this.scopeOptions.knowledgeBaseNames ?? {};
+
+    for (const note of filteredNotes) {
+      if (this.cancelled) throw new SyncCancelledError();
+      if (seenNoteIds.has(note.note_id)) continue;
+      seenNoteIds.add(note.note_id);
+      result.total++;
+      const knowledgeBaseName = knowledgeBaseNames[note.note_id];
+      const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;
+
+      const noteToWrite = await this.enrichAudioNote(note, signal, categoryOverride);
+      const appendNotes = await this.fetchAppendNotes(noteToWrite, signal, result, categoryOverride);
+      const parentBaseName = this.buildBaseName(noteToWrite);
+      const parentFileName = this.getFileName(noteToWrite);
+      const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
+
+      const writeResult = await this.writeNote(
+        noteToWrite,
+        uidIndex,
+        undefined,
+        undefined,
+        childFileNames,
+        categoryOverride
+      );
+      this.applyWriteResult(result, writeResult);
+      this.recordItem(result, noteToWrite, writeResult);
+
+      for (const appendNote of appendNotes) {
+        const appendWriteResult = await this.writeNote(
+          appendNote,
+          uidIndex,
+          parentBaseName,
+          parentFileName,
+          undefined,
+          categoryOverride
+        );
+        this.applyWriteResult(result, appendWriteResult);
+        this.recordItem(result, appendNote, appendWriteResult);
+      }
+
+      this.onProgress?.({
+        processed: result.total,
+        total: result.total,
+        created: result.created,
+        updated: result.updated,
+        skipped: result.skipped,
+        failed: result.failed,
+        percent: 0,
+      });
     }
   }
 
