@@ -435,3 +435,92 @@ describe('SettingsComponent auth credentials', () => {
     });
   });
 });
+
+describe('SettingsComponent scheduled sync toggles (#136)', () => {
+  function findScheduledEnabledRow(container: HTMLElement): HTMLElement {
+    const rows = container.querySelectorAll('.getnote-scheduled-row');
+    const row = Array.from(rows).find((el) => el.textContent === '启用定时同步');
+    expect(row).toBeTruthy();
+    return row!;
+  }
+
+  function findSyncOnStartRow(container: HTMLElement): HTMLElement {
+    const rows = container.querySelectorAll('.getnote-scheduled-row');
+    const row = Array.from(rows).find((el) => el.textContent?.includes('启动时同步'));
+    expect(row).toBeTruthy();
+    return row!;
+  }
+
+  it('renders scheduledEnabled as an Obsidian toggle (not a plain checkbox)', () => {
+    const { container } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: false },
+    }));
+
+    const row = findScheduledEnabledRow(container);
+    const toggleContainers = row.querySelectorAll('.checkbox-container');
+    const plainCheckboxes = row.querySelectorAll(':scope > input[type="checkbox"]');
+
+    expect(toggleContainers.length).toBe(1);
+    expect(plainCheckboxes.length).toBe(0);
+    const innerCheckbox = toggleContainers[0].querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(innerCheckbox).toBeTruthy();
+    expect(innerCheckbox.checked).toBe(false);
+  });
+
+  it('renders syncOnStart as an Obsidian toggle inside the scheduled sync options', () => {
+    const { container } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true, syncOnStart: true },
+    }));
+
+    const row = findSyncOnStartRow(container);
+    const toggleContainers = row.querySelectorAll('.checkbox-container');
+    const plainCheckboxes = row.querySelectorAll(':scope > input[type="checkbox"]');
+
+    expect(toggleContainers.length).toBe(1);
+    expect(plainCheckboxes.length).toBe(0);
+    const innerCheckbox = toggleContainers[0].querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(innerCheckbox).toBeTruthy();
+    expect(innerCheckbox.checked).toBe(true);
+    expect(toggleContainers[0].classList.contains('is-enabled')).toBe(true);
+  });
+
+  it('preserves onChange behavior for scheduledEnabled toggle', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: false },
+    }));
+
+    const row = findScheduledEnabledRow(container);
+    const innerCheckbox = row.querySelector('.checkbox-container input[type="checkbox"]') as HTMLInputElement;
+    expect(innerCheckbox).toBeTruthy();
+
+    await act(() => {
+      innerCheckbox.checked = true;
+      innerCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('scheduledSync', expect.objectContaining({
+      enabled: true,
+    }));
+    expect(row.querySelector('.checkbox-container')?.classList.contains('is-enabled')).toBe(true);
+  });
+
+  it('preserves onChange behavior for syncOnStart toggle', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true, syncOnStart: false },
+    }));
+
+    const row = findSyncOnStartRow(container);
+    const innerCheckbox = row.querySelector('.checkbox-container input[type="checkbox"]') as HTMLInputElement;
+    expect(innerCheckbox).toBeTruthy();
+
+    await act(() => {
+      innerCheckbox.checked = true;
+      innerCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('scheduledSync', expect.objectContaining({
+      enabled: true,
+      syncOnStart: true,
+    }));
+  });
+});
