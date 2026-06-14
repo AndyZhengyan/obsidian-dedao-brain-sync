@@ -179,11 +179,13 @@ export function SettingsComponent({
   };
 
   const handleResetCheckpointClick = () => {
+    if (isSyncing) return;
     setPendingStartDate(settings.syncStartDate);
     setResetDialogOpen(true);
   };
 
   const handleResetSave = () => {
+    if (isSyncing) return;
     updateSetting('lastSyncEndTimestamp', '');
     if (pendingStartDate !== settings.syncStartDate) {
       updateSetting('syncStartDate', pendingStartDate);
@@ -562,6 +564,7 @@ export function SettingsComponent({
                       type="button"
                       className="getnote-button getnote-button-primary"
                       onClick={handleResetSave}
+                      disabled={isSyncing}
                     >
                       {t('settings.scheduled.resetSave')}
                     </button>
@@ -573,6 +576,7 @@ export function SettingsComponent({
                       type="button"
                       className="getnote-button getnote-button-secondary"
                       onClick={handleResetCheckpointClick}
+                      disabled={isSyncing}
                     >
                       {t('settings.scheduled.resetButton')}
                     </button>
