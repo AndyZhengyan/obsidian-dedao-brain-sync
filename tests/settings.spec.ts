@@ -401,6 +401,154 @@ describe('SettingsComponent auth credentials', () => {
     expect(links.some((href) => href.includes('docs/web-mode-manual-token.md'))).toBe(true);
   });
 
+  it('renders the attachment download section with a master toggle and four child toggles', async () => {
+    const settings = makeSettings();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(
+        h(SettingsComponent, {
+          settings,
+          updateSetting: vi.fn(),
+          startSync: vi.fn(),
+          isSyncing: false,
+          openNotePicker: vi.fn(),
+          startSubscribedKnowledgeSync: vi.fn(),
+          openLocalUpload: vi.fn(),
+          startAutoSync: vi.fn(),
+          stopAutoSync: vi.fn(),
+          cancelSync: vi.fn(),
+          app: new App(),
+        }),
+        container
+      );
+    });
+    await new Promise(r => setTimeout(r, 50));
+
+    const sectionName = container.querySelector('.setting-item-name');
+    expect(container.textContent).toContain('附件下载配置');
+
+    const toggleEls = container.querySelectorAll('.setting-item .checkbox-container');
+    // 5 toggles total: 1 master + image + audio + video + document
+    expect(toggleEls.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('flips all four child toggles when the master attachment toggle is clicked', async () => {
+    const updateSetting = vi.fn();
+    const settings = makeSettings({
+      attachmentImport: { image: true, audio: true, video: true, document: true },
+    });
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(
+        h(SettingsComponent, {
+          settings,
+          updateSetting,
+          startSync: vi.fn(),
+          isSyncing: false,
+          openNotePicker: vi.fn(),
+          startSubscribedKnowledgeSync: vi.fn(),
+          openLocalUpload: vi.fn(),
+          startAutoSync: vi.fn(),
+          stopAutoSync: vi.fn(),
+          cancelSync: vi.fn(),
+          app: new App(),
+        }),
+        container
+      );
+    });
+    await new Promise(r => setTimeout(r, 50));
+
+    const masterRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(row => row.textContent?.includes('下载附件'));
+    expect(masterRow).toBeTruthy();
+
+    const masterToggle = masterRow!.querySelector('.checkbox-container');
+    expect(masterToggle).toBeTruthy();
+
+    await act(() => {
+      masterToggle!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('attachmentImport', {
+      image: false,
+      audio: false,
+      video: false,
+      document: false,
+    });
+    const childToggles = Array.from(container.querySelectorAll('.getnote-scheduled-options .checkbox-container'));
+    expect(childToggles.every(toggle => !toggle.classList.contains('is-enabled'))).toBe(true);
+  });
+
+  it('enables all child toggles when a mixed attachment master is clicked', async () => {
+    const updateSetting = vi.fn();
+    const { container } = renderSettings(makeSettings({
+      attachmentImport: { image: true, audio: false, video: true, document: false },
+    }), updateSetting);
+
+    await new Promise(r => setTimeout(r, 50));
+    const masterRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(row => row.textContent?.includes('下载附件'));
+    const masterToggle = masterRow!.querySelector('.checkbox-container')!;
+
+    await act(() => {
+      masterToggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('attachmentImport', {
+      image: true,
+      audio: true,
+      video: true,
+      document: true,
+    });
+    const childToggles = Array.from(container.querySelectorAll('.getnote-scheduled-options .checkbox-container'));
+    expect(childToggles.every(toggle => toggle.classList.contains('is-enabled'))).toBe(true);
+  });
+
+  it('still honours legacy attachmentImport values from older user data.json', async () => {
+    const updateSetting = vi.fn();
+    const settings = makeSettings({
+      attachmentImport: { image: true, audio: false, video: true, document: false },
+    });
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(
+        h(SettingsComponent, {
+          settings,
+          updateSetting,
+          startSync: vi.fn(),
+          isSyncing: false,
+          openNotePicker: vi.fn(),
+          startSubscribedKnowledgeSync: vi.fn(),
+          openLocalUpload: vi.fn(),
+          startAutoSync: vi.fn(),
+          stopAutoSync: vi.fn(),
+          cancelSync: vi.fn(),
+          app: new App(),
+        }),
+        container
+      );
+    });
+    await new Promise(r => setTimeout(r, 50));
+
+    const audioRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(row => row.textContent?.includes('音频'));
+    expect(audioRow).toBeTruthy();
+    const audioToggle = audioRow!.querySelector('.checkbox-container');
+    expect(audioToggle).toBeTruthy();
+    expect(audioToggle!.classList.contains('is-enabled')).toBe(false);
+
+    await act(() => {
+      audioToggle!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('attachmentImport', expect.objectContaining({
+      audio: true,
+    }));
+  });
+
   it('stores note type filters inside scheduled sync settings', async () => {
     const scheduledSync = {
       ...DEFAULT_SETTINGS.scheduledSync,
