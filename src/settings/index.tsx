@@ -5,7 +5,7 @@ import { OAuthButton } from './oauth-button';
 import { openSyncHistoryModal } from '../ui/sync-history-modal';
 import { NoteTypeSelect } from '../ui/note-type-select';
 import { KnowledgeBaseSelect } from '../ui/knowledge-base-select';
-import { type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressDetail } from '../types';
+import { getAuthCredentials, type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressDetail } from '../types';
 import { App, AbstractInputSuggest } from 'obsidian';
 import { fetchNotes } from '../api';
 import { t } from '../i18n';
@@ -95,6 +95,7 @@ export function SettingsComponent({
   const [connectionErrorMsg, setConnectionErrorMsg] = useState('');
   const [connectionExpiryMin, setConnectionExpiryMin] = useState<number | null>(null);
   const [intervalWarning, setIntervalWarning] = useState(false);
+  const credentials = getAuthCredentials({ ...settings, authMode, openApiToken: apiTokenOpenapi, openApiClientId: clientIdOpenapi, webApiToken: apiTokenWeb });
 
   const folderInputRef = useRef<HTMLInputElement>(null);
 
@@ -541,6 +542,9 @@ export function SettingsComponent({
                   value={scheduledKnowledgeBases}
                   onChange={handleScheduledKnowledgeBases}
                   hasCredentials={hasCredentials}
+                  token={credentials.token}
+                  clientId={credentials.clientId}
+                  authMode={credentials.authMode}
                   initialCache={initialKnowledgeBaseCache ?? settings.knowledgeBaseCache}
                   onCacheUpdate={(snapshot) => updateSetting('knowledgeBaseCache', snapshot)}
                 />

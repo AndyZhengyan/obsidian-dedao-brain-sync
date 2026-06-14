@@ -302,6 +302,7 @@ function bloggerContentToNote(content: BloggerContent, topic: SubscribedTopic, b
     content: body,
     note_type: 'blogger_post',
     source: 'blogger',
+    topic_id: topic.topic_id,
     tags: [
       ...(topic.name ? [{ name: topic.name }] : []),
       ...(blogger.name ? [{ name: blogger.name }] : []),

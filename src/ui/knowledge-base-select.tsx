@@ -5,7 +5,8 @@ import {
   subscribedTopicsFetcher,
   type KnowledgeBaseEntry,
 } from '../utils/knowledge-base-aggregator';
-import { fetchSubscribedTopics } from '../api-clients/openapi-client';
+import { fetchSubscribedTopics } from '../api';
+import type { AuthMode } from '../types';
 
 interface KnowledgeBaseSelectProps {
   /** Selected knowledge-base topic ids (empty = cross-KB sync disabled). */
@@ -13,6 +14,9 @@ interface KnowledgeBaseSelectProps {
   onChange: (value: string[]) => void;
   /** Whether the user has valid credentials — used to gate remote fetches. */
   hasCredentials?: boolean;
+  token?: string;
+  clientId?: string;
+  authMode?: AuthMode;
   /** Persisted cache snapshot to seed the aggregator. */
   initialCache?: { entries: KnowledgeBaseEntry[]; cacheUpdatedAt?: number };
   /** Notify the parent whenever the underlying cache is refreshed. */
@@ -42,6 +46,9 @@ export function KnowledgeBaseSelect({
   value,
   onChange,
   hasCredentials,
+  token = '',
+  clientId = '',
+  authMode = 'openapi',
   initialCache,
   onCacheUpdate,
 }: KnowledgeBaseSelectProps) {
@@ -57,7 +64,9 @@ export function KnowledgeBaseSelect({
   useEffect(() => {
     if (!aggregatorRef.current) {
       aggregatorRef.current = new KnowledgeBaseAggregator(
-        subscribedTopicsFetcher(fetchSubscribedTopics),
+        subscribedTopicsFetcher((fetchToken, fetchClientId, signal) =>
+          fetchSubscribedTopics({ token: fetchToken, clientId: fetchClientId, authMode, signal })
+        ),
         initialCacheRef.current ? {
           cache: initialCacheRef.current.entries,
           cacheUpdatedAt: initialCacheRef.current.cacheUpdatedAt,
@@ -84,7 +93,7 @@ export function KnowledgeBaseSelect({
 
     setState(prev => ({ ...prev, loading: true, error: null }));
     aggregator
-      .refresh({ token: '', clientId: '' })
+      .refresh({ token, clientId })
       .then(snapshot => {
         if (cancelled) return;
         setState({ loading: false, error: null, entries: snapshot.entries });
@@ -98,7 +107,7 @@ export function KnowledgeBaseSelect({
     return () => {
       cancelled = true;
     };
-  }, [open, hasCredentials, onCacheUpdate]);
+  }, [open, hasCredentials, token, clientId, authMode, onCacheUpdate]);
 
   const filtered = useMemo(() => {
     const lower = query.trim().toLowerCase();

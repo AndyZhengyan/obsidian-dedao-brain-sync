@@ -454,11 +454,13 @@ export default class GetNoteSyncPlugin extends Plugin {
           ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}),
           ...(syncKnowledgeBases?.length ? { syncKnowledgeBases } : {}),
           ...(knowledgeBaseNames ? { knowledgeBaseNames } : {}),
+          knowledgeBaseEntries: this.settings.knowledgeBaseCache?.entries,
         }
       : {
           ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}),
           ...(syncKnowledgeBases?.length ? { syncKnowledgeBases } : {}),
           ...(knowledgeBaseNames ? { knowledgeBaseNames } : {}),
+          knowledgeBaseEntries: this.settings.knowledgeBaseCache?.entries,
         };
     void this.runSync('auto', scopeOptions);
   }

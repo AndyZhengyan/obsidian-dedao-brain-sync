@@ -967,8 +967,10 @@ export class SyncEngine {
     if (selectedKnowledgeBases.length === 0) return;
 
     const credentials = getAuthCredentials(this.settings);
-    const topicIds = selectedKnowledgeBases;
-    const createdTopicIds: string[] = [];
+    const entries = this.scopeOptions.knowledgeBaseEntries ?? [];
+    const createdIds = new Set(entries.filter(entry => entry.source === 'created').map(entry => entry.topicId));
+    const topicIds = selectedKnowledgeBases.filter(id => !createdIds.has(id));
+    const createdTopicIds = selectedKnowledgeBases.filter(id => createdIds.has(id));
     const bloggerIds: string[] = [];
 
     const knowledgeNotes = await fetchSubscribedKnowledgeNotes({
@@ -1000,7 +1002,7 @@ export class SyncEngine {
       if (seenNoteIds.has(note.note_id)) continue;
       seenNoteIds.add(note.note_id);
       result.total++;
-      const knowledgeBaseName = knowledgeBaseNames[note.note_id];
+      const knowledgeBaseName = note.topic_id ? knowledgeBaseNames[note.topic_id] : undefined;
       const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;
 
       const noteToWrite = await this.enrichAudioNote(note, signal, categoryOverride);
@@ -1019,6 +1021,11 @@ export class SyncEngine {
       );
       this.applyWriteResult(result, writeResult);
       this.recordItem(result, noteToWrite, writeResult);
+      const updatedTime = parseNoteUpdatedTime(noteToWrite);
+      const currentLastTime = result.lastNoteTimestamp ? parseSyncBoundaryTime(result.lastNoteTimestamp) : null;
+      if (updatedTime !== null && (currentLastTime === null || updatedTime > currentLastTime)) {
+        result.lastNoteTimestamp = noteToWrite.updated_at;
+      }
 
       for (const appendNote of appendNotes) {
         const appendWriteResult = await this.writeNote(

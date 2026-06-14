@@ -321,6 +321,7 @@ export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions):
       for (const resource of resources) {
         const note = noteFromKnowledgeResource(resource, typeof topic.name === 'string' ? topic.name : undefined);
         if (!note) continue;
+        note.topic_id = String(topicAlias);
         if (remainingNoteIds && !remainingNoteIds.has(note.note_id)) continue;
         notes.push(note);
         remainingNoteIds?.delete(note.note_id);
