@@ -500,10 +500,10 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
       attachment: { type: 'audio', url: 'https://cdn.example.com/knowledge.mp3', title: '' },
       detailExtra: { audio: '知识库音频转写' },
       expectedAssets: [
-        '得到大脑/知识库/我的知识库/asset/知识库音频笔记_audio.mp3',
-        '得到大脑/知识库/我的知识库/asset/知识库音频笔记_transcript.md',
+        '得到大脑/知识库/我的知识库/asset/知识库音频笔记_created_audio_note_audio.mp3',
+        '得到大脑/知识库/我的知识库/asset/知识库音频笔记_created_audio_note_transcript.md',
       ],
-      expectedMarkdown: '知识库音频笔记_audio.mp3',
+      expectedMarkdown: '知识库音频笔记_created_audio_note_audio.mp3',
     },
   ])('reuses ordinary note enrichment for $noteType notes in a created knowledge base', async ({
     noteId,
@@ -1458,8 +1458,8 @@ describe('SyncEngine — audio note sync', () => {
 
       // 验证 asset 目录被创建/写入
       expect(createdFiles.some(f => f.includes('/asset/'))).toBe(true);
-      expect(createdFiles).toContain('得到大脑/录音长录/asset/我的录音笔记_audio.mp3');
-      expect(createdFiles).toContain('得到大脑/录音长录/asset/我的录音笔记_transcript.md');
+      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_1908723638246504120_audio.mp3');
+      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_1908723638246504120_transcript.md');
       expect(vi.mocked(globalThis.fetch)).toHaveBeenCalledWith('https://cdn.example.com/test.mp3');
       // 验证 md 文件被创建
       expect(createdFiles.some(f => f.endsWith('.md'))).toBe(true);
@@ -1730,9 +1730,9 @@ describe('SyncEngine — audio note sync', () => {
       const result = await engine.sync();
 
       expect(result.failed).toBe(0);
-      expect(createdFiles).toContain('得到大脑/录音长录/asset/我的录音笔记_audio.mp3');
-      expect(createdFiles).toContain('得到大脑/录音长录/asset/我的录音笔记_transcript.md');
-      expect(createdFiles).toContain('得到大脑/录音长录/我的录音笔记.md');
+      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_1908723638246504120_audio.mp3');
+      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_1908723638246504120_transcript.md');
+      expect(createdFiles).toContain('得到大脑/录音笔记/我的录音笔记.md');
       expect(createdFiles.join('\n')).toContain('created: 2026-04-30 12:45:24');
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
@@ -1794,14 +1794,14 @@ describe('SyncEngine — selective sync cancellation', () => {
     it('音频笔记：附件齐全且内容未变时返回 { exists: true }', () => {
       const app = makeMockApp();
       app.vault._addFile(
-        '得到大脑/录音长录/test.md',
+        '得到大脑/录音笔记/test.md',
         '---\nuid: "audio_ready"\nmodified: "2026-04-28 10:00:00"\n---\n音频笔记',
         { uid: 'audio_ready', modified: '2026-04-28 10:00:00' }
       );
-      app.vault._addFolder('得到大脑/录音长录');
-      app.vault._addFolder('得到大脑/录音长录/asset');
-      app.vault._addFile('得到大脑/录音长录/asset/测试笔记_audio.mp3', '');
-      app.vault._addFile('得到大脑/录音长录/asset/测试笔记_transcript.md', '');
+      app.vault._addFolder('得到大脑/录音笔记');
+      app.vault._addFolder('得到大脑/录音笔记/asset');
+      app.vault._addFile('得到大脑/录音笔记/asset/测试笔记_audio.mp3', '');
+      app.vault._addFile('得到大脑/录音笔记/asset/测试笔记_transcript.md', '');
       const engine = new SyncEngine(app as any, makeSettings());
       const note = makeNote({
         note_id: 'audio_ready',
@@ -1809,7 +1809,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         note_type: 'recorder_audio',
         updated_at: '2026-04-28T10:00:00+08:00',
       });
-      const index = new Map([['audio_ready', { path: '得到大脑/录音长录/test.md' }]]);
+      const index = new Map([['audio_ready', { path: '得到大脑/录音笔记/test.md' }]]);
       // @ts-ignore
       const result = engine['preCheckNote'](note, index);
       expect(result.exists).toBe(true);
@@ -1818,13 +1818,13 @@ describe('SyncEngine — selective sync cancellation', () => {
     it('音频笔记：缺少音频文件时返回 { exists: false }', () => {
       const app = makeMockApp();
       app.vault._addFile(
-        '得到大脑/录音长录/test.md',
+        '得到大脑/录音笔记/test.md',
         '---\nuid: "audio_missing_mp3"\nmodified: "2026-04-28 10:00:00"\n---\n音频笔记',
         { uid: 'audio_missing_mp3', modified: '2026-04-28 10:00:00' }
       );
-      app.vault._addFolder('得到大脑/录音长录');
-      app.vault._addFolder('得到大脑/录音长录/asset');
-      app.vault._addFile('得到大脑/录音长录/asset/测试笔记_transcript.md', '');
+      app.vault._addFolder('得到大脑/录音笔记');
+      app.vault._addFolder('得到大脑/录音笔记/asset');
+      app.vault._addFile('得到大脑/录音笔记/asset/测试笔记_transcript.md', '');
       const engine = new SyncEngine(app as any, makeSettings());
       const note = makeNote({
         note_id: 'audio_missing_mp3',
@@ -1832,7 +1832,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         note_type: 'recorder_audio',
         updated_at: '2026-04-28T10:00:00+08:00',
       });
-      const index = new Map([['audio_missing_mp3', { path: '得到大脑/录音长录/test.md' }]]);
+      const index = new Map([['audio_missing_mp3', { path: '得到大脑/录音笔记/test.md' }]]);
       // @ts-ignore
       const result = engine['preCheckNote'](note, index);
       expect(result.exists).toBe(false);
@@ -1841,13 +1841,13 @@ describe('SyncEngine — selective sync cancellation', () => {
     it('音频笔记：缺少转写文件时返回 { exists: false }', () => {
       const app = makeMockApp();
       app.vault._addFile(
-        '得到大脑/录音长录/test.md',
+        '得到大脑/录音笔记/test.md',
         '---\nuid: "audio_missing_transcript"\nmodified: "2026-04-28 10:00:00"\n---\n音频笔记',
         { uid: 'audio_missing_transcript', modified: '2026-04-28 10:00:00' }
       );
-      app.vault._addFolder('得到大脑/录音长录');
-      app.vault._addFolder('得到大脑/录音长录/asset');
-      app.vault._addFile('得到大脑/录音长录/asset/测试笔记_audio.mp3', '');
+      app.vault._addFolder('得到大脑/录音笔记');
+      app.vault._addFolder('得到大脑/录音笔记/asset');
+      app.vault._addFile('得到大脑/录音笔记/asset/测试笔记_audio.mp3', '');
       const engine = new SyncEngine(app as any, makeSettings());
       const note = makeNote({
         note_id: 'audio_missing_transcript',
@@ -1855,7 +1855,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         note_type: 'recorder_audio',
         updated_at: '2026-04-28T10:00:00+08:00',
       });
-      const index = new Map([['audio_missing_transcript', { path: '得到大脑/录音长录/test.md' }]]);
+      const index = new Map([['audio_missing_transcript', { path: '得到大脑/录音笔记/test.md' }]]);
       // @ts-ignore
       const result = engine['preCheckNote'](note, index);
       expect(result.exists).toBe(false);
@@ -2671,7 +2671,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
       'https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children?limit=20&since_id=&sort=create_desc'
     );
     const parentContent = vi.mocked(app.vault.create).mock.calls.find(([path]) =>
-      path === '得到大脑/录音长录/WebAPI 录音主笔记.md'
+      path === '得到大脑/录音笔记/WebAPI 录音主笔记.md'
     )?.[1] as string;
     expect(parentContent).toContain('children_ids: ["1909246675068292528"]');
     expect(parentContent).not.toContain('1909246675068292530');

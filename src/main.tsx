@@ -1,6 +1,6 @@
 import { App, Modal, Notice, Plugin, getLanguage, type DataAdapter, type TFile } from 'obsidian';
 import ReactDOM from 'react-dom';
-import { DEFAULT_SETTINGS, getAuthCredentials, type Settings, type SyncHistoryScope, type SyncProgressDetail, type SyncHistoryEntry, type SyncResult, type SyncScopeOptions } from './types';
+import { DEFAULT_SETTINGS, getAuthCredentials, migrateEnabledNoteTypes, type Settings, type SyncHistoryScope, type SyncProgressDetail, type SyncHistoryEntry, type SyncResult, type SyncScopeOptions } from './types';
 import { GetNoteSettingsTab } from './settings-tab';
 import { SyncEngine, SyncCancelledError } from './sync';
 import { showError, showNotice, showSuccess } from './ui/notice';
@@ -153,9 +153,11 @@ export default class GetNoteSyncPlugin extends Plugin {
       scheduledSync: {
         ...DEFAULT_SETTINGS.scheduledSync,
         ...loaded?.scheduledSync,
-        enabledNoteTypes: 'enabledNoteTypes' in (loaded?.scheduledSync ?? {}) && Array.isArray(loaded?.scheduledSync?.enabledNoteTypes)
-          ? loaded.scheduledSync.enabledNoteTypes.filter((type): type is string => typeof type === 'string')
-          : undefined,
+        enabledNoteTypes: migrateEnabledNoteTypes(
+          'enabledNoteTypes' in (loaded?.scheduledSync ?? {}) && Array.isArray(loaded?.scheduledSync?.enabledNoteTypes)
+            ? loaded.scheduledSync.enabledNoteTypes.filter((type): type is string => typeof type === 'string')
+            : undefined
+        ),
       },
       reverseSync: { ...DEFAULT_SETTINGS.reverseSync, ...loaded?.reverseSync },
       syncHistory: normalizeSyncHistory(loaded?.syncHistory),

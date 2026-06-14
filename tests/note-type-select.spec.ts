@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 describe('NoteTypeSelect', () => {
-  it('按官方筛选项展示笔记类型，不展开底层录音类型', async () => {
+  it('按官方筛选项展示笔记类型，仅 5 个 group（不含订阅博主）', async () => {
     const { container } = renderSelect();
 
     await act(() => {
@@ -27,18 +27,15 @@ describe('NoteTypeSelect', () => {
 
     expect(labels).toEqual([
       '全部笔记',
-      '录音笔记',
       '文字笔记',
-      '链接笔记',
       '图片笔记',
-      '录音卡笔记',
-      '内部记录',
-      '会议记录',
-      '订阅博主',
+      '链接笔记',
+      '录音笔记',
+      '其他',
     ]);
   });
 
-  it('取消录音笔记时移除该组包含的所有底层录音类型', async () => {
+  it('取消录音笔记时移除全部 9 种底层 audio 类型', async () => {
     const { container, onChange } = renderSelect();
 
     await act(() => {
@@ -55,6 +52,18 @@ describe('NoteTypeSelect', () => {
       checkbox.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
-    expect(onChange).toHaveBeenCalledWith(['plain_text', 'link', 'img_text', 'recorder_flash_audio', 'internal_record', 'meeting', 'blogger_post']);
+    const callArg = onChange.mock.calls.at(-1)![0] as string[];
+    expect(callArg).not.toContain('recorder_audio');
+    expect(callArg).not.toContain('recorder_flash_audio');
+    expect(callArg).not.toContain('immediate_audio');
+    expect(callArg).not.toContain('audio_long');
+    expect(callArg).not.toContain('local_audio');
+    expect(callArg).not.toContain('audio');
+    expect(callArg).not.toContain('class_audio');
+    expect(callArg).not.toContain('internal_record');
+    expect(callArg).not.toContain('meeting');
+    expect(callArg).toContain('plain_text');
+    expect(callArg).toContain('link');
+    expect(callArg).toContain('img_text');
   });
 });

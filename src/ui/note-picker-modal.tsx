@@ -3,6 +3,7 @@ import type { AuthMode, GetNoteNote } from '../types';
 import { fetchNotes } from '../api';
 import { generateDisplayTitle } from '../note-parser';
 import { t } from '../i18n';
+import { formatNoteTypeLabel } from '../utils/note-type';
 import { NoteTypeSelect } from './note-type-select';
 
 interface NotePickerModalProps {
@@ -29,8 +30,7 @@ function formatRelativeTime(iso: string): string {
 }
 
 function getTypeLabel(noteType: string): string {
-  const key = `picker.type.${noteType}` as const;
-  return t(key);
+  return formatNoteTypeLabel(noteType);
 }
 
 function matchesSearchQuery(note: GetNoteNote, searchQuery: string): boolean {

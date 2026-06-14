@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest';
 import { h, render } from 'preact';
 import { act } from 'preact/test-utils';
 import { fetchNotes } from '../src/api';
 import { generateDisplayTitle } from '../src/note-parser';
 import { NotePickerModal } from '../src/ui/note-picker-modal';
+import { initI18n } from '../src/i18n';
 import type { GetNoteNote } from '../src/types';
 
 vi.mock('../src/api', () => ({
@@ -185,7 +186,10 @@ describe('NotePickerModal auth chains', () => {
       container.querySelector('.mod-cta')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    expect(onConfirm).toHaveBeenCalledWith(['link'], ['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'audio', 'class_audio', 'link', 'img_text', 'recorder_flash_audio', 'internal_record', 'meeting', 'blogger_post']);
+    expect(onConfirm).toHaveBeenCalledWith(
+      ['link'],
+      expect.arrayContaining(['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'audio', 'class_audio', 'link', 'img_text', 'recorder_flash_audio', 'internal_record', 'meeting', 'blogger_post'])
+    );
   });
 
   it('filters the picker list by tags and selects the visible matches', async () => {
@@ -339,5 +343,85 @@ describe('NotePickerModal card layout (#138)', () => {
 
     const searchInput = container.querySelector('.getnote-picker-search input') as HTMLInputElement;
     expect(searchInput.value).toContain('工作');
+  });
+});
+
+describe('NotePickerModal type label folding (#141 follow-up)', () => {
+  beforeAll(() => {
+    initI18n('zh-CN');
+  });
+
+  async function renderPickerWithNotes(notes: GetNoteNote[]) {
+    vi.mocked(fetchNotes).mockResolvedValueOnce({ notes, hasMore: false });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(
+        h(NotePickerModal, {
+          token: 'web-token',
+          clientId: '',
+          authMode: 'web',
+          onConfirm: vi.fn(),
+          onCancel: vi.fn(),
+        }),
+        container
+      );
+      await Promise.resolve();
+    });
+    return container;
+  }
+
+  it('folds all 9 internal audio note types into "录音笔记"', async () => {
+    const audioTypes = [
+      'recorder_audio',
+      'recorder_flash_audio',
+      'immediate_audio',
+      'audio_long',
+      'local_audio',
+      'audio',
+      'class_audio',
+      'internal_record',
+      'meeting',
+    ];
+
+    for (const noteType of audioTypes) {
+      const container = await renderPickerWithNotes([
+        makeNote({ note_id: `n-${noteType}`, title: `音频-${noteType}`, note_type: noteType }),
+      ]);
+      const typeLabel = container.querySelector('.getnote-note-card-type');
+      expect(typeLabel?.textContent).toBe('录音笔记');
+      expect(typeLabel?.textContent).not.toContain('picker.type.');
+    }
+  });
+
+  it('folds blogger_post into "其他"', async () => {
+    const container = await renderPickerWithNotes([
+      makeNote({ note_id: 'bp', title: '订阅博主', note_type: 'blogger_post' }),
+    ]);
+    const typeLabel = container.querySelector('.getnote-note-card-type');
+    expect(typeLabel?.textContent).toBe('其他');
+    expect(typeLabel?.textContent).not.toContain('picker.type.');
+  });
+
+  it('keeps plain_text label as "文字笔记"', async () => {
+    const container = await renderPickerWithNotes([
+      makeNote({ note_id: 'pt', title: '普通笔记', note_type: 'plain_text' }),
+    ]);
+    expect(container.querySelector('.getnote-note-card-type')?.textContent).toBe('文字笔记');
+  });
+
+  it('keeps img_text label as "图片笔记"', async () => {
+    const container = await renderPickerWithNotes([
+      makeNote({ note_id: 'it', title: '图片笔记', note_type: 'img_text' }),
+    ]);
+    expect(container.querySelector('.getnote-note-card-type')?.textContent).toBe('图片笔记');
+  });
+
+  it('keeps link label as "链接笔记"', async () => {
+    const container = await renderPickerWithNotes([
+      makeNote({ note_id: 'lk', title: '链接笔记', note_type: 'link' }),
+    ]);
+    expect(container.querySelector('.getnote-note-card-type')?.textContent).toBe('链接笔记');
   });
 });
