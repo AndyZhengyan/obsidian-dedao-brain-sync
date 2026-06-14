@@ -117,11 +117,9 @@ export function SettingsComponent({
       k => attachmentImport?.[k as 'image' | 'audio' | 'video' | 'document'] !== false,
     );
     toggle.setValue(allOn);
-    toggle.onChange(() => {
-      // Flip all four children when the master is clicked.
-      const current = settings.attachmentImport;
-      const firstValue = current?.image !== false;
-      const nextValue = !firstValue;
+    toggle.onChange((nextValue) => {
+      (Object.keys(childTogglesRef.current) as Array<'image' | 'audio' | 'video' | 'document'>)
+        .forEach(kind => childTogglesRef.current[kind]?.setValue(nextValue));
       updateSetting('attachmentImport', {
         image: nextValue,
         audio: nextValue,

@@ -477,6 +477,33 @@ describe('SettingsComponent auth credentials', () => {
       video: false,
       document: false,
     });
+    const childToggles = Array.from(container.querySelectorAll('.getnote-scheduled-options .checkbox-container'));
+    expect(childToggles.every(toggle => !toggle.classList.contains('is-enabled'))).toBe(true);
+  });
+
+  it('enables all child toggles when a mixed attachment master is clicked', async () => {
+    const updateSetting = vi.fn();
+    const { container } = renderSettings(makeSettings({
+      attachmentImport: { image: true, audio: false, video: true, document: false },
+    }), updateSetting);
+
+    await new Promise(r => setTimeout(r, 50));
+    const masterRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(row => row.textContent?.includes('下载附件'));
+    const masterToggle = masterRow!.querySelector('.checkbox-container')!;
+
+    await act(() => {
+      masterToggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('attachmentImport', {
+      image: true,
+      audio: true,
+      video: true,
+      document: true,
+    });
+    const childToggles = Array.from(container.querySelectorAll('.getnote-scheduled-options .checkbox-container'));
+    expect(childToggles.every(toggle => toggle.classList.contains('is-enabled'))).toBe(true);
   });
 
   it('still honours legacy attachmentImport values from older user data.json', async () => {
