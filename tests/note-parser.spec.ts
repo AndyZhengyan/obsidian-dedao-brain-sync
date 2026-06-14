@@ -204,6 +204,7 @@ describe('renderNote — audio note', () => {
       attachments: [
         { type: 'audio', url: 'https://example.com/test.mp3', title: '', duration: 883920 },
       ],
+      assetPaths: ['得到大脑/录音笔记/asset/我的录音_audio.mp3'],
       audio: '🟢 说话人1 [00:00:01]\n测试转写内容',
     };
 
@@ -256,6 +257,7 @@ describe('renderNote — audio note', () => {
       attachments: [
         { type: 'audio', url: 'https://example.com/test.mp3', title: '', duration: 883920 },
       ],
+      assetPaths: ['得到大脑/录音笔记/asset/仅录音笔记_audio.mp3'],
       // 注意：未提供 audio（转写文本）
     };
 
@@ -268,6 +270,28 @@ describe('renderNote — audio note', () => {
     expect(result).not.toContain('> [[仅录音笔记_transcript]]');
     // 原有正文保留
     expect(result).toContain('这是AI摘要');
+  });
+
+  it('音频下载失败时不嵌入不存在的录音链接', () => {
+    const note: GetNoteNote = {
+      id: 1,
+      note_id: 'note_audio_download_failed',
+      title: '下载失败的录音',
+      content: '正文内容',
+      note_type: 'recorder_audio',
+      source: 'app',
+      tags: [],
+      created_at: '2026-04-30T12:45:24+08:00',
+      updated_at: '2026-04-30T13:00:07+08:00',
+      attachments: [
+        { type: 'audio', url: 'https://example.com/test.mp3', title: '', duration: 883920 },
+      ],
+    };
+
+    const result = renderNote(note);
+
+    expect(result).not.toContain('> ![[下载失败的录音_audio.mp3]]');
+    expect(result).toContain('正文内容');
   });
 });
 
