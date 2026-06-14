@@ -500,10 +500,10 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
       attachment: { type: 'audio', url: 'https://cdn.example.com/knowledge.mp3', title: '' },
       detailExtra: { audio: '知识库音频转写' },
       expectedAssets: [
-        '得到大脑/知识库/我的知识库/asset/知识库音频笔记_audio.mp3',
-        '得到大脑/知识库/我的知识库/asset/知识库音频笔记_transcript.md',
+        '得到大脑/知识库/我的知识库/asset/知识库音频笔记_created_audio_note_audio.mp3',
+        '得到大脑/知识库/我的知识库/asset/知识库音频笔记_created_audio_note_transcript.md',
       ],
-      expectedMarkdown: '知识库音频笔记_audio.mp3',
+      expectedMarkdown: '知识库音频笔记_created_audio_note_audio.mp3',
     },
   ])('reuses ordinary note enrichment for $noteType notes in a created knowledge base', async ({
     noteId,
@@ -1458,8 +1458,8 @@ describe('SyncEngine — audio note sync', () => {
 
       // 验证 asset 目录被创建/写入
       expect(createdFiles.some(f => f.includes('/asset/'))).toBe(true);
-      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_audio.mp3');
-      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_transcript.md');
+      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_1908723638246504120_audio.mp3');
+      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_1908723638246504120_transcript.md');
       expect(vi.mocked(globalThis.fetch)).toHaveBeenCalledWith('https://cdn.example.com/test.mp3');
       // 验证 md 文件被创建
       expect(createdFiles.some(f => f.endsWith('.md'))).toBe(true);
@@ -1730,8 +1730,8 @@ describe('SyncEngine — audio note sync', () => {
       const result = await engine.sync();
 
       expect(result.failed).toBe(0);
-      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_audio.mp3');
-      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_transcript.md');
+      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_1908723638246504120_audio.mp3');
+      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_1908723638246504120_transcript.md');
       expect(createdFiles).toContain('得到大脑/录音笔记/我的录音笔记.md');
       expect(createdFiles.join('\n')).toContain('created: 2026-04-30 12:45:24');
     } finally {
