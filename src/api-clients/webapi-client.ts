@@ -283,8 +283,10 @@ export async function fetchSubscribedTopics(token: string, signal?: AbortSignal)
 
 export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions): Promise<GetNoteNote[]> {
   const notes: GetNoteNote[] = [];
-  const topicIdSet = options.topicIds?.length ? new Set(options.topicIds) : undefined;
   const remainingNoteIds = options.selectedNoteIds?.length ? new Set(options.selectedNoteIds) : undefined;
+  const topicIdSet = options.topicIds === undefined || (remainingNoteIds && options.topicIds.length === 0)
+    ? undefined
+    : new Set(options.topicIds);
   const listUrl = 'https://knowledge-api.trytalks.com/v1/web/subscribe/topic/list?page=1&size=200&exclude_mine=true';
   const listData = await apiRequest<Record<string, unknown>>(listUrl, {
     method: 'GET',

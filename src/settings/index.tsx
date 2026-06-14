@@ -1,11 +1,12 @@
-import { useState, useCallback, useRef, useEffect } from 'preact/hooks';
+import { useState, useCallback, useRef, useEffect, type MutableRef } from 'preact/hooks';
 import { SettingItem } from './setting-item';
 import { SyncButton } from './sync-button';
 import { OAuthButton } from './oauth-button';
 import { openSyncHistoryModal } from '../ui/sync-history-modal';
 import { NoteTypeSelect } from '../ui/note-type-select';
+import { Toggle } from './toggle';
 import { type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressDetail } from '../types';
-import { App, AbstractInputSuggest } from 'obsidian';
+import { App, AbstractInputSuggest, ToggleComponent } from 'obsidian';
 import { fetchNotes } from '../api';
 import { t } from '../i18n';
 import { ExternalLink } from './external-link';
@@ -95,6 +96,87 @@ export function SettingsComponent({
   const [pendingStartDate, setPendingStartDate] = useState(settings.syncStartDate);
 
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const masterAttachmentRef = useRef<HTMLDivElement>(null);
+  const childAttachmentRefs: Record<'image' | 'audio' | 'video' | 'document', MutableRef<HTMLDivElement | null>> = {
+    image: useRef<HTMLDivElement>(null),
+    audio: useRef<HTMLDivElement>(null),
+    video: useRef<HTMLDivElement>(null),
+    document: useRef<HTMLDivElement>(null),
+  };
+  const childTogglesRef = useRef<Record<'image' | 'audio' | 'video' | 'document', ToggleComponent | null>>({
+    image: null,
+    audio: null,
+    video: null,
+    document: null,
+  });
+  const masterToggleRef = useRef<ToggleComponent | null>(null);
+
+  useEffect(() => {
+    if (!masterAttachmentRef.current) return;
+    const toggle = new ToggleComponent(masterAttachmentRef.current);
+    masterToggleRef.current = toggle;
+    const attachmentImport = settings.attachmentImport;
+    const allOn = ['image', 'audio', 'video', 'document'].every(
+      k => attachmentImport?.[k as 'image' | 'audio' | 'video' | 'document'] !== false,
+    );
+    toggle.setValue(allOn);
+    toggle.onChange((nextValue) => {
+      (Object.keys(childTogglesRef.current) as Array<'image' | 'audio' | 'video' | 'document'>)
+        .forEach(kind => childTogglesRef.current[kind]?.setValue(nextValue));
+      updateSetting('attachmentImport', {
+        image: nextValue,
+        audio: nextValue,
+        video: nextValue,
+        document: nextValue,
+      });
+    });
+    return () => {
+      toggle.toggleEl.replaceWith(document.createTextNode(''));
+      masterToggleRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    (['image', 'audio', 'video', 'document'] as const).forEach((kind) => {
+      const container = childAttachmentRefs[kind].current;
+      if (!container || childTogglesRef.current[kind]) return;
+      const toggle = new ToggleComponent(container);
+      childTogglesRef.current[kind] = toggle;
+      toggle.setValue(settings.attachmentImport?.[kind] !== false);
+      toggle.onChange((value) => {
+        const next = {
+          ...settings.attachmentImport,
+          [kind]: value,
+        };
+        masterToggleRef.current?.setValue(
+          (['image', 'audio', 'video', 'document'] as const).every(key => next[key] !== false)
+        );
+        updateSetting('attachmentImport', next);
+      });
+    });
+    return () => {
+      (Object.keys(childTogglesRef.current) as Array<'image' | 'audio' | 'video' | 'document'>).forEach((kind) => {
+        const t = childTogglesRef.current[kind];
+        if (t) {
+          t.toggleEl.replaceWith(document.createTextNode(''));
+          childTogglesRef.current[kind] = null;
+        }
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    (['image', 'audio', 'video', 'document'] as const).forEach((kind) => {
+      const t = childTogglesRef.current[kind];
+      if (!t) return;
+      t.setValue(settings.attachmentImport?.[kind] !== false);
+    });
+    const attachmentImport = settings.attachmentImport;
+    const allOn = ['image', 'audio', 'video', 'document'].every(
+      k => attachmentImport?.[k as 'image' | 'audio' | 'video' | 'document'] !== false,
+    );
+    masterToggleRef.current?.setValue(allOn);
+  }, [settings.attachmentImport]);
 
   useEffect(() => {
     if (!settings.syncStartDate && !settings.lastSyncEndTimestamp) {
@@ -510,10 +592,9 @@ export function SettingsComponent({
         <div className="getnote-scheduled-control">
           <div className="getnote-scheduled-row">
             <span>{t('settings.scheduled.enabled')}</span>
-            <input
-              type="checkbox"
-              checked={scheduledEnabled}
-              onChange={(e) => handleScheduledEnabled((e.target as HTMLInputElement).checked)}
+            <Toggle
+              value={scheduledEnabled}
+              onChange={handleScheduledEnabled}
             />
           </div>
           <div
@@ -538,10 +619,9 @@ export function SettingsComponent({
             <div className="getnote-scheduled-row">
               <span className="getnote-scheduled-row-label">{t('settings.scheduled.onStart')}</span>
               <span className="getnote-scheduled-row-control">
-                <input
-                  type="checkbox"
-                  checked={scheduledSync.syncOnStart}
-                  onChange={(e) => handleScheduledOnStart((e.target as HTMLInputElement).checked)}
+                <Toggle
+                  value={scheduledSync.syncOnStart}
+                  onChange={handleScheduledOnStart}
                 />
               </span>
             </div>
@@ -627,18 +707,17 @@ export function SettingsComponent({
 
       <SettingItem name={t('settings.attachment.section')}>
         <div className="getnote-scheduled-options">
+          <div className="getnote-scheduled-row">
+            <span className="getnote-scheduled-row-label">{t('settings.attachment.master')}</span>
+            <span className="getnote-scheduled-row-control">
+              <div ref={masterAttachmentRef} />
+            </span>
+          </div>
           {(['image', 'audio', 'video', 'document'] as const).map(kind => (
             <div className="getnote-scheduled-row" key={kind}>
               <span className="getnote-scheduled-row-label">{t(`settings.attachment.${kind}`)}</span>
               <span className="getnote-scheduled-row-control">
-                <input
-                  type="checkbox"
-                  checked={settings.attachmentImport?.[kind] !== false}
-                  onChange={(e) => updateSetting('attachmentImport', {
-                    ...settings.attachmentImport,
-                    [kind]: (e.target as HTMLInputElement).checked,
-                  })}
-                />
+                <div ref={childAttachmentRefs[kind]} />
               </span>
             </div>
           ))}

@@ -597,6 +597,154 @@ describe('SettingsComponent auth credentials', () => {
     expect(dateInput.value).toBe('2025-12-15');
   });
 
+  it('renders the attachment download section with a master toggle and four child toggles', async () => {
+    const settings = makeSettings();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(
+        h(SettingsComponent, {
+          settings,
+          updateSetting: vi.fn(),
+          startSync: vi.fn(),
+          isSyncing: false,
+          openNotePicker: vi.fn(),
+          startSubscribedKnowledgeSync: vi.fn(),
+          openLocalUpload: vi.fn(),
+          startAutoSync: vi.fn(),
+          stopAutoSync: vi.fn(),
+          cancelSync: vi.fn(),
+          app: new App(),
+        }),
+        container
+      );
+    });
+    await new Promise(r => setTimeout(r, 50));
+
+    const sectionName = container.querySelector('.setting-item-name');
+    expect(container.textContent).toContain('附件下载配置');
+
+    const toggleEls = container.querySelectorAll('.setting-item .checkbox-container');
+    // 5 toggles total: 1 master + image + audio + video + document
+    expect(toggleEls.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('flips all four child toggles when the master attachment toggle is clicked', async () => {
+    const updateSetting = vi.fn();
+    const settings = makeSettings({
+      attachmentImport: { image: true, audio: true, video: true, document: true },
+    });
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(
+        h(SettingsComponent, {
+          settings,
+          updateSetting,
+          startSync: vi.fn(),
+          isSyncing: false,
+          openNotePicker: vi.fn(),
+          startSubscribedKnowledgeSync: vi.fn(),
+          openLocalUpload: vi.fn(),
+          startAutoSync: vi.fn(),
+          stopAutoSync: vi.fn(),
+          cancelSync: vi.fn(),
+          app: new App(),
+        }),
+        container
+      );
+    });
+    await new Promise(r => setTimeout(r, 50));
+
+    const masterRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(row => row.textContent?.includes('下载附件'));
+    expect(masterRow).toBeTruthy();
+
+    const masterToggle = masterRow!.querySelector('.checkbox-container');
+    expect(masterToggle).toBeTruthy();
+
+    await act(() => {
+      masterToggle!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('attachmentImport', {
+      image: false,
+      audio: false,
+      video: false,
+      document: false,
+    });
+    const childToggles = Array.from(container.querySelectorAll('.getnote-scheduled-options .checkbox-container'));
+    expect(childToggles.every(toggle => !toggle.classList.contains('is-enabled'))).toBe(true);
+  });
+
+  it('enables all child toggles when a mixed attachment master is clicked', async () => {
+    const updateSetting = vi.fn();
+    const { container } = renderSettings(makeSettings({
+      attachmentImport: { image: true, audio: false, video: true, document: false },
+    }), updateSetting);
+
+    await new Promise(r => setTimeout(r, 50));
+    const masterRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(row => row.textContent?.includes('下载附件'));
+    const masterToggle = masterRow!.querySelector('.checkbox-container')!;
+
+    await act(() => {
+      masterToggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('attachmentImport', {
+      image: true,
+      audio: true,
+      video: true,
+      document: true,
+    });
+    const childToggles = Array.from(container.querySelectorAll('.getnote-scheduled-options .checkbox-container'));
+    expect(childToggles.every(toggle => toggle.classList.contains('is-enabled'))).toBe(true);
+  });
+
+  it('still honours legacy attachmentImport values from older user data.json', async () => {
+    const updateSetting = vi.fn();
+    const settings = makeSettings({
+      attachmentImport: { image: true, audio: false, video: true, document: false },
+    });
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(
+        h(SettingsComponent, {
+          settings,
+          updateSetting,
+          startSync: vi.fn(),
+          isSyncing: false,
+          openNotePicker: vi.fn(),
+          startSubscribedKnowledgeSync: vi.fn(),
+          openLocalUpload: vi.fn(),
+          startAutoSync: vi.fn(),
+          stopAutoSync: vi.fn(),
+          cancelSync: vi.fn(),
+          app: new App(),
+        }),
+        container
+      );
+    });
+    await new Promise(r => setTimeout(r, 50));
+
+    const audioRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(row => row.textContent?.includes('音频'));
+    expect(audioRow).toBeTruthy();
+    const audioToggle = audioRow!.querySelector('.checkbox-container');
+    expect(audioToggle).toBeTruthy();
+    expect(audioToggle!.classList.contains('is-enabled')).toBe(false);
+
+    await act(() => {
+      audioToggle!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('attachmentImport', expect.objectContaining({
+      audio: true,
+    }));
+  });
+
   it('stores note type filters inside scheduled sync settings', async () => {
     const scheduledSync = {
       ...DEFAULT_SETTINGS.scheduledSync,
@@ -629,5 +777,94 @@ describe('SettingsComponent auth credentials', () => {
       ...scheduledSync,
       enabledNoteTypes: ['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'audio', 'class_audio', 'link', 'img_text', 'recorder_flash_audio', 'internal_record', 'meeting', 'blogger_post'],
     });
+  });
+});
+
+describe('SettingsComponent scheduled sync toggles (#136)', () => {
+  function findScheduledEnabledRow(container: HTMLElement): HTMLElement {
+    const rows = container.querySelectorAll('.getnote-scheduled-row');
+    const row = Array.from(rows).find((el) => el.textContent === '启用定时同步');
+    expect(row).toBeTruthy();
+    return row!;
+  }
+
+  function findSyncOnStartRow(container: HTMLElement): HTMLElement {
+    const rows = container.querySelectorAll('.getnote-scheduled-row');
+    const row = Array.from(rows).find((el) => el.textContent?.includes('启动时同步'));
+    expect(row).toBeTruthy();
+    return row!;
+  }
+
+  it('renders scheduledEnabled as an Obsidian toggle (not a plain checkbox)', () => {
+    const { container } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: false },
+    }));
+
+    const row = findScheduledEnabledRow(container);
+    const toggleContainers = row.querySelectorAll('.checkbox-container');
+    const plainCheckboxes = row.querySelectorAll(':scope > input[type="checkbox"]');
+
+    expect(toggleContainers.length).toBe(1);
+    expect(plainCheckboxes.length).toBe(0);
+    const innerCheckbox = toggleContainers[0].querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(innerCheckbox).toBeTruthy();
+    expect(innerCheckbox.checked).toBe(false);
+  });
+
+  it('renders syncOnStart as an Obsidian toggle inside the scheduled sync options', () => {
+    const { container } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true, syncOnStart: true },
+    }));
+
+    const row = findSyncOnStartRow(container);
+    const toggleContainers = row.querySelectorAll('.checkbox-container');
+    const plainCheckboxes = row.querySelectorAll(':scope > input[type="checkbox"]');
+
+    expect(toggleContainers.length).toBe(1);
+    expect(plainCheckboxes.length).toBe(0);
+    const innerCheckbox = toggleContainers[0].querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(innerCheckbox).toBeTruthy();
+    expect(innerCheckbox.checked).toBe(true);
+    expect(toggleContainers[0].classList.contains('is-enabled')).toBe(true);
+  });
+
+  it('preserves onChange behavior for scheduledEnabled toggle', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: false },
+    }));
+
+    const row = findScheduledEnabledRow(container);
+    const innerCheckbox = row.querySelector('.checkbox-container input[type="checkbox"]') as HTMLInputElement;
+    expect(innerCheckbox).toBeTruthy();
+
+    await act(() => {
+      innerCheckbox.checked = true;
+      innerCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('scheduledSync', expect.objectContaining({
+      enabled: true,
+    }));
+    expect(row.querySelector('.checkbox-container')?.classList.contains('is-enabled')).toBe(true);
+  });
+
+  it('preserves onChange behavior for syncOnStart toggle', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true, syncOnStart: false },
+    }));
+
+    const row = findSyncOnStartRow(container);
+    const innerCheckbox = row.querySelector('.checkbox-container input[type="checkbox"]') as HTMLInputElement;
+    expect(innerCheckbox).toBeTruthy();
+
+    await act(() => {
+      innerCheckbox.checked = true;
+      innerCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('scheduledSync', expect.objectContaining({
+      enabled: true,
+      syncOnStart: true,
+    }));
   });
 });
