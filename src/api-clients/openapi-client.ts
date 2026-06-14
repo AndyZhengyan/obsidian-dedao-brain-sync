@@ -524,10 +524,14 @@ async function fetchBloggerContentDetail(topicId: string, content: BloggerConten
 export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions): Promise<GetNoteNote[]> {
   const { token, clientId, signal } = options;
   const notes: GetNoteNote[] = [];
-  const topicIdSet = options.topicIds?.length ? new Set(options.topicIds) : undefined;
-  const createdTopicIdSet = options.createdTopicIds?.length ? new Set(options.createdTopicIds) : undefined;
-  const bloggerIdSet = options.bloggerIds?.length ? new Set(options.bloggerIds) : undefined;
   const remainingNoteIds = options.selectedNoteIds?.length ? new Set(options.selectedNoteIds) : undefined;
+  const topicIdSet = options.topicIds === undefined || (remainingNoteIds && options.topicIds.length === 0)
+    ? undefined
+    : new Set(options.topicIds);
+  const createdTopicIdSet = options.createdTopicIds === undefined || (remainingNoteIds && options.createdTopicIds.length === 0)
+    ? undefined
+    : new Set(options.createdTopicIds);
+  const bloggerIdSet = options.bloggerIds?.length ? new Set(options.bloggerIds) : undefined;
   const sources: Array<NonNullable<SubscribedTopic['source']>> = [];
   if (createdTopicIdSet) sources.push('created');
   if (topicIdSet || sources.length === 0) sources.push('subscribed');
