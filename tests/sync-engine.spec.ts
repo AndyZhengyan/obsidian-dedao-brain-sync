@@ -2991,4 +2991,116 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
       vi.resetModules();
     }
   });
+
+  it('跨库同步：音频笔记正文未变但本地缺音频文件时触发补下载（不跳过）', async () => {
+    const noteId = 'cross_kb_audio_missing';
+    const fakeNotes = [
+      {
+        id: 'cross_kb_audio_missing:1',
+        note_id: noteId,
+        title: '跨库音频笔记',
+        content: '跨库正文',
+        note_type: 'recorder_audio',
+        source: 'blogger',
+        topic_id: 'kb-audio',
+        tags: [],
+        created_at: '2026-04-27T22:26:17+08:00',
+        updated_at: '2026-04-28T10:00:00+08:00',
+        attachments: [
+          { type: 'audio', url: 'https://cdn.example.com/cross-kb.mp3', title: '', duration: 1000 },
+        ],
+        audio: '🟢 说话人1 [00:00:01]\n转写',
+      },
+    ];
+    fetchSubscribedSpy.mockResolvedValue(fakeNotes);
+    vi.doMock('../src/api', async () => {
+      const actual = await vi.importActual<typeof import('../src/api')>('../src/api');
+      return {
+        ...actual,
+        fetchSubscribedKnowledgeNotes: fetchSubscribedSpy,
+      };
+    });
+    vi.resetModules();
+    const { SyncEngine: EngineReloaded } = await import('../src/sync');
+
+    try {
+      const app = makeMockApp();
+      // md 已存在 + uid 命中 + modified 匹配 + transcript 存在，但音频 mp3 缺失
+      app.vault._addFolder('得到大脑/知识库/跨库专题');
+      app.vault._addFolder('得到大脑/知识库/跨库专题/asset');
+      app.vault._addFile(
+        `得到大脑/知识库/跨库专题/跨库音频笔记.md`,
+        `---\nuid: "${noteId}"\nmodified: "2026-04-28 10:00:00"\nnote_type: recorder_audio\n---\n跨库正文`,
+        { uid: noteId, modified: '2026-04-28 10:00:00' }
+      );
+      app.vault._addFile('得到大脑/知识库/跨库专题/asset/跨库音频笔记_transcript.md', '');
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any) => {
+        const urlStr = typeof url === 'string' ? url : url?.url ?? '';
+        if (urlStr.includes('/resource/note/list')) {
+          return mockFetchResponse({
+            success: true,
+            data: { notes: [], has_more: false, next_cursor: '0' },
+          }) as Response;
+        }
+        if (urlStr.includes('/resource/note/detail')) {
+          return mockFetchResponse({
+            success: true,
+            data: {
+              note: {
+                note_id: noteId,
+                title: '跨库音频笔记',
+                content: '跨库正文',
+                note_type: 'recorder_audio',
+                attachments: [
+                  { type: 'audio', url: 'https://cdn.example.com/cross-kb.mp3', title: '', duration: 1000 },
+                ],
+                audio: '🟢 说话人1 [00:00:01]\n转写',
+                created_at: '2026-04-27T22:26:17+08:00',
+                updated_at: '2026-04-28T10:00:00+08:00',
+              },
+            },
+          }) as Response;
+        }
+        if (new URL(urlStr).hostname === 'cdn.example.com') {
+          return {
+            ok: true,
+            status: 200,
+            arrayBuffer: async () => new ArrayBuffer(32),
+          } as Response;
+        }
+        throw new Error(`Unexpected request: ${urlStr}`);
+      });
+
+      const settings = makeSettings({
+        scheduledSync: {
+          ...DEFAULT_SCHEDULED_SYNC,
+          enabled: true,
+          syncKnowledgeBases: ['kb-audio'],
+        },
+      });
+
+      const engine = new EngineReloaded(app as any, settings, undefined, {
+        maxDays: 0,
+        syncStartDate: '2026-04-27',
+        syncKnowledgeBases: ['kb-audio'],
+        knowledgeBaseNames: { kb_audio: '跨库专题', kb_audio_missing: '跨库专题' } as any,
+      });
+
+      const result = await engine.sync();
+
+      // 正文未变 + audio 缺失 → 跨库路径不能简单地 skip，必须走补下载
+      const itemsForNote = result.items?.filter(item => item.noteId === noteId) ?? [];
+      expect(itemsForNote.length).toBeGreaterThan(0);
+      const statuses = itemsForNote.map(item => item.status);
+      // 不允许出现纯 skipped（缺附件时必须重写或下载）
+      expect(statuses).not.toEqual(['skipped']);
+      // 必须尝试下载音频
+      const fetchCalls = vi.mocked(globalThis.fetch).mock.calls.map(call => String(call[0]));
+      expect(fetchCalls.some(url => url === 'https://cdn.example.com/cross-kb.mp3')).toBe(true);
+    } finally {
+      vi.doUnmock('../src/api');
+      vi.resetModules();
+    }
+  });
 });

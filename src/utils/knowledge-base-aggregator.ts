@@ -56,9 +56,16 @@ export class KnowledgeBaseAggregator {
    *   de-duplicate by topic_id so newly-created knowledge bases get appended.
    *
    * Returns the merged cache along with whether more pages remain upstream.
+   *
+   * Throws `Error('MISSING_CREDENTIALS')` when called with an empty token so
+   * callers (e.g. the settings UI) can short-circuit and surface a localized
+   * hint instead of hitting the API with empty auth headers.
    */
   async refresh(options: AggregatorRefreshOptions): Promise<AggregatorSnapshot> {
     const { token, clientId } = options;
+    if (!token) {
+      throw new Error('MISSING_CREDENTIALS');
+    }
     const maxPages = options.maxPages ?? 50;
     const merged: KnowledgeBaseEntry[] = [...this.cache];
     let page = 1;

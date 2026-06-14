@@ -398,10 +398,16 @@ export class SyncEngine {
   /**
    * Check if a note and all its artifacts already exist in the vault and are up to date.
    * Uses UID-based lookup so renamed/moved files are still found.
+   *
+   * `categoryOverride` lets callers route the check at a custom vault path
+   * (e.g. `知识库/<name>/`) instead of the default `getCategoryDir(note_type)`
+   * location. This is required for cross-KB sync where notes live under a
+   * per-knowledge-base directory.
    */
   private preCheckNote(
     note: GetNoteNote,
-    uidIndex: Map<string, TFile>
+    uidIndex: Map<string, TFile>,
+    categoryOverride?: string
   ): { exists: boolean; file?: TFile } {
     const existingFile = uidIndex.get(note.note_id);
     if (!existingFile) return { exists: false };
@@ -410,12 +416,11 @@ export class SyncEngine {
     if (contentChanged) return { exists: false, file: existingFile };
     if (hasImageAssetPaths(note)) return { exists: false, file: existingFile };
 
-    if (AUDIO_NOTE_TYPES.has(note.note_type) && isAttachmentTypeEnabled(this.settings.attachmentImport, 'audio')) {
-      const categoryDir = getCategoryDir(note.note_type);
-      const basePath = `${this.settings.folderName}/${categoryDir}`;
-      const assetDir = `${basePath}/asset`;
-      const baseFilename = this.getFileName(note);
+    const categoryDir = categoryOverride ?? getCategoryDir(note.note_type);
+    const assetDir = `${this.settings.folderName}/${categoryDir}/asset`;
+    const baseFilename = this.getFileName(note);
 
+    if (AUDIO_NOTE_TYPES.has(note.note_type) && isAttachmentTypeEnabled(this.settings.attachmentImport, 'audio')) {
       if (
         !this.app.vault.getAbstractFileByPath(`${assetDir}/${baseFilename}_audio.mp3`) ||
         !this.app.vault.getAbstractFileByPath(`${assetDir}/${baseFilename}_transcript.md`)
@@ -426,10 +431,6 @@ export class SyncEngine {
 
     const imageAttachments = (note.attachments ?? []).filter(isImageAttachment);
     if (isAttachmentTypeEnabled(this.settings.attachmentImport, 'image') && imageAttachments.length > 0) {
-      const categoryDir = getCategoryDir(note.note_type);
-      const basePath = `${this.settings.folderName}/${categoryDir}`;
-      const assetDir = `${basePath}/asset`;
-      const baseFilename = this.getFileName(note);
       if (!hasDownloadedImageAssets(this.app.vault, assetDir, baseFilename, imageAttachments.length)) {
         return { exists: false, file: existingFile };
       }
@@ -439,9 +440,6 @@ export class SyncEngine {
       a => !isImageAttachment(a) && a.type !== 'audio' && isDownloadableAttachment(a, this.settings)
     );
     if (genericAttachments.length > 0) {
-      const categoryDir = getCategoryDir(note.note_type);
-      const assetDir = `${this.settings.folderName}/${categoryDir}/asset`;
-      const baseFilename = this.getFileName(note);
       const missingGenericAsset = genericAttachments.some((attachment, index) => {
         const kind = classifyAttachmentUrl(attachment.url);
         const filename = genericAssetFilename(baseFilename, attachment.url, index, kind);
@@ -1004,6 +1002,26 @@ export class SyncEngine {
       result.total++;
       const knowledgeBaseName = note.topic_id ? knowledgeBaseNames[note.topic_id] : undefined;
       const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;
+
+      // Reuse the preCheckNote logic from the main sync path: if the note is
+      // already up to date in the vault, skip it without re-running
+      // enrichAudioNote. This is the same path used by syncNoteIds to avoid
+      // missing audio/transcript/image attachment re-downloads.
+      const preCheck = this.preCheckNote(note, uidIndex, categoryOverride);
+      if (preCheck.exists) {
+        result.skipped++;
+        this.recordItem(result, note, { status: 'skipped' });
+        this.onProgress?.({
+          processed: result.total,
+          total: result.total,
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: result.failed,
+          percent: 0,
+        });
+        continue;
+      }
 
       const noteToWrite = await this.enrichAudioNote(note, signal, categoryOverride);
       const appendNotes = await this.fetchAppendNotes(noteToWrite, signal, result, categoryOverride);
