@@ -87,6 +87,7 @@ export function SettingsComponent({
   const lastSyncedTo = settings.lastSyncEndTimestamp || '';
   const [scheduledEnabled, setScheduledEnabled] = useState(settings.scheduledSync.enabled);
   const [scheduledNoteTypes, setScheduledNoteTypes] = useState<string[] | undefined>(settings.scheduledSync.enabledNoteTypes);
+  const [syncTags, setSyncTags] = useState<string[]>(settings.syncTags ?? []);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [connectionErrorMsg, setConnectionErrorMsg] = useState('');
@@ -466,9 +467,12 @@ export function SettingsComponent({
         description={t('settings.syncTags.desc')}
       >
         <TagSelect
-          value={settings.syncTags ?? []}
+          value={syncTags}
           options={settings.tagCache?.tags ?? []}
-          onChange={(value) => updateSetting('syncTags', value)}
+          onChange={(value) => {
+            setSyncTags(value);
+            updateSetting('syncTags', value);
+          }}
         />
       </SettingItem>
 
