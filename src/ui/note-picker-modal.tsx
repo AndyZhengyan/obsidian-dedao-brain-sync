@@ -34,15 +34,15 @@ function getTypeLabel(noteType: string): string {
 }
 
 function matchesSearchQuery(note: GetNoteNote, searchQuery: string): boolean {
-  const normalizedQuery = searchQuery.trim().toLowerCase();
-  if (!normalizedQuery) return true;
+  const queryTokens = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (queryTokens.length === 0) return true;
 
   const haystacks = [
     generateDisplayTitle(note),
     ...note.tags.map(tag => tag.name),
   ];
 
-  return haystacks.some(value => value.toLowerCase().includes(normalizedQuery));
+  return queryTokens.every(token => haystacks.some(value => value.toLowerCase().includes(token)));
 }
 
 function NoteRow({ note, checked, onChange, onTagClick }: { note: GetNoteNote; checked: boolean; onChange: (id: string, v: boolean) => void; onTagClick?: (tagName: string) => void }) {
