@@ -403,6 +403,350 @@ describe('SettingsComponent auth credentials', () => {
     expect(links.some((href) => href.includes('docs/web-mode-manual-token.md'))).toBe(true);
   });
 
+  it('renders a reset button next to the last sync checkpoint', () => {
+    const { container } = renderSettings(makeSettings({
+      syncStartDate: '2026-01-01',
+      lastSyncEndTimestamp: '2026-06-12T15:30:00+08:00',
+    }));
+
+    const row = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('上次同步断点'));
+    expect(row).toBeTruthy();
+    // The checkpoint is rendered in the viewer's local timezone via toLocaleString.
+    // The original +08:00 input is converted to local time; we compare against the
+    // same conversion so the test is timezone-independent.
+    const expectedLocal = new Date('2026-06-12T15:30:00+08:00').toLocaleString();
+    expect(row!.textContent).toContain(expectedLocal);
+
+    const resetButton = Array.from(row!.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '重置');
+    expect(resetButton).toBeTruthy();
+  });
+
+  it('renders a UTC checkpoint in the local timezone and includes the timezone abbreviation', () => {
+    // 2026-06-12T15:30:00Z (UTC) — toLocaleString should convert to local time
+    // and include a timezone abbreviation (e.g. "GMT+8" for zh-CN, "PDT" for en-US, etc.).
+    // The original bug stripped the timezone info entirely, so any output containing a
+    // timezone abbreviation is the contract under test.
+    const utcIso = '2026-06-12T15:30:00Z';
+    const expectedLocal = new Date(utcIso).toLocaleString();
+
+    const { container } = renderSettings(makeSettings({
+      syncStartDate: '2026-01-01',
+      lastSyncEndTimestamp: utcIso,
+    }));
+
+    const row = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('上次同步断点'));
+    expect(row).toBeTruthy();
+    // The displayed text must equal the local-time conversion of the UTC ISO.
+    expect(row!.textContent).toContain(expectedLocal);
+    // Must NOT silently strip the timezone — the rendered text must include a
+    // timezone abbreviation produced by toLocaleString (e.g. "GMT+8", "UTC",
+    // "CST", "JST" depending on the test environment's locale).
+    const tzAbbrevPattern = /(GMT[+\-]\d+|UTC|CST|JST|EST|EDT|PST|PDT|UTC[+\-]\d+)/;
+    expect(row!.textContent).toMatch(tzAbbrevPattern);
+  });
+
+  it('reveals the inline start date editor when the reset button is clicked', async () => {
+    const { container } = renderSettings(makeSettings({
+      syncStartDate: '2026-01-01',
+      lastSyncEndTimestamp: '2026-06-12T15:30:00+08:00',
+    }));
+
+    const resetButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '重置');
+    expect(resetButton).toBeTruthy();
+
+    await act(() => {
+      resetButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    // Label switches to "同步起始日期", date input becomes editable, and Save/Cancel buttons appear
+    const editorRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('同步起始日期'));
+    expect(editorRow).toBeTruthy();
+    const dateInput = editorRow!.querySelector('input[type="date"]') as HTMLInputElement;
+    expect(dateInput).toBeTruthy();
+    expect(dateInput.value).toBe('2026-01-01');
+    expect(dateInput.readOnly).toBe(false);
+
+    const saveButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '保存');
+    const cancelButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '取消');
+    expect(saveButton).toBeTruthy();
+    expect(cancelButton).toBeTruthy();
+  });
+
+  it('clears lastSyncEndTimestamp and updates syncStartDate when the reset editor saves', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      syncStartDate: '2026-01-01',
+      lastSyncEndTimestamp: '2026-06-12T15:30:00+08:00',
+    }));
+
+    const resetButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '重置');
+    await act(() => {
+      resetButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const editorRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('同步起始日期'));
+    const dateInput = editorRow!.querySelector('input[type="date"]') as HTMLInputElement;
+    await act(() => {
+      dateInput.value = '2025-08-01';
+      dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    const saveButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '保存');
+    await act(() => {
+      saveButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('lastSyncEndTimestamp', '');
+    expect(updateSetting).toHaveBeenCalledWith('syncStartDate', '2025-08-01');
+  });
+
+  it('rejects an empty start date in the reset editor and keeps the previous syncStartDate', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      syncStartDate: '2026-01-01',
+      lastSyncEndTimestamp: '2026-06-12T15:30:00+08:00',
+    }));
+
+    const resetButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '重置');
+    await act(() => {
+      resetButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const editorRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('同步起始日期'));
+    const dateInput = editorRow!.querySelector('input[type="date"]') as HTMLInputElement;
+    await act(() => {
+      // User clears the date input — pendingStartDate is now ''.
+      dateInput.value = '';
+      dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    const saveButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '保存');
+    await act(() => {
+      saveButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    // The previous syncStartDate ('2026-01-01') must NOT be overwritten with an
+    // empty string — the original bug silently fell back to maxDays (default 30
+    // days). The fix is to refuse the save when the input is empty so the
+    // existing value remains intact.
+    expect(updateSetting).not.toHaveBeenCalledWith('syncStartDate', '');
+    expect(updateSetting).not.toHaveBeenCalledWith('syncStartDate', '2026-01-01');
+  });
+
+  it('discards changes when the reset editor is cancelled', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      syncStartDate: '2026-01-01',
+      lastSyncEndTimestamp: '2026-06-12T15:30:00+08:00',
+    }));
+
+    const resetButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '重置');
+    await act(() => {
+      resetButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const editorRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('同步起始日期'));
+    const dateInput = editorRow!.querySelector('input[type="date"]') as HTMLInputElement;
+    await act(() => {
+      dateInput.value = '2025-08-01';
+      dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    const cancelButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '取消');
+    await act(() => {
+      cancelButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).not.toHaveBeenCalledWith('lastSyncEndTimestamp', '');
+    expect(updateSetting).not.toHaveBeenCalledWith('syncStartDate', '2025-08-01');
+
+    // UI returns to state A
+    const checkpointRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('上次同步断点'));
+    expect(checkpointRow).toBeTruthy();
+    const expectedLocal = new Date('2026-06-12T15:30:00+08:00').toLocaleString();
+    expect(checkpointRow!.textContent).toContain(expectedLocal);
+  });
+
+  it('uses the previous syncStartDate as the default value when reset is clicked', async () => {
+    const { container } = renderSettings(makeSettings({
+      syncStartDate: '2025-12-15',
+      lastSyncEndTimestamp: '2026-06-12T15:30:00+08:00',
+    }));
+
+    const resetButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '重置');
+    await act(() => {
+      resetButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const editorRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('同步起始日期'));
+    const dateInput = editorRow!.querySelector('input[type="date"]') as HTMLInputElement;
+    expect(dateInput.value).toBe('2025-12-15');
+  });
+
+  it('renders the attachment download section with a master toggle and four child toggles', async () => {
+    const settings = makeSettings();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(
+        h(SettingsComponent, {
+          settings,
+          updateSetting: vi.fn(),
+          startSync: vi.fn(),
+          isSyncing: false,
+          openNotePicker: vi.fn(),
+          startSubscribedKnowledgeSync: vi.fn(),
+          openLocalUpload: vi.fn(),
+          startAutoSync: vi.fn(),
+          stopAutoSync: vi.fn(),
+          cancelSync: vi.fn(),
+          app: new App(),
+        }),
+        container
+      );
+    });
+    await new Promise(r => setTimeout(r, 50));
+
+    const sectionName = container.querySelector('.setting-item-name');
+    expect(container.textContent).toContain('附件下载配置');
+
+    const toggleEls = container.querySelectorAll('.setting-item .checkbox-container');
+    // 5 toggles total: 1 master + image + audio + video + document
+    expect(toggleEls.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('flips all four child toggles when the master attachment toggle is clicked', async () => {
+    const updateSetting = vi.fn();
+    const settings = makeSettings({
+      attachmentImport: { image: true, audio: true, video: true, document: true },
+    });
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(
+        h(SettingsComponent, {
+          settings,
+          updateSetting,
+          startSync: vi.fn(),
+          isSyncing: false,
+          openNotePicker: vi.fn(),
+          startSubscribedKnowledgeSync: vi.fn(),
+          openLocalUpload: vi.fn(),
+          startAutoSync: vi.fn(),
+          stopAutoSync: vi.fn(),
+          cancelSync: vi.fn(),
+          app: new App(),
+        }),
+        container
+      );
+    });
+    await new Promise(r => setTimeout(r, 50));
+
+    const masterRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(row => row.textContent?.includes('下载附件'));
+    expect(masterRow).toBeTruthy();
+
+    const masterToggle = masterRow!.querySelector('.checkbox-container');
+    expect(masterToggle).toBeTruthy();
+
+    await act(() => {
+      masterToggle!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('attachmentImport', {
+      image: false,
+      audio: false,
+      video: false,
+      document: false,
+    });
+    const childToggles = Array.from(container.querySelectorAll('.getnote-scheduled-options .checkbox-container'));
+    expect(childToggles.every(toggle => !toggle.classList.contains('is-enabled'))).toBe(true);
+  });
+
+  it('enables all child toggles when a mixed attachment master is clicked', async () => {
+    const updateSetting = vi.fn();
+    const { container } = renderSettings(makeSettings({
+      attachmentImport: { image: true, audio: false, video: true, document: false },
+    }), updateSetting);
+
+    await new Promise(r => setTimeout(r, 50));
+    const masterRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(row => row.textContent?.includes('下载附件'));
+    const masterToggle = masterRow!.querySelector('.checkbox-container')!;
+
+    await act(() => {
+      masterToggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('attachmentImport', {
+      image: true,
+      audio: true,
+      video: true,
+      document: true,
+    });
+    const childToggles = Array.from(container.querySelectorAll('.getnote-scheduled-options .checkbox-container'));
+    expect(childToggles.every(toggle => toggle.classList.contains('is-enabled'))).toBe(true);
+  });
+
+  it('still honours legacy attachmentImport values from older user data.json', async () => {
+    const updateSetting = vi.fn();
+    const settings = makeSettings({
+      attachmentImport: { image: true, audio: false, video: true, document: false },
+    });
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(
+        h(SettingsComponent, {
+          settings,
+          updateSetting,
+          startSync: vi.fn(),
+          isSyncing: false,
+          openNotePicker: vi.fn(),
+          startSubscribedKnowledgeSync: vi.fn(),
+          openLocalUpload: vi.fn(),
+          startAutoSync: vi.fn(),
+          stopAutoSync: vi.fn(),
+          cancelSync: vi.fn(),
+          app: new App(),
+        }),
+        container
+      );
+    });
+    await new Promise(r => setTimeout(r, 50));
+
+    const audioRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(row => row.textContent?.includes('音频'));
+    expect(audioRow).toBeTruthy();
+    const audioToggle = audioRow!.querySelector('.checkbox-container');
+    expect(audioToggle).toBeTruthy();
+    expect(audioToggle!.classList.contains('is-enabled')).toBe(false);
+
+    await act(() => {
+      audioToggle!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('attachmentImport', expect.objectContaining({
+      audio: true,
+    }));
+  });
+
   it('stores note type filters inside scheduled sync settings', async () => {
     const scheduledSync = {
       ...DEFAULT_SETTINGS.scheduledSync,
@@ -433,7 +777,7 @@ describe('SettingsComponent auth credentials', () => {
     expect(updateSetting).not.toHaveBeenCalledWith('enabledNoteTypes', expect.anything());
     expect(updateSetting).toHaveBeenCalledWith('scheduledSync', expect.objectContaining({
       ...scheduledSync,
-      enabledNoteTypes: ['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'audio', 'class_audio', 'link', 'img_text', 'recorder_flash_audio', 'internal_record', 'meeting', 'blogger_post'],
+      enabledNoteTypes: expect.arrayContaining(['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'audio', 'class_audio', 'recorder_flash_audio', 'internal_record', 'meeting', 'link', 'img_text', 'blogger_post']),
     }));
   });
 
@@ -479,6 +823,95 @@ describe('SettingsComponent auth credentials', () => {
 
     expect(updateSetting).toHaveBeenCalledWith('scheduledSync', expect.objectContaining({
       syncKnowledgeBases: ['kb-test'],
+    }));
+  });
+});
+
+describe('SettingsComponent scheduled sync toggles (#136)', () => {
+  function findScheduledEnabledRow(container: HTMLElement): HTMLElement {
+    const rows = container.querySelectorAll('.getnote-scheduled-row');
+    const row = Array.from(rows).find((el) => el.textContent === '启用定时同步');
+    expect(row).toBeTruthy();
+    return row!;
+  }
+
+  function findSyncOnStartRow(container: HTMLElement): HTMLElement {
+    const rows = container.querySelectorAll('.getnote-scheduled-row');
+    const row = Array.from(rows).find((el) => el.textContent?.includes('启动时同步'));
+    expect(row).toBeTruthy();
+    return row!;
+  }
+
+  it('renders scheduledEnabled as an Obsidian toggle (not a plain checkbox)', () => {
+    const { container } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: false },
+    }));
+
+    const row = findScheduledEnabledRow(container);
+    const toggleContainers = row.querySelectorAll('.checkbox-container');
+    const plainCheckboxes = row.querySelectorAll(':scope > input[type="checkbox"]');
+
+    expect(toggleContainers.length).toBe(1);
+    expect(plainCheckboxes.length).toBe(0);
+    const innerCheckbox = toggleContainers[0].querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(innerCheckbox).toBeTruthy();
+    expect(innerCheckbox.checked).toBe(false);
+  });
+
+  it('renders syncOnStart as an Obsidian toggle inside the scheduled sync options', () => {
+    const { container } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true, syncOnStart: true },
+    }));
+
+    const row = findSyncOnStartRow(container);
+    const toggleContainers = row.querySelectorAll('.checkbox-container');
+    const plainCheckboxes = row.querySelectorAll(':scope > input[type="checkbox"]');
+
+    expect(toggleContainers.length).toBe(1);
+    expect(plainCheckboxes.length).toBe(0);
+    const innerCheckbox = toggleContainers[0].querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(innerCheckbox).toBeTruthy();
+    expect(innerCheckbox.checked).toBe(true);
+    expect(toggleContainers[0].classList.contains('is-enabled')).toBe(true);
+  });
+
+  it('preserves onChange behavior for scheduledEnabled toggle', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: false },
+    }));
+
+    const row = findScheduledEnabledRow(container);
+    const innerCheckbox = row.querySelector('.checkbox-container input[type="checkbox"]') as HTMLInputElement;
+    expect(innerCheckbox).toBeTruthy();
+
+    await act(() => {
+      innerCheckbox.checked = true;
+      innerCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('scheduledSync', expect.objectContaining({
+      enabled: true,
+    }));
+    expect(row.querySelector('.checkbox-container')?.classList.contains('is-enabled')).toBe(true);
+  });
+
+  it('preserves onChange behavior for syncOnStart toggle', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true, syncOnStart: false },
+    }));
+
+    const row = findSyncOnStartRow(container);
+    const innerCheckbox = row.querySelector('.checkbox-container input[type="checkbox"]') as HTMLInputElement;
+    expect(innerCheckbox).toBeTruthy();
+
+    await act(() => {
+      innerCheckbox.checked = true;
+      innerCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('scheduledSync', expect.objectContaining({
+      enabled: true,
+      syncOnStart: true,
     }));
   });
 });

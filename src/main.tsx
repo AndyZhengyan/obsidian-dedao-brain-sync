@@ -1,6 +1,6 @@
 import { App, Modal, Notice, Plugin, getLanguage, type DataAdapter, type TFile } from 'obsidian';
 import ReactDOM from 'react-dom';
-import { DEFAULT_SETTINGS, getAuthCredentials, type Settings, type SyncHistoryScope, type SyncProgressDetail, type SyncHistoryEntry, type SyncResult, type SyncScopeOptions } from './types';
+import { DEFAULT_SETTINGS, getAuthCredentials, migrateEnabledNoteTypes, type Settings, type SyncHistoryScope, type SyncProgressDetail, type SyncHistoryEntry, type SyncResult, type SyncScopeOptions } from './types';
 import { GetNoteSettingsTab } from './settings-tab';
 import { SyncEngine, SyncCancelledError } from './sync';
 import { showError, showNotice, showSuccess } from './ui/notice';
@@ -153,9 +153,11 @@ export default class GetNoteSyncPlugin extends Plugin {
       scheduledSync: {
         ...DEFAULT_SETTINGS.scheduledSync,
         ...loaded?.scheduledSync,
-        enabledNoteTypes: 'enabledNoteTypes' in (loaded?.scheduledSync ?? {}) && Array.isArray(loaded?.scheduledSync?.enabledNoteTypes)
-          ? loaded.scheduledSync.enabledNoteTypes.filter((type): type is string => typeof type === 'string')
-          : undefined,
+        enabledNoteTypes: migrateEnabledNoteTypes(
+          'enabledNoteTypes' in (loaded?.scheduledSync ?? {}) && Array.isArray(loaded?.scheduledSync?.enabledNoteTypes)
+            ? loaded.scheduledSync.enabledNoteTypes.filter((type): type is string => typeof type === 'string')
+            : undefined
+        ),
         syncKnowledgeBases: 'syncKnowledgeBases' in (loaded?.scheduledSync ?? {}) && Array.isArray(loaded?.scheduledSync?.syncKnowledgeBases)
           ? loaded.scheduledSync.syncKnowledgeBases.filter((id): id is string => typeof id === 'string')
           : [],
@@ -318,9 +320,8 @@ export default class GetNoteSyncPlugin extends Plugin {
 
     // lastSyncEndTimestamp only belongs to auto sync
     // 更新断点只要：有笔记成功同步且有 lastNoteTimestamp（即使有部分失败）
-    const hasSuccessfulSync = (result.created > 0 || result.updated > 0);
-    if (type === 'auto' && hasSuccessfulSync && result.lastNoteTimestamp) {
-      this.settings.lastSyncEndTimestamp = result.lastNoteTimestamp;
+    if (type === 'auto' && status === 'success') {
+      this.settings.lastSyncEndTimestamp = result.lastNoteTimestamp ?? new Date(finishedAt).toISOString();
     }
 
     this.lastSyncResult = entry;

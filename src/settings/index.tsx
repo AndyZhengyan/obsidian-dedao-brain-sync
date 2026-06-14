@@ -1,12 +1,13 @@
-import { useState, useCallback, useRef, useEffect } from 'preact/hooks';
+import { useState, useCallback, useRef, useEffect, type MutableRef } from 'preact/hooks';
 import { SettingItem } from './setting-item';
 import { SyncButton } from './sync-button';
 import { OAuthButton } from './oauth-button';
 import { openSyncHistoryModal } from '../ui/sync-history-modal';
 import { NoteTypeSelect } from '../ui/note-type-select';
 import { KnowledgeBaseSelect } from '../ui/knowledge-base-select';
+import { Toggle } from './toggle';
 import { getAuthCredentials, type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressDetail } from '../types';
-import { App, AbstractInputSuggest } from 'obsidian';
+import { App, AbstractInputSuggest, ToggleComponent } from 'obsidian';
 import { fetchNotes } from '../api';
 import { t } from '../i18n';
 import { ExternalLink } from './external-link';
@@ -96,8 +97,91 @@ export function SettingsComponent({
   const [connectionExpiryMin, setConnectionExpiryMin] = useState<number | null>(null);
   const [intervalWarning, setIntervalWarning] = useState(false);
   const credentials = getAuthCredentials({ ...settings, authMode, openApiToken: apiTokenOpenapi, openApiClientId: clientIdOpenapi, webApiToken: apiTokenWeb });
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [pendingStartDate, setPendingStartDate] = useState(settings.syncStartDate);
 
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const masterAttachmentRef = useRef<HTMLDivElement>(null);
+  const childAttachmentRefs: Record<'image' | 'audio' | 'video' | 'document', MutableRef<HTMLDivElement | null>> = {
+    image: useRef<HTMLDivElement>(null),
+    audio: useRef<HTMLDivElement>(null),
+    video: useRef<HTMLDivElement>(null),
+    document: useRef<HTMLDivElement>(null),
+  };
+  const childTogglesRef = useRef<Record<'image' | 'audio' | 'video' | 'document', ToggleComponent | null>>({
+    image: null,
+    audio: null,
+    video: null,
+    document: null,
+  });
+  const masterToggleRef = useRef<ToggleComponent | null>(null);
+
+  useEffect(() => {
+    if (!masterAttachmentRef.current) return;
+    const toggle = new ToggleComponent(masterAttachmentRef.current);
+    masterToggleRef.current = toggle;
+    const attachmentImport = settings.attachmentImport;
+    const allOn = ['image', 'audio', 'video', 'document'].every(
+      k => attachmentImport?.[k as 'image' | 'audio' | 'video' | 'document'] !== false,
+    );
+    toggle.setValue(allOn);
+    toggle.onChange((nextValue) => {
+      (Object.keys(childTogglesRef.current) as Array<'image' | 'audio' | 'video' | 'document'>)
+        .forEach(kind => childTogglesRef.current[kind]?.setValue(nextValue));
+      updateSetting('attachmentImport', {
+        image: nextValue,
+        audio: nextValue,
+        video: nextValue,
+        document: nextValue,
+      });
+    });
+    return () => {
+      toggle.toggleEl.replaceWith(document.createTextNode(''));
+      masterToggleRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    (['image', 'audio', 'video', 'document'] as const).forEach((kind) => {
+      const container = childAttachmentRefs[kind].current;
+      if (!container || childTogglesRef.current[kind]) return;
+      const toggle = new ToggleComponent(container);
+      childTogglesRef.current[kind] = toggle;
+      toggle.setValue(settings.attachmentImport?.[kind] !== false);
+      toggle.onChange((value) => {
+        const next = {
+          ...settings.attachmentImport,
+          [kind]: value,
+        };
+        masterToggleRef.current?.setValue(
+          (['image', 'audio', 'video', 'document'] as const).every(key => next[key] !== false)
+        );
+        updateSetting('attachmentImport', next);
+      });
+    });
+    return () => {
+      (Object.keys(childTogglesRef.current) as Array<'image' | 'audio' | 'video' | 'document'>).forEach((kind) => {
+        const t = childTogglesRef.current[kind];
+        if (t) {
+          t.toggleEl.replaceWith(document.createTextNode(''));
+          childTogglesRef.current[kind] = null;
+        }
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    (['image', 'audio', 'video', 'document'] as const).forEach((kind) => {
+      const t = childTogglesRef.current[kind];
+      if (!t) return;
+      t.setValue(settings.attachmentImport?.[kind] !== false);
+    });
+    const attachmentImport = settings.attachmentImport;
+    const allOn = ['image', 'audio', 'video', 'document'].every(
+      k => attachmentImport?.[k as 'image' | 'audio' | 'video' | 'document'] !== false,
+    );
+    masterToggleRef.current?.setValue(allOn);
+  }, [settings.attachmentImport]);
 
   useEffect(() => {
     if (!settings.syncStartDate && !settings.lastSyncEndTimestamp) {
@@ -179,6 +263,33 @@ export function SettingsComponent({
 
   const handleSyncStartDateChange = (value: string) => {
     updateSetting('syncStartDate', value);
+  };
+
+  const handleResetCheckpointClick = () => {
+    if (isSyncing) return;
+    setPendingStartDate(settings.syncStartDate);
+    setResetDialogOpen(true);
+  };
+
+  const handleResetSave = () => {
+    if (isSyncing) return;
+    // Reject empty input — silently writing '' would cause the sync engine to
+    // fall back to maxDays (default 30), surprising users who simply cleared
+    // the field by accident. Keep the previous syncStartDate unchanged.
+    if (pendingStartDate === '') {
+      setResetDialogOpen(false);
+      return;
+    }
+    updateSetting('lastSyncEndTimestamp', '');
+    if (pendingStartDate !== settings.syncStartDate) {
+      updateSetting('syncStartDate', pendingStartDate);
+    }
+    setResetDialogOpen(false);
+  };
+
+  const handleResetCancel = () => {
+    setPendingStartDate(settings.syncStartDate);
+    setResetDialogOpen(false);
   };
 
   const handleScheduledEnabled = (checked: boolean) => {
@@ -304,6 +415,19 @@ export function SettingsComponent({
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return `${hours}小时前`;
     return `${Math.floor(hours / 24)}天前`;
+  };
+
+  // Format an ISO datetime to a local-time string that includes a timezone
+  // marker. The API returns UTC values (e.g. "...Z") and the previous
+  // implementation silently dropped the offset, so a user in UTC+8 saw the
+  // checkpoint displayed 8 hours ahead of its true local meaning. Parsing
+  // via `new Date()` and rendering with `toLocaleString()` (with
+  // timeZoneName='short') converts the timestamp to the viewer's local time
+  // and embeds the timezone (e.g. "6/12/2026, 11:30:00 PM GMT+8").
+  const formatCheckpoint = (iso: string): string => {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return iso;
+    return date.toLocaleString(undefined, { timeZoneName: 'short' });
   };
 
   // Progress bar with # characters
@@ -494,10 +618,9 @@ export function SettingsComponent({
         <div className="getnote-scheduled-control">
           <div className="getnote-scheduled-row">
             <span>{t('settings.scheduled.enabled')}</span>
-            <input
-              type="checkbox"
-              checked={scheduledEnabled}
-              onChange={(e) => handleScheduledEnabled((e.target as HTMLInputElement).checked)}
+            <Toggle
+              value={scheduledEnabled}
+              onChange={handleScheduledEnabled}
             />
           </div>
           <div
@@ -522,10 +645,9 @@ export function SettingsComponent({
             <div className="getnote-scheduled-row">
               <span className="getnote-scheduled-row-label">{t('settings.scheduled.onStart')}</span>
               <span className="getnote-scheduled-row-control">
-                <input
-                  type="checkbox"
-                  checked={scheduledSync.syncOnStart}
-                  onChange={(e) => handleScheduledOnStart((e.target as HTMLInputElement).checked)}
+                <Toggle
+                  value={scheduledSync.syncOnStart}
+                  onChange={handleScheduledOnStart}
                 />
               </span>
             </div>
@@ -553,11 +675,47 @@ export function SettingsComponent({
             <div className="getnote-input-hint">{t('settings.scheduled.syncKnowledgeBases.hint')}</div>
             <div className="getnote-scheduled-row getnote-scheduled-date-row">
               <span className="getnote-scheduled-row-label">
-                {lastSyncedTo ? t('settings.syncStartDate.lastSyncedTo') : t('settings.syncStartDate.label')}
+                {resetDialogOpen
+                  ? t('settings.scheduled.resetStartDate')
+                  : (lastSyncedTo ? t('settings.syncStartDate.lastSyncedTo') : t('settings.syncStartDate.label'))}
               </span>
               <span className="getnote-scheduled-row-control">
-                {lastSyncedTo ? (
-                  <span className="getnote-muted-text">{lastSyncedTo}</span>
+                {resetDialogOpen ? (
+                  <>
+                    <input
+                      type="date"
+                      className="getnote-input getnote-date-input"
+                      value={pendingStartDate}
+                      onChange={(e) => setPendingStartDate((e.target as HTMLInputElement).value)}
+                    />
+                    <button
+                      type="button"
+                      className="getnote-button getnote-button-secondary"
+                      onClick={handleResetCancel}
+                    >
+                      {t('settings.scheduled.resetCancel')}
+                    </button>
+                    <button
+                      type="button"
+                      className="getnote-button getnote-button-primary"
+                      onClick={handleResetSave}
+                      disabled={isSyncing}
+                    >
+                      {t('settings.scheduled.resetSave')}
+                    </button>
+                  </>
+                ) : lastSyncedTo ? (
+                  <>
+                    <span className="getnote-muted-text">{formatCheckpoint(lastSyncedTo)}</span>
+                    <button
+                      type="button"
+                      className="getnote-button getnote-button-secondary"
+                      onClick={handleResetCheckpointClick}
+                      disabled={isSyncing}
+                    >
+                      {t('settings.scheduled.resetButton')}
+                    </button>
+                  </>
                 ) : (
                   <input
                     type="date"
@@ -568,7 +726,9 @@ export function SettingsComponent({
                 )}
               </span>
             </div>
-            {lastSyncedTo ? (
+            {resetDialogOpen ? (
+              <div className="getnote-input-hint">{t('settings.scheduled.resetStartDateDesc')}</div>
+            ) : lastSyncedTo ? (
               <div className="getnote-input-hint">{t('settings.syncStartDate.lastSyncedToDesc')}</div>
             ) : (
               <div className="getnote-input-hint">{t('settings.syncStartDate.desc')}</div>
@@ -589,18 +749,17 @@ export function SettingsComponent({
 
       <SettingItem name={t('settings.attachment.section')}>
         <div className="getnote-scheduled-options">
+          <div className="getnote-scheduled-row">
+            <span className="getnote-scheduled-row-label">{t('settings.attachment.master')}</span>
+            <span className="getnote-scheduled-row-control">
+              <div ref={masterAttachmentRef} />
+            </span>
+          </div>
           {(['image', 'audio', 'video', 'document'] as const).map(kind => (
             <div className="getnote-scheduled-row" key={kind}>
               <span className="getnote-scheduled-row-label">{t(`settings.attachment.${kind}`)}</span>
               <span className="getnote-scheduled-row-control">
-                <input
-                  type="checkbox"
-                  checked={settings.attachmentImport?.[kind] !== false}
-                  onChange={(e) => updateSetting('attachmentImport', {
-                    ...settings.attachmentImport,
-                    [kind]: (e.target as HTMLInputElement).checked,
-                  })}
-                />
+                <div ref={childAttachmentRefs[kind]} />
               </span>
             </div>
           ))}

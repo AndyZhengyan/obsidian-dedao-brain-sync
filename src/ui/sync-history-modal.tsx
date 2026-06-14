@@ -1,11 +1,10 @@
 import { App, Modal } from 'obsidian';
 import type { SyncHistoryEntry, SyncResultItem } from '../types';
 import { t } from '../i18n';
+import { formatNoteTypeLabel } from '../utils/note-type';
 
 export function formatHistoryNoteType(noteType: string): string {
-  const key = `picker.type.${noteType}`;
-  const label = t(key);
-  return label === key ? t('picker.type.unknown') : label;
+  return formatNoteTypeLabel(noteType);
 }
 
 export function formatHistoryScope(entry: SyncHistoryEntry): string {

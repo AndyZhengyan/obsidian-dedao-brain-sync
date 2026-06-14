@@ -233,6 +233,11 @@ export class SyncEngine {
     return this.buildBaseName(note);
   }
 
+  private getAudioAssetBaseName(note: GetNoteNote): string {
+    const safeNoteId = note.note_id.replace(/[\\/:*?"<>|]/g, '_');
+    return `${this.getFileName(note)}_${safeNoteId}`;
+  }
+
   private getFilePath(categoryDir: string, note: GetNoteNote): string {
     return `${categoryDir}/${this.getFileName(note)}.md`;
   }
@@ -273,7 +278,7 @@ export class SyncEngine {
         await this.app.vault.createFolder(assetDir);
       }
 
-      const rawFilename = `${this.getFileName(note)}_audio.mp3`;
+      const rawFilename = `${this.getAudioAssetBaseName(note)}_audio.mp3`;
       const filename = rawFilename.split('/').pop()!.split('\\').pop()!;
       const targetPath = `${assetDir}/${filename}`;
 
@@ -380,7 +385,7 @@ export class SyncEngine {
         await this.app.vault.createFolder(assetDir);
       }
 
-      const targetPath = `${assetDir}/${this.getFileName(note)}_transcript.md`;
+      const targetPath = `${assetDir}/${this.getAudioAssetBaseName(note)}_transcript.md`;
       const content = `# ${generateDisplayTitle(note) || t('picker.noTitle')}\n\n${note.audio}`;
       const existing = this.app.vault.getAbstractFileByPath(targetPath);
       if (existing instanceof TFile) {
@@ -667,7 +672,7 @@ export class SyncEngine {
         }
         const transcriptPath = await this.writeAudioTranscriptAsset(enrichedNote, categoryOverride);
         if (transcriptPath) assetPaths.push(transcriptPath);
-        enrichedNote.assetFileName = this.getFileName(enrichedNote);
+        enrichedNote.assetFileName = this.getAudioAssetBaseName(enrichedNote);
       }
 
       // Image attachments keep their dedicated downloader (legacy naming scheme).

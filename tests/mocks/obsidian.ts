@@ -147,8 +147,39 @@ export class TextComponent {
 }
 
 export class ToggleComponent {
-  setValue(_value: boolean): this { return this; }
-  onChange(_fn: (value: boolean) => void): this { return this; }
+  toggleEl: HTMLElement = document.createElement('div');
+  private _value = false;
+  private _callback: ((value: boolean) => void) | null = null;
+  private _container: HTMLElement | null = null;
+  private _onClick = () => {
+    this._value = !this._value;
+    this.toggleEl.classList.toggle('is-enabled', this._value);
+    if (this._callback) this._callback(this._value);
+  };
+
+  constructor(containerEl: HTMLElement) {
+    this.toggleEl.classList.add('checkbox-container');
+    this.toggleEl.addEventListener('click', this._onClick);
+    this._container = containerEl;
+    containerEl.appendChild(this.toggleEl);
+  }
+
+  setValue(value: boolean): this {
+    this._value = value;
+    this.toggleEl.classList.toggle('is-enabled', value);
+    return this;
+  }
+
+  getValue(): boolean {
+    return this._value;
+  }
+
+  onChange(fn: (value: boolean) => void): this {
+    this._callback = fn;
+    return this;
+  }
+
+  setDisabled(_disabled: boolean): this { return this; }
 }
 
 export class DropdownComponent {
