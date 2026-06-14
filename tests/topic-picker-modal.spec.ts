@@ -245,6 +245,61 @@ describe('TopicPickerModal', () => {
     expect(container.textContent).not.toContain('管理文章');
   });
 
+  it('stops auto-selecting newly loaded contents after a tag chip changes the filter', async () => {
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([{ topic_id: 'luo', name: '罗振宇学习笔记' }]);
+    vi.mocked(fetchTopicContentPreviewPage)
+      .mockResolvedValueOnce({
+        items: [{
+          note_id: 'note-1',
+          title: 'AI 第一篇',
+          updated_at: '2026-06-01T10:00:00+08:00',
+          tags: [{ name: 'AI' }],
+        }],
+        nextCursor: { bloggerIndex: 0, page: 2 },
+      })
+      .mockResolvedValueOnce({
+        items: [{
+          note_id: 'note-2',
+          title: 'AI 第二篇',
+          updated_at: '2026-06-01T11:00:00+08:00',
+          tags: [{ name: 'AI' }],
+        }],
+      });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(h(TopicPickerModal, {
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+      }), container);
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-id="luo"]') as HTMLButtonElement).click();
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-select-all]') as HTMLButtonElement).click();
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-tag-name="AI"]') as HTMLButtonElement).click();
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-load-more]') as HTMLButtonElement).click();
+    });
+    await flush();
+
+    expect(container.textContent).toContain('已选 1 个');
+    expect(Array.from(container.querySelectorAll('input[type="checkbox"]'))
+      .filter(input => (input as HTMLInputElement).checked)).toHaveLength(1);
+  });
+
   it('renders topic filters outside the scrollable article list', async () => {
     vi.mocked(fetchSubscribedTopics).mockResolvedValue([{ topic_id: 'luo', name: '罗振宇学习笔记' }]);
     vi.mocked(fetchTopicContentPreviewPage).mockResolvedValue({
@@ -594,5 +649,86 @@ describe('TopicPickerModal', () => {
         'blogger_note-1': '罗振宇学习笔记',
       },
     });
+  });
+});
+
+describe('TopicPickerModal card layout (#138)', () => {
+  it('renders knowledge-base contents as cards with title, summary, preview, tags and timestamp', async () => {
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([
+      { topic_id: 'luo', name: '罗振宇学习笔记' },
+    ]);
+    vi.mocked(fetchTopicContentPreviewPage).mockResolvedValue({
+      items: [
+        {
+          note_id: 'kb-card-1',
+          title: 'AI 知识库卡片化测试',
+          updated_at: '2026-06-10T15:30:00+08:00',
+          blogger_name: '罗振宇',
+          topic_id: 'luo',
+          summary: '这是一段 AI 生成的摘要，用于验证卡片显示摘要区域。',
+          content: '这是与摘要不同的正文预览内容。',
+        } as never,
+      ],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(h(TopicPickerModal, {
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+      }), container);
+      await Promise.resolve();
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-id="luo"]') as HTMLButtonElement).click();
+    });
+    await flush();
+
+    const card = container.querySelector('.getnote-note-card');
+    expect(card).not.toBeNull();
+
+    expect(card!.querySelector('.getnote-note-card-title')).not.toBeNull();
+    expect(card!.querySelector('.getnote-note-card-summary')?.textContent).toContain('AI 生成的摘要');
+    expect(card!.querySelector('.getnote-note-card-preview')?.textContent).toContain('与摘要不同的正文预览');
+    expect(card!.querySelector('.getnote-note-card-time')).not.toBeNull();
+  });
+
+  it('renders multiple knowledge-base contents as a single-column vertical stack of cards', async () => {
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([
+      { topic_id: 'luo', name: '罗振宇学习笔记' },
+    ]);
+    vi.mocked(fetchTopicContentPreviewPage).mockResolvedValue({
+      items: [
+        { note_id: 'kb-1', title: '内容 1', updated_at: '2026-06-01T10:00:00+08:00', topic_id: 'luo' },
+        { note_id: 'kb-2', title: '内容 2', updated_at: '2026-06-02T10:00:00+08:00', topic_id: 'luo' },
+        { note_id: 'kb-3', title: '内容 3', updated_at: '2026-06-03T10:00:00+08:00', topic_id: 'luo' },
+      ],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(h(TopicPickerModal, {
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+      }), container);
+      await Promise.resolve();
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-id="luo"]') as HTMLButtonElement).click();
+    });
+    await flush();
+
+    const cards = Array.from(container.querySelectorAll('.getnote-note-card'));
+    expect(cards.length).toBe(3);
   });
 });

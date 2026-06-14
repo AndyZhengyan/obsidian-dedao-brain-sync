@@ -283,8 +283,10 @@ export async function fetchSubscribedTopics(token: string, signal?: AbortSignal)
 
 export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions): Promise<GetNoteNote[]> {
   const notes: GetNoteNote[] = [];
-  const topicIdSet = options.topicIds?.length ? new Set(options.topicIds) : undefined;
   const remainingNoteIds = options.selectedNoteIds?.length ? new Set(options.selectedNoteIds) : undefined;
+  const topicIdSet = options.topicIds === undefined || (remainingNoteIds && options.topicIds.length === 0)
+    ? undefined
+    : new Set(options.topicIds);
   const listUrl = 'https://knowledge-api.trytalks.com/v1/web/subscribe/topic/list?page=1&size=200&exclude_mine=true';
   const listData = await apiRequest<Record<string, unknown>>(listUrl, {
     method: 'GET',
@@ -412,7 +414,7 @@ export async function fetchTopicContentPreviewPage(
   const items = resources
     .map(resource => noteFromKnowledgeResource(resource, typeof rawTopic.name === 'string' ? rawTopic.name : undefined))
     .filter((note): note is GetNoteNote => Boolean(note))
-    .map(note => ({ note_id: note.note_id, title: note.title, updated_at: note.updated_at, topic_id: topicId }));
+    .map(note => ({ note_id: note.note_id, title: note.title, updated_at: note.updated_at, topic_id: topicId, content: note.content, tags: note.tags }));
   const nextCursor = source.has_next && resources.length > 0
     ? { bloggerIndex: 0, page: cursor.page + 1 }
     : undefined;

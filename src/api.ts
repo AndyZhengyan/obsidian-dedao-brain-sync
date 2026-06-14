@@ -94,6 +94,9 @@ export interface ContentPreview {
   blogger_name?: string;
   topic_id?: string;
   blogger_id?: string;
+  summary?: string;
+  content?: string;
+  tags?: { name: string }[];
 }
 
 export interface TopicContentPreviewOptions {
