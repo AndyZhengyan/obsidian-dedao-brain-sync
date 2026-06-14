@@ -47,19 +47,55 @@ function formatRelativeTime(iso: string): string {
   }
 }
 
-function ContentRow({ item, checked, onChange }: { item: ContentPreview; checked: boolean; onChange: (noteId: string, v: boolean) => void }) {
+function ContentRow({ item, checked, onChange, onTagClick }: { item: ContentPreview; checked: boolean; onChange: (noteId: string, v: boolean) => void; onTagClick?: (tagName: string) => void }) {
+  const displayTitle = item.title || t('picker.noTitle');
+  const rawPreview = item.summary
+    || item.content
+    || '';
+  const summaryText = rawPreview ? rawPreview.replace(/\n+/g, ' ').slice(0, 80) : '';
+  const previewText = rawPreview ? rawPreview.replace(/\n+/g, ' ').slice(0, 150) : '';
+  const tags = item.tags ?? [];
   return (
-    <div className="getnote-picker-row">
+    <div className="getnote-note-card">
       <input
         type="checkbox"
+        className="getnote-note-card-checkbox"
         checked={checked}
         onChange={(e) => onChange(item.note_id, (e.target as HTMLInputElement).checked)}
       />
-      <div className="getnote-picker-row-info">
-        <div className="getnote-picker-title">{item.title || t('picker.noTitle')}</div>
-        <div className="getnote-picker-meta">
-          {item.blogger_name && <span className="getnote-picker-type">{item.blogger_name}</span>}
-          <span className="getnote-picker-time">{formatRelativeTime(item.updated_at)}</span>
+      <div className="getnote-note-card-body">
+        <div className="getnote-note-card-header">
+          <div className="getnote-note-card-title">{displayTitle}</div>
+          {item.blogger_name && (
+            <span className="getnote-note-card-type">{item.blogger_name}</span>
+          )}
+        </div>
+        {summaryText && (
+          <blockquote className="getnote-note-card-summary">{summaryText}</blockquote>
+        )}
+        {previewText && (
+          <div className="getnote-note-card-preview">{previewText}</div>
+        )}
+        <div className="getnote-note-card-footer">
+          {tags.length > 0 && (
+            <div className="getnote-note-card-tags">
+              {tags.map((tag, index) => (
+                <button
+                  key={`${tag.name}-${index}`}
+                  type="button"
+                  className="getnote-note-card-tag"
+                  data-tag-name={tag.name}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTagClick?.(tag.name);
+                  }}
+                >
+                  #{tag.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <span className="getnote-note-card-time">{formatRelativeTime(item.updated_at)}</span>
         </div>
       </div>
     </div>
@@ -81,7 +117,10 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   const [topicSearchQuery, setTopicSearchQuery] = useState('');
   const matchesActiveFilters = (item: ContentPreview) =>
     (!bloggerFilter || item.blogger_name === bloggerFilter) &&
-    (!searchQuery || item.title.toLowerCase().includes(searchQuery.toLowerCase()));
+    searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean).every(token =>
+      [item.title, item.blogger_name ?? '', ...(item.tags ?? []).map(tag => tag.name)]
+        .some(value => value.toLowerCase().includes(token))
+    );
 
   const loadTopics = useCallback(() => {
     setTopicsLoading(true);
@@ -194,6 +233,14 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
         .find(content => content.note_id === noteId);
       if (item) next.set(noteId, item);
       return next;
+    });
+  };
+
+  const handleTagClick = (tagName: string) => {
+    setSearchQuery((prev) => {
+      const tag = tagName.trim();
+      if (!tag) return prev;
+      return prev.includes(tag) ? prev : (prev ? `${prev} ${tag}` : tag);
     });
   };
 
@@ -435,7 +482,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
           <div className="getnote-picker-empty">{t('topicPicker.emptyContent')}</div>
         )}
         {activeTopic && !syncAllActive && !activeTopic.loading && !activeTopic.error && visibleItems.map(item => (
-          <ContentRow key={item.note_id} item={item} checked={selectedNoteIds.has(item.note_id)} onChange={handleCheck} />
+          <ContentRow key={item.note_id} item={item} checked={selectedNoteIds.has(item.note_id)} onChange={handleCheck} onTagClick={handleTagClick} />
         ))}
         {activeTopic && !syncAllActive && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length > 0 && visibleItems.length === 0 && (
           <div className="getnote-picker-empty">{t('picker.noMatch')}</div>

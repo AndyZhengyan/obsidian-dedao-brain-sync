@@ -414,7 +414,7 @@ export async function fetchTopicContentPreviewPage(
   const items = resources
     .map(resource => noteFromKnowledgeResource(resource, typeof rawTopic.name === 'string' ? rawTopic.name : undefined))
     .filter((note): note is GetNoteNote => Boolean(note))
-    .map(note => ({ note_id: note.note_id, title: note.title, updated_at: note.updated_at, topic_id: topicId }));
+    .map(note => ({ note_id: note.note_id, title: note.title, updated_at: note.updated_at, topic_id: topicId, content: note.content, tags: note.tags }));
   const nextCursor = source.has_next && resources.length > 0
     ? { bloggerIndex: 0, page: cursor.page + 1 }
     : undefined;

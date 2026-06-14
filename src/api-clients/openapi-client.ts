@@ -470,6 +470,12 @@ export async function fetchTopicContentPreviewPage(
       blogger_name: blogger.name ?? '',
       topic_id: topicId,
       blogger_id: blogger.follow_id,
+      summary: content.summary,
+      content: content.content,
+      tags: [
+        ...(_topicName ? [{ name: _topicName }] : []),
+        ...(blogger.name ? [{ name: blogger.name }] : []),
+      ],
     };
   });
   const nextCursor = readHasMore(source) && contents.length > 0
