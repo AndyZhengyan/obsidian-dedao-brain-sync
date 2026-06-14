@@ -141,10 +141,14 @@ export function SettingsComponent({
       childTogglesRef.current[kind] = toggle;
       toggle.setValue(settings.attachmentImport?.[kind] !== false);
       toggle.onChange((value) => {
-        updateSetting('attachmentImport', {
+        const next = {
           ...settings.attachmentImport,
           [kind]: value,
-        });
+        };
+        masterToggleRef.current?.setValue(
+          (['image', 'audio', 'video', 'document'] as const).every(key => next[key] !== false)
+        );
+        updateSetting('attachmentImport', next);
       });
     });
     return () => {
