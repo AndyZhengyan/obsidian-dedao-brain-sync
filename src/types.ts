@@ -19,6 +19,7 @@ export interface GetNoteNote {
   assetFileName?: string;     // 内部使用：音频文件的文件名（不含扩展名）
   assetPaths?: string[];      // 内部使用：所有附件文件的完整路径（图片、音频等）
   prime_id?: string;          // Web API detail identifier
+  topic_id?: string;          // Knowledge-base topic identifier
 }
 
 export interface Tag {
@@ -63,6 +64,7 @@ export interface ScheduledSyncSettings {
   intervalMinutes: number;
   syncOnStart: boolean;
   enabledNoteTypes?: string[];  // undefined = all types, empty array = no types
+  syncKnowledgeBases?: string[];  // empty / undefined = cross-KB sync disabled
 }
 
 export interface ReverseSyncSettings {
@@ -112,12 +114,16 @@ export interface Settings {
   lastQuotaState?: ApiQuotaState;
   syncHistory: SyncHistoryEntry[];
   tagMigrationVersion: number;
+  knowledgeBaseCache?: KnowledgeBaseCacheState;
 }
 
 export interface SyncScopeOptions {
   maxDays: number;
   syncStartDate: string;
   enabledNoteTypes?: string[];
+  syncKnowledgeBases?: string[];
+  knowledgeBaseNames?: Record<string, string>;
+  knowledgeBaseEntries?: Array<{ topicId: string; name: string; source?: 'subscribed' | 'created' }>;
 }
 
 export interface SyncHistoryScope {
@@ -126,6 +132,11 @@ export interface SyncHistoryScope {
   enabledNoteTypes?: string[];
   selectedCount?: number;
   selectedIds?: string[];
+}
+
+export interface KnowledgeBaseCacheState {
+  entries: { topicId: string; name: string; source?: 'subscribed' | 'created' }[];
+  cacheUpdatedAt?: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {

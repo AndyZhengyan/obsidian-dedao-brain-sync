@@ -30,6 +30,7 @@ function renderSettings(
     isSyncing?: boolean;
     syncProgress?: { message: string; count: string; percent: number };
     startSubscribedKnowledgeSync?: () => void;
+    initialKnowledgeBaseCache?: { entries: Array<{ topicId: string; name: string }>; cacheUpdatedAt?: number };
   } = {}
 ) {
   const container = document.createElement('div');
@@ -48,6 +49,7 @@ function renderSettings(
       cancelSync: vi.fn(),
       app: new App(),
       syncProgress: options.syncProgress,
+      initialKnowledgeBaseCache: options.initialKnowledgeBaseCache,
     }),
     container
   );
@@ -773,10 +775,55 @@ describe('SettingsComponent auth credentials', () => {
     });
 
     expect(updateSetting).not.toHaveBeenCalledWith('enabledNoteTypes', expect.anything());
-    expect(updateSetting).toHaveBeenCalledWith('scheduledSync', {
+    expect(updateSetting).toHaveBeenCalledWith('scheduledSync', expect.objectContaining({
       ...scheduledSync,
       enabledNoteTypes: expect.arrayContaining(['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'audio', 'class_audio', 'recorder_flash_audio', 'internal_record', 'meeting', 'link', 'img_text', 'blogger_post']),
+    }));
+  });
+
+  it('renders the knowledge-base dropdown inside scheduled sync controls', () => {
+    const { container } = renderSettings(makeSettings({
+      scheduledSync: {
+        ...DEFAULT_SETTINGS.scheduledSync,
+        enabled: true,
+        syncKnowledgeBases: ['kb-1'],
+      },
+    }));
+
+    const labelNode = Array.from(container.querySelectorAll('span'))
+      .find(node => node.textContent === '同步知识库');
+    expect(labelNode).toBeTruthy();
+    expect(labelNode!.closest('.getnote-scheduled-row')).not.toBeNull();
+  });
+
+  it('stores the selected knowledge bases inside scheduled sync settings', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
+    }), vi.fn(), vi.fn(), {
+      initialKnowledgeBaseCache: {
+        entries: [{ topicId: 'kb-test', name: '测试知识库' }],
+      },
     });
+
+    const trigger = Array.from(container.querySelectorAll('.getnote-knowledge-base-select-trigger'))[0] as HTMLButtonElement;
+    expect(trigger).toBeTruthy();
+    await act(() => {
+      trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const kbOption = Array.from(container.querySelectorAll('label'))
+      .find(label => label.textContent === '测试知识库');
+    expect(kbOption).toBeTruthy();
+    const checkbox = kbOption!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+
+    await act(() => {
+      checkbox.checked = true;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('scheduledSync', expect.objectContaining({
+      syncKnowledgeBases: ['kb-test'],
+    }));
   });
 });
 

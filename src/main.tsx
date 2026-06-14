@@ -158,6 +158,9 @@ export default class GetNoteSyncPlugin extends Plugin {
             ? loaded.scheduledSync.enabledNoteTypes.filter((type): type is string => typeof type === 'string')
             : undefined
         ),
+        syncKnowledgeBases: 'syncKnowledgeBases' in (loaded?.scheduledSync ?? {}) && Array.isArray(loaded?.scheduledSync?.syncKnowledgeBases)
+          ? loaded.scheduledSync.syncKnowledgeBases.filter((id): id is string => typeof id === 'string')
+          : [],
       },
       reverseSync: { ...DEFAULT_SETTINGS.reverseSync, ...loaded?.reverseSync },
       syncHistory: normalizeSyncHistory(loaded?.syncHistory),
@@ -437,9 +440,29 @@ export default class GetNoteSyncPlugin extends Plugin {
     // This IS the early-exit mechanism — no separate lastSyncEndTimestamp logic needed in engine.
     const syncStartDate = this.settings.lastSyncEndTimestamp || this.settings.syncStartDate;
     const enabledNoteTypes = this.settings.scheduledSync.enabledNoteTypes;
+    const syncKnowledgeBases = this.settings.scheduledSync.syncKnowledgeBases;
+    const knowledgeBaseNames = this.settings.scheduledSync.syncKnowledgeBases?.length
+      ? Object.fromEntries(
+          (this.settings.knowledgeBaseCache?.entries ?? [])
+            .filter(entry => this.settings.scheduledSync.syncKnowledgeBases!.includes(entry.topicId))
+            .map(entry => [entry.topicId, entry.name])
+        )
+      : undefined;
     const scopeOptions: Partial<SyncScopeOptions> = syncStartDate
-      ? { syncStartDate, maxDays: 0, ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}) }
-      : { ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}) };
+      ? {
+          syncStartDate,
+          maxDays: 0,
+          ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}),
+          ...(syncKnowledgeBases?.length ? { syncKnowledgeBases } : {}),
+          ...(knowledgeBaseNames ? { knowledgeBaseNames } : {}),
+          knowledgeBaseEntries: this.settings.knowledgeBaseCache?.entries,
+        }
+      : {
+          ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}),
+          ...(syncKnowledgeBases?.length ? { syncKnowledgeBases } : {}),
+          ...(knowledgeBaseNames ? { knowledgeBaseNames } : {}),
+          knowledgeBaseEntries: this.settings.knowledgeBaseCache?.entries,
+        };
     void this.runSync('auto', scopeOptions);
   }
 

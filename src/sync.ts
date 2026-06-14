@@ -178,10 +178,13 @@ export class SyncEngine {
     this.settings = settings;
     const syncStartDate = scopeOptions?.syncStartDate ?? settings.syncStartDate;
     const enabledNoteTypes = scopeOptions?.enabledNoteTypes;
+    const syncKnowledgeBases = scopeOptions?.syncKnowledgeBases;
     this.scopeOptions = {
       maxDays: syncStartDate ? 0 : scopeOptions?.maxDays ?? settings.maxDays,
       syncStartDate,
       ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}),
+      ...(syncKnowledgeBases !== undefined ? { syncKnowledgeBases } : {}),
+      ...(scopeOptions?.knowledgeBaseNames ? { knowledgeBaseNames: scopeOptions.knowledgeBaseNames } : {}),
     };
     this.onProgress = onProgress;
   }
@@ -400,10 +403,16 @@ export class SyncEngine {
   /**
    * Check if a note and all its artifacts already exist in the vault and are up to date.
    * Uses UID-based lookup so renamed/moved files are still found.
+   *
+   * `categoryOverride` lets callers route the check at a custom vault path
+   * (e.g. `知识库/<name>/`) instead of the default `getCategoryDir(note_type)`
+   * location. This is required for cross-KB sync where notes live under a
+   * per-knowledge-base directory.
    */
   private preCheckNote(
     note: GetNoteNote,
-    uidIndex: Map<string, TFile>
+    uidIndex: Map<string, TFile>,
+    categoryOverride?: string
   ): { exists: boolean; file?: TFile } {
     const existingFile = uidIndex.get(note.note_id);
     if (!existingFile) return { exists: false };
@@ -412,12 +421,11 @@ export class SyncEngine {
     if (contentChanged) return { exists: false, file: existingFile };
     if (hasImageAssetPaths(note)) return { exists: false, file: existingFile };
 
-    if (AUDIO_NOTE_TYPES.has(note.note_type) && isAttachmentTypeEnabled(this.settings.attachmentImport, 'audio')) {
-      const categoryDir = getCategoryDir(note.note_type);
-      const basePath = `${this.settings.folderName}/${categoryDir}`;
-      const assetDir = `${basePath}/asset`;
-      const baseFilename = this.getFileName(note);
+    const categoryDir = categoryOverride ?? getCategoryDir(note.note_type);
+    const assetDir = `${this.settings.folderName}/${categoryDir}/asset`;
+    const baseFilename = this.getFileName(note);
 
+    if (AUDIO_NOTE_TYPES.has(note.note_type) && isAttachmentTypeEnabled(this.settings.attachmentImport, 'audio')) {
       if (
         !this.app.vault.getAbstractFileByPath(`${assetDir}/${baseFilename}_audio.mp3`) ||
         !this.app.vault.getAbstractFileByPath(`${assetDir}/${baseFilename}_transcript.md`)
@@ -428,10 +436,6 @@ export class SyncEngine {
 
     const imageAttachments = (note.attachments ?? []).filter(isImageAttachment);
     if (isAttachmentTypeEnabled(this.settings.attachmentImport, 'image') && imageAttachments.length > 0) {
-      const categoryDir = getCategoryDir(note.note_type);
-      const basePath = `${this.settings.folderName}/${categoryDir}`;
-      const assetDir = `${basePath}/asset`;
-      const baseFilename = this.getFileName(note);
       if (!hasDownloadedImageAssets(this.app.vault, assetDir, baseFilename, imageAttachments.length)) {
         return { exists: false, file: existingFile };
       }
@@ -441,9 +445,6 @@ export class SyncEngine {
       a => !isImageAttachment(a) && a.type !== 'audio' && isDownloadableAttachment(a, this.settings)
     );
     if (genericAttachments.length > 0) {
-      const categoryDir = getCategoryDir(note.note_type);
-      const assetDir = `${this.settings.folderName}/${categoryDir}/asset`;
-      const baseFilename = this.getFileName(note);
       const missingGenericAsset = genericAttachments.some((attachment, index) => {
         const kind = classifyAttachmentUrl(attachment.url);
         const filename = genericAssetFilename(baseFilename, attachment.url, index, kind);
@@ -946,6 +947,14 @@ export class SyncEngine {
       }
 
       this.onProgress?.({ percent: 100 });
+
+      // Cross-KB path: only run when the user has explicitly selected at least
+      // one knowledge base. Empty array / undefined = cross-KB sync disabled.
+      const selectedKnowledgeBases = this.scopeOptions.syncKnowledgeBases ?? [];
+      if (selectedKnowledgeBases.length > 0) {
+        await this.runCrossKnowledgeBaseSync(result, controller.signal);
+      }
+
       return result;
     } catch (err) {
       cleanup();
@@ -953,6 +962,116 @@ export class SyncEngine {
         throw new SyncCancelledError();
       }
       throw err;
+    }
+  }
+
+  private async runCrossKnowledgeBaseSync(result: SyncResult, signal: AbortSignal): Promise<void> {
+    const selectedKnowledgeBases = this.scopeOptions.syncKnowledgeBases ?? [];
+    if (selectedKnowledgeBases.length === 0) return;
+
+    const credentials = getAuthCredentials(this.settings);
+    const entries = this.scopeOptions.knowledgeBaseEntries ?? [];
+    const createdIds = new Set(entries.filter(entry => entry.source === 'created').map(entry => entry.topicId));
+    const topicIds = selectedKnowledgeBases.filter(id => !createdIds.has(id));
+    const createdTopicIds = selectedKnowledgeBases.filter(id => createdIds.has(id));
+    const bloggerIds: string[] = [];
+
+    const knowledgeNotes = await fetchSubscribedKnowledgeNotes({
+      token: credentials.token,
+      clientId: credentials.clientId,
+      signal,
+      authMode: credentials.authMode,
+      topicIds,
+      createdTopicIds,
+      bloggerIds,
+    });
+
+    const cutoffTime = this.scopeOptions.syncStartDate
+      ? parseSyncBoundaryTime(this.scopeOptions.syncStartDate)
+      : null;
+
+    const filteredNotes = knowledgeNotes.filter(note => {
+      if (cutoffTime === null) return true;
+      const updated = parseNoteUpdatedTime(note);
+      return updated !== null && updated >= cutoffTime;
+    });
+
+    const uidIndex = this.buildUidIndex();
+    const seenNoteIds = new Set<string>();
+    const knowledgeBaseNames = this.scopeOptions.knowledgeBaseNames ?? {};
+
+    for (const note of filteredNotes) {
+      if (this.cancelled) throw new SyncCancelledError();
+      if (seenNoteIds.has(note.note_id)) continue;
+      seenNoteIds.add(note.note_id);
+      result.total++;
+      const knowledgeBaseName = note.topic_id ? knowledgeBaseNames[note.topic_id] : undefined;
+      const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;
+
+      // Reuse the preCheckNote logic from the main sync path: if the note is
+      // already up to date in the vault, skip it without re-running
+      // enrichAudioNote. This is the same path used by syncNoteIds to avoid
+      // missing audio/transcript/image attachment re-downloads.
+      const preCheck = this.preCheckNote(note, uidIndex, categoryOverride);
+      if (preCheck.exists) {
+        result.skipped++;
+        this.recordItem(result, note, { status: 'skipped' });
+        this.onProgress?.({
+          processed: result.total,
+          total: result.total,
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: result.failed,
+          percent: 0,
+        });
+        continue;
+      }
+
+      const noteToWrite = await this.enrichAudioNote(note, signal, categoryOverride);
+      const appendNotes = await this.fetchAppendNotes(noteToWrite, signal, result, categoryOverride);
+      const parentBaseName = this.buildBaseName(noteToWrite);
+      const parentFileName = this.getFileName(noteToWrite);
+      const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
+
+      const writeResult = await this.writeNote(
+        noteToWrite,
+        uidIndex,
+        undefined,
+        undefined,
+        childFileNames,
+        categoryOverride
+      );
+      this.applyWriteResult(result, writeResult);
+      this.recordItem(result, noteToWrite, writeResult);
+      const updatedTime = parseNoteUpdatedTime(noteToWrite);
+      const currentLastTime = result.lastNoteTimestamp ? parseSyncBoundaryTime(result.lastNoteTimestamp) : null;
+      if (updatedTime !== null && (currentLastTime === null || updatedTime > currentLastTime)) {
+        result.lastNoteTimestamp = noteToWrite.updated_at;
+      }
+
+      for (const appendNote of appendNotes) {
+        const appendWriteResult = await this.writeNote(
+          appendNote,
+          uidIndex,
+          parentBaseName,
+          parentFileName,
+          undefined,
+          categoryOverride
+        );
+        this.applyWriteResult(result, appendWriteResult);
+        this.recordItem(result, appendNote, appendWriteResult);
+      }
+
+      this.onProgress?.({
+        processed: result.total,
+        total: result.total,
+        created: result.created,
+        updated: result.updated,
+        skipped: result.skipped,
+        failed: result.failed,
+        percent: 0,
+      });
     }
   }
 
