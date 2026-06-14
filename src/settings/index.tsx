@@ -186,6 +186,13 @@ export function SettingsComponent({
 
   const handleResetSave = () => {
     if (isSyncing) return;
+    // Reject empty input — silently writing '' would cause the sync engine to
+    // fall back to maxDays (default 30), surprising users who simply cleared
+    // the field by accident. Keep the previous syncStartDate unchanged.
+    if (pendingStartDate === '') {
+      setResetDialogOpen(false);
+      return;
+    }
     updateSetting('lastSyncEndTimestamp', '');
     if (pendingStartDate !== settings.syncStartDate) {
       updateSetting('syncStartDate', pendingStartDate);
@@ -302,11 +309,17 @@ export function SettingsComponent({
     return `${Math.floor(hours / 24)}天前`;
   };
 
-  // Format ISO datetime (e.g. "2026-06-12T15:30:00+08:00") to "2026-06-12 15:30"
+  // Format an ISO datetime to a local-time string that includes a timezone
+  // marker. The API returns UTC values (e.g. "...Z") and the previous
+  // implementation silently dropped the offset, so a user in UTC+8 saw the
+  // checkpoint displayed 8 hours ahead of its true local meaning. Parsing
+  // via `new Date()` and rendering with `toLocaleString()` (with
+  // timeZoneName='short') converts the timestamp to the viewer's local time
+  // and embeds the timezone (e.g. "6/12/2026, 11:30:00 PM GMT+8").
   const formatCheckpoint = (iso: string): string => {
-    const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-    if (!match) return iso;
-    return `${match[1]}-${match[2]}-${match[3]} ${match[4]}:${match[5]}`;
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return iso;
+    return date.toLocaleString(undefined, { timeZoneName: 'short' });
   };
 
   // Progress bar with # characters

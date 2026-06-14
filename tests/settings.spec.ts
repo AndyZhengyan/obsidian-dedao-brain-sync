@@ -410,11 +410,40 @@ describe('SettingsComponent auth credentials', () => {
     const row = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
       .find(node => node.textContent?.includes('上次同步断点'));
     expect(row).toBeTruthy();
-    expect(row!.textContent).toContain('2026-06-12 15:30');
+    // The checkpoint is rendered in the viewer's local timezone via toLocaleString.
+    // The original +08:00 input is converted to local time; we compare against the
+    // same conversion so the test is timezone-independent.
+    const expectedLocal = new Date('2026-06-12T15:30:00+08:00').toLocaleString();
+    expect(row!.textContent).toContain(expectedLocal);
 
     const resetButton = Array.from(row!.querySelectorAll('button'))
       .find((item): item is HTMLButtonElement => item.textContent === '重置');
     expect(resetButton).toBeTruthy();
+  });
+
+  it('renders a UTC checkpoint in the local timezone and includes the timezone abbreviation', () => {
+    // 2026-06-12T15:30:00Z (UTC) — toLocaleString should convert to local time
+    // and include a timezone abbreviation (e.g. "GMT+8" for zh-CN, "PDT" for en-US, etc.).
+    // The original bug stripped the timezone info entirely, so any output containing a
+    // timezone abbreviation is the contract under test.
+    const utcIso = '2026-06-12T15:30:00Z';
+    const expectedLocal = new Date(utcIso).toLocaleString();
+
+    const { container } = renderSettings(makeSettings({
+      syncStartDate: '2026-01-01',
+      lastSyncEndTimestamp: utcIso,
+    }));
+
+    const row = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('上次同步断点'));
+    expect(row).toBeTruthy();
+    // The displayed text must equal the local-time conversion of the UTC ISO.
+    expect(row!.textContent).toContain(expectedLocal);
+    // Must NOT silently strip the timezone — the rendered text must include a
+    // timezone abbreviation produced by toLocaleString (e.g. "GMT+8", "UTC",
+    // "CST", "JST" depending on the test environment's locale).
+    const tzAbbrevPattern = /(GMT[+\-]\d+|UTC|CST|JST|EST|EDT|PST|PDT|UTC[+\-]\d+)/;
+    expect(row!.textContent).toMatch(tzAbbrevPattern);
   });
 
   it('reveals the inline start date editor when the reset button is clicked', async () => {
@@ -478,6 +507,41 @@ describe('SettingsComponent auth credentials', () => {
     expect(updateSetting).toHaveBeenCalledWith('syncStartDate', '2025-08-01');
   });
 
+  it('rejects an empty start date in the reset editor and keeps the previous syncStartDate', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      syncStartDate: '2026-01-01',
+      lastSyncEndTimestamp: '2026-06-12T15:30:00+08:00',
+    }));
+
+    const resetButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '重置');
+    await act(() => {
+      resetButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const editorRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
+      .find(node => node.textContent?.includes('同步起始日期'));
+    const dateInput = editorRow!.querySelector('input[type="date"]') as HTMLInputElement;
+    await act(() => {
+      // User clears the date input — pendingStartDate is now ''.
+      dateInput.value = '';
+      dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    const saveButton = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '保存');
+    await act(() => {
+      saveButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    // The previous syncStartDate ('2026-01-01') must NOT be overwritten with an
+    // empty string — the original bug silently fell back to maxDays (default 30
+    // days). The fix is to refuse the save when the input is empty so the
+    // existing value remains intact.
+    expect(updateSetting).not.toHaveBeenCalledWith('syncStartDate', '');
+    expect(updateSetting).not.toHaveBeenCalledWith('syncStartDate', '2026-01-01');
+  });
+
   it('discards changes when the reset editor is cancelled', async () => {
     const { container, updateSetting } = renderSettings(makeSettings({
       syncStartDate: '2026-01-01',
@@ -511,7 +575,8 @@ describe('SettingsComponent auth credentials', () => {
     const checkpointRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
       .find(node => node.textContent?.includes('上次同步断点'));
     expect(checkpointRow).toBeTruthy();
-    expect(checkpointRow!.textContent).toContain('2026-06-12 15:30');
+    const expectedLocal = new Date('2026-06-12T15:30:00+08:00').toLocaleString();
+    expect(checkpointRow!.textContent).toContain(expectedLocal);
   });
 
   it('uses the previous syncStartDate as the default value when reset is clicked', async () => {
