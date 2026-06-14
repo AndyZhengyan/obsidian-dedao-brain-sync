@@ -1,9 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SyncEngine } from '../src/sync';
 import type { Settings, GetNoteNote } from '../src/types';
+import { DEFAULT_SETTINGS } from '../src/types';
 import { mkdtemp, readFile, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
+
+const DEFAULT_SCHEDULED_SYNC = { ...DEFAULT_SETTINGS.scheduledSync };
 
 // Minimal mock app for SyncEngine tests
 function makeMockApp() {
@@ -500,10 +503,10 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
       attachment: { type: 'audio', url: 'https://cdn.example.com/knowledge.mp3', title: '' },
       detailExtra: { audio: '知识库音频转写' },
       expectedAssets: [
-        '得到大脑/知识库/我的知识库/asset/知识库音频笔记_audio.mp3',
-        '得到大脑/知识库/我的知识库/asset/知识库音频笔记_transcript.md',
+        '得到大脑/知识库/我的知识库/asset/知识库音频笔记_created_audio_note_audio.mp3',
+        '得到大脑/知识库/我的知识库/asset/知识库音频笔记_created_audio_note_transcript.md',
       ],
-      expectedMarkdown: '知识库音频笔记_audio.mp3',
+      expectedMarkdown: '知识库音频笔记_created_audio_note_audio.mp3',
     },
   ])('reuses ordinary note enrichment for $noteType notes in a created knowledge base', async ({
     noteId,
@@ -1388,6 +1391,49 @@ describe('SyncEngine — append note sync', () => {
       vi.mocked(globalThis.fetch).mockRestore();
     }
   });
+
+  it('标签白名单独立过滤附加笔记，并通过不匹配的父笔记发现匹配子笔记', async () => {
+    const parentNote = makeNote({
+      note_id: 'parent-other-tag',
+      title: '不匹配父笔记',
+      children_count: 1,
+      tags: [{ name: '其他' }],
+    });
+    const childNote = makeNote({
+      note_id: 'child-work-tag',
+      title: '匹配附加笔记',
+      parent_id: parentNote.note_id,
+      is_child_note: true,
+      tags: [{ name: '工作' }],
+    });
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: unknown) => {
+      const urlStr = typeof url === 'string' ? url : (url as Request).url;
+      if (urlStr.includes('/resource/note/list')) {
+        return Promise.resolve(mockFetchResponse({ data: { notes: [parentNote], has_more: false } }) as Response);
+      }
+      if (urlStr.includes(`id=${parentNote.note_id}`)) {
+        return Promise.resolve(mockFetchResponse({ data: { note: { ...parentNote, children_ids: [childNote.note_id] } } }) as Response);
+      }
+      if (urlStr.includes(`id=${childNote.note_id}`)) {
+        return Promise.resolve(mockFetchResponse({ data: { note: childNote } }) as Response);
+      }
+      throw new Error(`Unexpected request: ${urlStr}`);
+    });
+
+    try {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }), undefined, { syncTags: ['工作'] });
+      const result = await engine.sync();
+
+      expect(result.items.map(item => item.noteId)).toEqual([childNote.note_id]);
+      expect(vi.mocked(app.vault.create).mock.calls.map(([path]) => path)).toEqual([
+        '得到大脑/纯文本/匹配附加笔记.md',
+      ]);
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
 });
 
 describe('SyncEngine — audio note sync', () => {
@@ -1458,8 +1504,8 @@ describe('SyncEngine — audio note sync', () => {
 
       // 验证 asset 目录被创建/写入
       expect(createdFiles.some(f => f.includes('/asset/'))).toBe(true);
-      expect(createdFiles).toContain('得到大脑/录音长录/asset/我的录音笔记_audio.mp3');
-      expect(createdFiles).toContain('得到大脑/录音长录/asset/我的录音笔记_transcript.md');
+      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_1908723638246504120_audio.mp3');
+      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_1908723638246504120_transcript.md');
       expect(vi.mocked(globalThis.fetch)).toHaveBeenCalledWith('https://cdn.example.com/test.mp3');
       // 验证 md 文件被创建
       expect(createdFiles.some(f => f.endsWith('.md'))).toBe(true);
@@ -1730,9 +1776,9 @@ describe('SyncEngine — audio note sync', () => {
       const result = await engine.sync();
 
       expect(result.failed).toBe(0);
-      expect(createdFiles).toContain('得到大脑/录音长录/asset/我的录音笔记_audio.mp3');
-      expect(createdFiles).toContain('得到大脑/录音长录/asset/我的录音笔记_transcript.md');
-      expect(createdFiles).toContain('得到大脑/录音长录/我的录音笔记.md');
+      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_1908723638246504120_audio.mp3');
+      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_1908723638246504120_transcript.md');
+      expect(createdFiles).toContain('得到大脑/录音笔记/我的录音笔记.md');
       expect(createdFiles.join('\n')).toContain('created: 2026-04-30 12:45:24');
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
@@ -1794,14 +1840,14 @@ describe('SyncEngine — selective sync cancellation', () => {
     it('音频笔记：附件齐全且内容未变时返回 { exists: true }', () => {
       const app = makeMockApp();
       app.vault._addFile(
-        '得到大脑/录音长录/test.md',
+        '得到大脑/录音笔记/test.md',
         '---\nuid: "audio_ready"\nmodified: "2026-04-28 10:00:00"\n---\n音频笔记',
         { uid: 'audio_ready', modified: '2026-04-28 10:00:00' }
       );
-      app.vault._addFolder('得到大脑/录音长录');
-      app.vault._addFolder('得到大脑/录音长录/asset');
-      app.vault._addFile('得到大脑/录音长录/asset/测试笔记_audio.mp3', '');
-      app.vault._addFile('得到大脑/录音长录/asset/测试笔记_transcript.md', '');
+      app.vault._addFolder('得到大脑/录音笔记');
+      app.vault._addFolder('得到大脑/录音笔记/asset');
+      app.vault._addFile('得到大脑/录音笔记/asset/测试笔记_audio.mp3', '');
+      app.vault._addFile('得到大脑/录音笔记/asset/测试笔记_transcript.md', '');
       const engine = new SyncEngine(app as any, makeSettings());
       const note = makeNote({
         note_id: 'audio_ready',
@@ -1809,7 +1855,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         note_type: 'recorder_audio',
         updated_at: '2026-04-28T10:00:00+08:00',
       });
-      const index = new Map([['audio_ready', { path: '得到大脑/录音长录/test.md' }]]);
+      const index = new Map([['audio_ready', { path: '得到大脑/录音笔记/test.md' }]]);
       // @ts-ignore
       const result = engine['preCheckNote'](note, index);
       expect(result.exists).toBe(true);
@@ -1818,13 +1864,13 @@ describe('SyncEngine — selective sync cancellation', () => {
     it('音频笔记：缺少音频文件时返回 { exists: false }', () => {
       const app = makeMockApp();
       app.vault._addFile(
-        '得到大脑/录音长录/test.md',
+        '得到大脑/录音笔记/test.md',
         '---\nuid: "audio_missing_mp3"\nmodified: "2026-04-28 10:00:00"\n---\n音频笔记',
         { uid: 'audio_missing_mp3', modified: '2026-04-28 10:00:00' }
       );
-      app.vault._addFolder('得到大脑/录音长录');
-      app.vault._addFolder('得到大脑/录音长录/asset');
-      app.vault._addFile('得到大脑/录音长录/asset/测试笔记_transcript.md', '');
+      app.vault._addFolder('得到大脑/录音笔记');
+      app.vault._addFolder('得到大脑/录音笔记/asset');
+      app.vault._addFile('得到大脑/录音笔记/asset/测试笔记_transcript.md', '');
       const engine = new SyncEngine(app as any, makeSettings());
       const note = makeNote({
         note_id: 'audio_missing_mp3',
@@ -1832,7 +1878,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         note_type: 'recorder_audio',
         updated_at: '2026-04-28T10:00:00+08:00',
       });
-      const index = new Map([['audio_missing_mp3', { path: '得到大脑/录音长录/test.md' }]]);
+      const index = new Map([['audio_missing_mp3', { path: '得到大脑/录音笔记/test.md' }]]);
       // @ts-ignore
       const result = engine['preCheckNote'](note, index);
       expect(result.exists).toBe(false);
@@ -1841,13 +1887,13 @@ describe('SyncEngine — selective sync cancellation', () => {
     it('音频笔记：缺少转写文件时返回 { exists: false }', () => {
       const app = makeMockApp();
       app.vault._addFile(
-        '得到大脑/录音长录/test.md',
+        '得到大脑/录音笔记/test.md',
         '---\nuid: "audio_missing_transcript"\nmodified: "2026-04-28 10:00:00"\n---\n音频笔记',
         { uid: 'audio_missing_transcript', modified: '2026-04-28 10:00:00' }
       );
-      app.vault._addFolder('得到大脑/录音长录');
-      app.vault._addFolder('得到大脑/录音长录/asset');
-      app.vault._addFile('得到大脑/录音长录/asset/测试笔记_audio.mp3', '');
+      app.vault._addFolder('得到大脑/录音笔记');
+      app.vault._addFolder('得到大脑/录音笔记/asset');
+      app.vault._addFile('得到大脑/录音笔记/asset/测试笔记_audio.mp3', '');
       const engine = new SyncEngine(app as any, makeSettings());
       const note = makeNote({
         note_id: 'audio_missing_transcript',
@@ -1855,7 +1901,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         note_type: 'recorder_audio',
         updated_at: '2026-04-28T10:00:00+08:00',
       });
-      const index = new Map([['audio_missing_transcript', { path: '得到大脑/录音长录/test.md' }]]);
+      const index = new Map([['audio_missing_transcript', { path: '得到大脑/录音笔记/test.md' }]]);
       // @ts-ignore
       const result = engine['preCheckNote'](note, index);
       expect(result.exists).toBe(false);
@@ -2671,7 +2717,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
       'https://get-notes.luojilab.com/voicenotes/web/notes/prime_1909193892067130512/children?limit=20&since_id=&sort=create_desc'
     );
     const parentContent = vi.mocked(app.vault.create).mock.calls.find(([path]) =>
-      path === '得到大脑/录音长录/WebAPI 录音主笔记.md'
+      path === '得到大脑/录音笔记/WebAPI 录音主笔记.md'
     )?.[1] as string;
     expect(parentContent).toContain('children_ids: ["1909246675068292528"]');
     expect(parentContent).not.toContain('1909246675068292530');
@@ -2923,5 +2969,303 @@ describe('SyncEngine — tag whitelist filter', () => {
     // @ts-ignore accessing private method
     const result = engine['filterNotesByTags'](notes, ['work', 'project']);
     expect(result.map(n => n.note_id).sort()).toEqual(['a', 'c']);
+  });
+});
+
+describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
+  const fetchSubscribedSpy = vi.fn();
+
+  beforeEach(() => {
+    fetchSubscribedSpy.mockReset();
+  });
+
+  it('syncKnowledgeBases=[] 时不调用 fetchSubscribedKnowledgeNotes（关闭跨库同步）', async () => {
+    fetchSubscribedSpy.mockResolvedValue([]);
+    vi.doMock('../src/api', async () => {
+      const actual = await vi.importActual<typeof import('../src/api')>('../src/api');
+      return {
+        ...actual,
+        fetchSubscribedKnowledgeNotes: fetchSubscribedSpy,
+      };
+    });
+    vi.resetModules();
+    const { SyncEngine: EngineReloaded } = await import('../src/sync');
+
+    try {
+      const app = makeMockApp();
+      const settings = makeSettings({
+        scheduledSync: {
+          ...DEFAULT_SCHEDULED_SYNC,
+          enabled: true,
+          syncKnowledgeBases: [],
+        },
+      });
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({
+        success: true,
+        data: { notes: [], has_more: false, next_cursor: '0' },
+      }) as any);
+
+      const engine = new EngineReloaded(app as any, settings, undefined, {
+        maxDays: 0,
+        syncStartDate: '2026-04-27',
+      });
+
+      await engine.sync();
+
+      expect(fetchSubscribedSpy).not.toHaveBeenCalled();
+    } finally {
+      vi.doUnmock('../src/api');
+      vi.resetModules();
+    }
+  });
+
+  it('syncKnowledgeBases 非空时拉取并按 note_id + 内容比对跳过未变更的笔记', async () => {
+    const fakeNotes = [
+      {
+        id: 'blogger:kb-1:1',
+        note_id: 'blogger_kb-1',
+        title: '已有博主笔记',
+        content: '新内容',
+        note_type: 'blogger_post',
+        source: 'blogger',
+        tags: [{ name: '测试博主' }],
+        created_at: '2026-04-27T22:26:17+08:00',
+        updated_at: '2026-04-29T10:00:00+08:00', // 比旧 modified 更新
+      },
+      {
+        id: 'blogger:kb-1:2',
+        note_id: 'blogger_kb-2',
+        title: '新博主笔记',
+        content: '全新内容',
+        note_type: 'blogger_post',
+        source: 'blogger',
+        tags: [{ name: '测试博主' }],
+        created_at: '2026-04-27T22:26:17+08:00',
+        updated_at: '2026-04-28T10:00:00+08:00',
+      },
+    ];
+    fetchSubscribedSpy.mockResolvedValue(fakeNotes);
+    vi.doMock('../src/api', async () => {
+      const actual = await vi.importActual<typeof import('../src/api')>('../src/api');
+      return {
+        ...actual,
+        fetchSubscribedKnowledgeNotes: fetchSubscribedSpy,
+      };
+    });
+    vi.resetModules();
+    const { SyncEngine: EngineReloaded } = await import('../src/sync');
+
+    try {
+      const app = makeMockApp();
+      app.vault._addFile(
+        '得到大脑/订阅博主/已有博主笔记.md',
+        '---\nuid: "blogger_kb-1"\nmodified: "2026-04-28 10:00:00"\n---\n旧内容',
+        { uid: 'blogger_kb-1', modified: '2026-04-28 10:00:00' }
+      );
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({
+        success: true,
+        data: { notes: [], has_more: false, next_cursor: '0' },
+      }) as any);
+
+      const settings = makeSettings({
+        scheduledSync: {
+          ...DEFAULT_SCHEDULED_SYNC,
+          enabled: true,
+          syncKnowledgeBases: ['kb-1'],
+        },
+      });
+
+      const engine = new EngineReloaded(app as any, settings, undefined, {
+        maxDays: 0,
+        syncStartDate: '2026-04-27',
+        syncKnowledgeBases: ['kb-1'],
+      });
+
+      const result = await engine.sync();
+
+      // 跨库路径被触发
+      expect(fetchSubscribedSpy).toHaveBeenCalled();
+      // 修改后的 kb-1 应被标记为 updated
+      expect(result.items?.some(item => item.noteId === 'blogger_kb-1' && item.status === 'updated')).toBe(true);
+      // kb-2 应被标记为 created
+      expect(result.items?.some(item => item.noteId === 'blogger_kb-2' && item.status === 'created')).toBe(true);
+    } finally {
+      vi.doUnmock('../src/api');
+      vi.resetModules();
+    }
+  });
+
+  it('跨库同步时，本地存在且内容相同则跳过', async () => {
+    const sameContent = '相同内容';
+    const fakeNotes = [
+      {
+        id: 'blogger:kb-3:1',
+        note_id: 'blogger_kb-3',
+        title: '未变博主笔记',
+        content: sameContent,
+        note_type: 'blogger_post',
+        source: 'blogger',
+        tags: [],
+        created_at: '2026-04-27T22:26:17+08:00',
+        updated_at: '2026-04-28T10:00:00+08:00',
+      },
+    ];
+    fetchSubscribedSpy.mockResolvedValue(fakeNotes);
+    vi.doMock('../src/api', async () => {
+      const actual = await vi.importActual<typeof import('../src/api')>('../src/api');
+      return {
+        ...actual,
+        fetchSubscribedKnowledgeNotes: fetchSubscribedSpy,
+      };
+    });
+    vi.resetModules();
+    const { SyncEngine: EngineReloaded } = await import('../src/sync');
+
+    try {
+      const app = makeMockApp();
+      app.vault._addFile(
+        '得到大脑/订阅博主/未变博主笔记.md',
+        '---\nuid: "blogger_kb-3"\nmodified: "2026-04-28 10:00:00"\n---\n相同内容',
+        { uid: 'blogger_kb-3', modified: '2026-04-28 10:00:00' }
+      );
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({
+        success: true,
+        data: { notes: [], has_more: false, next_cursor: '0' },
+      }) as any);
+
+      const settings = makeSettings({
+        scheduledSync: {
+          ...DEFAULT_SCHEDULED_SYNC,
+          enabled: true,
+          syncKnowledgeBases: ['kb-3'],
+        },
+      });
+
+      const engine = new EngineReloaded(app as any, settings, undefined, {
+        maxDays: 0,
+        syncStartDate: '2026-04-27',
+        syncKnowledgeBases: ['kb-3'],
+      });
+
+      const result = await engine.sync();
+
+      expect(fetchSubscribedSpy).toHaveBeenCalled();
+      expect(result.items?.some(item => item.noteId === 'blogger_kb-3' && item.status === 'skipped')).toBe(true);
+    } finally {
+      vi.doUnmock('../src/api');
+      vi.resetModules();
+    }
+  });
+
+  it('跨库同步：音频笔记正文未变但本地缺音频文件时触发补下载（不跳过）', async () => {
+    const noteId = 'cross_kb_audio_missing';
+    const fakeNotes = [
+      {
+        id: 'cross_kb_audio_missing:1',
+        note_id: noteId,
+        title: '跨库音频笔记',
+        content: '跨库正文',
+        note_type: 'recorder_audio',
+        source: 'blogger',
+        topic_id: 'kb-audio',
+        tags: [],
+        created_at: '2026-04-27T22:26:17+08:00',
+        updated_at: '2026-04-28T10:00:00+08:00',
+        attachments: [
+          { type: 'audio', url: 'https://cdn.example.com/cross-kb.mp3', title: '', duration: 1000 },
+        ],
+        audio: '🟢 说话人1 [00:00:01]\n转写',
+      },
+    ];
+    fetchSubscribedSpy.mockResolvedValue(fakeNotes);
+    vi.doMock('../src/api', async () => {
+      const actual = await vi.importActual<typeof import('../src/api')>('../src/api');
+      return {
+        ...actual,
+        fetchSubscribedKnowledgeNotes: fetchSubscribedSpy,
+      };
+    });
+    vi.resetModules();
+    const { SyncEngine: EngineReloaded } = await import('../src/sync');
+
+    try {
+      const app = makeMockApp();
+      // md 已存在 + uid 命中 + modified 匹配 + transcript 存在，但音频 mp3 缺失
+      app.vault._addFolder('得到大脑/知识库/跨库专题');
+      app.vault._addFolder('得到大脑/知识库/跨库专题/asset');
+      app.vault._addFile(
+        `得到大脑/知识库/跨库专题/跨库音频笔记.md`,
+        `---\nuid: "${noteId}"\nmodified: "2026-04-28 10:00:00"\nnote_type: recorder_audio\n---\n跨库正文`,
+        { uid: noteId, modified: '2026-04-28 10:00:00' }
+      );
+      app.vault._addFile('得到大脑/知识库/跨库专题/asset/跨库音频笔记_transcript.md', '');
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any) => {
+        const urlStr = typeof url === 'string' ? url : url?.url ?? '';
+        if (urlStr.includes('/resource/note/list')) {
+          return mockFetchResponse({
+            success: true,
+            data: { notes: [], has_more: false, next_cursor: '0' },
+          }) as Response;
+        }
+        if (urlStr.includes('/resource/note/detail')) {
+          return mockFetchResponse({
+            success: true,
+            data: {
+              note: {
+                note_id: noteId,
+                title: '跨库音频笔记',
+                content: '跨库正文',
+                note_type: 'recorder_audio',
+                attachments: [
+                  { type: 'audio', url: 'https://cdn.example.com/cross-kb.mp3', title: '', duration: 1000 },
+                ],
+                audio: '🟢 说话人1 [00:00:01]\n转写',
+                created_at: '2026-04-27T22:26:17+08:00',
+                updated_at: '2026-04-28T10:00:00+08:00',
+              },
+            },
+          }) as Response;
+        }
+        if (new URL(urlStr).hostname === 'cdn.example.com') {
+          return {
+            ok: true,
+            status: 200,
+            arrayBuffer: async () => new ArrayBuffer(32),
+          } as Response;
+        }
+        throw new Error(`Unexpected request: ${urlStr}`);
+      });
+
+      const settings = makeSettings({
+        scheduledSync: {
+          ...DEFAULT_SCHEDULED_SYNC,
+          enabled: true,
+          syncKnowledgeBases: ['kb-audio'],
+        },
+      });
+
+      const engine = new EngineReloaded(app as any, settings, undefined, {
+        maxDays: 0,
+        syncStartDate: '2026-04-27',
+        syncKnowledgeBases: ['kb-audio'],
+        knowledgeBaseNames: { kb_audio: '跨库专题', kb_audio_missing: '跨库专题' } as any,
+      });
+
+      const result = await engine.sync();
+
+      // 正文未变 + audio 缺失 → 跨库路径不能简单地 skip，必须走补下载
+      const itemsForNote = result.items?.filter(item => item.noteId === noteId) ?? [];
+      expect(itemsForNote.length).toBeGreaterThan(0);
+      const statuses = itemsForNote.map(item => item.status);
+      // 不允许出现纯 skipped（缺附件时必须重写或下载）
+      expect(statuses).not.toEqual(['skipped']);
+      // 必须尝试下载音频
+      const fetchCalls = vi.mocked(globalThis.fetch).mock.calls.map(call => String(call[0]));
+      expect(fetchCalls.some(url => url === 'https://cdn.example.com/cross-kb.mp3')).toBe(true);
+    } finally {
+      vi.doUnmock('../src/api');
+      vi.resetModules();
+    }
   });
 });

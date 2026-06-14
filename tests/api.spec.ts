@@ -569,6 +569,42 @@ describe('OpenAPI knowledge previews', () => {
       vi.mocked(globalThis.fetch).mockRestore();
     }
   });
+
+  it('keeps created knowledge-base content and tags in preview items', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(mockFetchResponse({
+      data: {
+        notes: [{
+          note_id: 'created-note-1',
+          title: '创建型知识库笔记',
+          content: '创建型知识库正文预览',
+          tags: [{ name: '原始标签' }],
+          updated_at: '2026-06-01 10:00:00',
+        }],
+        has_more: false,
+      },
+    }) as Response);
+
+    try {
+      const page = await fetchTopicContentPreviewPage(
+        'created-1',
+        '我创建的知识库',
+        'token',
+        'client',
+        'openapi',
+        undefined,
+        undefined,
+        'created'
+      );
+
+      expect(page.items[0]).toMatchObject({
+        note_id: 'created-note-1',
+        content: '创建型知识库正文预览',
+        tags: [{ name: '原始标签' }, { name: '我创建的知识库' }],
+      });
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
 });
 
 describe('createNote', () => {

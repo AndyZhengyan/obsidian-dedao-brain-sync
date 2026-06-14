@@ -176,11 +176,8 @@ describe('t() - Note type labels', () => {
   it('returns correct Chinese type labels', () => {
     expect(i18n.t('picker.type.plain_text')).toBe('文字笔记');
     expect(i18n.t('picker.type.link')).toBe('链接笔记');
-    expect(i18n.t('picker.type.recorder_audio')).toBe('录音笔记');
+    expect(i18n.t('picker.type.audio_note')).toBe('录音笔记');
     expect(i18n.t('picker.type.img_text')).toBe('图片笔记');
-    expect(i18n.t('picker.type.immediate_audio')).toBe('录音笔记');
-    expect(i18n.t('picker.type.local_audio')).toBe('录音笔记');
-    expect(i18n.t('picker.type.recorder_flash_audio')).toBe('录音卡笔记');
     expect(i18n.t('picker.type.unknown')).toBe('其他');
   });
 
@@ -188,11 +185,8 @@ describe('t() - Note type labels', () => {
     i18n.initI18n('en-US');
     expect(i18n.t('picker.type.plain_text')).toBe('Plain Text');
     expect(i18n.t('picker.type.link')).toBe('Link Note');
-    expect(i18n.t('picker.type.recorder_audio')).toBe('Audio Note');
+    expect(i18n.t('picker.type.audio_note')).toBe('Audio Note');
     expect(i18n.t('picker.type.img_text')).toBe('Image Note');
-    expect(i18n.t('picker.type.immediate_audio')).toBe('Audio Note');
-    expect(i18n.t('picker.type.local_audio')).toBe('Audio Note');
-    expect(i18n.t('picker.type.recorder_flash_audio')).toBe('Recording Card Note');
     expect(i18n.t('picker.type.unknown')).toBe('Other');
   });
 });

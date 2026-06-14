@@ -200,6 +200,29 @@ describe('sync history note type display', () => {
     expect(formatHistoryNoteType('recorder_audio')).toBe('录音笔记');
     expect(formatHistoryNoteType('unknown_remote_type')).toBe('其他');
   });
+
+  it('折叠所有 9 种内部 audio 类型到统一“录音笔记”', () => {
+    initI18n('zh-CN');
+    const audioTypes = [
+      'immediate_audio',
+      'recorder_audio',
+      'recorder_flash_audio',
+      'audio_long',
+      'local_audio',
+      'audio',
+      'class_audio',
+      'internal_record',
+      'meeting',
+    ];
+    for (const noteType of audioTypes) {
+      expect(formatHistoryNoteType(noteType)).toBe('录音笔记');
+    }
+  });
+
+  it('blogger_post 在历史记录中显示为“其他”', () => {
+    initI18n('zh-CN');
+    expect(formatHistoryNoteType('blogger_post')).toBe('其他');
+  });
 });
 
 describe('sync history scope display', () => {
@@ -289,5 +312,18 @@ describe('sync history scope display', () => {
         maxDays: 0,
       },
     }))).toBe('仅按更新时间过滤，无类型或标签过滤');
+  });
+
+  it('shows configured tag filters alongside note type filters', () => {
+    initI18n('zh-CN');
+
+    expect(formatHistoryFilter(makeEntry({
+      scope: {
+        syncStartDate: '',
+        maxDays: 0,
+        enabledNoteTypes: ['plain_text'],
+        syncTags: ['工作', '项目'],
+      },
+    }))).toBe('仅同步：文字笔记 · 标签：工作、项目');
   });
 });

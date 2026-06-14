@@ -57,7 +57,7 @@ describe('getCategoryDir', () => {
   it('maps known note types', () => {
     expect(getCategoryDir('plain_text')).toBe('纯文本');
     expect(getCategoryDir('link')).toBe('链接笔记');
-    expect(getCategoryDir('immediate_audio')).toBe('即时录音');
+    expect(getCategoryDir('immediate_audio')).toBe('录音笔记');
   });
 
   it('returns 其他 for unknown types', () => {

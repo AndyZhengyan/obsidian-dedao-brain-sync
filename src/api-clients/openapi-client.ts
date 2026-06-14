@@ -302,6 +302,7 @@ function bloggerContentToNote(content: BloggerContent, topic: SubscribedTopic, b
     content: body,
     note_type: 'blogger_post',
     source: 'blogger',
+    topic_id: topic.topic_id,
     tags: [
       ...(topic.name ? [{ name: topic.name }] : []),
       ...(blogger.name ? [{ name: blogger.name }] : []),
@@ -345,18 +346,25 @@ async function fetchCreatedTopicNotes(topic: SubscribedTopic, token: string, cli
     const source = normalizeData(data);
     const pageNotes = readArray(source, ['notes', 'list', 'items'])
       .filter(isRecord)
-      .map(value => ({
-        ...value,
-        id: value.note_id,
-        note_id: String(value.note_id ?? ''),
-        title: typeof value.title === 'string' ? value.title : '',
-        content: typeof value.content === 'string' ? value.content : '',
-        note_type: typeof value.note_type === 'string' ? value.note_type : 'plain_text',
-        source: 'knowledge',
-        tags: topic.name ? [{ name: topic.name }] : [],
-        created_at: typeof value.created_at === 'string' ? value.created_at : '',
-        updated_at: typeof value.updated_at === 'string' ? value.updated_at : typeof value.edit_time === 'string' ? value.edit_time : '',
-      } as GetNoteNote))
+      .map(value => {
+        const tags = readArray(value, ['tags'])
+          .filter(isRecord)
+          .map(tag => ({ name: typeof tag.name === 'string' ? tag.name : '' }))
+          .filter(tag => tag.name);
+        if (topic.name && !tags.some(tag => tag.name === topic.name)) tags.push({ name: topic.name });
+        return {
+          ...value,
+          id: value.note_id,
+          note_id: String(value.note_id ?? ''),
+          title: typeof value.title === 'string' ? value.title : '',
+          content: typeof value.content === 'string' ? value.content : '',
+          note_type: typeof value.note_type === 'string' ? value.note_type : 'plain_text',
+          source: 'knowledge',
+          tags,
+          created_at: typeof value.created_at === 'string' ? value.created_at : '',
+          updated_at: typeof value.updated_at === 'string' ? value.updated_at : typeof value.edit_time === 'string' ? value.edit_time : '',
+        } as GetNoteNote;
+      })
       .filter(note => !selectedNoteIds || selectedNoteIds.has(note.note_id));
     notes.push(...pageNotes);
     for (const note of pageNotes) selectedNoteIds?.delete(note.note_id);
@@ -429,7 +437,17 @@ export async function fetchTopicContentPreviewPage(
   cursor: { bloggerIndex: number; page: number } = { bloggerIndex: 0, page: 1 },
   topicSource?: SubscribedTopic['source']
 ): Promise<{
-  items: { note_id: string; title: string; updated_at: string; blogger_name: string; topic_id: string; blogger_id: string }[];
+  items: {
+    note_id: string;
+    title: string;
+    updated_at: string;
+    blogger_name: string;
+    topic_id: string;
+    blogger_id: string;
+    summary?: string;
+    content?: string;
+    tags?: { name: string }[];
+  }[];
   nextCursor?: { bloggerIndex: number; page: number };
 }> {
   if (topicSource === 'created') {
@@ -442,6 +460,8 @@ export async function fetchTopicContentPreviewPage(
       blogger_name: '',
       topic_id: topicId,
       blogger_id: '',
+      content: note.content,
+      tags: note.tags,
     }));
     return { items };
   }
@@ -470,6 +490,12 @@ export async function fetchTopicContentPreviewPage(
       blogger_name: blogger.name ?? '',
       topic_id: topicId,
       blogger_id: blogger.follow_id,
+      summary: content.summary,
+      content: content.content,
+      tags: [
+        ...(_topicName ? [{ name: _topicName }] : []),
+        ...(blogger.name ? [{ name: blogger.name }] : []),
+      ],
     };
   });
   const nextCursor = readHasMore(source) && contents.length > 0
@@ -524,10 +550,14 @@ async function fetchBloggerContentDetail(topicId: string, content: BloggerConten
 export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions): Promise<GetNoteNote[]> {
   const { token, clientId, signal } = options;
   const notes: GetNoteNote[] = [];
-  const topicIdSet = options.topicIds?.length ? new Set(options.topicIds) : undefined;
-  const createdTopicIdSet = options.createdTopicIds?.length ? new Set(options.createdTopicIds) : undefined;
-  const bloggerIdSet = options.bloggerIds?.length ? new Set(options.bloggerIds) : undefined;
   const remainingNoteIds = options.selectedNoteIds?.length ? new Set(options.selectedNoteIds) : undefined;
+  const topicIdSet = options.topicIds === undefined || (remainingNoteIds && options.topicIds.length === 0)
+    ? undefined
+    : new Set(options.topicIds);
+  const createdTopicIdSet = options.createdTopicIds === undefined || (remainingNoteIds && options.createdTopicIds.length === 0)
+    ? undefined
+    : new Set(options.createdTopicIds);
+  const bloggerIdSet = options.bloggerIds?.length ? new Set(options.bloggerIds) : undefined;
   const sources: Array<NonNullable<SubscribedTopic['source']>> = [];
   if (createdTopicIdSet) sources.push('created');
   if (topicIdSet || sources.length === 0) sources.push('subscribed');

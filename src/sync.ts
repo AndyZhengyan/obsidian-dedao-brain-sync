@@ -181,11 +181,15 @@ export class SyncEngine {
     const syncStartDate = scopeOptions?.syncStartDate ?? settings.syncStartDate;
     const enabledNoteTypes = scopeOptions?.enabledNoteTypes;
     const syncTags = scopeOptions?.syncTags;
+    const syncKnowledgeBases = scopeOptions?.syncKnowledgeBases;
     this.scopeOptions = {
       maxDays: syncStartDate ? 0 : scopeOptions?.maxDays ?? settings.maxDays,
       syncStartDate,
       ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}),
       ...(syncTags !== undefined && syncTags.length > 0 ? { syncTags } : {}),
+      ...(syncKnowledgeBases !== undefined ? { syncKnowledgeBases } : {}),
+      ...(scopeOptions?.knowledgeBaseNames ? { knowledgeBaseNames: scopeOptions.knowledgeBaseNames } : {}),
+      ...(scopeOptions?.knowledgeBaseEntries ? { knowledgeBaseEntries: scopeOptions.knowledgeBaseEntries } : {}),
     };
     this.onProgress = onProgress;
   }
@@ -234,6 +238,11 @@ export class SyncEngine {
     return this.buildBaseName(note);
   }
 
+  private getAudioAssetBaseName(note: GetNoteNote): string {
+    const safeNoteId = note.note_id.replace(/[\\/:*?"<>|]/g, '_');
+    return `${this.getFileName(note)}_${safeNoteId}`;
+  }
+
   private getFilePath(categoryDir: string, note: GetNoteNote): string {
     return `${categoryDir}/${this.getFileName(note)}.md`;
   }
@@ -274,7 +283,7 @@ export class SyncEngine {
         await this.app.vault.createFolder(assetDir);
       }
 
-      const rawFilename = `${this.getFileName(note)}_audio.mp3`;
+      const rawFilename = `${this.getAudioAssetBaseName(note)}_audio.mp3`;
       const filename = rawFilename.split('/').pop()!.split('\\').pop()!;
       const targetPath = `${assetDir}/${filename}`;
 
@@ -381,7 +390,7 @@ export class SyncEngine {
         await this.app.vault.createFolder(assetDir);
       }
 
-      const targetPath = `${assetDir}/${this.getFileName(note)}_transcript.md`;
+      const targetPath = `${assetDir}/${this.getAudioAssetBaseName(note)}_transcript.md`;
       const content = `# ${generateDisplayTitle(note) || t('picker.noTitle')}\n\n${note.audio}`;
       const existing = this.app.vault.getAbstractFileByPath(targetPath);
       if (existing instanceof TFile) {
@@ -399,10 +408,16 @@ export class SyncEngine {
   /**
    * Check if a note and all its artifacts already exist in the vault and are up to date.
    * Uses UID-based lookup so renamed/moved files are still found.
+   *
+   * `categoryOverride` lets callers route the check at a custom vault path
+   * (e.g. `知识库/<name>/`) instead of the default `getCategoryDir(note_type)`
+   * location. This is required for cross-KB sync where notes live under a
+   * per-knowledge-base directory.
    */
   private preCheckNote(
     note: GetNoteNote,
-    uidIndex: Map<string, TFile>
+    uidIndex: Map<string, TFile>,
+    categoryOverride?: string
   ): { exists: boolean; file?: TFile } {
     const existingFile = uidIndex.get(note.note_id);
     if (!existingFile) return { exists: false };
@@ -411,12 +426,11 @@ export class SyncEngine {
     if (contentChanged) return { exists: false, file: existingFile };
     if (hasImageAssetPaths(note)) return { exists: false, file: existingFile };
 
-    if (AUDIO_NOTE_TYPES.has(note.note_type) && isAttachmentTypeEnabled(this.settings.attachmentImport, 'audio')) {
-      const categoryDir = getCategoryDir(note.note_type);
-      const basePath = `${this.settings.folderName}/${categoryDir}`;
-      const assetDir = `${basePath}/asset`;
-      const baseFilename = this.getFileName(note);
+    const categoryDir = categoryOverride ?? getCategoryDir(note.note_type);
+    const assetDir = `${this.settings.folderName}/${categoryDir}/asset`;
+    const baseFilename = this.getFileName(note);
 
+    if (AUDIO_NOTE_TYPES.has(note.note_type) && isAttachmentTypeEnabled(this.settings.attachmentImport, 'audio')) {
       if (
         !this.app.vault.getAbstractFileByPath(`${assetDir}/${baseFilename}_audio.mp3`) ||
         !this.app.vault.getAbstractFileByPath(`${assetDir}/${baseFilename}_transcript.md`)
@@ -427,10 +441,6 @@ export class SyncEngine {
 
     const imageAttachments = (note.attachments ?? []).filter(isImageAttachment);
     if (isAttachmentTypeEnabled(this.settings.attachmentImport, 'image') && imageAttachments.length > 0) {
-      const categoryDir = getCategoryDir(note.note_type);
-      const basePath = `${this.settings.folderName}/${categoryDir}`;
-      const assetDir = `${basePath}/asset`;
-      const baseFilename = this.getFileName(note);
       if (!hasDownloadedImageAssets(this.app.vault, assetDir, baseFilename, imageAttachments.length)) {
         return { exists: false, file: existingFile };
       }
@@ -440,9 +450,6 @@ export class SyncEngine {
       a => !isImageAttachment(a) && a.type !== 'audio' && isDownloadableAttachment(a, this.settings)
     );
     if (genericAttachments.length > 0) {
-      const categoryDir = getCategoryDir(note.note_type);
-      const assetDir = `${this.settings.folderName}/${categoryDir}/asset`;
-      const baseFilename = this.getFileName(note);
       const missingGenericAsset = genericAttachments.some((attachment, index) => {
         const kind = classifyAttachmentUrl(attachment.url);
         const filename = genericAssetFilename(baseFilename, attachment.url, index, kind);
@@ -670,7 +677,7 @@ export class SyncEngine {
         }
         const transcriptPath = await this.writeAudioTranscriptAsset(enrichedNote, categoryOverride);
         if (transcriptPath) assetPaths.push(transcriptPath);
-        enrichedNote.assetFileName = this.getFileName(enrichedNote);
+        enrichedNote.assetFileName = this.getAudioAssetBaseName(enrichedNote);
       }
 
       // Image attachments keep their dedicated downloader (legacy naming scheme).
@@ -888,28 +895,30 @@ export class SyncEngine {
         const recentNotes = this.filterRecentNotes(notes);
         const filtered = this.filterNotesByDateRange(recentNotes);
         const typeFiltered = this.filterNotesByType(filtered);
-        const tagFiltered = this.filterNotesByTags(typeFiltered);
-
-        for (const note of tagFiltered) {
+        for (const note of typeFiltered) {
           if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
           if (seenNoteIds.has(note.note_id)) continue;
-          seenNoteIds.add(note.note_id);
-          result.total++;
-          for (const tag of note.tags ?? []) {
-            if (tag?.name) observedTagNames.add(tag.name);
-          }
+          const parentMatchesTags = this.filterNotesByTags([note]).length > 0;
           const noteToWrite = await this.enrichAudioNote(note, controller.signal);
 
-          const appendNotes = await this.fetchAppendNotes(noteToWrite, controller.signal, result);
+          const appendNotes = this.filterNotesByTags(await this.fetchAppendNotes(noteToWrite, controller.signal, result));
+          if (!parentMatchesTags && appendNotes.length === 0) continue;
           const parentBaseName = this.buildBaseName(noteToWrite);
           const parentFileName = this.getFileName(noteToWrite);
           // 子文档完整文件名（用于父文档的 wiki 链接）
           const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
 
           // 写入父文档（含子文档链接）
-          const writeResult = await this.writeNote(noteToWrite, uidIndex, undefined, undefined, childFileNames);
-          this.applyWriteResult(result, writeResult);
-          this.recordItem(result, noteToWrite, writeResult);
+          if (parentMatchesTags) {
+            seenNoteIds.add(note.note_id);
+            result.total++;
+            for (const tag of note.tags ?? []) {
+              if (tag?.name) observedTagNames.add(tag.name);
+            }
+            const writeResult = await this.writeNote(noteToWrite, uidIndex, undefined, undefined, childFileNames);
+            this.applyWriteResult(result, writeResult);
+            this.recordItem(result, noteToWrite, writeResult);
+          }
 
           // 写入子文档（链接回父文档）
           for (const appendNote of appendNotes) {
@@ -919,7 +928,12 @@ export class SyncEngine {
             for (const tag of appendNote.tags ?? []) {
               if (tag?.name) observedTagNames.add(tag.name);
             }
-            const appendWriteResult = await this.writeNote(appendNote, uidIndex, parentBaseName, parentFileName);
+            const appendWriteResult = await this.writeNote(
+              appendNote,
+              uidIndex,
+              parentMatchesTags ? parentBaseName : undefined,
+              parentMatchesTags ? parentFileName : undefined
+            );
             this.applyWriteResult(result, appendWriteResult);
             this.recordItem(result, appendNote, appendWriteResult);
           }
@@ -957,6 +971,13 @@ export class SyncEngine {
       }
 
       this.onProgress?.({ percent: 100 });
+      // Cross-KB path: only run when the user has explicitly selected at least
+      // one knowledge base. Empty array / undefined = cross-KB sync disabled.
+      const selectedKnowledgeBases = this.scopeOptions.syncKnowledgeBases ?? [];
+      if (selectedKnowledgeBases.length > 0) {
+        await this.runCrossKnowledgeBaseSync(result, controller.signal);
+      }
+
       if (observedTagNames.size > 0) {
         result.observedTags = Array.from(observedTagNames);
       }
@@ -967,6 +988,116 @@ export class SyncEngine {
         throw new SyncCancelledError();
       }
       throw err;
+    }
+  }
+
+  private async runCrossKnowledgeBaseSync(result: SyncResult, signal: AbortSignal): Promise<void> {
+    const selectedKnowledgeBases = this.scopeOptions.syncKnowledgeBases ?? [];
+    if (selectedKnowledgeBases.length === 0) return;
+
+    const credentials = getAuthCredentials(this.settings);
+    const entries = this.scopeOptions.knowledgeBaseEntries ?? [];
+    const createdIds = new Set(entries.filter(entry => entry.source === 'created').map(entry => entry.topicId));
+    const topicIds = selectedKnowledgeBases.filter(id => !createdIds.has(id));
+    const createdTopicIds = selectedKnowledgeBases.filter(id => createdIds.has(id));
+    const bloggerIds: string[] = [];
+
+    const knowledgeNotes = await fetchSubscribedKnowledgeNotes({
+      token: credentials.token,
+      clientId: credentials.clientId,
+      signal,
+      authMode: credentials.authMode,
+      topicIds,
+      createdTopicIds,
+      bloggerIds,
+    });
+
+    const cutoffTime = this.scopeOptions.syncStartDate
+      ? parseSyncBoundaryTime(this.scopeOptions.syncStartDate)
+      : null;
+
+    const filteredNotes = knowledgeNotes.filter(note => {
+      if (cutoffTime === null) return true;
+      const updated = parseNoteUpdatedTime(note);
+      return updated !== null && updated >= cutoffTime;
+    });
+
+    const uidIndex = this.buildUidIndex();
+    const seenNoteIds = new Set<string>();
+    const knowledgeBaseNames = this.scopeOptions.knowledgeBaseNames ?? {};
+
+    for (const note of filteredNotes) {
+      if (this.cancelled) throw new SyncCancelledError();
+      if (seenNoteIds.has(note.note_id)) continue;
+      seenNoteIds.add(note.note_id);
+      result.total++;
+      const knowledgeBaseName = note.topic_id ? knowledgeBaseNames[note.topic_id] : undefined;
+      const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;
+
+      // Reuse the preCheckNote logic from the main sync path: if the note is
+      // already up to date in the vault, skip it without re-running
+      // enrichAudioNote. This is the same path used by syncNoteIds to avoid
+      // missing audio/transcript/image attachment re-downloads.
+      const preCheck = this.preCheckNote(note, uidIndex, categoryOverride);
+      if (preCheck.exists) {
+        result.skipped++;
+        this.recordItem(result, note, { status: 'skipped' });
+        this.onProgress?.({
+          processed: result.total,
+          total: result.total,
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: result.failed,
+          percent: 0,
+        });
+        continue;
+      }
+
+      const noteToWrite = await this.enrichAudioNote(note, signal, categoryOverride);
+      const appendNotes = await this.fetchAppendNotes(noteToWrite, signal, result, categoryOverride);
+      const parentBaseName = this.buildBaseName(noteToWrite);
+      const parentFileName = this.getFileName(noteToWrite);
+      const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
+
+      const writeResult = await this.writeNote(
+        noteToWrite,
+        uidIndex,
+        undefined,
+        undefined,
+        childFileNames,
+        categoryOverride
+      );
+      this.applyWriteResult(result, writeResult);
+      this.recordItem(result, noteToWrite, writeResult);
+      const updatedTime = parseNoteUpdatedTime(noteToWrite);
+      const currentLastTime = result.lastNoteTimestamp ? parseSyncBoundaryTime(result.lastNoteTimestamp) : null;
+      if (updatedTime !== null && (currentLastTime === null || updatedTime > currentLastTime)) {
+        result.lastNoteTimestamp = noteToWrite.updated_at;
+      }
+
+      for (const appendNote of appendNotes) {
+        const appendWriteResult = await this.writeNote(
+          appendNote,
+          uidIndex,
+          parentBaseName,
+          parentFileName,
+          undefined,
+          categoryOverride
+        );
+        this.applyWriteResult(result, appendWriteResult);
+        this.recordItem(result, appendNote, appendWriteResult);
+      }
+
+      this.onProgress?.({
+        processed: result.total,
+        total: result.total,
+        created: result.created,
+        updated: result.updated,
+        skipped: result.skipped,
+        failed: result.failed,
+        percent: 0,
+      });
     }
   }
 
@@ -997,24 +1128,21 @@ export class SyncEngine {
 
         const matched = batch.filter(n => idSet.has(n.note_id));
         const typeFiltered = this.filterNotesByType(matched);
-        const tagFiltered = this.filterNotesByTags(typeFiltered);
 
-        for (const note of tagFiltered) {
+        for (const note of typeFiltered) {
           if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
           if (seenNoteIds.has(note.note_id)) continue;
-          seenNoteIds.add(note.note_id);
-          for (const tag of note.tags ?? []) {
-            if (tag?.name) observedTagNames.add(tag.name);
+          const parentMatchesTags = this.filterNotesByTags([note]).length > 0;
+          if (parentMatchesTags) {
+            seenNoteIds.add(note.note_id);
+            fetchedCount++;
+            result.total++;
+            for (const tag of note.tags ?? []) {
+              if (tag?.name) observedTagNames.add(tag.name);
+            }
+            const percent = Math.round((fetchedCount / noteIds.length) * 100);
+            this.onProgress?.({ processed: fetchedCount, total: noteIds.length, percent });
           }
-
-          fetchedCount++;
-          result.total++;
-          const percent = Math.round((fetchedCount / noteIds.length) * 100);
-          this.onProgress?.({
-            processed: fetchedCount,
-            total: noteIds.length,
-            percent,
-          });
           const noteForPreCheck = this.needsImageDetail(note)
             ? await this.enrichAudioNote(note, controller.signal)
             : note;
@@ -1022,8 +1150,10 @@ export class SyncEngine {
           // Uses UID-based lookup so renamed/moved files are still found.
           const preCheck = this.preCheckNote(noteForPreCheck, uidIndex);
           if (preCheck.exists) {
-            result.skipped++;
-            this.recordItem(result, noteForPreCheck, { status: 'skipped' });
+            if (parentMatchesTags) {
+              result.skipped++;
+              this.recordItem(result, noteForPreCheck, { status: 'skipped' });
+            }
             const mayHaveAppendNotes = (noteForPreCheck.children_count ?? 0) > 0 || Boolean(noteForPreCheck.children_ids?.length);
             if (!mayHaveAppendNotes) {
               continue;
@@ -1033,12 +1163,13 @@ export class SyncEngine {
             ? await this.enrichAudioNote(note, controller.signal)
             : noteForPreCheck;
 
-          const appendNotes = await this.fetchAppendNotes(noteToWrite, controller.signal, result);
+          const appendNotes = this.filterNotesByTags(await this.fetchAppendNotes(noteToWrite, controller.signal, result));
+          if (!parentMatchesTags && appendNotes.length === 0) continue;
           const parentBaseName = this.buildBaseName(noteToWrite);
           const parentFileName = this.getFileName(noteToWrite);
           const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
 
-          if (!preCheck.exists) {
+          if (parentMatchesTags && !preCheck.exists) {
             const writeResult = await this.writeNote(noteToWrite, uidIndex, undefined, parentFileName, childFileNames);
             this.applyWriteResult(result, writeResult);
             this.recordItem(result, noteToWrite, writeResult);
@@ -1052,7 +1183,12 @@ export class SyncEngine {
             for (const tag of appendNote.tags ?? []) {
               if (tag?.name) observedTagNames.add(tag.name);
             }
-            const appendWriteResult = await this.writeNote(appendNote, uidIndex, parentBaseName, parentFileName);
+            const appendWriteResult = await this.writeNote(
+              appendNote,
+              uidIndex,
+              parentMatchesTags ? parentBaseName : undefined,
+              parentMatchesTags ? parentFileName : undefined
+            );
             this.applyWriteResult(result, appendWriteResult);
             this.recordItem(result, appendNote, appendWriteResult);
           }
@@ -1119,46 +1255,52 @@ export class SyncEngine {
         ? notes.filter(n => selectedNoteIds.includes(n.note_id))
         : notes;
       const filteredNotes = selectedNoteIds || syncOptions.syncAll
-        ? this.filterNotesByTags(noteIdFiltered, syncOptions.syncTags)
-        : this.filterNotesByTags(
-          this.filterNotesByType(this.filterNotesByDateRange(this.filterRecentNotes(noteIdFiltered))),
-          syncOptions.syncTags,
-        );
+        ? noteIdFiltered
+        : this.filterNotesByType(this.filterNotesByDateRange(this.filterRecentNotes(noteIdFiltered)));
 
       for (const note of filteredNotes) {
         if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
         if (seenNoteIds.has(note.note_id)) continue;
-        seenNoteIds.add(note.note_id);
-        for (const tag of note.tags ?? []) {
-          if (tag?.name) observedTagNames.add(tag.name);
-        }
-        result.total++;
+        const parentMatchesTags = this.filterNotesByTags([note], syncOptions.syncTags).length > 0;
         const knowledgeBaseName = syncOptions.knowledgeBaseNames?.[note.note_id] ?? syncOptions.knowledgeBaseName;
         const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;
         const noteToWrite = await this.enrichAudioNote(note, controller.signal, categoryOverride);
-        const appendNotes = await this.fetchAppendNotes(noteToWrite, controller.signal, result, categoryOverride);
+        const appendNotes = this.filterNotesByTags(
+          await this.fetchAppendNotes(noteToWrite, controller.signal, result, categoryOverride),
+          syncOptions.syncTags
+        );
+        if (!parentMatchesTags && appendNotes.length === 0) continue;
         const parentBaseName = this.buildBaseName(noteToWrite);
         const parentFileName = this.getFileName(noteToWrite);
         const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
-        const writeResult = await this.writeNote(
-          noteToWrite,
-          uidIndex,
-          undefined,
-          undefined,
-          childFileNames,
-          categoryOverride
-        );
-        this.applyWriteResult(result, writeResult);
-        this.recordItem(result, noteToWrite, writeResult);
+        if (parentMatchesTags) {
+          seenNoteIds.add(note.note_id);
+          result.total++;
+          for (const tag of note.tags ?? []) {
+            if (tag?.name) observedTagNames.add(tag.name);
+          }
+          const writeResult = await this.writeNote(
+            noteToWrite,
+            uidIndex,
+            undefined,
+            undefined,
+            childFileNames,
+            categoryOverride
+          );
+          this.applyWriteResult(result, writeResult);
+          this.recordItem(result, noteToWrite, writeResult);
+        }
         for (const appendNote of appendNotes) {
+          seenNoteIds.add(appendNote.note_id);
+          result.total++;
           for (const tag of appendNote.tags ?? []) {
             if (tag?.name) observedTagNames.add(tag.name);
           }
           const appendWriteResult = await this.writeNote(
             appendNote,
             uidIndex,
-            parentBaseName,
-            parentFileName,
+            parentMatchesTags ? parentBaseName : undefined,
+            parentMatchesTags ? parentFileName : undefined,
             undefined,
             categoryOverride
           );

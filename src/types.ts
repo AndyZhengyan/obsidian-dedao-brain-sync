@@ -19,6 +19,7 @@ export interface GetNoteNote {
   assetFileName?: string;     // 内部使用：音频文件的文件名（不含扩展名）
   assetPaths?: string[];      // 内部使用：所有附件文件的完整路径（图片、音频等）
   prime_id?: string;          // Web API detail identifier
+  topic_id?: string;          // Knowledge-base topic identifier
 }
 
 export interface Tag {
@@ -63,6 +64,7 @@ export interface ScheduledSyncSettings {
   intervalMinutes: number;
   syncOnStart: boolean;
   enabledNoteTypes?: string[];  // undefined = all types, empty array = no types
+  syncKnowledgeBases?: string[];  // empty / undefined = cross-KB sync disabled
 }
 
 export interface ReverseSyncSettings {
@@ -122,6 +124,7 @@ export interface Settings {
    * populate the tag dropdown without an extra network round trip.
    */
   tagCache?: TagCache;
+  knowledgeBaseCache?: KnowledgeBaseCacheState;
 }
 
 export interface TagCache {
@@ -138,6 +141,9 @@ export interface SyncScopeOptions {
    * Notes are kept when their tags intersect the whitelist (case-insensitive).
    */
   syncTags?: string[];
+  syncKnowledgeBases?: string[];
+  knowledgeBaseNames?: Record<string, string>;
+  knowledgeBaseEntries?: Array<{ topicId: string; name: string; source?: 'subscribed' | 'created' }>;
 }
 
 export interface SyncHistoryScope {
@@ -147,6 +153,11 @@ export interface SyncHistoryScope {
   syncTags?: string[];
   selectedCount?: number;
   selectedIds?: string[];
+}
+
+export interface KnowledgeBaseCacheState {
+  entries: { topicId: string; name: string; source?: 'subscribed' | 'created' }[];
+  cacheUpdatedAt?: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -247,25 +258,67 @@ export interface NoteCategory {
 }
 
 // note_type → 目录名映射
+// 顶层目录统一为 5 个：纯文本 / 图片笔记 / 链接笔记 / 录音笔记 / 其他
+// 订阅博主走"其他/订阅博主"子目录
+// 内部 9 种 audio 类型（recorder_audio / recorder_flash_audio / immediate_audio /
+// audio_long / local_audio / audio / class_audio / internal_record / meeting）
+// 全部归入"录音笔记"，但 AUDIO_NOTE_TYPES 集合（sync.ts 内部使用）保持完整以解耦 UI 和 sync 逻辑
 export const NOTE_CATEGORIES: NoteCategory[] = [
   { dirName: '纯文本', noteType: 'plain_text' },
   { dirName: '图片笔记', noteType: 'img_text' },
   { dirName: '链接笔记', noteType: 'link' },
-  { dirName: '即时录音', noteType: 'immediate_audio' },
-  { dirName: '录音长录', noteType: 'recorder_audio' },
-  { dirName: '录音长录', noteType: 'recorder_flash_audio' },
-  { dirName: '录音长录', noteType: 'audio_long' },
-  { dirName: '本地音频', noteType: 'local_audio' },
+  { dirName: '录音笔记', noteType: 'recorder_audio' },
+  { dirName: '录音笔记', noteType: 'recorder_flash_audio' },
+  { dirName: '录音笔记', noteType: 'immediate_audio' },
+  { dirName: '录音笔记', noteType: 'audio_long' },
+  { dirName: '录音笔记', noteType: 'local_audio' },
   { dirName: '录音笔记', noteType: 'audio' },
   { dirName: '录音笔记', noteType: 'class_audio' },
   { dirName: '录音笔记', noteType: 'internal_record' },
   { dirName: '录音笔记', noteType: 'meeting' },
-  { dirName: '订阅博主', noteType: 'blogger_post' },
+  { dirName: '其他/订阅博主', noteType: 'blogger_post' },
 ];
 
 export function getCategoryDir(noteType: string): string {
   const found = NOTE_CATEGORIES.find(c => c.noteType === noteType);
   return found ? found.dirName : '其他';
+}
+
+// 内部 9 种 audio 类型：用于把老用户的 enabledNoteTypes 一次性归到"录音笔记"组
+// 重要：此集合与 sync.ts 中的 AUDIO_NOTE_TYPES 保持一致
+export const INTERNAL_AUDIO_NOTE_TYPES: readonly string[] = [
+  'recorder_audio',
+  'recorder_flash_audio',
+  'immediate_audio',
+  'audio_long',
+  'local_audio',
+  'audio',
+  'class_audio',
+  'internal_record',
+  'meeting',
+];
+
+export const CANONICAL_NOTE_TYPES: readonly string[] = [
+  'plain_text',
+  'img_text',
+  'link',
+  ...INTERNAL_AUDIO_NOTE_TYPES,
+  'blogger_post',
+];
+
+/**
+ * 老用户迁移：在 onload 阶段调用，把已保存的 enabledNoteTypes 统一为内部 note_type 集合。
+ *
+ * - 移除未知值（防御性，避免污染 sync 过滤）
+ * - 保留所有规范内部类型（包括 9 种 audio）
+ * - 保留已存在的 blogger_post（订阅博主从 UI 选项移除后仍默认同步）
+ * - 数组空时（未选择任何类型）保持原样，由 sync 层显式视为"不限制"
+ * - undefined 表示"全部类型"，保持原样
+ */
+export function migrateEnabledNoteTypes(value: string[] | undefined): string[] | undefined {
+  if (value === undefined) return undefined;
+  const valid = new Set(CANONICAL_NOTE_TYPES);
+  return Array.from(new Set(value.filter(type => valid.has(type))));
 }
 
 export interface Attachment {
