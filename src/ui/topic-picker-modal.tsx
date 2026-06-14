@@ -49,11 +49,10 @@ function formatRelativeTime(iso: string): string {
 
 function ContentRow({ item, checked, onChange, onTagClick }: { item: ContentPreview; checked: boolean; onChange: (noteId: string, v: boolean) => void; onTagClick?: (tagName: string) => void }) {
   const displayTitle = item.title || t('picker.noTitle');
-  const rawPreview = item.summary
-    || item.content
-    || '';
-  const summaryText = rawPreview ? rawPreview.replace(/\n+/g, ' ').slice(0, 80) : '';
-  const previewText = rawPreview ? rawPreview.replace(/\n+/g, ' ').slice(0, 150) : '';
+  const summarySource = item.summary || item.content || '';
+  const previewSource = item.content || item.summary || '';
+  const summaryText = summarySource ? summarySource.replace(/\n+/g, ' ').slice(0, 80) : '';
+  const previewText = previewSource ? previewSource.replace(/\n+/g, ' ').slice(0, 150) : '';
   const tags = item.tags ?? [];
   return (
     <div className="getnote-note-card">
@@ -237,6 +236,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   };
 
   const handleTagClick = (tagName: string) => {
+    setSelectAllActive(false);
     setSearchQuery((prev) => {
       const tag = tagName.trim();
       if (!tag) return prev;

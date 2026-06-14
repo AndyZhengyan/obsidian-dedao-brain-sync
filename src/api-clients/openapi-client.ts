@@ -429,7 +429,17 @@ export async function fetchTopicContentPreviewPage(
   cursor: { bloggerIndex: number; page: number } = { bloggerIndex: 0, page: 1 },
   topicSource?: SubscribedTopic['source']
 ): Promise<{
-  items: { note_id: string; title: string; updated_at: string; blogger_name: string; topic_id: string; blogger_id: string }[];
+  items: {
+    note_id: string;
+    title: string;
+    updated_at: string;
+    blogger_name: string;
+    topic_id: string;
+    blogger_id: string;
+    summary?: string;
+    content?: string;
+    tags?: { name: string }[];
+  }[];
   nextCursor?: { bloggerIndex: number; page: number };
 }> {
   if (topicSource === 'created') {
@@ -442,6 +452,8 @@ export async function fetchTopicContentPreviewPage(
       blogger_name: '',
       topic_id: topicId,
       blogger_id: '',
+      content: note.content,
+      tags: note.tags,
     }));
     return { items };
   }
