@@ -113,4 +113,31 @@ describe('KnowledgeBaseAggregator', () => {
     expect(result.entries).toEqual([]);
     expect(result.hasMore).toBe(false);
   });
+
+  it('空 token 调 refresh 抛 MISSING_CREDENTIALS，fetcher 不被调用', async () => {
+    const fetcher = makeFetcher([[makeEntry()]]);
+    const aggregator = new KnowledgeBaseAggregator(fetcher);
+
+    await expect(aggregator.refresh({ token: '', clientId: '' })).rejects.toThrow('MISSING_CREDENTIALS');
+    expect(fetcher.calls).toBe(0);
+  });
+});
+
+describe('KnowledgeBaseAggregator — empty credentials gating', () => {
+  it('空 token 时不调用 fetcher', async () => {
+    const fetcher = makeFetcher([[makeEntry()]]);
+    const aggregator = new KnowledgeBaseAggregator(fetcher);
+
+    await expect(aggregator.refresh({ token: '', clientId: 'c' })).rejects.toThrow('MISSING_CREDENTIALS');
+    expect(fetcher.calls).toBe(0);
+  });
+
+  it('非空 token 正常调 fetcher', async () => {
+    const fetcher = makeFetcher([[makeEntry()]]);
+    const aggregator = new KnowledgeBaseAggregator(fetcher);
+
+    const result = await aggregator.refresh({ token: 'real-token', clientId: 'real-client' });
+    expect(result.entries).toHaveLength(1);
+    expect(fetcher.calls).toBe(1);
+  });
 });

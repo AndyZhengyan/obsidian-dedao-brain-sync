@@ -81,6 +81,21 @@ export function KnowledgeBaseSelect({
       setState(prev => ({ ...prev, error: null, loading: false }));
       return;
     }
+    // Defensive: even if the parent claims `hasCredentials`, the token might
+    // still be empty (e.g. settings still being edited, debounce, mismatched
+    // authMode). In that case show a localized hint and skip the remote call
+    // so we never hit the API with empty credentials.
+    const trimmedToken = (token ?? '').trim();
+    const trimmedClientId = (clientId ?? '').trim();
+    if (!trimmedToken || (authMode === 'openapi' && !trimmedClientId)) {
+      const cached = aggregatorRef.current?.exportCache() ?? { entries: [], cacheUpdatedAt: 0 };
+      setState({
+        loading: false,
+        error: t('sync.noCredentials'),
+        entries: cached.entries,
+      });
+      return;
+    }
     const aggregator = aggregatorRef.current;
     if (!aggregator) return;
 
@@ -93,7 +108,7 @@ export function KnowledgeBaseSelect({
 
     setState(prev => ({ ...prev, loading: true, error: null }));
     aggregator
-      .refresh({ token, clientId })
+      .refresh({ token: trimmedToken, clientId: trimmedClientId })
       .then(snapshot => {
         if (cancelled) return;
         setState({ loading: false, error: null, entries: snapshot.entries });
