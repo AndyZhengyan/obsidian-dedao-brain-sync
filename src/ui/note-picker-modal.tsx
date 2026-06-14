@@ -5,7 +5,7 @@ import { generateDisplayTitle } from '../note-parser';
 import { t } from '../i18n';
 import { NoteTypeSelect } from './note-type-select';
 import { TagSelect } from './tag-select';
-import { aggregateTagsFromNotes } from '../utils/tag-aggregator';
+import { aggregateTagsFromNotes, applyTagFilter } from '../utils/tag-aggregator';
 
 interface NotePickerModalProps {
   onConfirm: (selectedNoteIds: string[], enabledNoteTypes?: string[], syncTags?: string[]) => void;
@@ -135,9 +135,7 @@ export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel
     : enabledNoteTypes.length > 0
     ? notes.filter(note => enabledNoteTypes.includes(note.note_type))
     : [];
-  const tagFilteredNotes = syncTags.length === 0
-    ? typeFilteredNotes
-    : typeFilteredNotes.filter(note => note.tags.some(tag => syncTags.some(st => st.toLowerCase() === tag.name.toLowerCase())));
+  const tagFilteredNotes = applyTagFilter(typeFilteredNotes, syncTags);
   const filteredNotes = searchQuery
     ? tagFilteredNotes.filter(note => matchesSearchQuery(note, searchQuery))
     : tagFilteredNotes;
