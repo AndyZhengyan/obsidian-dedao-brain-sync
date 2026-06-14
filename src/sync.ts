@@ -1119,8 +1119,11 @@ export class SyncEngine {
         ? notes.filter(n => selectedNoteIds.includes(n.note_id))
         : notes;
       const filteredNotes = selectedNoteIds || syncOptions.syncAll
-        ? this.filterNotesByTags(noteIdFiltered)
-        : this.filterNotesByTags(this.filterNotesByType(this.filterNotesByDateRange(this.filterRecentNotes(noteIdFiltered))));
+        ? this.filterNotesByTags(noteIdFiltered, syncOptions.syncTags)
+        : this.filterNotesByTags(
+          this.filterNotesByType(this.filterNotesByDateRange(this.filterRecentNotes(noteIdFiltered))),
+          syncOptions.syncTags,
+        );
 
       for (const note of filteredNotes) {
         if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();

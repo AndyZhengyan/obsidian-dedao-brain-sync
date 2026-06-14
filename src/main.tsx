@@ -532,7 +532,9 @@ export default class GetNoteSyncPlugin extends Plugin {
     this.refreshSettingsTab();
     showNotice(t('sync.subscribedKnowledge.started'));
 
-    const engine = new SyncEngine(this.app, this.settings, (info) => this.setProgress(info));
+    const engine = new SyncEngine(this.app, this.settings, (info) => this.setProgress(info), {
+      syncTags: syncOptions?.syncTags,
+    });
     this.currentSyncEngine = engine;
     engine.setOnCancel(() => this.cancelSync());
 
@@ -699,6 +701,7 @@ class ManualSyncModalWrapper extends Modal {
         initialOptions={{
           syncStartDate: this.plugin.settings.syncStartDate,
           maxDays: this.plugin.settings.maxDays,
+          syncTags: this.plugin.settings.syncTags,
         }}
         tagOptions={this.plugin.settings.tagCache?.tags ?? []}
         onConfirm={(options) => {
