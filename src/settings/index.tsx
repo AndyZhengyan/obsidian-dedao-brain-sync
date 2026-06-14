@@ -92,6 +92,8 @@ export function SettingsComponent({
   const [connectionErrorMsg, setConnectionErrorMsg] = useState('');
   const [connectionExpiryMin, setConnectionExpiryMin] = useState<number | null>(null);
   const [intervalWarning, setIntervalWarning] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [pendingStartDate, setPendingStartDate] = useState(settings.syncStartDate);
 
   const folderInputRef = useRef<HTMLInputElement>(null);
   const masterAttachmentRef = useRef<HTMLDivElement>(null);
@@ -258,6 +260,33 @@ export function SettingsComponent({
     updateSetting('syncStartDate', value);
   };
 
+  const handleResetCheckpointClick = () => {
+    if (isSyncing) return;
+    setPendingStartDate(settings.syncStartDate);
+    setResetDialogOpen(true);
+  };
+
+  const handleResetSave = () => {
+    if (isSyncing) return;
+    // Reject empty input — silently writing '' would cause the sync engine to
+    // fall back to maxDays (default 30), surprising users who simply cleared
+    // the field by accident. Keep the previous syncStartDate unchanged.
+    if (pendingStartDate === '') {
+      setResetDialogOpen(false);
+      return;
+    }
+    updateSetting('lastSyncEndTimestamp', '');
+    if (pendingStartDate !== settings.syncStartDate) {
+      updateSetting('syncStartDate', pendingStartDate);
+    }
+    setResetDialogOpen(false);
+  };
+
+  const handleResetCancel = () => {
+    setPendingStartDate(settings.syncStartDate);
+    setResetDialogOpen(false);
+  };
+
   const handleScheduledEnabled = (checked: boolean) => {
     setScheduledEnabled(checked);
     updateSetting('scheduledSync', { ...settings.scheduledSync, enabledNoteTypes: scheduledNoteTypes, enabled: checked });
@@ -360,6 +389,19 @@ export function SettingsComponent({
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return `${hours}小时前`;
     return `${Math.floor(hours / 24)}天前`;
+  };
+
+  // Format an ISO datetime to a local-time string that includes a timezone
+  // marker. The API returns UTC values (e.g. "...Z") and the previous
+  // implementation silently dropped the offset, so a user in UTC+8 saw the
+  // checkpoint displayed 8 hours ahead of its true local meaning. Parsing
+  // via `new Date()` and rendering with `toLocaleString()` (with
+  // timeZoneName='short') converts the timestamp to the viewer's local time
+  // and embeds the timezone (e.g. "6/12/2026, 11:30:00 PM GMT+8").
+  const formatCheckpoint = (iso: string): string => {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return iso;
+    return date.toLocaleString(undefined, { timeZoneName: 'short' });
   };
 
   // Progress bar with # characters
@@ -591,11 +633,47 @@ export function SettingsComponent({
             </div>
             <div className="getnote-scheduled-row getnote-scheduled-date-row">
               <span className="getnote-scheduled-row-label">
-                {lastSyncedTo ? t('settings.syncStartDate.lastSyncedTo') : t('settings.syncStartDate.label')}
+                {resetDialogOpen
+                  ? t('settings.scheduled.resetStartDate')
+                  : (lastSyncedTo ? t('settings.syncStartDate.lastSyncedTo') : t('settings.syncStartDate.label'))}
               </span>
               <span className="getnote-scheduled-row-control">
-                {lastSyncedTo ? (
-                  <span className="getnote-muted-text">{lastSyncedTo}</span>
+                {resetDialogOpen ? (
+                  <>
+                    <input
+                      type="date"
+                      className="getnote-input getnote-date-input"
+                      value={pendingStartDate}
+                      onChange={(e) => setPendingStartDate((e.target as HTMLInputElement).value)}
+                    />
+                    <button
+                      type="button"
+                      className="getnote-button getnote-button-secondary"
+                      onClick={handleResetCancel}
+                    >
+                      {t('settings.scheduled.resetCancel')}
+                    </button>
+                    <button
+                      type="button"
+                      className="getnote-button getnote-button-primary"
+                      onClick={handleResetSave}
+                      disabled={isSyncing}
+                    >
+                      {t('settings.scheduled.resetSave')}
+                    </button>
+                  </>
+                ) : lastSyncedTo ? (
+                  <>
+                    <span className="getnote-muted-text">{formatCheckpoint(lastSyncedTo)}</span>
+                    <button
+                      type="button"
+                      className="getnote-button getnote-button-secondary"
+                      onClick={handleResetCheckpointClick}
+                      disabled={isSyncing}
+                    >
+                      {t('settings.scheduled.resetButton')}
+                    </button>
+                  </>
                 ) : (
                   <input
                     type="date"
@@ -606,7 +684,9 @@ export function SettingsComponent({
                 )}
               </span>
             </div>
-            {lastSyncedTo ? (
+            {resetDialogOpen ? (
+              <div className="getnote-input-hint">{t('settings.scheduled.resetStartDateDesc')}</div>
+            ) : lastSyncedTo ? (
               <div className="getnote-input-hint">{t('settings.syncStartDate.lastSyncedToDesc')}</div>
             ) : (
               <div className="getnote-input-hint">{t('settings.syncStartDate.desc')}</div>
