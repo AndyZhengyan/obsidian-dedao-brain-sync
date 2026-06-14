@@ -3,6 +3,7 @@ import type { AuthMode, SubscribedTopic } from '../types';
 import type { ContentPreview, TopicContentPreviewCursor } from '../api';
 import { fetchSubscribedTopics, fetchTopicContentPreviewPage } from '../api';
 import { t } from '../i18n';
+import { TagSelect } from './tag-select';
 
 interface TopicData {
   topic: SubscribedTopic;
@@ -21,6 +22,7 @@ export interface TopicPickerSelection {
   bloggerIds?: string[];
   knowledgeBaseName?: string;
   knowledgeBaseNames?: Record<string, string>;
+  syncTags?: string[];
 }
 
 interface TopicPickerModalProps {
@@ -30,6 +32,8 @@ interface TopicPickerModalProps {
   clientId: string;
   authMode?: AuthMode;
   abortSignal?: AbortSignal;
+  initialSyncTags?: string[];
+  tagOptions?: string[];
 }
 
 function formatRelativeTime(iso: string): string {
@@ -101,7 +105,7 @@ function ContentRow({ item, checked, onChange, onTagClick }: { item: ContentPrev
   );
 }
 
-export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCancel, abortSignal }: TopicPickerModalProps) {
+export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCancel, abortSignal, initialSyncTags, tagOptions = [] }: TopicPickerModalProps) {
   const [topics, setTopics] = useState<SubscribedTopic[]>([]);
   const [topicData, setTopicData] = useState<Record<string, TopicData>>({});
   const [topicsLoading, setTopicsLoading] = useState(true);
@@ -114,6 +118,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   const [selectAllActive, setSelectAllActive] = useState(false);
   const [syncAllActive, setSyncAllActive] = useState(false);
   const [topicSearchQuery, setTopicSearchQuery] = useState('');
+  const [syncTags, setSyncTags] = useState<string[]>(initialSyncTags ?? []);
   const matchesActiveFilters = (item: ContentPreview) =>
     (!bloggerFilter || item.blogger_name === bloggerFilter) &&
     searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean).every(token =>
@@ -271,6 +276,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
           ? { createdTopicIds: [activeTopic.topic.topic_id] }
           : { topicIds: [activeTopic.topic.topic_id] }),
         knowledgeBaseName: activeTopic.topic.name || activeTopic.topic.topic_id,
+        ...(syncTags.length > 0 ? { syncTags } : {}),
       });
       return;
     }
@@ -291,6 +297,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
       ...(createdTopicIds.length > 0 ? { createdTopicIds } : {}),
       ...(bloggerIds.length > 0 ? { bloggerIds } : {}),
       ...(Object.keys(knowledgeBaseNames).length > 0 ? { knowledgeBaseNames } : {}),
+      ...(syncTags.length > 0 ? { syncTags } : {}),
     });
   };
 
@@ -369,6 +376,15 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
       )}
       {activeTopic && syncAllActive && (
         <div className="getnote-input-hint getnote-topic-scope-hint">{t('topicPicker.scope.allHint')}</div>
+      )}
+      {activeTopic && !activeTopic.loading && !activeTopic.error && (
+        <div className="getnote-topic-tag-filter">
+          <TagSelect
+            value={syncTags}
+            options={tagOptions}
+            onChange={setSyncTags}
+          />
+        </div>
       )}
       {activeTopic && !syncAllActive && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length > 0 && (
         <div className="getnote-topic-filter-bar">

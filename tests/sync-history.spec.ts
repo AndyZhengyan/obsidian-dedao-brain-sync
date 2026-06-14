@@ -313,4 +313,17 @@ describe('sync history scope display', () => {
       },
     }))).toBe('仅按更新时间过滤，无类型或标签过滤');
   });
+
+  it('shows configured tag filters alongside note type filters', () => {
+    initI18n('zh-CN');
+
+    expect(formatHistoryFilter(makeEntry({
+      scope: {
+        syncStartDate: '',
+        maxDays: 0,
+        enabledNoteTypes: ['plain_text'],
+        syncTags: ['工作', '项目'],
+      },
+    }))).toBe('仅同步：文字笔记 · 标签：工作、项目');
+  });
 });

@@ -346,18 +346,25 @@ async function fetchCreatedTopicNotes(topic: SubscribedTopic, token: string, cli
     const source = normalizeData(data);
     const pageNotes = readArray(source, ['notes', 'list', 'items'])
       .filter(isRecord)
-      .map(value => ({
-        ...value,
-        id: value.note_id,
-        note_id: String(value.note_id ?? ''),
-        title: typeof value.title === 'string' ? value.title : '',
-        content: typeof value.content === 'string' ? value.content : '',
-        note_type: typeof value.note_type === 'string' ? value.note_type : 'plain_text',
-        source: 'knowledge',
-        tags: topic.name ? [{ name: topic.name }] : [],
-        created_at: typeof value.created_at === 'string' ? value.created_at : '',
-        updated_at: typeof value.updated_at === 'string' ? value.updated_at : typeof value.edit_time === 'string' ? value.edit_time : '',
-      } as GetNoteNote))
+      .map(value => {
+        const tags = readArray(value, ['tags'])
+          .filter(isRecord)
+          .map(tag => ({ name: typeof tag.name === 'string' ? tag.name : '' }))
+          .filter(tag => tag.name);
+        if (topic.name && !tags.some(tag => tag.name === topic.name)) tags.push({ name: topic.name });
+        return {
+          ...value,
+          id: value.note_id,
+          note_id: String(value.note_id ?? ''),
+          title: typeof value.title === 'string' ? value.title : '',
+          content: typeof value.content === 'string' ? value.content : '',
+          note_type: typeof value.note_type === 'string' ? value.note_type : 'plain_text',
+          source: 'knowledge',
+          tags,
+          created_at: typeof value.created_at === 'string' ? value.created_at : '',
+          updated_at: typeof value.updated_at === 'string' ? value.updated_at : typeof value.edit_time === 'string' ? value.edit_time : '',
+        } as GetNoteNote;
+      })
       .filter(note => !selectedNoteIds || selectedNoteIds.has(note.note_id));
     notes.push(...pageNotes);
     for (const note of pageNotes) selectedNoteIds?.delete(note.note_id);

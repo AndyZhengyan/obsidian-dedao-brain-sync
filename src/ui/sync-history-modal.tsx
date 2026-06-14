@@ -28,12 +28,22 @@ export function formatHistoryScope(entry: SyncHistoryEntry): string {
 }
 
 export function formatHistoryFilter(entry: SyncHistoryEntry): string {
-  if (!entry.scope || entry.scope.enabledNoteTypes === undefined) return t('syncHistory.filter.default');
+  if (!entry.scope) return t('syncHistory.filter.default');
+  const parts: string[] = [];
   const enabledNoteTypes = entry.scope.enabledNoteTypes;
-  if (enabledNoteTypes.length === 0) return t('syncHistory.filter.noNoteTypes');
-  return t('syncHistory.filter.noteTypes', {
-    types: enabledNoteTypes.map(formatHistoryNoteType).join(t('syncHistory.filter.noteTypes.separator')),
-  });
+  if (enabledNoteTypes !== undefined) {
+    parts.push(enabledNoteTypes.length === 0
+      ? t('syncHistory.filter.noNoteTypes')
+      : t('syncHistory.filter.noteTypes', {
+          types: enabledNoteTypes.map(formatHistoryNoteType).join(t('syncHistory.filter.noteTypes.separator')),
+        }));
+  }
+  if (entry.scope.syncTags?.length) {
+    parts.push(t('syncHistory.filter.tags', {
+      tags: entry.scope.syncTags.join(t('syncHistory.filter.noteTypes.separator')),
+    }));
+  }
+  return parts.length > 0 ? parts.join(' · ') : t('syncHistory.filter.default');
 }
 
 export function formatHistoryMode(entry: SyncHistoryEntry): string {

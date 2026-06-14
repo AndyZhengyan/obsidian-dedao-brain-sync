@@ -5,14 +5,17 @@ import { generateDisplayTitle } from '../note-parser';
 import { t } from '../i18n';
 import { formatNoteTypeLabel } from '../utils/note-type';
 import { NoteTypeSelect } from './note-type-select';
+import { TagSelect } from './tag-select';
+import { aggregateTagsFromNotes, applyTagFilter } from '../utils/tag-aggregator';
 
 interface NotePickerModalProps {
-  onConfirm: (selectedNoteIds: string[], enabledNoteTypes?: string[]) => void;
+  onConfirm: (selectedNoteIds: string[], enabledNoteTypes?: string[], syncTags?: string[]) => void;
   onCancel: () => void;
   token: string;
   clientId: string;
   authMode?: AuthMode;
   abortSignal?: AbortSignal;
+  initialSyncTags?: string[];
 }
 
 function formatRelativeTime(iso: string): string {
@@ -95,7 +98,7 @@ function NoteRow({ note, checked, onChange, onTagClick }: { note: GetNoteNote; c
   );
 }
 
-export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel, abortSignal }: NotePickerModalProps) {
+export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel, abortSignal, initialSyncTags }: NotePickerModalProps) {
   const [notes, setNotes] = useState<GetNoteNote[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -105,6 +108,7 @@ export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel
   const [hasMore, setHasMore] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [enabledNoteTypes, setEnabledNoteTypes] = useState<string[] | undefined>(undefined);
+  const [syncTags, setSyncTags] = useState<string[]>(initialSyncTags ?? []);
 
   const loadFirstPage = useCallback(() => {
     setLoading(true);
@@ -160,14 +164,15 @@ export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel
     : enabledNoteTypes.length > 0
     ? notes.filter(note => enabledNoteTypes.includes(note.note_type))
     : [];
+  const tagFilteredNotes = applyTagFilter(typeFilteredNotes, syncTags);
   const filteredNotes = searchQuery
-    ? typeFilteredNotes.filter(note => matchesSearchQuery(note, searchQuery))
-    : typeFilteredNotes;
+    ? tagFilteredNotes.filter(note => matchesSearchQuery(note, searchQuery))
+    : tagFilteredNotes;
   const visibleSelectedIds = filteredNotes.filter(note => selected.has(note.note_id)).map(note => note.note_id);
 
   const handleSelectAll = () => setSelected(new Set(filteredNotes.map(n => n.note_id)));
   const handleSelectNone = () => setSelected(new Set());
-  const handleConfirm = () => onConfirm(visibleSelectedIds, enabledNoteTypes);
+  const handleConfirm = () => onConfirm(visibleSelectedIds, enabledNoteTypes, syncTags);
   const handleTagClick = (tagName: string) => {
     setSearchQuery((prev) => {
       const tag = tagName.trim();
@@ -180,6 +185,11 @@ export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel
     <div className="getnote-picker">
       <div className="getnote-picker-header">
         <NoteTypeSelect value={enabledNoteTypes} onChange={setEnabledNoteTypes} />
+        <TagSelect
+          value={syncTags}
+          options={aggregateTagsFromNotes(notes)}
+          onChange={setSyncTags}
+        />
         <div className="getnote-picker-actions">
           <button onClick={handleSelectAll}>{t('picker.selectAll')}</button>
           <button onClick={handleSelectNone}>{t('picker.selectNone')}</button>

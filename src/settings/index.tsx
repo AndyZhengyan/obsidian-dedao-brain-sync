@@ -4,6 +4,7 @@ import { SyncButton } from './sync-button';
 import { OAuthButton } from './oauth-button';
 import { openSyncHistoryModal } from '../ui/sync-history-modal';
 import { NoteTypeSelect } from '../ui/note-type-select';
+import { TagSelect } from '../ui/tag-select';
 import { KnowledgeBaseSelect } from '../ui/knowledge-base-select';
 import { Toggle } from './toggle';
 import { getAuthCredentials, type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressDetail } from '../types';
@@ -90,6 +91,7 @@ export function SettingsComponent({
   const lastSyncedTo = settings.lastSyncEndTimestamp || '';
   const [scheduledEnabled, setScheduledEnabled] = useState(settings.scheduledSync.enabled);
   const [scheduledNoteTypes, setScheduledNoteTypes] = useState<string[] | undefined>(settings.scheduledSync.enabledNoteTypes);
+  const [syncTags, setSyncTags] = useState<string[]>(settings.syncTags ?? []);
   const [scheduledKnowledgeBases, setScheduledKnowledgeBases] = useState<string[]>(settings.scheduledSync.syncKnowledgeBases ?? []);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -606,6 +608,21 @@ export function SettingsComponent({
           placeholder={t('settings.prefix.placeholder')}
           value={filenamePrefix}
           onInput={(e) => handleFilenamePrefixChange((e.target as HTMLInputElement).value)}
+        />
+      </SettingItem>
+
+      {/* 同步范围（标签白名单） */}
+      <SettingItem
+        name={t('settings.syncTags.label')}
+        description={t('settings.syncTags.desc')}
+      >
+        <TagSelect
+          value={syncTags}
+          options={settings.tagCache?.tags ?? []}
+          onChange={(value) => {
+            setSyncTags(value);
+            updateSetting('syncTags', value);
+          }}
         />
       </SettingItem>
 
