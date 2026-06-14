@@ -37,7 +37,7 @@ export function Toggle({ value, onChange }: ToggleProps) {
   };
 
   return (
-    <div className="checkbox-container">
+    <div className={`checkbox-container${currentValue ? ' is-enabled' : ''}`}>
       <input type="checkbox" checked={currentValue} onChange={handleChange} />
     </div>
   );

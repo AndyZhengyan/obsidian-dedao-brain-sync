@@ -481,6 +481,7 @@ describe('SettingsComponent scheduled sync toggles (#136)', () => {
     const innerCheckbox = toggleContainers[0].querySelector('input[type="checkbox"]') as HTMLInputElement;
     expect(innerCheckbox).toBeTruthy();
     expect(innerCheckbox.checked).toBe(true);
+    expect(toggleContainers[0].classList.contains('is-enabled')).toBe(true);
   });
 
   it('preserves onChange behavior for scheduledEnabled toggle', async () => {
@@ -500,6 +501,7 @@ describe('SettingsComponent scheduled sync toggles (#136)', () => {
     expect(updateSetting).toHaveBeenCalledWith('scheduledSync', expect.objectContaining({
       enabled: true,
     }));
+    expect(row.querySelector('.checkbox-container')?.classList.contains('is-enabled')).toBe(true);
   });
 
   it('preserves onChange behavior for syncOnStart toggle', async () => {
