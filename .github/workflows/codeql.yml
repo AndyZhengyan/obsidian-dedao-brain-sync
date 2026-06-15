@@ -3,22 +3,8 @@ name: CodeQL
 on:
   push:
     branches: [main]
-    paths:
-      - src/**
-      - tests/**
-      - package.json
-      - package-lock.json
-      - tsconfig.json
-      - .github/workflows/codeql.yml
   pull_request:
     branches: [main]
-    paths:
-      - src/**
-      - tests/**
-      - package.json
-      - package-lock.json
-      - tsconfig.json
-      - .github/workflows/codeql.yml
   schedule:
     - cron: "0 2 * * 1"
   workflow_dispatch:
