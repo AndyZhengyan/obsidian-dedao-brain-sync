@@ -30,14 +30,25 @@ export function Toggle({ value, onChange }: ToggleProps) {
     setCurrentValue(value);
   }, [value]);
 
-  const handleChange = (event: Event) => {
-    const next = (event.target as HTMLInputElement).checked;
+  const applyValue = (next: boolean) => {
     setCurrentValue(next);
     onChangeRef.current(next);
   };
 
+  const handleChange = (event: Event) => {
+    applyValue((event.target as HTMLInputElement).checked);
+  };
+
+  const handleContainerClick = (event: MouseEvent) => {
+    if (event.target instanceof HTMLInputElement) return;
+    applyValue(!currentValue);
+  };
+
   return (
-    <div className={`checkbox-container${currentValue ? ' is-enabled' : ''}`}>
+    <div
+      className={`checkbox-container${currentValue ? ' is-enabled' : ''}`}
+      onClick={handleContainerClick}
+    >
       <input type="checkbox" checked={currentValue} onChange={handleChange} />
     </div>
   );

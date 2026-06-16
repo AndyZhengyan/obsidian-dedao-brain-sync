@@ -895,6 +895,25 @@ describe('SettingsComponent scheduled sync toggles (#136)', () => {
     expect(row.querySelector('.checkbox-container')?.classList.contains('is-enabled')).toBe(true);
   });
 
+  it('toggles scheduled sync when clicking the Obsidian switch container', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: false },
+    }));
+
+    const row = findScheduledEnabledRow(container);
+    const switchContainer = row.querySelector('.checkbox-container') as HTMLElement;
+    expect(switchContainer).toBeTruthy();
+
+    await act(() => {
+      switchContainer.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('scheduledSync', expect.objectContaining({
+      enabled: true,
+    }));
+    expect(switchContainer.classList.contains('is-enabled')).toBe(true);
+  });
+
   it('preserves onChange behavior for syncOnStart toggle', async () => {
     const { container, updateSetting } = renderSettings(makeSettings({
       scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true, syncOnStart: false },
