@@ -131,11 +131,13 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   const [syncAllActive, setSyncAllActive] = useState(false);
   const [topicSearchQuery, setTopicSearchQuery] = useState('');
   const [syncTags, setSyncTags] = useState<string[]>(initialSyncTags ?? []);
+  const matchesTagFilter = (item: ContentPreview, tags: string[]) =>
+    tags.length === 0 || (item.tags ?? []).some(tag =>
+      tags.some(selected => selected.toLowerCase() === tag.name.toLowerCase())
+    );
   const matchesActiveFilters = (item: ContentPreview) =>
     (!bloggerFilter || item.blogger_name === bloggerFilter) &&
-    (syncTags.length === 0 || (item.tags ?? []).some(tag =>
-      syncTags.some(selected => selected.toLowerCase() === tag.name.toLowerCase())
-    )) &&
+    matchesTagFilter(item, syncTags) &&
     searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean).every(token =>
       [item.title, item.blogger_name ?? '', ...(item.tags ?? []).map(tag => tag.name)]
         .some(value => value.toLowerCase().includes(token))
@@ -283,6 +285,23 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
     });
   };
 
+  const pruneSelectedItemsByTags = (tags: string[]) => {
+    setSelectedNoteIds(prev => {
+      const next = new Set(prev);
+      for (const item of selectedItems.values()) {
+        if (!matchesTagFilter(item, tags)) next.delete(item.note_id);
+      }
+      return next;
+    });
+    setSelectedItems(prev => {
+      const next = new Map(prev);
+      for (const [noteId, item] of prev.entries()) {
+        if (!matchesTagFilter(item, tags)) next.delete(noteId);
+      }
+      return next;
+    });
+  };
+
   const handleConfirm = () => {
     if (syncAllActive && activeTopic) {
       onConfirm({
@@ -403,6 +422,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
             options={activeTagOptions}
             onChange={(value) => {
               setSelectAllActive(false);
+              pruneSelectedItemsByTags(value);
               setSyncTags(value);
             }}
           />

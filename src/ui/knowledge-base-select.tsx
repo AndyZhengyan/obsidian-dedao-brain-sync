@@ -79,6 +79,12 @@ export function KnowledgeBaseSelect({
   }, []);
 
   useEffect(() => {
+    const close = () => setOpen(false);
+    window.addEventListener('getnote-close-floating-selects', close);
+    return () => window.removeEventListener('getnote-close-floating-selects', close);
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
     if (!hasCredentials) {
       setState(prev => ({ ...prev, error: null, loading: false }));
@@ -185,7 +191,10 @@ export function KnowledgeBaseSelect({
         ref={triggerRef}
         type="button"
         className="getnote-knowledge-base-select-trigger"
-        onClick={() => setOpen(prev => !prev)}
+        onClick={() => {
+          if (!open) window.dispatchEvent(new Event('getnote-close-floating-selects'));
+          setOpen(!open);
+        }}
       >
         <span>{triggerLabel}</span>
         <span aria-hidden="true" className={`getnote-knowledge-base-select-caret${open ? ' is-open' : ''}`} />

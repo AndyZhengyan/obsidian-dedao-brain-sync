@@ -53,6 +53,12 @@ export function NoteTypeSelect({ value, onChange }: NoteTypeSelectProps) {
   }, [value]);
 
   useEffect(() => {
+    const close = () => setOpen(false);
+    window.addEventListener('getnote-close-floating-selects', close);
+    return () => window.removeEventListener('getnote-close-floating-selects', close);
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
     const positionMenu = () => {
       const rect = triggerRef.current?.getBoundingClientRect();
@@ -98,7 +104,10 @@ export function NoteTypeSelect({ value, onChange }: NoteTypeSelectProps) {
         ref={triggerRef}
         type="button"
         className="getnote-note-type-select-trigger"
-        onClick={() => setOpen(value => !value)}
+        onClick={() => {
+          if (!open) window.dispatchEvent(new Event('getnote-close-floating-selects'));
+          setOpen(!open);
+        }}
       >
         <span>{visibleValue === undefined ? t('noteTypes.all') : summarizeTypes(visibleValue)}</span>
         <span

@@ -381,6 +381,79 @@ describe('TopicPickerModal', () => {
     expect(container.textContent).not.toContain('其他内容');
   });
 
+  it('removes selected notes that no longer match the selected tag filter', async () => {
+    const onConfirm = vi.fn();
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([{ topic_id: 'luo', name: '罗振宇学习笔记' }]);
+    vi.mocked(fetchTopicContentPreviewPage).mockResolvedValue({
+      items: [
+        {
+          note_id: 'ai-note',
+          title: 'AI 内容',
+          updated_at: '2026-06-01T10:00:00+08:00',
+          tags: [{ name: 'AI' }],
+          topic_id: 'luo',
+        },
+        {
+          note_id: 'biz-note',
+          title: '管理内容',
+          updated_at: '2026-06-01T11:00:00+08:00',
+          tags: [{ name: '管理' }],
+          topic_id: 'luo',
+        },
+      ],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(h(TopicPickerModal, {
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        onConfirm,
+        onCancel: vi.fn(),
+        tagOptions: ['AI', '管理'],
+      }), container);
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-id="luo"]') as HTMLButtonElement).click();
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-select-all]') as HTMLButtonElement).click();
+    });
+    expect(container.textContent).toContain('已选 2 个');
+
+    const trigger = container.querySelector('.getnote-topic-filter-bar .getnote-tag-select-trigger') as HTMLButtonElement;
+    await act(() => {
+      trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    const option = Array.from(container.querySelectorAll('.getnote-tag-select-option'))
+      .find(label => label.textContent === 'AI') as HTMLLabelElement;
+    const checkbox = option.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    await act(() => {
+      checkbox.checked = true;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain('AI 内容');
+    expect(container.textContent).not.toContain('管理内容');
+    expect(container.textContent).toContain('已选 1 个');
+
+    await act(async () => {
+      (container.querySelector('.mod-cta') as HTMLButtonElement).click();
+    });
+    expect(onConfirm).toHaveBeenCalledWith({
+      selectedNoteIds: ['ai-note'],
+      topicIds: ['luo'],
+      knowledgeBaseNames: {
+        'ai-note': '罗振宇学习笔记',
+      },
+      syncTags: ['AI'],
+    });
+  });
+
   it('resets selection and loaded count when switching knowledge bases', async () => {
     vi.mocked(fetchSubscribedTopics).mockResolvedValue([
       { topic_id: 'first', name: '第一个知识库' },

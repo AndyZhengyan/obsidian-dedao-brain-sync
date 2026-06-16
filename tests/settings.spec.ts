@@ -85,6 +85,31 @@ afterEach(() => {
 });
 
 describe('SettingsComponent auth credentials', () => {
+  it('keeps the tag whitelist editable when scheduled sync is disabled', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: false },
+      tagCache: { tags: ['AI', '管理'], cacheUpdatedAt: Date.now() },
+    }));
+
+    expect(container.textContent).toContain('同步范围');
+    const trigger = container.querySelector('.getnote-tag-select-trigger') as HTMLButtonElement;
+    expect(trigger).toBeTruthy();
+    await act(() => {
+      trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const option = Array.from(container.querySelectorAll('.getnote-tag-select-option'))
+      .find(label => label.textContent === 'AI') as HTMLLabelElement;
+    expect(option).toBeTruthy();
+    const checkbox = option.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    await act(() => {
+      checkbox.checked = true;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('syncTags', ['AI']);
+  });
+
   it('renders the exhausted quota warning inside the scheduled sync controls', () => {
     const { container } = renderSettings(makeSettings({
       lastQuotaState: { exhausted: true, reason: 'quota_day', checkedAt: Date.now() },
@@ -792,7 +817,7 @@ describe('SettingsComponent auth credentials', () => {
     }));
   });
 
-  it('renders note type and tag filters inside scheduled sync controls', () => {
+  it('renders note type inside scheduled sync controls and tag filters as global sync scope', () => {
     const { container } = renderSettings(makeSettings({
       scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
       maxDays: 14,
@@ -806,7 +831,7 @@ describe('SettingsComponent auth credentials', () => {
     expect(noteTypeLabel).toBeTruthy();
     expect(noteTypeLabel!.closest('.getnote-scheduled-rows')).not.toBeNull();
     expect(tagLabel).toBeTruthy();
-    expect(tagLabel!.closest('.getnote-scheduled-rows')).not.toBeNull();
+    expect(tagLabel!.closest('.getnote-scheduled-rows')).toBeNull();
   });
 
   it('shows scheduled sync details directly and does not render auto sync range there', async () => {
@@ -995,7 +1020,7 @@ describe('SettingsComponent — syncTags (tag whitelist) dropdown', () => {
     const syncRangeLabel = Array.from(container.querySelectorAll('.getnote-scheduled-row-label'))
       .find(node => node.textContent === '同步范围');
     expect(syncRangeLabel).toBeTruthy();
-    expect(syncRangeLabel!.closest('.getnote-scheduled-rows')).not.toBeNull();
+    expect(syncRangeLabel!.closest('.getnote-scheduled-rows')).toBeNull();
     const tagTrigger = Array.from(container.querySelectorAll('button'))
       .find(button => button.textContent === '已选 2 项');
     expect(tagTrigger).toBeTruthy();

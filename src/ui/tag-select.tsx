@@ -52,6 +52,12 @@ export function TagSelect({ value, onChange, options, placeholder }: TagSelectPr
   };
 
   useEffect(() => {
+    const close = () => setOpen(false);
+    window.addEventListener('getnote-close-floating-selects', close);
+    return () => window.removeEventListener('getnote-close-floating-selects', close);
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
     const positionMenu = () => {
       const rect = triggerRef.current?.getBoundingClientRect();
@@ -83,7 +89,10 @@ export function TagSelect({ value, onChange, options, placeholder }: TagSelectPr
         ref={triggerRef}
         type="button"
         className="getnote-tag-select-trigger"
-        onClick={() => setOpen(prev => !prev)}
+        onClick={() => {
+          if (!open) window.dispatchEvent(new Event('getnote-close-floating-selects'));
+          setOpen(!open);
+        }}
       >
         <span>{summarize(value)}</span>
         <span

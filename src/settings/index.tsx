@@ -660,21 +660,6 @@ export function SettingsComponent({
               </span>
             </div>
             <div className="getnote-scheduled-row">
-              <span className="getnote-scheduled-row-label">{t('settings.syncTags.label')}</span>
-              <span className="getnote-scheduled-row-control">
-                <TagSelect
-                  value={syncTags}
-                  options={settings.tagCache?.tags ?? []}
-                  onChange={(value) => {
-                    setSyncTags(value);
-                    updateSetting('syncTags', value);
-                  }}
-                  placeholder={t('settings.syncTags.placeholder')}
-                />
-              </span>
-            </div>
-            <div className="getnote-input-hint">{t('settings.syncTags.desc')}</div>
-            <div className="getnote-scheduled-row">
               <span className="getnote-scheduled-row-label">{t('settings.scheduled.syncKnowledgeBases')}</span>
               <span className="getnote-scheduled-row-control">
                 <KnowledgeBaseSelect
@@ -761,6 +746,21 @@ export function SettingsComponent({
               </div>
             </div>
           )}
+          <div className="getnote-scheduled-row">
+            <span className="getnote-scheduled-row-label">{t('settings.syncTags.label')}</span>
+            <span className="getnote-scheduled-row-control">
+              <TagSelect
+                value={syncTags}
+                options={settings.tagCache?.tags ?? []}
+                onChange={(value) => {
+                  setSyncTags(value);
+                  updateSetting('syncTags', value);
+                }}
+                placeholder={t('settings.syncTags.placeholder')}
+              />
+            </span>
+          </div>
+          <div className="getnote-input-hint">{t('settings.syncTags.desc')}</div>
         </div>
       </SettingItem>
 
