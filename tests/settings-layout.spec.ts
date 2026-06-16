@@ -40,4 +40,18 @@ describe('settings layout CSS', () => {
     expect(syncLog).toContain('max-width: var(--getnote-primary-input-width)');
     expect(syncLogLabels).toContain('text-align: right');
   });
+
+  it('keeps long dropdown option labels aligned after wrapping', () => {
+    const knowledgeInput = ruleFor('.getnote-knowledge-base-select-option input');
+    const knowledgeLabel = ruleFor('.getnote-knowledge-base-select-option span');
+    const tagInput = ruleFor('.getnote-tag-select-option input');
+    const tagLabel = ruleFor('.getnote-tag-select-option span');
+
+    expect(knowledgeInput).toContain('flex: 0 0 auto');
+    expect(tagInput).toContain('flex: 0 0 auto');
+    expect(knowledgeLabel).toContain('text-align: left');
+    expect(knowledgeLabel).toContain('overflow-wrap: anywhere');
+    expect(tagLabel).toContain('text-align: left');
+    expect(tagLabel).toContain('overflow-wrap: anywhere');
+  });
 });

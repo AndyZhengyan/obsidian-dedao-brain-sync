@@ -688,6 +688,38 @@
   background: var(--background-modifier-hover);
 }
 
+.getnote-knowledge-base-select-option input,
+.getnote-tag-select-option input {
+  flex: 0 0 auto;
+}
+
+.getnote-knowledge-base-select-option span,
+.getnote-tag-select-option span {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.getnote-knowledge-base-select-option input {
+  flex: 0 0 auto;
+}
+
+.getnote-tag-select-option input {
+  flex: 0 0 auto;
+}
+
+.getnote-knowledge-base-select-option span {
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.getnote-tag-select-option span {
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
 .getnote-tag-select-options {
   max-height: 190px;
   overflow-y: auto;
