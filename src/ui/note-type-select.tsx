@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { t } from '../i18n';
 import { INTERNAL_AUDIO_NOTE_TYPES } from '../types';
 
@@ -40,6 +40,9 @@ interface NoteTypeSelectProps {
 export function NoteTypeSelect({ value, onChange }: NoteTypeSelectProps) {
   const [open, setOpen] = useState(false);
   const [visibleValue, setVisibleValue] = useState<string[] | undefined>(value);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [menuStyle, setMenuStyle] = useState<Record<string, string>>({});
   const allNoteTypes = NOTE_TYPE_OPTIONS.flatMap(option => option.noteTypes);
   const selectedTypes = visibleValue ?? allNoteTypes;
   const allSelected = visibleValue === undefined || selectedTypes.length === allNoteTypes.length;
@@ -48,6 +51,32 @@ export function NoteTypeSelect({ value, onChange }: NoteTypeSelectProps) {
   useEffect(() => {
     setVisibleValue(value);
   }, [value]);
+
+  useEffect(() => {
+    if (!open) return;
+    const positionMenu = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setMenuStyle({
+        top: `${rect.bottom + 4}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+      });
+    };
+    const handlePointerDown = (event: MouseEvent) => {
+      if (rootRef.current?.contains(event.target as Node)) return;
+      setOpen(false);
+    };
+    positionMenu();
+    document.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('resize', positionMenu);
+    window.addEventListener('scroll', positionMenu, true);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('resize', positionMenu);
+      window.removeEventListener('scroll', positionMenu, true);
+    };
+  }, [open]);
 
   const applyChange = (next: string[] | undefined) => {
     setVisibleValue(next);
@@ -64,8 +93,9 @@ export function NoteTypeSelect({ value, onChange }: NoteTypeSelectProps) {
   };
 
   return (
-    <div className="getnote-note-type-select">
+    <div className="getnote-note-type-select" ref={rootRef}>
       <button
+        ref={triggerRef}
         type="button"
         className="getnote-note-type-select-trigger"
         onClick={() => setOpen(value => !value)}
@@ -77,7 +107,7 @@ export function NoteTypeSelect({ value, onChange }: NoteTypeSelectProps) {
         />
       </button>
       {open && (
-        <div className="getnote-note-type-select-menu">
+        <div className="getnote-note-type-select-menu" style={menuStyle}>
           <label className="getnote-note-type-select-option">
             <input
               type="checkbox"

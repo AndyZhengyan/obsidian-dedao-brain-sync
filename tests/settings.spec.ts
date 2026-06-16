@@ -631,20 +631,13 @@ describe('SettingsComponent auth credentials', () => {
     expect(toggleEls.length).toBeGreaterThanOrEqual(5);
   });
 
-  it('collapses attachment child toggles by default and expands them with the disclosure button', async () => {
+  it('shows attachment child toggles directly as a compact nested group', async () => {
     const { container } = renderSettings(makeSettings());
     await new Promise(r => setTimeout(r, 50));
 
     const detail = container.querySelector('.getnote-scheduled-options-detail');
     expect(detail).toBeTruthy();
-    expect(detail!.classList.contains('getnote-hidden')).toBe(true);
-
-    const disclosure = container.querySelector('.getnote-attachment-disclosure') as HTMLButtonElement;
-    expect(disclosure).toBeTruthy();
-    await act(() => {
-      disclosure.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-
+    expect(container.querySelector('.getnote-attachment-disclosure')).toBeNull();
     expect(detail!.classList.contains('getnote-hidden')).toBe(false);
     expect(detail!.querySelectorAll('.getnote-nested-row').length).toBe(4);
   });
@@ -799,59 +792,34 @@ describe('SettingsComponent auth credentials', () => {
     }));
   });
 
-  it('renders auto sync range and note type filters inside scheduled sync controls', () => {
+  it('renders note type and tag filters inside scheduled sync controls', () => {
     const { container } = renderSettings(makeSettings({
       scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
       maxDays: 14,
     }));
 
-    const rangeLabel = Array.from(container.querySelectorAll('.getnote-scheduled-row-label'))
-      .find(node => node.textContent === '自动同步范围');
     const noteTypeLabel = Array.from(container.querySelectorAll('.getnote-scheduled-row-label'))
       .find(node => node.textContent === '同步笔记类型');
+    const tagLabel = Array.from(container.querySelectorAll('.getnote-scheduled-row-label'))
+      .find(node => node.textContent === '同步范围');
 
-    expect(rangeLabel).toBeTruthy();
-    expect(rangeLabel!.closest('.getnote-scheduled-rows')).not.toBeNull();
     expect(noteTypeLabel).toBeTruthy();
     expect(noteTypeLabel!.closest('.getnote-scheduled-rows')).not.toBeNull();
+    expect(tagLabel).toBeTruthy();
+    expect(tagLabel!.closest('.getnote-scheduled-rows')).not.toBeNull();
   });
 
-  it('collapses scheduled sync details by default and expands them with the disclosure button', async () => {
+  it('shows scheduled sync details directly and does not render auto sync range there', async () => {
     const { container } = renderSettings(makeSettings({
-      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
-    }));
-
-    const details = container.querySelector('.getnote-scheduled-rows');
-    expect(details).toBeTruthy();
-    expect(details!.classList.contains('getnote-hidden')).toBe(true);
-
-    const disclosure = container.querySelector('.getnote-scheduled-disclosure') as HTMLButtonElement;
-    expect(disclosure).toBeTruthy();
-    await act(() => {
-      disclosure.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-
-    expect(details!.classList.contains('getnote-hidden')).toBe(false);
-  });
-
-  it('stores auto sync range from the scheduled sync controls', async () => {
-    const { container, updateSetting } = renderSettings(makeSettings({
       scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
       maxDays: 30,
     }));
 
-    const rangeLabel = Array.from(container.querySelectorAll('.getnote-scheduled-row-label'))
-      .find(node => node.textContent === '自动同步范围');
-    expect(rangeLabel).toBeTruthy();
-    const input = rangeLabel!.closest('.getnote-scheduled-row')!.querySelector('input[type="number"]') as HTMLInputElement;
-    expect(input).toBeTruthy();
-
-    await act(() => {
-      input.value = '14';
-      input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: '14' }));
-    });
-
-    expect(updateSetting).toHaveBeenCalledWith('maxDays', 14);
+    expect(container.querySelector('.getnote-scheduled-disclosure')).toBeNull();
+    const details = container.querySelector('.getnote-scheduled-rows');
+    expect(details).toBeTruthy();
+    expect(details!.classList.contains('getnote-hidden')).toBe(false);
+    expect(container.textContent).not.toContain('自动同步范围');
   });
 
   it('renders the knowledge-base dropdown inside scheduled sync controls', () => {
@@ -864,7 +832,7 @@ describe('SettingsComponent auth credentials', () => {
     }));
 
     const labelNode = Array.from(container.querySelectorAll('span'))
-      .find(node => node.textContent === '同步知识库');
+      .find(node => node.textContent === '允许同步知识库');
     expect(labelNode).toBeTruthy();
     expect(labelNode!.closest('.getnote-scheduled-row')).not.toBeNull();
   });
@@ -897,6 +865,14 @@ describe('SettingsComponent auth credentials', () => {
     expect(updateSetting).toHaveBeenCalledWith('scheduledSync', expect.objectContaining({
       syncKnowledgeBases: ['kb-test'],
     }));
+  });
+
+  it('keeps the sync history button compact', () => {
+    const { container } = renderSettings(makeSettings());
+    const button = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '查看日志');
+    expect(button).toBeTruthy();
+    expect(button!.classList.contains('getnote-view-history-btn')).toBe(true);
   });
 });
 

@@ -372,6 +372,14 @@
   width: 100%;
 }
 
+.getnote-attachment-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 6px 12px;
+  padding-left: 18px;
+  box-sizing: border-box;
+}
+
 .getnote-scheduled-row {
   display: flex;
   align-items: center;
@@ -394,6 +402,10 @@
 
 .getnote-scheduled-options .getnote-scheduled-row-label {
   text-align: right;
+}
+
+.getnote-attachment-master-row .getnote-scheduled-row-label {
+  text-align: left;
 }
 
 .getnote-sync-log-section .getnote-scheduled-row-label {
@@ -445,6 +457,27 @@
 .getnote-nested-row {
   padding-left: 12px;
   box-sizing: border-box;
+}
+
+.getnote-attachment-option {
+  padding: 3px 0;
+  gap: 8px;
+}
+
+.getnote-attachment-option.getnote-nested-row {
+  padding-left: 0;
+}
+
+.getnote-attachment-option .getnote-scheduled-row-label {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.getnote-attachment-option .getnote-scheduled-row-control {
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .getnote-scheduled-date-row .getnote-date-input {
@@ -629,11 +662,8 @@
 .getnote-note-type-select-menu,
 .getnote-knowledge-base-select-menu,
 .getnote-tag-select-menu {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
+  position: fixed;
+  z-index: 10000;
   max-height: 220px;
   overflow-y: auto;
   padding: 6px;
@@ -645,9 +675,17 @@
 }
 
 .getnote-knowledge-base-select-menu {
-  position: absolute;
+  position: fixed;
   max-height: 220px;
   overflow-y: auto;
+}
+
+.getnote-note-type-select-menu {
+  position: fixed;
+}
+
+.getnote-tag-select-menu {
+  position: fixed;
 }
 
 .getnote-knowledge-base-select-search,
@@ -754,12 +792,13 @@
 
 .getnote-topic-filter-bar {
   display: grid;
-  grid-template-columns: minmax(140px, 0.38fr) minmax(0, 1fr);
+  grid-template-columns: minmax(150px, 0.38fr) minmax(0, 1fr);
   gap: 8px;
   padding: 0 0 8px;
 }
 
-.getnote-topic-filter-bar > input:only-child {
+.getnote-topic-filter-bar > input:only-child,
+.getnote-topic-filter-bar > .getnote-tag-select:only-child {
   grid-column: 1 / -1;
 }
 
@@ -784,7 +823,8 @@
 }
 
 .getnote-topic-filter-bar select,
-.getnote-topic-filter-bar input {
+.getnote-topic-filter-bar input,
+.getnote-topic-filter-bar .getnote-tag-select {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
@@ -1381,6 +1421,8 @@
 
 
 .getnote-view-history-btn {
+  align-self: flex-end;
+  width: auto;
   font-size: 12px;
   padding: 4px 10px;
 }

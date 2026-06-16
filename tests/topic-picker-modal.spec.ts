@@ -327,6 +327,60 @@ describe('TopicPickerModal', () => {
     expect(container.querySelector('.getnote-picker > .getnote-topic-filter-bar')).not.toBeNull();
   });
 
+  it('filters active knowledge-base contents by the selected tag dropdown', async () => {
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([{ topic_id: 'luo', name: '罗振宇学习笔记' }]);
+    vi.mocked(fetchTopicContentPreviewPage).mockResolvedValue({
+      items: [
+        {
+          note_id: 'tagged',
+          title: '带标签内容',
+          updated_at: '2026-06-01T10:00:00+08:00',
+          tags: [{ name: '目标标签' }],
+        },
+        {
+          note_id: 'untagged',
+          title: '其他内容',
+          updated_at: '2026-06-01T11:00:00+08:00',
+          tags: [{ name: '其他标签' }],
+        },
+      ],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(h(TopicPickerModal, {
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+      }), container);
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-id="luo"]') as HTMLButtonElement).click();
+    });
+    await flush();
+
+    const trigger = container.querySelector('.getnote-topic-filter-bar .getnote-tag-select-trigger') as HTMLButtonElement;
+    expect(trigger).toBeTruthy();
+    await act(() => {
+      trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    const option = Array.from(container.querySelectorAll('.getnote-tag-select-option'))
+      .find(label => label.textContent === '目标标签') as HTMLLabelElement;
+    expect(option).toBeTruthy();
+    const checkbox = option.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    await act(() => {
+      checkbox.checked = true;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain('带标签内容');
+    expect(container.textContent).not.toContain('其他内容');
+  });
+
   it('resets selection and loaded count when switching knowledge bases', async () => {
     vi.mocked(fetchSubscribedTopics).mockResolvedValue([
       { topic_id: 'first', name: '第一个知识库' },

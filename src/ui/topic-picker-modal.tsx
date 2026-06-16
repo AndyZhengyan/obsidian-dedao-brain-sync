@@ -133,6 +133,9 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   const [syncTags, setSyncTags] = useState<string[]>(initialSyncTags ?? []);
   const matchesActiveFilters = (item: ContentPreview) =>
     (!bloggerFilter || item.blogger_name === bloggerFilter) &&
+    (syncTags.length === 0 || (item.tags ?? []).some(tag =>
+      syncTags.some(selected => selected.toLowerCase() === tag.name.toLowerCase())
+    )) &&
     searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean).every(token =>
       [item.title, item.blogger_name ?? '', ...(item.tags ?? []).map(tag => tag.name)]
         .some(value => value.toLowerCase().includes(token))
@@ -394,16 +397,28 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
         <div className="getnote-input-hint getnote-topic-scope-hint">{t('topicPicker.scope.allHint')}</div>
       )}
       {activeTopic && !activeTopic.loading && !activeTopic.error && (
-        <div className="getnote-topic-tag-filter">
+        <div className="getnote-topic-filter-bar">
           <TagSelect
             value={syncTags}
             options={activeTagOptions}
-            onChange={setSyncTags}
+            onChange={(value) => {
+              setSelectAllActive(false);
+              setSyncTags(value);
+            }}
           />
-        </div>
-      )}
-      {activeTopic && !syncAllActive && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length > 0 && (
-        <div className="getnote-topic-filter-bar">
+          {!syncAllActive && activeTopic.contents.length > 0 && (
+            <input
+              data-topic-search
+              type="text"
+              className="getnote-input"
+              placeholder={t('picker.search')}
+              value={searchQuery}
+              onInput={(event) => {
+                setSelectAllActive(false);
+                setSearchQuery((event.target as HTMLInputElement).value);
+              }}
+            />
+          )}
           {bloggers.length > 0 && (
             <select
               data-topic-blogger-filter
@@ -417,17 +432,6 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
               {bloggers.map(blogger => <option key={blogger} value={blogger}>{blogger}</option>)}
             </select>
           )}
-          <input
-            data-topic-search
-            type="text"
-            className="getnote-input"
-            placeholder={t('picker.search')}
-            value={searchQuery}
-            onInput={(event) => {
-              setSelectAllActive(false);
-              setSearchQuery((event.target as HTMLInputElement).value);
-            }}
-          />
         </div>
       )}
       {!activeTopic && !topicsLoading && !topicsError && topics.length > 0 && (

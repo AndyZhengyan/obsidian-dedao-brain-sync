@@ -90,11 +90,9 @@ export function SettingsComponent({
   // Only show actual lastSyncEndTimestamp — do NOT fallback to syncStartDate
   const lastSyncedTo = settings.lastSyncEndTimestamp || '';
   const [scheduledEnabled, setScheduledEnabled] = useState(settings.scheduledSync.enabled);
-  const [scheduledDetailsOpen, setScheduledDetailsOpen] = useState(false);
   const [scheduledNoteTypes, setScheduledNoteTypes] = useState<string[] | undefined>(settings.scheduledSync.enabledNoteTypes);
   const [syncTags, setSyncTags] = useState<string[]>(settings.syncTags ?? []);
   const [scheduledKnowledgeBases, setScheduledKnowledgeBases] = useState<string[]>(settings.scheduledSync.syncKnowledgeBases ?? []);
-  const [attachmentDetailsOpen, setAttachmentDetailsOpen] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [connectionErrorMsg, setConnectionErrorMsg] = useState('');
@@ -330,11 +328,6 @@ export function SettingsComponent({
         intervalMinutes: n,
       });
     }
-  };
-
-  const handleMaxDaysChange = (value: string) => {
-    const n = parseInt(value, 10);
-    updateSetting('maxDays', Number.isNaN(n) || n < 0 ? 0 : n);
   };
 
   const handleScheduledOnStart = (checked: boolean) => {
@@ -625,29 +618,15 @@ export function SettingsComponent({
         description={t('settings.scheduled.desc')}
       >
         <div className="getnote-scheduled-control">
-          <div className="getnote-scheduled-row getnote-collapsible-row">
+          <div className="getnote-scheduled-row">
             <span>{t('settings.scheduled.enabled')}</span>
-            <span className="getnote-scheduled-row-control getnote-collapsible-control">
-              <button
-                type="button"
-                className="getnote-disclosure-button getnote-scheduled-disclosure"
-                aria-label={scheduledDetailsOpen ? t('settings.collapse') : t('settings.expand')}
-                aria-expanded={scheduledDetailsOpen}
-                onClick={() => setScheduledDetailsOpen(prev => !prev)}
-              >
-                <span
-                  aria-hidden="true"
-                  className={`getnote-disclosure-caret${scheduledDetailsOpen ? ' is-open' : ''}`}
-                />
-              </button>
-              <Toggle
-                value={scheduledEnabled}
-                onChange={handleScheduledEnabled}
-              />
-            </span>
+            <Toggle
+              value={scheduledEnabled}
+              onChange={handleScheduledEnabled}
+            />
           </div>
           <div
-            className={`getnote-scheduled-rows${scheduledEnabled && scheduledDetailsOpen ? '' : ' getnote-hidden'}`}
+            className={`getnote-scheduled-rows${scheduledEnabled ? '' : ' getnote-hidden'}`}
           >
             <div className="getnote-scheduled-row">
               <span className="getnote-scheduled-row-label">{t('settings.scheduled.interval')}</span>
@@ -665,19 +644,6 @@ export function SettingsComponent({
                 {t('settings.interval.minWarning')}
               </div>
             )}
-            <div className="getnote-scheduled-row">
-              <span className="getnote-scheduled-row-label">{t('settings.maxDays.label')}</span>
-              <span className="getnote-scheduled-row-control">
-                <input
-                  type="number"
-                  min="0"
-                  value={settings.maxDays}
-                  placeholder={t('settings.maxDays.placeholder')}
-                  onInput={(e) => handleMaxDaysChange((e.target as HTMLInputElement).value)}
-                />
-              </span>
-            </div>
-            <div className="getnote-input-hint">{t('settings.maxDays.hint')}</div>
             <div className="getnote-scheduled-row">
               <span className="getnote-scheduled-row-label">{t('settings.scheduled.onStart')}</span>
               <span className="getnote-scheduled-row-control">
@@ -800,27 +766,15 @@ export function SettingsComponent({
 
       <SettingItem name={t('settings.attachment.section')}>
         <div className="getnote-scheduled-options">
-          <div className="getnote-scheduled-row getnote-collapsible-row">
+          <div className="getnote-scheduled-row getnote-attachment-master-row">
             <span className="getnote-scheduled-row-label">{t('settings.attachment.master')}</span>
-            <span className="getnote-scheduled-row-control getnote-collapsible-control">
-              <button
-                type="button"
-                className="getnote-disclosure-button getnote-attachment-disclosure"
-                aria-label={attachmentDetailsOpen ? t('settings.collapse') : t('settings.expand')}
-                aria-expanded={attachmentDetailsOpen}
-                onClick={() => setAttachmentDetailsOpen(prev => !prev)}
-              >
-                <span
-                  aria-hidden="true"
-                  className={`getnote-disclosure-caret${attachmentDetailsOpen ? ' is-open' : ''}`}
-                />
-              </button>
+            <span className="getnote-scheduled-row-control">
               <div ref={masterAttachmentRef} />
             </span>
           </div>
-          <div className={`getnote-scheduled-options-detail${attachmentDetailsOpen ? '' : ' getnote-hidden'}`}>
+          <div className="getnote-scheduled-options-detail getnote-attachment-options">
             {(['image', 'audio', 'video', 'document'] as const).map(kind => (
-              <div className="getnote-scheduled-row getnote-nested-row" key={kind}>
+              <div className="getnote-scheduled-row getnote-nested-row getnote-attachment-option" key={kind}>
                 <span className="getnote-scheduled-row-label">{t(`settings.attachment.${kind}`)}</span>
                 <span className="getnote-scheduled-row-control">
                   <div ref={childAttachmentRefs[kind]} />
@@ -890,7 +844,7 @@ export function SettingsComponent({
             </span>
           </div>
           <button
-            className="mod-secondary"
+            className="mod-secondary getnote-view-history-btn"
             onClick={() => openSyncHistoryModal(app, currentSyncHistory)}
           >
             {t('syncHistory.view')}

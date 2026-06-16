@@ -20,7 +20,7 @@ describe('settings layout CSS', () => {
     expect(root).toContain('position: relative');
     expect(trigger).toContain('display: flex');
     expect(trigger).toContain('justify-content: space-between');
-    expect(menu).toContain('position: absolute');
+    expect(menu).toContain('position: fixed');
     expect(menu).toContain('max-height: 220px');
     expect(menu).toContain('overflow-y: auto');
   });
@@ -53,5 +53,11 @@ describe('settings layout CSS', () => {
     expect(knowledgeLabel).toContain('overflow-wrap: anywhere');
     expect(tagLabel).toContain('text-align: left');
     expect(tagLabel).toContain('overflow-wrap: anywhere');
+  });
+
+  it('keeps dropdown menus above modal content instead of clipping inside nested panels', () => {
+    expect(ruleFor('.getnote-note-type-select-menu')).toContain('position: fixed');
+    expect(ruleFor('.getnote-knowledge-base-select-menu')).toContain('position: fixed');
+    expect(ruleFor('.getnote-tag-select-menu')).toContain('position: fixed');
   });
 });

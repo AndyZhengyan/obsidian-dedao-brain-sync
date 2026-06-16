@@ -58,6 +58,9 @@ export function KnowledgeBaseSelect({
     ...EMPTY_STATE,
     entries: initialCache?.entries ?? [],
   }));
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [menuStyle, setMenuStyle] = useState<Record<string, string>>({});
   const aggregatorRef = useRef<KnowledgeBaseAggregator | null>(null);
   const initialCacheRef = useRef(initialCache);
 
@@ -124,6 +127,32 @@ export function KnowledgeBaseSelect({
     };
   }, [open, hasCredentials, token, clientId, authMode, onCacheUpdate]);
 
+  useEffect(() => {
+    if (!open) return;
+    const positionMenu = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setMenuStyle({
+        top: `${rect.bottom + 4}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+      });
+    };
+    const handlePointerDown = (event: MouseEvent) => {
+      if (rootRef.current?.contains(event.target as Node)) return;
+      setOpen(false);
+    };
+    positionMenu();
+    document.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('resize', positionMenu);
+    window.addEventListener('scroll', positionMenu, true);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('resize', positionMenu);
+      window.removeEventListener('scroll', positionMenu, true);
+    };
+  }, [open]);
+
   const filtered = useMemo(() => {
     const lower = query.trim().toLowerCase();
     if (!lower) return state.entries;
@@ -151,8 +180,9 @@ export function KnowledgeBaseSelect({
       : summarize(value, state.entries);
 
   return (
-    <div className="getnote-knowledge-base-select">
+    <div className="getnote-knowledge-base-select" ref={rootRef}>
       <button
+        ref={triggerRef}
         type="button"
         className="getnote-knowledge-base-select-trigger"
         onClick={() => setOpen(prev => !prev)}
@@ -161,7 +191,7 @@ export function KnowledgeBaseSelect({
         <span aria-hidden="true" className={`getnote-knowledge-base-select-caret${open ? ' is-open' : ''}`} />
       </button>
       {open && (
-        <div className="getnote-knowledge-base-select-menu">
+        <div className="getnote-knowledge-base-select-menu" style={menuStyle}>
           <input
             type="search"
             className="getnote-knowledge-base-select-search"
