@@ -698,6 +698,92 @@ describe('TopicPickerModal card layout (#138)', () => {
     expect(card!.querySelector('.getnote-note-card-time')).not.toBeNull();
   });
 
+  it('hides the summary when knowledge-base summary and content are the same', async () => {
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([
+      { topic_id: 'luo', name: '罗振宇学习笔记' },
+    ]);
+    vi.mocked(fetchTopicContentPreviewPage).mockResolvedValue({
+      items: [
+        {
+          note_id: 'kb-card-duplicate',
+          title: '重复摘要测试',
+          updated_at: '2026-06-10T15:30:00+08:00',
+          topic_id: 'luo',
+          summary: '同一段内容',
+          content: '同一段内容',
+        } as never,
+      ],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(h(TopicPickerModal, {
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+      }), container);
+      await Promise.resolve();
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-id="luo"]') as HTMLButtonElement).click();
+    });
+    await flush();
+
+    const card = container.querySelector('.getnote-note-card');
+    expect(card!.querySelector('.getnote-note-card-summary')).toBeNull();
+    expect(card!.querySelector('.getnote-note-card-preview')?.textContent).toContain('同一段内容');
+  });
+
+  it('uses cached tag options together with tags from the active knowledge-base contents', async () => {
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([
+      { topic_id: 'luo', name: '罗振宇学习笔记' },
+    ]);
+    vi.mocked(fetchTopicContentPreviewPage).mockResolvedValue({
+      items: [
+        {
+          note_id: 'kb-card-tags',
+          title: '标签合并测试',
+          updated_at: '2026-06-10T15:30:00+08:00',
+          topic_id: 'luo',
+          content: '正文',
+          tags: [{ name: 'active-tag' }],
+        } as never,
+      ],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(h(TopicPickerModal, {
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        tagOptions: ['cached-tag'],
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+      }), container);
+      await Promise.resolve();
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-id="luo"]') as HTMLButtonElement).click();
+    });
+    await flush();
+
+    const tagTrigger = container.querySelector('.getnote-tag-select-trigger') as HTMLButtonElement;
+    expect(tagTrigger).toBeTruthy();
+    await act(() => {
+      tagTrigger.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain('cached-tag');
+    expect(container.textContent).toContain('active-tag');
+  });
+
   it('renders multiple knowledge-base contents as a single-column vertical stack of cards', async () => {
     vi.mocked(fetchSubscribedTopics).mockResolvedValue([
       { topic_id: 'luo', name: '罗振宇学习笔记' },

@@ -28,6 +28,21 @@ export function aggregateTagsFromNotes(notes: GetNoteNote[]): string[] {
   );
 }
 
+export function mergeTagNames(...groups: Array<readonly string[] | undefined>): string[] {
+  const seen = new Map<string, string>();
+  for (const group of groups) {
+    for (const name of group ?? []) {
+      const trimmed = name?.trim();
+      if (!trimmed) continue;
+      const key = trimmed.toLowerCase();
+      if (!seen.has(key)) seen.set(key, trimmed);
+    }
+  }
+  return Array.from(seen.values()).sort((a, b) =>
+    a.toLowerCase().localeCompare(b.toLowerCase())
+  );
+}
+
 /**
  * Merge an existing tag cache with newly observed tag names.
  * Existing tags are preserved; new tags are appended (case-insensitive dedup).

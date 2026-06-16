@@ -6,7 +6,7 @@ import { t } from '../i18n';
 import { formatNoteTypeLabel } from '../utils/note-type';
 import { NoteTypeSelect } from './note-type-select';
 import { TagSelect } from './tag-select';
-import { aggregateTagsFromNotes, applyTagFilter } from '../utils/tag-aggregator';
+import { aggregateTagsFromNotes, applyTagFilter, mergeTagNames } from '../utils/tag-aggregator';
 
 interface NotePickerModalProps {
   onConfirm: (selectedNoteIds: string[], enabledNoteTypes?: string[], syncTags?: string[]) => void;
@@ -16,6 +16,7 @@ interface NotePickerModalProps {
   authMode?: AuthMode;
   abortSignal?: AbortSignal;
   initialSyncTags?: string[];
+  tagOptions?: string[];
 }
 
 function formatRelativeTime(iso: string): string {
@@ -48,11 +49,14 @@ function matchesSearchQuery(note: GetNoteNote, searchQuery: string): boolean {
   return queryTokens.every(token => haystacks.some(value => value.toLowerCase().includes(token)));
 }
 
+function compactCardText(value: string | undefined): string {
+  return (value ?? '').replace(/\n+/g, ' ').trim();
+}
+
 function NoteRow({ note, checked, onChange, onTagClick }: { note: GetNoteNote; checked: boolean; onChange: (id: string, v: boolean) => void; onTagClick?: (tagName: string) => void }) {
   const title = generateDisplayTitle(note);
   const displayTitle = title || t('picker.noTitle');
-  const summaryText = (note.content || '').replace(/\n+/g, ' ').slice(0, 80);
-  const previewText = (note.content || '').replace(/\n+/g, ' ').slice(0, 150);
+  const previewText = compactCardText(note.content).slice(0, 150);
   return (
     <div className="getnote-note-card">
       <input
@@ -66,9 +70,6 @@ function NoteRow({ note, checked, onChange, onTagClick }: { note: GetNoteNote; c
           <div className="getnote-note-card-title">{displayTitle}</div>
           <span className="getnote-note-card-type">{getTypeLabel(note.note_type)}</span>
         </div>
-        {summaryText && (
-          <blockquote className="getnote-note-card-summary">{summaryText}</blockquote>
-        )}
         {previewText && (
           <div className="getnote-note-card-preview">{previewText}</div>
         )}
@@ -98,7 +99,7 @@ function NoteRow({ note, checked, onChange, onTagClick }: { note: GetNoteNote; c
   );
 }
 
-export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel, abortSignal, initialSyncTags }: NotePickerModalProps) {
+export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel, abortSignal, initialSyncTags, tagOptions = [] }: NotePickerModalProps) {
   const [notes, setNotes] = useState<GetNoteNote[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -165,6 +166,7 @@ export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel
     ? notes.filter(note => enabledNoteTypes.includes(note.note_type))
     : [];
   const tagFilteredNotes = applyTagFilter(typeFilteredNotes, syncTags);
+  const availableTags = mergeTagNames(tagOptions, aggregateTagsFromNotes(notes));
   const filteredNotes = searchQuery
     ? tagFilteredNotes.filter(note => matchesSearchQuery(note, searchQuery))
     : tagFilteredNotes;
@@ -187,7 +189,7 @@ export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel
         <NoteTypeSelect value={enabledNoteTypes} onChange={setEnabledNoteTypes} />
         <TagSelect
           value={syncTags}
-          options={aggregateTagsFromNotes(notes)}
+          options={availableTags}
           onChange={setSyncTags}
         />
         <div className="getnote-picker-actions">

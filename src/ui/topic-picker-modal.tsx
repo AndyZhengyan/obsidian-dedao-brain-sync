@@ -4,6 +4,7 @@ import type { ContentPreview, TopicContentPreviewCursor } from '../api';
 import { fetchSubscribedTopics, fetchTopicContentPreviewPage } from '../api';
 import { t } from '../i18n';
 import { TagSelect } from './tag-select';
+import { mergeTagNames } from '../utils/tag-aggregator';
 
 interface TopicData {
   topic: SubscribedTopic;
@@ -51,12 +52,23 @@ function formatRelativeTime(iso: string): string {
   }
 }
 
+function compactCardText(value: string | undefined): string {
+  return (value ?? '').replace(/\n+/g, ' ').trim();
+}
+
+function cardPreviewText(summary: string | undefined, content: string | undefined): { summaryText: string; previewText: string } {
+  const normalizedSummary = compactCardText(summary);
+  const normalizedContent = compactCardText(content);
+  const previewSource = normalizedContent || normalizedSummary;
+  return {
+    summaryText: normalizedSummary && normalizedSummary !== previewSource ? normalizedSummary.slice(0, 80) : '',
+    previewText: previewSource.slice(0, 150),
+  };
+}
+
 function ContentRow({ item, checked, onChange, onTagClick }: { item: ContentPreview; checked: boolean; onChange: (noteId: string, v: boolean) => void; onTagClick?: (tagName: string) => void }) {
   const displayTitle = item.title || t('picker.noTitle');
-  const summarySource = item.summary || item.content || '';
-  const previewSource = item.content || item.summary || '';
-  const summaryText = summarySource ? summarySource.replace(/\n+/g, ' ').slice(0, 80) : '';
-  const previewText = previewSource ? previewSource.replace(/\n+/g, ' ').slice(0, 150) : '';
+  const { summaryText, previewText } = cardPreviewText(item.summary, item.content);
   const tags = item.tags ?? [];
   return (
     <div className="getnote-note-card">
@@ -314,6 +326,10 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   const visibleItems = activeTopic
     ? activeTopic.contents.filter(matchesActiveFilters)
     : [];
+  const activeTagOptions = mergeTagNames(
+    tagOptions,
+    activeTopic?.contents.flatMap(item => (item.tags ?? []).map(tag => tag.name))
+  );
 
   return (
     <div className="getnote-picker">
@@ -381,7 +397,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
         <div className="getnote-topic-tag-filter">
           <TagSelect
             value={syncTags}
-            options={tagOptions}
+            options={activeTagOptions}
             onChange={setSyncTags}
           />
         </div>

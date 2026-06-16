@@ -365,6 +365,13 @@
   width: 100%;
 }
 
+.getnote-scheduled-options-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
 .getnote-scheduled-row {
   display: flex;
   align-items: center;
@@ -404,6 +411,40 @@
 
 .getnote-scheduled-row input[type="number"] {
   width: var(--getnote-secondary-input-width);
+}
+
+.getnote-collapsible-control {
+  gap: 8px;
+}
+
+.getnote-disclosure-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  padding: 0;
+  border-radius: 4px;
+}
+
+.getnote-disclosure-caret {
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.getnote-disclosure-caret::before {
+  content: "v";
+}
+
+.getnote-disclosure-caret.is-open::before {
+  content: "^";
+}
+
+.getnote-nested-row {
+  padding-left: 12px;
+  box-sizing: border-box;
 }
 
 .getnote-scheduled-date-row .getnote-date-input {
@@ -522,19 +563,26 @@
 
 .getnote-scheduled-row-control .getnote-note-type-select,
 .getnote-scheduled-row-control .getnote-knowledge-base-select,
+.getnote-scheduled-row-control .getnote-tag-select,
 .getnote-picker-header .getnote-note-type-select {
   max-width: var(--getnote-secondary-input-width);
 }
 
-.getnote-knowledge-base-select {
+.getnote-knowledge-base-select,
+.getnote-tag-select {
   position: relative;
   width: 100%;
   max-width: var(--getnote-primary-input-width);
   min-width: 0;
 }
 
+.getnote-knowledge-base-select {
+  position: relative;
+}
+
 .getnote-note-type-select-trigger,
-.getnote-knowledge-base-select-trigger {
+.getnote-knowledge-base-select-trigger,
+.getnote-tag-select-trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -545,8 +593,14 @@
   text-align: left;
 }
 
+.getnote-knowledge-base-select-trigger {
+  display: flex;
+  justify-content: space-between;
+}
+
 .getnote-note-type-select-trigger span:first-child,
-.getnote-knowledge-base-select-trigger span:first-child {
+.getnote-knowledge-base-select-trigger span:first-child,
+.getnote-tag-select-trigger span:first-child {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -554,23 +608,27 @@
 }
 
 .getnote-note-type-select-caret,
-.getnote-knowledge-base-select-caret {
+.getnote-knowledge-base-select-caret,
+.getnote-tag-select-caret {
   flex: 0 0 auto;
   color: var(--text-muted);
 }
 
 .getnote-note-type-select-caret::before,
-.getnote-knowledge-base-select-caret::before {
+.getnote-knowledge-base-select-caret::before,
+.getnote-tag-select-caret::before {
   content: "v";
 }
 
 .getnote-note-type-select-caret.is-open::before,
-.getnote-knowledge-base-select-caret.is-open::before {
+.getnote-knowledge-base-select-caret.is-open::before,
+.getnote-tag-select-caret.is-open::before {
   content: "^";
 }
 
 .getnote-note-type-select-menu,
-.getnote-knowledge-base-select-menu {
+.getnote-knowledge-base-select-menu,
+.getnote-tag-select-menu {
   position: absolute;
   z-index: 30;
   top: calc(100% + 4px);
@@ -586,7 +644,14 @@
   box-shadow: var(--shadow-s);
 }
 
-.getnote-knowledge-base-select-search {
+.getnote-knowledge-base-select-menu {
+  position: absolute;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.getnote-knowledge-base-select-search,
+.getnote-tag-select-search {
   width: 100%;
   box-sizing: border-box;
   margin-bottom: 6px;
@@ -595,7 +660,9 @@
 .getnote-note-type-select-option,
 .getnote-note-type-select-status,
 .getnote-knowledge-base-select-option,
-.getnote-knowledge-base-select-status {
+.getnote-knowledge-base-select-status,
+.getnote-tag-select-option,
+.getnote-tag-select-empty {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -606,7 +673,8 @@
 }
 
 .getnote-note-type-select-status,
-.getnote-knowledge-base-select-status {
+.getnote-knowledge-base-select-status,
+.getnote-tag-select-empty {
   color: var(--text-muted);
 }
 
@@ -615,59 +683,14 @@
 }
 
 .getnote-note-type-select-option:hover,
-.getnote-knowledge-base-select-option:hover {
+.getnote-knowledge-base-select-option:hover,
+.getnote-tag-select-option:hover {
   background: var(--background-modifier-hover);
-}
-
-.getnote-tag-select {
-  position: relative;
-  width: 100%;
-  max-width: var(--getnote-primary-input-width);
-  min-width: 0;
-}
-
-.getnote-tag-select-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  text-align: left;
-}
-
-.getnote-tag-select-menu {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  max-height: 260px;
-  overflow-y: auto;
-  padding: 6px;
-  box-sizing: border-box;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  background: var(--background-primary);
-  box-shadow: var(--shadow-s);
 }
 
 .getnote-tag-select-options {
   max-height: 190px;
   overflow-y: auto;
-}
-
-.getnote-tag-select-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 6px;
-  border-radius: 4px;
-}
-
-.getnote-tag-select-option:hover {
-  background: var(--background-modifier-hover);
 }
 
 .getnote-local-upload {

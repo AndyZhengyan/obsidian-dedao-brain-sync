@@ -90,9 +90,11 @@ export function SettingsComponent({
   // Only show actual lastSyncEndTimestamp — do NOT fallback to syncStartDate
   const lastSyncedTo = settings.lastSyncEndTimestamp || '';
   const [scheduledEnabled, setScheduledEnabled] = useState(settings.scheduledSync.enabled);
+  const [scheduledDetailsOpen, setScheduledDetailsOpen] = useState(false);
   const [scheduledNoteTypes, setScheduledNoteTypes] = useState<string[] | undefined>(settings.scheduledSync.enabledNoteTypes);
   const [syncTags, setSyncTags] = useState<string[]>(settings.syncTags ?? []);
   const [scheduledKnowledgeBases, setScheduledKnowledgeBases] = useState<string[]>(settings.scheduledSync.syncKnowledgeBases ?? []);
+  const [attachmentDetailsOpen, setAttachmentDetailsOpen] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [connectionErrorMsg, setConnectionErrorMsg] = useState('');
@@ -623,15 +625,29 @@ export function SettingsComponent({
         description={t('settings.scheduled.desc')}
       >
         <div className="getnote-scheduled-control">
-          <div className="getnote-scheduled-row">
+          <div className="getnote-scheduled-row getnote-collapsible-row">
             <span>{t('settings.scheduled.enabled')}</span>
-            <Toggle
-              value={scheduledEnabled}
-              onChange={handleScheduledEnabled}
-            />
+            <span className="getnote-scheduled-row-control getnote-collapsible-control">
+              <button
+                type="button"
+                className="getnote-disclosure-button getnote-scheduled-disclosure"
+                aria-label={scheduledDetailsOpen ? t('settings.collapse') : t('settings.expand')}
+                aria-expanded={scheduledDetailsOpen}
+                onClick={() => setScheduledDetailsOpen(prev => !prev)}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`getnote-disclosure-caret${scheduledDetailsOpen ? ' is-open' : ''}`}
+                />
+              </button>
+              <Toggle
+                value={scheduledEnabled}
+                onChange={handleScheduledEnabled}
+              />
+            </span>
           </div>
           <div
-            className={`getnote-scheduled-rows${scheduledEnabled ? '' : ' getnote-hidden'}`}
+            className={`getnote-scheduled-rows${scheduledEnabled && scheduledDetailsOpen ? '' : ' getnote-hidden'}`}
           >
             <div className="getnote-scheduled-row">
               <span className="getnote-scheduled-row-label">{t('settings.scheduled.interval')}</span>
@@ -784,20 +800,34 @@ export function SettingsComponent({
 
       <SettingItem name={t('settings.attachment.section')}>
         <div className="getnote-scheduled-options">
-          <div className="getnote-scheduled-row">
+          <div className="getnote-scheduled-row getnote-collapsible-row">
             <span className="getnote-scheduled-row-label">{t('settings.attachment.master')}</span>
-            <span className="getnote-scheduled-row-control">
+            <span className="getnote-scheduled-row-control getnote-collapsible-control">
+              <button
+                type="button"
+                className="getnote-disclosure-button getnote-attachment-disclosure"
+                aria-label={attachmentDetailsOpen ? t('settings.collapse') : t('settings.expand')}
+                aria-expanded={attachmentDetailsOpen}
+                onClick={() => setAttachmentDetailsOpen(prev => !prev)}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`getnote-disclosure-caret${attachmentDetailsOpen ? ' is-open' : ''}`}
+                />
+              </button>
               <div ref={masterAttachmentRef} />
             </span>
           </div>
-          {(['image', 'audio', 'video', 'document'] as const).map(kind => (
-            <div className="getnote-scheduled-row" key={kind}>
-              <span className="getnote-scheduled-row-label">{t(`settings.attachment.${kind}`)}</span>
-              <span className="getnote-scheduled-row-control">
-                <div ref={childAttachmentRefs[kind]} />
-              </span>
-            </div>
-          ))}
+          <div className={`getnote-scheduled-options-detail${attachmentDetailsOpen ? '' : ' getnote-hidden'}`}>
+            {(['image', 'audio', 'video', 'document'] as const).map(kind => (
+              <div className="getnote-scheduled-row getnote-nested-row" key={kind}>
+                <span className="getnote-scheduled-row-label">{t(`settings.attachment.${kind}`)}</span>
+                <span className="getnote-scheduled-row-control">
+                  <div ref={childAttachmentRefs[kind]} />
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </SettingItem>
 

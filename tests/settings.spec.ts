@@ -631,6 +631,24 @@ describe('SettingsComponent auth credentials', () => {
     expect(toggleEls.length).toBeGreaterThanOrEqual(5);
   });
 
+  it('collapses attachment child toggles by default and expands them with the disclosure button', async () => {
+    const { container } = renderSettings(makeSettings());
+    await new Promise(r => setTimeout(r, 50));
+
+    const detail = container.querySelector('.getnote-scheduled-options-detail');
+    expect(detail).toBeTruthy();
+    expect(detail!.classList.contains('getnote-hidden')).toBe(true);
+
+    const disclosure = container.querySelector('.getnote-attachment-disclosure') as HTMLButtonElement;
+    expect(disclosure).toBeTruthy();
+    await act(() => {
+      disclosure.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(detail!.classList.contains('getnote-hidden')).toBe(false);
+    expect(detail!.querySelectorAll('.getnote-nested-row').length).toBe(4);
+  });
+
   it('flips all four child toggles when the master attachment toggle is clicked', async () => {
     const updateSetting = vi.fn();
     const settings = makeSettings({
@@ -796,6 +814,24 @@ describe('SettingsComponent auth credentials', () => {
     expect(rangeLabel!.closest('.getnote-scheduled-rows')).not.toBeNull();
     expect(noteTypeLabel).toBeTruthy();
     expect(noteTypeLabel!.closest('.getnote-scheduled-rows')).not.toBeNull();
+  });
+
+  it('collapses scheduled sync details by default and expands them with the disclosure button', async () => {
+    const { container } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
+    }));
+
+    const details = container.querySelector('.getnote-scheduled-rows');
+    expect(details).toBeTruthy();
+    expect(details!.classList.contains('getnote-hidden')).toBe(true);
+
+    const disclosure = container.querySelector('.getnote-scheduled-disclosure') as HTMLButtonElement;
+    expect(disclosure).toBeTruthy();
+    await act(() => {
+      disclosure.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(details!.classList.contains('getnote-hidden')).toBe(false);
   });
 
   it('stores auto sync range from the scheduled sync controls', async () => {

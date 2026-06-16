@@ -753,6 +753,7 @@ class NotePickerModalWrapper extends Modal {
         authMode={getAuthCredentials(this.plugin.settings).authMode}
         abortSignal={this.abortController.signal}
         initialSyncTags={this.plugin.settings.syncTags ?? []}
+        tagOptions={this.plugin.settings.tagCache?.tags ?? []}
         onConfirm={(noteIds, enabledNoteTypes, syncTags) => {
           this.abortController.abort();
           this.close();

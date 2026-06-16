@@ -96,7 +96,7 @@ describe('filterNotes (note picker search)', () => {
 });
 
 describe('NotePickerModal auth chains', () => {
-  async function renderPicker(props: { token: string; clientId: string; authMode: 'openapi' | 'web' }, onConfirm = vi.fn()) {
+  async function renderPicker(props: { token: string; clientId: string; authMode: 'openapi' | 'web'; tagOptions?: string[] }, onConfirm = vi.fn()) {
     const container = document.createElement('div');
     document.body.appendChild(container);
     await act(async () => {
@@ -229,6 +229,31 @@ describe('NotePickerModal auth chains', () => {
     });
 
     expect(onConfirm).toHaveBeenCalledWith(['tagged'], undefined, []);
+  });
+
+  it('uses cached tag options together with tags from loaded notes', async () => {
+    vi.mocked(fetchNotes).mockResolvedValueOnce({
+      notes: [
+        makeNote({ note_id: 'loaded', title: '已加载笔记', tags: [{ name: 'loaded-tag' }] }),
+      ],
+      hasMore: false,
+    });
+
+    const container = await renderPicker({
+      token: 'web-token',
+      clientId: '',
+      authMode: 'web',
+      tagOptions: ['cached-tag'],
+    });
+
+    const tagTrigger = Array.from(container.querySelectorAll('.getnote-tag-select-trigger'))[0] as HTMLButtonElement;
+    expect(tagTrigger).toBeTruthy();
+    await act(() => {
+      tagTrigger.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain('cached-tag');
+    expect(container.textContent).toContain('loaded-tag');
   });
 
   it('filters picker list by the tag whitelist dropdown', async () => {
@@ -446,7 +471,7 @@ describe('NotePickerModal card layout (#138)', () => {
     return container;
   }
 
-  it('renders each note as a card containing title, summary, content preview, tags, and timestamp', async () => {
+  it('renders each note as a card containing title, content preview, tags, and timestamp', async () => {
     const notes: GetNoteNote[] = [
       {
         id: 1,
@@ -475,10 +500,9 @@ describe('NotePickerModal card layout (#138)', () => {
     expect(title).not.toBeNull();
     expect(title!.textContent).toContain('AI 摘要卡片化测试');
 
-    // AI 摘要框（灰色背景）
+    // 普通笔记摘要和正文同源，不重复渲染摘要框。
     const summary = card!.querySelector('.getnote-note-card-summary');
-    expect(summary).not.toBeNull();
-    expect(summary!.textContent).toBeTruthy();
+    expect(summary).toBeNull();
 
     // 正文预览存在
     const preview = card!.querySelector('.getnote-note-card-preview');
