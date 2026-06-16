@@ -12,6 +12,7 @@ import { initI18n, t } from './i18n';
 import { ReverseSyncEngine, type ReverseSyncResult } from './reverse-sync';
 import { migrateSyncedNoteTags } from './tag-migration';
 import { getLastQuotaState, resetQuotaState } from './api-clients/openapi-client';
+import { mergeTagCache } from './utils/tag-aggregator';
 
 const MAX_SYNC_HISTORY = 20;
 const TAG_MIGRATION_VERSION = 2;
@@ -318,6 +319,19 @@ export default class GetNoteSyncPlugin extends Plugin {
     this.syncHistory = this.syncHistory.slice(-MAX_SYNC_HISTORY);
     this.settings.syncHistory = this.syncHistory;
 
+    // Incrementally merge newly observed tag names into the local cache.
+    // The SyncEngine exposes any tag names it observed during the sync in
+    // `result.observedTags` (populated lazily — older SyncResult payloads may
+    // not include it, so default to an empty array).
+    const observedTags = ((result as { observedTags?: string[] }).observedTags ?? []);
+    if (observedTags.length > 0 || scope.syncTags?.length) {
+      const incoming = Array.from(new Set([
+        ...observedTags,
+        ...(scope.syncTags ?? []),
+      ]));
+      this.settings.tagCache = mergeTagCache(this.settings.tagCache, incoming);
+    }
+
     // lastSyncEndTimestamp only belongs to auto sync
     // 更新断点只要：有笔记成功同步且有 lastNoteTimestamp（即使有部分失败）
     if (type === 'auto' && status === 'success') {
@@ -343,10 +357,12 @@ export default class GetNoteSyncPlugin extends Plugin {
     const startedAt = Date.now();
     const resolvedSyncStartDate = scopeOptions?.syncStartDate ?? this.settings.syncStartDate;
     const resolvedEnabledNoteTypes = scopeOptions?.enabledNoteTypes;
+    const resolvedSyncTags = scopeOptions?.syncTags;
     const resolvedScope: SyncHistoryScope = {
       maxDays: resolvedSyncStartDate ? 0 : scopeOptions?.maxDays ?? this.settings.maxDays,
       syncStartDate: resolvedSyncStartDate,
       ...(resolvedEnabledNoteTypes !== undefined ? { enabledNoteTypes: resolvedEnabledNoteTypes } : {}),
+      ...(resolvedSyncTags !== undefined && resolvedSyncTags.length > 0 ? { syncTags: resolvedSyncTags } : {}),
       selectedCount: selectedIds?.length,
       selectedIds,
     };
@@ -440,6 +456,7 @@ export default class GetNoteSyncPlugin extends Plugin {
     // This IS the early-exit mechanism — no separate lastSyncEndTimestamp logic needed in engine.
     const syncStartDate = this.settings.lastSyncEndTimestamp || this.settings.syncStartDate;
     const enabledNoteTypes = this.settings.scheduledSync.enabledNoteTypes;
+    const syncTags = this.settings.syncTags;
     const syncKnowledgeBases = this.settings.scheduledSync.syncKnowledgeBases;
     const knowledgeBaseNames = this.settings.scheduledSync.syncKnowledgeBases?.length
       ? Object.fromEntries(
@@ -453,12 +470,14 @@ export default class GetNoteSyncPlugin extends Plugin {
           syncStartDate,
           maxDays: 0,
           ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}),
+          ...(syncTags !== undefined && syncTags.length > 0 ? { syncTags } : {}),
           ...(syncKnowledgeBases?.length ? { syncKnowledgeBases } : {}),
           ...(knowledgeBaseNames ? { knowledgeBaseNames } : {}),
           knowledgeBaseEntries: this.settings.knowledgeBaseCache?.entries,
         }
       : {
           ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}),
+          ...(syncTags !== undefined && syncTags.length > 0 ? { syncTags } : {}),
           ...(syncKnowledgeBases?.length ? { syncKnowledgeBases } : {}),
           ...(knowledgeBaseNames ? { knowledgeBaseNames } : {}),
           knowledgeBaseEntries: this.settings.knowledgeBaseCache?.entries,
@@ -495,8 +514,13 @@ export default class GetNoteSyncPlugin extends Plugin {
     wrapper.open();
   }
 
-  syncSelectedNotes(noteIds: string[], enabledNoteTypes?: string[]): void {
-    void this.runSync('selective', { maxDays: 0, syncStartDate: '', ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}) }, noteIds);
+  syncSelectedNotes(noteIds: string[], enabledNoteTypes?: string[], syncTags?: string[]): void {
+    void this.runSync('selective', {
+      maxDays: 0,
+      syncStartDate: '',
+      ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}),
+      ...(syncTags !== undefined ? { syncTags } : {}),
+    }, noteIds);
   }
 
   syncSubscribedKnowledge(): void {
@@ -526,7 +550,9 @@ export default class GetNoteSyncPlugin extends Plugin {
     this.refreshSettingsTab();
     showNotice(t('sync.subscribedKnowledge.started'));
 
-    const engine = new SyncEngine(this.app, this.settings, (info) => this.setProgress(info));
+    const engine = new SyncEngine(this.app, this.settings, (info) => this.setProgress(info), {
+      syncTags: syncOptions?.syncTags,
+    });
     this.currentSyncEngine = engine;
     engine.setOnCancel(() => this.cancelSync());
 
@@ -693,7 +719,9 @@ class ManualSyncModalWrapper extends Modal {
         initialOptions={{
           syncStartDate: this.plugin.settings.syncStartDate,
           maxDays: this.plugin.settings.maxDays,
+          syncTags: this.plugin.settings.syncTags,
         }}
+        tagOptions={this.plugin.settings.tagCache?.tags ?? []}
         onConfirm={(options) => {
           this.close();
           this.plugin.startSync(options);
@@ -724,10 +752,11 @@ class NotePickerModalWrapper extends Modal {
         clientId={getAuthCredentials(this.plugin.settings).clientId}
         authMode={getAuthCredentials(this.plugin.settings).authMode}
         abortSignal={this.abortController.signal}
-        onConfirm={(noteIds, enabledNoteTypes) => {
+        initialSyncTags={this.plugin.settings.syncTags ?? []}
+        onConfirm={(noteIds, enabledNoteTypes, syncTags) => {
           this.abortController.abort();
           this.close();
-          this.plugin.syncSelectedNotes(noteIds, enabledNoteTypes);
+          this.plugin.syncSelectedNotes(noteIds, enabledNoteTypes, syncTags);
         }}
         onCancel={() => {
           this.abortController.abort();
@@ -759,6 +788,8 @@ class TopicPickerModalWrapper extends Modal {
         clientId={getAuthCredentials(this.plugin.settings).clientId}
         authMode={getAuthCredentials(this.plugin.settings).authMode}
         abortSignal={this.abortController.signal}
+        initialSyncTags={this.plugin.settings.syncTags ?? []}
+        tagOptions={this.plugin.settings.tagCache?.tags ?? []}
         onConfirm={(selection) => {
           this.abortController.abort();
           this.close();

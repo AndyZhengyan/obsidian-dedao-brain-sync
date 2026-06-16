@@ -3,6 +3,7 @@ import { fetchAllNotes, fetchNoteChildren, fetchNoteDetail, fetchSubscribedKnowl
 import { formatDateTime, formatTimestampPrefix, renderNote, generateDisplayTitle } from './note-parser';
 import { getCategoryDir } from './types';
 import { getAuthCredentials, type GetNoteNote, type Settings, type SyncResult, type SyncResultItem, type SyncScopeOptions } from './types';
+import { applyTagFilter } from './utils/tag-aggregator';
 import type { SyncModal } from './ui/sync-modal';
 import { t } from './i18n';
 import { tryWriteBinary } from './utils/vault-fs';
@@ -154,6 +155,7 @@ export interface SubscribedKnowledgeSyncOptions {
   bloggerIds?: string[];
   knowledgeBaseName?: string;
   knowledgeBaseNames?: Record<string, string>;
+  syncTags?: string[];
 }
 
 type WriteStatus = SyncResultItem['status'];
@@ -178,13 +180,16 @@ export class SyncEngine {
     this.settings = settings;
     const syncStartDate = scopeOptions?.syncStartDate ?? settings.syncStartDate;
     const enabledNoteTypes = scopeOptions?.enabledNoteTypes;
+    const syncTags = scopeOptions?.syncTags;
     const syncKnowledgeBases = scopeOptions?.syncKnowledgeBases;
     this.scopeOptions = {
       maxDays: syncStartDate ? 0 : scopeOptions?.maxDays ?? settings.maxDays,
       syncStartDate,
       ...(enabledNoteTypes !== undefined ? { enabledNoteTypes } : {}),
+      ...(syncTags !== undefined && syncTags.length > 0 ? { syncTags } : {}),
       ...(syncKnowledgeBases !== undefined ? { syncKnowledgeBases } : {}),
       ...(scopeOptions?.knowledgeBaseNames ? { knowledgeBaseNames: scopeOptions.knowledgeBaseNames } : {}),
+      ...(scopeOptions?.knowledgeBaseEntries ? { knowledgeBaseEntries: scopeOptions.knowledgeBaseEntries } : {}),
     };
     this.onProgress = onProgress;
   }
@@ -834,6 +839,10 @@ export class SyncEngine {
     return notes.filter(note => enabledNoteTypes.includes(note.note_type));
   }
 
+  private filterNotesByTags(notes: GetNoteNote[], whitelist?: string[]): GetNoteNote[] {
+    return applyTagFilter(notes, whitelist ?? this.scopeOptions.syncTags);
+  }
+
   private filterRecentNotes(notes: GetNoteNote[]): GetNoteNote[] {
     const { maxDays } = this.scopeOptions;
     if (!maxDays || maxDays <= 0) return notes;
@@ -849,6 +858,7 @@ export class SyncEngine {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
     const uidIndex = this.buildUidIndex();
     const seenNoteIds = new Set<string>();
+    const observedTagNames = new Set<string>();
     const controller = new AbortController();
     this.abortController = controller;
     let pageCount = 0;
@@ -885,31 +895,45 @@ export class SyncEngine {
         const recentNotes = this.filterRecentNotes(notes);
         const filtered = this.filterNotesByDateRange(recentNotes);
         const typeFiltered = this.filterNotesByType(filtered);
-
         for (const note of typeFiltered) {
           if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
           if (seenNoteIds.has(note.note_id)) continue;
-          seenNoteIds.add(note.note_id);
-          result.total++;
+          const parentMatchesTags = this.filterNotesByTags([note]).length > 0;
           const noteToWrite = await this.enrichAudioNote(note, controller.signal);
 
-          const appendNotes = await this.fetchAppendNotes(noteToWrite, controller.signal, result);
+          const appendNotes = this.filterNotesByTags(await this.fetchAppendNotes(noteToWrite, controller.signal, result));
+          if (!parentMatchesTags && appendNotes.length === 0) continue;
           const parentBaseName = this.buildBaseName(noteToWrite);
           const parentFileName = this.getFileName(noteToWrite);
           // 子文档完整文件名（用于父文档的 wiki 链接）
           const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
 
           // 写入父文档（含子文档链接）
-          const writeResult = await this.writeNote(noteToWrite, uidIndex, undefined, undefined, childFileNames);
-          this.applyWriteResult(result, writeResult);
-          this.recordItem(result, noteToWrite, writeResult);
+          if (parentMatchesTags) {
+            seenNoteIds.add(note.note_id);
+            result.total++;
+            for (const tag of note.tags ?? []) {
+              if (tag?.name) observedTagNames.add(tag.name);
+            }
+            const writeResult = await this.writeNote(noteToWrite, uidIndex, undefined, undefined, childFileNames);
+            this.applyWriteResult(result, writeResult);
+            this.recordItem(result, noteToWrite, writeResult);
+          }
 
           // 写入子文档（链接回父文档）
           for (const appendNote of appendNotes) {
             if (seenNoteIds.has(appendNote.note_id)) continue;
             seenNoteIds.add(appendNote.note_id);
             result.total++;
-            const appendWriteResult = await this.writeNote(appendNote, uidIndex, parentBaseName, parentFileName);
+            for (const tag of appendNote.tags ?? []) {
+              if (tag?.name) observedTagNames.add(tag.name);
+            }
+            const appendWriteResult = await this.writeNote(
+              appendNote,
+              uidIndex,
+              parentMatchesTags ? parentBaseName : undefined,
+              parentMatchesTags ? parentFileName : undefined
+            );
             this.applyWriteResult(result, appendWriteResult);
             this.recordItem(result, appendNote, appendWriteResult);
           }
@@ -947,7 +971,6 @@ export class SyncEngine {
       }
 
       this.onProgress?.({ percent: 100 });
-
       // Cross-KB path: only run when the user has explicitly selected at least
       // one knowledge base. Empty array / undefined = cross-KB sync disabled.
       const selectedKnowledgeBases = this.scopeOptions.syncKnowledgeBases ?? [];
@@ -955,6 +978,9 @@ export class SyncEngine {
         await this.runCrossKnowledgeBaseSync(result, controller.signal);
       }
 
+      if (observedTagNames.size > 0) {
+        result.observedTags = Array.from(observedTagNames);
+      }
       return result;
     } catch (err) {
       cleanup();
@@ -1083,6 +1109,7 @@ export class SyncEngine {
     const idSet = new Set(noteIds);
     const uidIndex = this.buildUidIndex();
     const seenNoteIds = new Set<string>();
+    const observedTagNames = new Set<string>();
     const controller = new AbortController();
     this.abortController = controller;
     this.cancelled = false;
@@ -1105,16 +1132,17 @@ export class SyncEngine {
         for (const note of typeFiltered) {
           if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
           if (seenNoteIds.has(note.note_id)) continue;
-          seenNoteIds.add(note.note_id);
-
-          fetchedCount++;
-          result.total++;
-          const percent = Math.round((fetchedCount / noteIds.length) * 100);
-          this.onProgress?.({
-            processed: fetchedCount,
-            total: noteIds.length,
-            percent,
-          });
+          const parentMatchesTags = this.filterNotesByTags([note]).length > 0;
+          if (parentMatchesTags) {
+            seenNoteIds.add(note.note_id);
+            fetchedCount++;
+            result.total++;
+            for (const tag of note.tags ?? []) {
+              if (tag?.name) observedTagNames.add(tag.name);
+            }
+            const percent = Math.round((fetchedCount / noteIds.length) * 100);
+            this.onProgress?.({ processed: fetchedCount, total: noteIds.length, percent });
+          }
           const noteForPreCheck = this.needsImageDetail(note)
             ? await this.enrichAudioNote(note, controller.signal)
             : note;
@@ -1122,8 +1150,10 @@ export class SyncEngine {
           // Uses UID-based lookup so renamed/moved files are still found.
           const preCheck = this.preCheckNote(noteForPreCheck, uidIndex);
           if (preCheck.exists) {
-            result.skipped++;
-            this.recordItem(result, noteForPreCheck, { status: 'skipped' });
+            if (parentMatchesTags) {
+              result.skipped++;
+              this.recordItem(result, noteForPreCheck, { status: 'skipped' });
+            }
             const mayHaveAppendNotes = (noteForPreCheck.children_count ?? 0) > 0 || Boolean(noteForPreCheck.children_ids?.length);
             if (!mayHaveAppendNotes) {
               continue;
@@ -1133,12 +1163,13 @@ export class SyncEngine {
             ? await this.enrichAudioNote(note, controller.signal)
             : noteForPreCheck;
 
-          const appendNotes = await this.fetchAppendNotes(noteToWrite, controller.signal, result);
+          const appendNotes = this.filterNotesByTags(await this.fetchAppendNotes(noteToWrite, controller.signal, result));
+          if (!parentMatchesTags && appendNotes.length === 0) continue;
           const parentBaseName = this.buildBaseName(noteToWrite);
           const parentFileName = this.getFileName(noteToWrite);
           const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
 
-          if (!preCheck.exists) {
+          if (parentMatchesTags && !preCheck.exists) {
             const writeResult = await this.writeNote(noteToWrite, uidIndex, undefined, parentFileName, childFileNames);
             this.applyWriteResult(result, writeResult);
             this.recordItem(result, noteToWrite, writeResult);
@@ -1149,7 +1180,15 @@ export class SyncEngine {
             if (seenNoteIds.has(appendNote.note_id)) continue;
             seenNoteIds.add(appendNote.note_id);
             result.total++;
-            const appendWriteResult = await this.writeNote(appendNote, uidIndex, parentBaseName, parentFileName);
+            for (const tag of appendNote.tags ?? []) {
+              if (tag?.name) observedTagNames.add(tag.name);
+            }
+            const appendWriteResult = await this.writeNote(
+              appendNote,
+              uidIndex,
+              parentMatchesTags ? parentBaseName : undefined,
+              parentMatchesTags ? parentFileName : undefined
+            );
             this.applyWriteResult(result, appendWriteResult);
             this.recordItem(result, appendNote, appendWriteResult);
           }
@@ -1159,6 +1198,9 @@ export class SyncEngine {
       }
 
       this.onProgress?.({ percent: 100 });
+      if (observedTagNames.size > 0) {
+        result.observedTags = Array.from(observedTagNames);
+      }
       return result;
     } catch (err) {
       cleanup();
@@ -1177,6 +1219,7 @@ export class SyncEngine {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
     const uidIndex = this.buildUidIndex();
     const seenNoteIds = new Set<string>();
+    const observedTagNames = new Set<string>();
     const controller = new AbortController();
     this.abortController = controller;
     this.cancelled = false;
@@ -1218,31 +1261,46 @@ export class SyncEngine {
       for (const note of filteredNotes) {
         if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
         if (seenNoteIds.has(note.note_id)) continue;
-        seenNoteIds.add(note.note_id);
-        result.total++;
+        const parentMatchesTags = this.filterNotesByTags([note], syncOptions.syncTags).length > 0;
         const knowledgeBaseName = syncOptions.knowledgeBaseNames?.[note.note_id] ?? syncOptions.knowledgeBaseName;
         const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;
         const noteToWrite = await this.enrichAudioNote(note, controller.signal, categoryOverride);
-        const appendNotes = await this.fetchAppendNotes(noteToWrite, controller.signal, result, categoryOverride);
+        const appendNotes = this.filterNotesByTags(
+          await this.fetchAppendNotes(noteToWrite, controller.signal, result, categoryOverride),
+          syncOptions.syncTags
+        );
+        if (!parentMatchesTags && appendNotes.length === 0) continue;
         const parentBaseName = this.buildBaseName(noteToWrite);
         const parentFileName = this.getFileName(noteToWrite);
         const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
-        const writeResult = await this.writeNote(
-          noteToWrite,
-          uidIndex,
-          undefined,
-          undefined,
-          childFileNames,
-          categoryOverride
-        );
-        this.applyWriteResult(result, writeResult);
-        this.recordItem(result, noteToWrite, writeResult);
+        if (parentMatchesTags) {
+          seenNoteIds.add(note.note_id);
+          result.total++;
+          for (const tag of note.tags ?? []) {
+            if (tag?.name) observedTagNames.add(tag.name);
+          }
+          const writeResult = await this.writeNote(
+            noteToWrite,
+            uidIndex,
+            undefined,
+            undefined,
+            childFileNames,
+            categoryOverride
+          );
+          this.applyWriteResult(result, writeResult);
+          this.recordItem(result, noteToWrite, writeResult);
+        }
         for (const appendNote of appendNotes) {
+          seenNoteIds.add(appendNote.note_id);
+          result.total++;
+          for (const tag of appendNote.tags ?? []) {
+            if (tag?.name) observedTagNames.add(tag.name);
+          }
           const appendWriteResult = await this.writeNote(
             appendNote,
             uidIndex,
-            parentBaseName,
-            parentFileName,
+            parentMatchesTags ? parentBaseName : undefined,
+            parentMatchesTags ? parentFileName : undefined,
             undefined,
             categoryOverride
           );
@@ -1261,6 +1319,9 @@ export class SyncEngine {
       }
 
       this.onProgress?.({ percent: 100 });
+      if (observedTagNames.size > 0) {
+        result.observedTags = Array.from(observedTagNames);
+      }
       return result;
     } catch (err) {
       cleanup();

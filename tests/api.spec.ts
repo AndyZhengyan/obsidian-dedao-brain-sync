@@ -577,6 +577,7 @@ describe('OpenAPI knowledge previews', () => {
           note_id: 'created-note-1',
           title: '创建型知识库笔记',
           content: '创建型知识库正文预览',
+          tags: [{ name: '原始标签' }],
           updated_at: '2026-06-01 10:00:00',
         }],
         has_more: false,
@@ -598,7 +599,7 @@ describe('OpenAPI knowledge previews', () => {
       expect(page.items[0]).toMatchObject({
         note_id: 'created-note-1',
         content: '创建型知识库正文预览',
-        tags: [{ name: '我创建的知识库' }],
+        tags: [{ name: '原始标签' }, { name: '我创建的知识库' }],
       });
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();

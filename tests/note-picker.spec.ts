@@ -4,6 +4,7 @@ import { act } from 'preact/test-utils';
 import { fetchNotes } from '../src/api';
 import { generateDisplayTitle } from '../src/note-parser';
 import { NotePickerModal } from '../src/ui/note-picker-modal';
+import { applyTagFilter } from '../src/utils/tag-aggregator';
 import { initI18n } from '../src/i18n';
 import type { GetNoteNote } from '../src/types';
 
@@ -188,7 +189,8 @@ describe('NotePickerModal auth chains', () => {
 
     expect(onConfirm).toHaveBeenCalledWith(
       ['link'],
-      expect.arrayContaining(['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'audio', 'class_audio', 'link', 'img_text', 'recorder_flash_audio', 'internal_record', 'meeting', 'blogger_post'])
+      expect.arrayContaining(['immediate_audio', 'recorder_audio', 'audio_long', 'local_audio', 'audio', 'class_audio', 'link', 'img_text', 'recorder_flash_audio', 'internal_record', 'meeting', 'blogger_post']),
+      []
     );
   });
 
@@ -226,7 +228,199 @@ describe('NotePickerModal auth chains', () => {
       container.querySelector('.mod-cta')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    expect(onConfirm).toHaveBeenCalledWith(['tagged'], undefined);
+    expect(onConfirm).toHaveBeenCalledWith(['tagged'], undefined, []);
+  });
+
+  it('filters picker list by the tag whitelist dropdown', async () => {
+    const onConfirm = vi.fn();
+    vi.mocked(fetchNotes).mockResolvedValueOnce({
+      notes: [
+        makeNote({ note_id: 'work_note', title: '工作笔记', tags: [{ name: 'work' }, { name: 'daily' }] }),
+        makeNote({ note_id: 'home_note', title: '生活笔记', tags: [{ name: 'home' }] }),
+        makeNote({ note_id: 'no_tag_note', title: '无标签笔记', tags: [] }),
+      ],
+      hasMore: false,
+    });
+
+    const container = await renderPicker({
+      token: 'web-token',
+      clientId: '',
+      authMode: 'web',
+    }, onConfirm);
+
+    // Open the tag dropdown (trigger shows "All tags" by default)
+    const tagTrigger = Array.from(container.querySelectorAll('button'))
+      .find(button => button.textContent === '全部标签');
+    expect(tagTrigger).toBeTruthy();
+    await act(() => {
+      tagTrigger!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const workOption = Array.from(container.querySelectorAll('label'))
+      .find(label => label.textContent === 'work');
+    expect(workOption).toBeTruthy();
+    const workCheckbox = workOption!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    await act(() => {
+      workCheckbox.checked = true;
+      workCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain('工作笔记');
+    expect(container.textContent).not.toContain('生活笔记');
+    expect(container.textContent).not.toContain('无标签笔记');
+
+    // submit and verify tag whitelist is forwarded
+    await act(() => {
+      Array.from(container.querySelectorAll('button'))
+        .find(button => button.textContent === '全选')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await act(() => {
+      container.querySelector('.mod-cta')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith(['work_note'], undefined, ['work']);
+  });
+});
+
+/**
+ * The picker modal's tag-whitelist filter must mirror `applyTagFilter` in
+ * `src/utils/tag-aggregator.ts`. The two implementations previously drifted
+ * (different case handling, picker never trimmed note tags), so we test the
+ * behaviour end-to-end through the modal UI.
+ */
+describe('NotePickerModal — tag filter matches applyTagFilter (engine parity)', () => {
+  async function renderPickerWithTags(notes: GetNoteNote[], props: { token: string; clientId: string; authMode: 'openapi' | 'web' }, onConfirm = vi.fn()) {
+    vi.mocked(fetchNotes).mockResolvedValueOnce({ notes, hasMore: false });
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(
+        h(NotePickerModal, {
+          ...props,
+          onConfirm,
+          onCancel: vi.fn(),
+        }),
+        container
+      );
+      await Promise.resolve();
+    });
+    return container;
+  }
+
+  function getAllNoteIdsFromUI(container: HTMLElement): string[] {
+    return Array.from(container.querySelectorAll('.getnote-note-card input[type="checkbox"]'))
+      .map(input => {
+        const card = input.closest('.getnote-note-card') as HTMLElement;
+        return card.querySelector('.getnote-note-card-title')?.textContent ?? '';
+      });
+  }
+
+  async function selectTagInDropdown(container: HTMLElement, tagLabel: string) {
+    const trigger = Array.from(container.querySelectorAll('button'))
+      .find(button => button.textContent === '全部标签');
+    expect(trigger).toBeTruthy();
+    await act(() => {
+      trigger!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    const option = Array.from(container.querySelectorAll('label'))
+      .find(label => label.textContent === tagLabel);
+    expect(option).toBeTruthy();
+    const checkbox = option!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    await act(() => {
+      checkbox.checked = true;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }
+
+  it('applies the empty-whitelist contract: no filter, all notes shown', async () => {
+    const notes = [
+      makeNote({ note_id: 'a', title: 'A', tags: [{ name: 'work' }] }),
+      makeNote({ note_id: 'b', title: 'B', tags: [{ name: 'home' }] }),
+      makeNote({ note_id: 'c', title: 'C', tags: [] }),
+    ];
+    const container = await renderPickerWithTags(notes, { token: 'web', clientId: '', authMode: 'web' });
+    // No tag selected — default "全部标签" means whitelist is empty.
+    expect(getAllNoteIdsFromUI(container)).toHaveLength(3);
+    // Sanity: applyTagFilter agrees.
+    expect(applyTagFilter(notes, []).map(n => n.note_id)).toHaveLength(3);
+  });
+
+  it('matches the engine case-insensitively (whitelist "WORK" matches note tag "work")', async () => {
+    const notes = [
+      makeNote({ note_id: 'work_note', title: '工作笔记', tags: [{ name: 'work' }] }),
+      makeNote({ note_id: 'home_note', title: '生活笔记', tags: [{ name: 'home' }] }),
+    ];
+    const container = await renderPickerWithTags(notes, { token: 'web', clientId: '', authMode: 'web' });
+    await selectTagInDropdown(container, 'work');
+
+    const visibleTitles = getAllNoteIdsFromUI(container);
+    expect(visibleTitles).toContain('工作笔记');
+    expect(visibleTitles).not.toContain('生活笔记');
+
+    // Engine parity
+    const engineResult = applyTagFilter(notes, ['WORK']);
+    expect(engineResult.map(n => n.note_id)).toEqual(['work_note']);
+  });
+
+  it('trims whitespace inside note tag names (engine parity)', async () => {
+    // Note tags arrive with leading/trailing whitespace; the engine trims
+    // before matching, so the picker must do the same to stay consistent.
+    const notes = [
+      makeNote({ note_id: 'padded', title: 'Padded', tags: [{ name: '  work  ' }] }),
+      makeNote({ note_id: 'clean', title: 'Clean', tags: [{ name: 'work' }] }),
+      makeNote({ note_id: 'home', title: 'Home', tags: [{ name: 'home' }] }),
+    ];
+    const container = await renderPickerWithTags(notes, { token: 'web', clientId: '', authMode: 'web' });
+    await selectTagInDropdown(container, 'work');
+
+    const visibleTitles = getAllNoteIdsFromUI(container);
+    // Both padded and clean should be visible — the engine trims before comparing.
+    expect(visibleTitles).toContain('Padded');
+    expect(visibleTitles).toContain('Clean');
+    expect(visibleTitles).not.toContain('Home');
+
+    // Engine parity
+    const engineResult = applyTagFilter(notes, ['work']);
+    expect(engineResult.map(n => n.note_id).sort()).toEqual(['clean', 'padded']);
+  });
+
+  it('excludes notes with no tags when a non-empty whitelist is set', async () => {
+    const notes = [
+      makeNote({ note_id: 'tagged', title: 'Tagged', tags: [{ name: 'work' }] }),
+      makeNote({ note_id: 'untagged', title: 'Untagged', tags: [] }),
+    ];
+    const container = await renderPickerWithTags(notes, { token: 'web', clientId: '', authMode: 'web' });
+    await selectTagInDropdown(container, 'work');
+
+    const visibleTitles = getAllNoteIdsFromUI(container);
+    expect(visibleTitles).toContain('Tagged');
+    expect(visibleTitles).not.toContain('Untagged');
+
+    // Engine parity
+    expect(applyTagFilter(notes, ['work']).map(n => n.note_id)).toEqual(['tagged']);
+  });
+
+  it('submit scope mirrors the picker filter — only visible selected ids are forwarded', async () => {
+    const onConfirm = vi.fn();
+    const notes = [
+      makeNote({ note_id: 'picked', title: 'Picked', tags: [{ name: 'work' }] }),
+      makeNote({ note_id: 'hidden', title: 'Hidden', tags: [{ name: 'home' }] }),
+    ];
+    const container = await renderPickerWithTags(notes, { token: 'web', clientId: '', authMode: 'web' }, onConfirm);
+    await selectTagInDropdown(container, 'work');
+
+    // Click "全选" (select all visible) — the hidden note must not be included.
+    await act(() => {
+      Array.from(container.querySelectorAll('button'))
+        .find(button => button.textContent === '全选')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await act(() => {
+      container.querySelector('.mod-cta')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith(['picked'], undefined, ['work']);
   });
 });
 

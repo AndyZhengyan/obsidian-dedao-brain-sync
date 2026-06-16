@@ -114,13 +114,33 @@ export interface Settings {
   lastQuotaState?: ApiQuotaState;
   syncHistory: SyncHistoryEntry[];
   tagMigrationVersion: number;
+  /**
+   * Tag whitelist persisted at the settings level.
+   * Empty array = no tag filter (sync all notes regardless of tags).
+   */
+  syncTags?: string[];
+  /**
+   * Local cache of tag names observed from previously synced notes. Used to
+   * populate the tag dropdown without an extra network round trip.
+   */
+  tagCache?: TagCache;
   knowledgeBaseCache?: KnowledgeBaseCacheState;
+}
+
+export interface TagCache {
+  tags: string[];
+  lastUpdated: number;
 }
 
 export interface SyncScopeOptions {
   maxDays: number;
   syncStartDate: string;
   enabledNoteTypes?: string[];
+  /**
+   * Tag whitelist. Empty/undefined means no tag-based filter.
+   * Notes are kept when their tags intersect the whitelist (case-insensitive).
+   */
+  syncTags?: string[];
   syncKnowledgeBases?: string[];
   knowledgeBaseNames?: Record<string, string>;
   knowledgeBaseEntries?: Array<{ topicId: string; name: string; source?: 'subscribed' | 'created' }>;
@@ -130,6 +150,7 @@ export interface SyncHistoryScope {
   maxDays: number;
   syncStartDate: string;
   enabledNoteTypes?: string[];
+  syncTags?: string[];
   selectedCount?: number;
   selectedIds?: string[];
 }
@@ -215,6 +236,11 @@ export interface SyncResult {
   total: number;
   items?: SyncResultItem[];
   lastNoteTimestamp?: string;  // updated_at of the last processed note
+  /**
+   * Tag names observed on processed notes during the sync. Used to
+   * incrementally update the local tag cache without an extra network call.
+   */
+  observedTags?: string[];
 }
 
 export interface SyncResultItem {

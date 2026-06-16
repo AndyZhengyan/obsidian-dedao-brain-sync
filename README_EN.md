@@ -14,31 +14,16 @@ Bidirectionally sync your notes, highlights, links, recordings, and AI summaries
 
 * * *
 
-## 🎉 1.2.0 — Latest Update
+## 🎉 1.3.0 — Latest Update
 
-1.2.0 is a fix-up release aimed at clearing the Obsidian community-plugin directory review findings against 1.1.3, so the marketplace listing can pass re-scan cleanly.
+- **🗂️ Card-based note picker**: See titles, summaries, content previews, tags, types, and update times at a glance.
+- **🏷️ Tag whitelist sync**: Filter manual, scheduled, and knowledge-base syncs by selected tags.
+- **📚 More precise scheduled sync**: Choose the knowledge bases and note types included in automatic sync.
+- **📎 Attachment controls by category**: Toggle image, audio, video, and document imports independently.
+- **🔄 Better sync management**: Reset sync checkpoints and see type/tag filters in sync history.
+- **🛠️ Stability fixes**: Improved knowledge-base, append-note, and tag handling.
 
-### ✨ User-facing changes
-
-- **🟢 More reliable notice colors**: `showError` / `showSuccess` now use the recommended `Notice.messageEl` + CSS-class mechanism. Colors and weights follow the active theme and no longer trip the "no static styles assignment" rule.
-
-### 🔧 Improvements
-
-- **🧹 Stricter type guards**: Web-API list mapping, subscribed-topic lookup, and `payload.exp` parsing now go through `Record<string, unknown>` plus type guards, removing redundant `as` assertions.
-- **🪜 Helper extraction**: Pulled `findTopicByAlias` out as a shared helper, eliminating the duplicated `(t: unknown) as Record` pattern.
-- **🎯 Async event handlers made explicit**: `openTopic` / `loadTopicPage` and other Preact `onClick` handlers are wrapped with `void`, so discarded promises are visible at compile time.
-
-### 🐛 Bug fixes
-
-- **🔤 Asset-path regex control characters**: Replaced literal `\x00-\x1f` with `\u0000-\u001f` escapes to clear the directory linter's "control character in regex" warning.
-- **🧪 Notice mock gains `messageEl`**: Unit-test stubs of `Notice` now expose an `addClass` shim, so the new styling path is exercisable in Vitest.
-
-### 📋 1.1.3 — Previous feature drop (already on main)
-
-- **📚 Knowledge-base sync completed**: Manual sync by knowledge base is end-to-end; OpenAPI knowledge-base sync no longer double-fetches.
-- **🏷️ Tag-aware manual sync filter**: The note picker matches tags, not just titles.
-- **🩹 Automatic tag repair**: Migration scrubs frontmatter characters that Obsidian rejects.
-- **🧪 ~600 new test lines** covering knowledge-base sync, tag cleanup, and the tag-aware picker.
+The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 
 * * *
 
@@ -47,7 +32,7 @@ Bidirectionally sync your notes, highlights, links, recordings, and AI summaries
 - **True bidirectional sync**: Pull notes from Dedao Brain into Obsidian, and manually upload selected local Markdown files back to Dedao Brain.
 - **Not a one-shot export**: The official export is offline HTML. This plugin syncs each note into its own Markdown file and keeps updating it over time.
 - **Stable, resumable sync**: Supports incremental sync, sync by date, sync by note, sync by knowledge base, scheduled sync, startup sync, and checkpoints.
-- **Richer filters**: Control each run by updated time, start date, max days, note types, manually selected notes, or selected knowledge bases.
+- **Richer filters**: Control each run by updated time, start date, max days, note types, tags, manually selected notes, or selected knowledge bases.
 - **Two auth modes**: PRO users can use long-term OpenAPI auth; Temporary Auth reuses the signed-in web session for quick trials.
 - **Detailed sync logs**: Keep recent runs with method, parameters, filters, duration, status, and per-note created / updated / skipped / failed details.
 - **Readable files**: Notes are organized by type, named by title first, with optional date/time prefixes and frontmatter metadata.
@@ -62,11 +47,11 @@ Bidirectionally sync your notes, highlights, links, recordings, and AI summaries
 | Sync by date | Pull notes from Dedao Brain by start date or "last N days". |
 | Sync by note | Pick specific notes from the remote list. |
 | Sync by knowledge base | Manually choose a subscribed knowledge base and sync its content locally. |
-| Scheduled sync | Pull from Dedao Brain at a configurable interval. |
+| Scheduled sync | Pull at a configurable interval with optional knowledge-base, note-type, and tag scopes. |
 | Startup sync | Run a download sync once when Obsidian starts. |
 | Local upload | Choose a vault folder and one or more Markdown files to manually create in Dedao Brain. |
 | Two auth modes | Supports OpenAPI auth and Temporary Web auth for long-term use and quick trials. |
-| Rich filters | Supports time range, last N days, checkpoints, note type filters, selected notes, and knowledge-base scope. |
+| Rich filters | Supports time range, last N days, checkpoints, note types, tags, selected notes, and knowledge-base scope. |
 | Type-based filing | Text, link, recording, local audio, and others are filed into separate folders. |
 | Sync logs | Shows each run's method, parameters, filters, processed counts, duration, and per-note results. |
 

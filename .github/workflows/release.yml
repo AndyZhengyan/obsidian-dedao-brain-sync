@@ -42,13 +42,26 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           MANIFEST_VERSION=$(node -e "console.log(require('./manifest.json').version)")
+          PACKAGE_VERSION=$(node -e "console.log(require('./package.json').version)")
           TAG_VERSION="${GITHUB_REF_NAME#v}"
           if [ "$MANIFEST_VERSION" != "$TAG_VERSION" ]; then
             echo "manifest.json version ($MANIFEST_VERSION) != tag version ($TAG_VERSION)"
             exit 1
           fi
+          if [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
+            echo "package.json version ($PACKAGE_VERSION) != tag version ($TAG_VERSION)"
+            exit 1
+          fi
+          if ! grep -Fq "## 🎉 $TAG_VERSION 最新更新" README.md; then
+            echo "README.md latest-update heading does not match tag version ($TAG_VERSION)"
+            exit 1
+          fi
+          if ! grep -Fq "## 🎉 $TAG_VERSION — Latest Update" README_EN.md; then
+            echo "README_EN.md latest-update heading does not match tag version ($TAG_VERSION)"
+            exit 1
+          fi
           echo "version=$TAG_VERSION" >> "$GITHUB_OUTPUT"
-          echo "Version $MANIFEST_VERSION OK"
+          echo "Tag, manifest, package, and README versions match: $TAG_VERSION"
 
       - name: Find previous tag
         id: prev-tag

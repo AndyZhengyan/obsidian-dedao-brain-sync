@@ -4,6 +4,7 @@ import { SyncButton } from './sync-button';
 import { OAuthButton } from './oauth-button';
 import { openSyncHistoryModal } from '../ui/sync-history-modal';
 import { NoteTypeSelect } from '../ui/note-type-select';
+import { TagSelect } from '../ui/tag-select';
 import { KnowledgeBaseSelect } from '../ui/knowledge-base-select';
 import { Toggle } from './toggle';
 import { getAuthCredentials, type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressDetail } from '../types';
@@ -90,6 +91,7 @@ export function SettingsComponent({
   const lastSyncedTo = settings.lastSyncEndTimestamp || '';
   const [scheduledEnabled, setScheduledEnabled] = useState(settings.scheduledSync.enabled);
   const [scheduledNoteTypes, setScheduledNoteTypes] = useState<string[] | undefined>(settings.scheduledSync.enabledNoteTypes);
+  const [syncTags, setSyncTags] = useState<string[]>(settings.syncTags ?? []);
   const [scheduledKnowledgeBases, setScheduledKnowledgeBases] = useState<string[]>(settings.scheduledSync.syncKnowledgeBases ?? []);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -675,6 +677,21 @@ export function SettingsComponent({
                 <NoteTypeSelect value={scheduledNoteTypes} onChange={handleScheduledNoteTypes} />
               </span>
             </div>
+            <div className="getnote-scheduled-row">
+              <span className="getnote-scheduled-row-label">{t('settings.syncTags.label')}</span>
+              <span className="getnote-scheduled-row-control">
+                <TagSelect
+                  value={syncTags}
+                  options={settings.tagCache?.tags ?? []}
+                  onChange={(value) => {
+                    setSyncTags(value);
+                    updateSetting('syncTags', value);
+                  }}
+                  placeholder={t('settings.syncTags.placeholder')}
+                />
+              </span>
+            </div>
+            <div className="getnote-input-hint">{t('settings.syncTags.desc')}</div>
             <div className="getnote-scheduled-row">
               <span className="getnote-scheduled-row-label">{t('settings.scheduled.syncKnowledgeBases')}</span>
               <span className="getnote-scheduled-row-control">
