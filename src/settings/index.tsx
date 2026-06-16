@@ -328,6 +328,11 @@ export function SettingsComponent({
     }
   };
 
+  const handleMaxDaysChange = (value: string) => {
+    const n = parseInt(value, 10);
+    updateSetting('maxDays', Number.isNaN(n) || n < 0 ? 0 : n);
+  };
+
   const handleScheduledOnStart = (checked: boolean) => {
     updateSetting('scheduledSync', {
       ...settings.scheduledSync,
@@ -642,6 +647,19 @@ export function SettingsComponent({
                 {t('settings.interval.minWarning')}
               </div>
             )}
+            <div className="getnote-scheduled-row">
+              <span className="getnote-scheduled-row-label">{t('settings.maxDays.label')}</span>
+              <span className="getnote-scheduled-row-control">
+                <input
+                  type="number"
+                  min="0"
+                  value={settings.maxDays}
+                  placeholder={t('settings.maxDays.placeholder')}
+                  onInput={(e) => handleMaxDaysChange((e.target as HTMLInputElement).value)}
+                />
+              </span>
+            </div>
+            <div className="getnote-input-hint">{t('settings.maxDays.hint')}</div>
             <div className="getnote-scheduled-row">
               <span className="getnote-scheduled-row-label">{t('settings.scheduled.onStart')}</span>
               <span className="getnote-scheduled-row-control">

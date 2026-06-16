@@ -781,6 +781,43 @@ describe('SettingsComponent auth credentials', () => {
     }));
   });
 
+  it('renders auto sync range and note type filters inside scheduled sync controls', () => {
+    const { container } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
+      maxDays: 14,
+    }));
+
+    const rangeLabel = Array.from(container.querySelectorAll('.getnote-scheduled-row-label'))
+      .find(node => node.textContent === '自动同步范围');
+    const noteTypeLabel = Array.from(container.querySelectorAll('.getnote-scheduled-row-label'))
+      .find(node => node.textContent === '同步笔记类型');
+
+    expect(rangeLabel).toBeTruthy();
+    expect(rangeLabel!.closest('.getnote-scheduled-rows')).not.toBeNull();
+    expect(noteTypeLabel).toBeTruthy();
+    expect(noteTypeLabel!.closest('.getnote-scheduled-rows')).not.toBeNull();
+  });
+
+  it('stores auto sync range from the scheduled sync controls', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
+      maxDays: 30,
+    }));
+
+    const rangeLabel = Array.from(container.querySelectorAll('.getnote-scheduled-row-label'))
+      .find(node => node.textContent === '自动同步范围');
+    expect(rangeLabel).toBeTruthy();
+    const input = rangeLabel!.closest('.getnote-scheduled-row')!.querySelector('input[type="number"]') as HTMLInputElement;
+    expect(input).toBeTruthy();
+
+    await act(() => {
+      input.value = '14';
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: '14' }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('maxDays', 14);
+  });
+
   it('renders the knowledge-base dropdown inside scheduled sync controls', () => {
     const { container } = renderSettings(makeSettings({
       scheduledSync: {
