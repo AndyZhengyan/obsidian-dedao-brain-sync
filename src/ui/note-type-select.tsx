@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { t } from '../i18n';
 import { INTERNAL_AUDIO_NOTE_TYPES } from '../types';
 
@@ -26,6 +26,12 @@ function summarizeTypes(value: string[]): string {
   return t('noteTypes.selected', { count: value.length });
 }
 
+function sameValue(a: string[] | undefined, b: string[] | undefined): boolean {
+  if (a === undefined || b === undefined) return a === b;
+  if (a.length !== b.length) return false;
+  return a.every(item => b.includes(item));
+}
+
 interface NoteTypeSelectProps {
   value?: string[];
   onChange: (value: string[] | undefined) => void;
@@ -33,17 +39,28 @@ interface NoteTypeSelectProps {
 
 export function NoteTypeSelect({ value, onChange }: NoteTypeSelectProps) {
   const [open, setOpen] = useState(false);
+  const [visibleValue, setVisibleValue] = useState<string[] | undefined>(value);
   const allNoteTypes = NOTE_TYPE_OPTIONS.flatMap(option => option.noteTypes);
-  const selectedTypes = value ?? allNoteTypes;
-  const allSelected = value === undefined || selectedTypes.length === allNoteTypes.length;
+  const selectedTypes = visibleValue ?? allNoteTypes;
+  const allSelected = visibleValue === undefined || selectedTypes.length === allNoteTypes.length;
+  const applying = !sameValue(visibleValue, value);
+
+  useEffect(() => {
+    setVisibleValue(value);
+  }, [value]);
+
+  const applyChange = (next: string[] | undefined) => {
+    setVisibleValue(next);
+    onChange(next);
+  };
 
   const handleTypeToggle = (noteTypes: string[], checked: boolean) => {
-    const current = value ?? allNoteTypes;
+    const current = visibleValue ?? allNoteTypes;
     const next = checked
       ? Array.from(new Set([...current, ...noteTypes]))
       : current.filter(type => !noteTypes.includes(type));
 
-    onChange(next.length === allNoteTypes.length ? undefined : next);
+    applyChange(next.length === allNoteTypes.length ? undefined : next);
   };
 
   return (
@@ -53,7 +70,7 @@ export function NoteTypeSelect({ value, onChange }: NoteTypeSelectProps) {
         className="getnote-note-type-select-trigger"
         onClick={() => setOpen(value => !value)}
       >
-        <span>{value === undefined ? t('noteTypes.all') : summarizeTypes(value)}</span>
+        <span>{visibleValue === undefined ? t('noteTypes.all') : summarizeTypes(visibleValue)}</span>
         <span
           aria-hidden="true"
           className={`getnote-note-type-select-caret${open ? ' is-open' : ''}`}
@@ -65,7 +82,7 @@ export function NoteTypeSelect({ value, onChange }: NoteTypeSelectProps) {
             <input
               type="checkbox"
               checked={allSelected}
-              onChange={(event) => onChange((event.target as HTMLInputElement).checked ? undefined : [])}
+              onChange={(event) => applyChange((event.target as HTMLInputElement).checked ? undefined : [])}
             />
             <span>{t('noteTypes.all')}</span>
           </label>
@@ -79,6 +96,9 @@ export function NoteTypeSelect({ value, onChange }: NoteTypeSelectProps) {
               <span>{getTypeLabel(option.labelKey)}</span>
             </label>
           ))}
+          {applying && (
+            <div className="getnote-note-type-select-status">{t('noteTypes.applying')}</div>
+          )}
         </div>
       )}
     </div>

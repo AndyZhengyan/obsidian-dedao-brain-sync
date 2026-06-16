@@ -66,4 +66,44 @@ describe('NoteTypeSelect', () => {
     expect(callArg).toContain('link');
     expect(callArg).toContain('img_text');
   });
+
+  it('updates its visible selection immediately even before the parent rerenders', async () => {
+    const { container } = renderSelect();
+
+    await act(() => {
+      container.querySelector('button')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const plainTextOption = Array.from(container.querySelectorAll('label'))
+      .find(label => label.textContent === '文字笔记');
+    expect(plainTextOption).toBeTruthy();
+    const checkbox = plainTextOption!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+
+    await act(() => {
+      checkbox.checked = false;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(container.querySelector('button')!.textContent).toContain('已选');
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it('shows an applying status while waiting for the parent value to catch up', async () => {
+    const { container } = renderSelect();
+
+    await act(() => {
+      container.querySelector('button')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const plainTextOption = Array.from(container.querySelectorAll('label'))
+      .find(label => label.textContent === '文字笔记');
+    const checkbox = plainTextOption!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+
+    await act(() => {
+      checkbox.checked = false;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain('应用中');
+  });
 });

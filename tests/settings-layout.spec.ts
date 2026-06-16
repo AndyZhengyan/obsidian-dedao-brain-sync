@@ -28,12 +28,16 @@ describe('settings layout CSS', () => {
   it('keeps attachment and sync-log setting rows on the same constrained layout as scheduled sync', () => {
     const attachment = ruleFor('.getnote-scheduled-options');
     const syncLog = ruleFor('.getnote-sync-log-section');
+    const attachmentLabels = ruleFor('.getnote-scheduled-options .getnote-scheduled-row-label');
+    const syncLogLabels = ruleFor('.getnote-sync-log-section .getnote-scheduled-row-label');
 
     expect(attachment).toContain('display: flex');
     expect(attachment).toContain('flex-direction: column');
     expect(attachment).toContain('max-width: var(--getnote-primary-input-width)');
+    expect(attachmentLabels).toContain('text-align: right');
     expect(syncLog).toContain('display: flex');
     expect(syncLog).toContain('flex-direction: column');
     expect(syncLog).toContain('max-width: var(--getnote-primary-input-width)');
+    expect(syncLogLabels).toContain('text-align: right');
   });
 });
