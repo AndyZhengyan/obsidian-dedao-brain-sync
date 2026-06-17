@@ -10,7 +10,6 @@
 
 Bidirectionally sync your notes, highlights, links, recordings, and AI summaries from Dedao Brain (得到大脑, formerly GetNote / Get笔记) into Obsidian as local Markdown files you can organize, search, and link over the long term.
 
-> The Obsidian Community Plugin directory requires `manifest.name` to use Basic Latin characters, so the marketplace listing is shown as `Dedao Brain Sync`. The plugin settings page and Chinese copy use the primary brand `得到大脑（原Get笔记）Sync`.
 
 * * *
 

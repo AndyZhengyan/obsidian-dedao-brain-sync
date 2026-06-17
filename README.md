@@ -10,7 +10,6 @@
 
 把得到大脑（原Get笔记）里的灵感、摘录、链接、录音和 AI 总结与 Obsidian 双向同步，变成可长期整理、搜索和链接的本地 Markdown 知识库。
 
-> Obsidian 社区插件目录要求 `manifest.name` 优先使用英文 Basic Latin 字符，所以插件市场显示名为 `Dedao Brain Sync`；插件设置页、README 和中文文案使用主品牌 `得到大脑（原Get笔记）Sync`。
 
 * * *
 
