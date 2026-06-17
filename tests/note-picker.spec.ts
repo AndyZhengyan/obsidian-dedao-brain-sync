@@ -157,6 +157,7 @@ describe('NotePickerModal auth chains', () => {
       token: 'web-token',
       clientId: '',
       authMode: 'web',
+      tagOptions: ['work', 'home'],
     }, onConfirm);
 
     const trigger = Array.from(container.querySelectorAll('button'))
@@ -208,6 +209,7 @@ describe('NotePickerModal auth chains', () => {
       token: 'web-token',
       clientId: '',
       authMode: 'web',
+      tagOptions: ['work', 'home', 'daily'],
     }, onConfirm);
 
     const searchInput = container.querySelector('.getnote-picker-search input') as HTMLInputElement;
@@ -231,7 +233,7 @@ describe('NotePickerModal auth chains', () => {
     expect(onConfirm).toHaveBeenCalledWith(['tagged'], undefined, []);
   });
 
-  it('uses cached tag options together with tags from loaded notes', async () => {
+  it('uses shared cached tag options without adding page-local note tags', async () => {
     vi.mocked(fetchNotes).mockResolvedValueOnce({
       notes: [
         makeNote({ note_id: 'loaded', title: '已加载笔记', tags: [{ name: 'loaded-tag' }] }),
@@ -252,8 +254,10 @@ describe('NotePickerModal auth chains', () => {
       tagTrigger.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    expect(container.textContent).toContain('cached-tag');
-    expect(container.textContent).toContain('loaded-tag');
+    const optionLabels = Array.from(container.querySelectorAll('.getnote-tag-select-option'))
+      .map(label => label.textContent);
+    expect(optionLabels).toContain('cached-tag');
+    expect(optionLabels).not.toContain('loaded-tag');
   });
 
   it('filters picker list by the tag whitelist dropdown', async () => {
@@ -271,6 +275,7 @@ describe('NotePickerModal auth chains', () => {
       token: 'web-token',
       clientId: '',
       authMode: 'web',
+      tagOptions: ['work', 'home', 'daily'],
     }, onConfirm);
 
     // Open the tag dropdown (trigger shows "All tags" by default)
@@ -317,12 +322,14 @@ describe('NotePickerModal auth chains', () => {
 describe('NotePickerModal — tag filter matches applyTagFilter (engine parity)', () => {
   async function renderPickerWithTags(notes: GetNoteNote[], props: { token: string; clientId: string; authMode: 'openapi' | 'web' }, onConfirm = vi.fn()) {
     vi.mocked(fetchNotes).mockResolvedValueOnce({ notes, hasMore: false });
+    const tagOptions = Array.from(new Set(notes.flatMap(note => note.tags.map(tag => tag.name.trim())).filter(Boolean)));
     const container = document.createElement('div');
     document.body.appendChild(container);
     await act(async () => {
       render(
         h(NotePickerModal, {
           ...props,
+          tagOptions,
           onConfirm,
           onCancel: vi.fn(),
         }),

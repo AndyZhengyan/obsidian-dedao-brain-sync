@@ -361,7 +361,6 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 8px;
   width: 100%;
 }
 
@@ -441,17 +440,51 @@
   border-radius: 4px;
 }
 
+.getnote-section-disclosure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 0 4px 12px;
+  border: 0;
+  border-left: 2px solid var(--background-modifier-border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: 500;
+  text-align: left;
+  box-shadow: none;
+}
+
+.getnote-section-disclosure:hover {
+  color: var(--text-normal);
+  border-left-color: var(--text-accent);
+  background: transparent;
+}
+
 .getnote-disclosure-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
   color: var(--text-muted);
   line-height: 1;
 }
 
 .getnote-disclosure-caret::before {
-  content: "v";
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 120ms ease;
 }
 
 .getnote-disclosure-caret.is-open::before {
-  content: "^";
+  transform: rotate(225deg);
 }
 
 .getnote-nested-row {

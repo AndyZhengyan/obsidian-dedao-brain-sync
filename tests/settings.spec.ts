@@ -656,13 +656,18 @@ describe('SettingsComponent auth credentials', () => {
     expect(toggleEls.length).toBeGreaterThanOrEqual(5);
   });
 
-  it('shows attachment child toggles directly as a compact nested group', async () => {
+  it('keeps attachment child toggles collapsed behind a compact disclosure', async () => {
     const { container } = renderSettings(makeSettings());
     await new Promise(r => setTimeout(r, 50));
 
     const detail = container.querySelector('.getnote-scheduled-options-detail');
     expect(detail).toBeTruthy();
-    expect(container.querySelector('.getnote-attachment-disclosure')).toBeNull();
+    const disclosure = container.querySelector('.getnote-attachment-section-disclosure') as HTMLButtonElement;
+    expect(disclosure).toBeTruthy();
+    expect(detail!.classList.contains('getnote-hidden')).toBe(true);
+    await act(() => {
+      disclosure.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
     expect(detail!.classList.contains('getnote-hidden')).toBe(false);
     expect(detail!.querySelectorAll('.getnote-nested-row').length).toBe(4);
   });
@@ -817,7 +822,7 @@ describe('SettingsComponent auth credentials', () => {
     }));
   });
 
-  it('renders note type inside scheduled sync controls and tag filters as global sync scope', () => {
+  it('renders note type and tag filters inside scheduled sync controls', () => {
     const { container } = renderSettings(makeSettings({
       scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
       maxDays: 14,
@@ -831,18 +836,23 @@ describe('SettingsComponent auth credentials', () => {
     expect(noteTypeLabel).toBeTruthy();
     expect(noteTypeLabel!.closest('.getnote-scheduled-rows')).not.toBeNull();
     expect(tagLabel).toBeTruthy();
-    expect(tagLabel!.closest('.getnote-scheduled-rows')).toBeNull();
+    expect(tagLabel!.closest('.getnote-scheduled-rows')).not.toBeNull();
   });
 
-  it('shows scheduled sync details directly and does not render auto sync range there', async () => {
+  it('keeps scheduled sync details collapsed and does not render auto sync range there', async () => {
     const { container } = renderSettings(makeSettings({
       scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
       maxDays: 30,
     }));
 
-    expect(container.querySelector('.getnote-scheduled-disclosure')).toBeNull();
+    const disclosure = container.querySelector('.getnote-scheduled-section-disclosure') as HTMLButtonElement;
+    expect(disclosure).toBeTruthy();
     const details = container.querySelector('.getnote-scheduled-rows');
     expect(details).toBeTruthy();
+    expect(details!.classList.contains('getnote-hidden')).toBe(true);
+    await act(() => {
+      disclosure.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
     expect(details!.classList.contains('getnote-hidden')).toBe(false);
     expect(container.textContent).not.toContain('自动同步范围');
   });
@@ -1020,7 +1030,7 @@ describe('SettingsComponent — syncTags (tag whitelist) dropdown', () => {
     const syncRangeLabel = Array.from(container.querySelectorAll('.getnote-scheduled-row-label'))
       .find(node => node.textContent === '同步范围');
     expect(syncRangeLabel).toBeTruthy();
-    expect(syncRangeLabel!.closest('.getnote-scheduled-rows')).toBeNull();
+    expect(syncRangeLabel!.closest('.getnote-scheduled-rows')).not.toBeNull();
     const tagTrigger = Array.from(container.querySelectorAll('button'))
       .find(button => button.textContent === '已选 2 项');
     expect(tagTrigger).toBeTruthy();

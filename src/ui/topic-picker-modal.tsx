@@ -348,10 +348,7 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
   const visibleItems = activeTopic
     ? activeTopic.contents.filter(matchesActiveFilters)
     : [];
-  const activeTagOptions = mergeTagNames(
-    tagOptions,
-    activeTopic?.contents.flatMap(item => (item.tags ?? []).map(tag => tag.name))
-  );
+  const activeTagOptions = mergeTagNames(tagOptions);
 
   return (
     <div className="getnote-picker">

@@ -174,6 +174,7 @@ describe('TopicPickerModal', () => {
         token: 'token',
         clientId: 'client',
         authMode: 'openapi',
+        tagOptions: ['目标标签', '其他标签'],
         onConfirm: vi.fn(),
         onCancel: vi.fn(),
       }), container);
@@ -218,6 +219,7 @@ describe('TopicPickerModal', () => {
         token: 'token',
         clientId: 'client',
         authMode: 'openapi',
+        tagOptions: ['目标标签', '其他标签'],
         onConfirm: vi.fn(),
         onCancel: vi.fn(),
       }), container);
@@ -273,6 +275,7 @@ describe('TopicPickerModal', () => {
         token: 'token',
         clientId: 'client',
         authMode: 'openapi',
+        tagOptions: ['目标标签', '其他标签'],
         onConfirm: vi.fn(),
         onCancel: vi.fn(),
       }), container);
@@ -353,6 +356,7 @@ describe('TopicPickerModal', () => {
         token: 'token',
         clientId: 'client',
         authMode: 'openapi',
+        tagOptions: ['目标标签', '其他标签'],
         onConfirm: vi.fn(),
         onCancel: vi.fn(),
       }), container);
@@ -865,7 +869,7 @@ describe('TopicPickerModal card layout (#138)', () => {
     expect(card!.querySelector('.getnote-note-card-preview')?.textContent).toContain('同一段内容');
   });
 
-  it('uses cached tag options together with tags from the active knowledge-base contents', async () => {
+  it('uses shared cached tag options without adding active knowledge-base content tags', async () => {
     vi.mocked(fetchSubscribedTopics).mockResolvedValue([
       { topic_id: 'luo', name: '罗振宇学习笔记' },
     ]);
@@ -907,8 +911,10 @@ describe('TopicPickerModal card layout (#138)', () => {
       tagTrigger.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    expect(container.textContent).toContain('cached-tag');
-    expect(container.textContent).toContain('active-tag');
+    const optionLabels = Array.from(container.querySelectorAll('.getnote-tag-select-option'))
+      .map(label => label.textContent);
+    expect(optionLabels).toContain('cached-tag');
+    expect(optionLabels).not.toContain('active-tag');
   });
 
   it('renders multiple knowledge-base contents as a single-column vertical stack of cards', async () => {

@@ -19,6 +19,7 @@ const TAG_MIGRATION_VERSION = 2;
 const LEGACY_PLUGIN_IDS = ['obsidian-getnote-importer', 'getnote-importer'] as const;
 const PLUGIN_DATA_FILE = 'data.json';
 const LEGACY_PLUGIN_MIGRATION_NOTICE = '已经从旧的 GetNote Importer 迁移成功，请手动停止和卸载 GetNote Importer';
+const CLOSE_FLOATING_SELECTS_EVENT = 'getnote-close-floating-selects';
 
 type PluginDataMigrationAdapter = Pick<DataAdapter, 'exists' | 'mkdir' | 'copy'>;
 
@@ -43,6 +44,10 @@ export async function migrateLegacyPluginData(adapter: PluginDataMigrationAdapte
 export function notifyLegacyPluginDataMigrated(migrated: boolean): void {
   if (!migrated) return;
   new Notice(LEGACY_PLUGIN_MIGRATION_NOTICE, 10000);
+}
+
+function closeFloatingSelects(): void {
+  window.dispatchEvent(new Event(CLOSE_FLOATING_SELECTS_EVENT));
 }
 
 async function findExistingLegacyDataPath(adapter: PluginDataMigrationAdapter): Promise<string | null> {
@@ -501,6 +506,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 
   openManualSyncModal(): void {
+    closeFloatingSelects();
     const wrapper = new ManualSyncModalWrapper(this.app, this);
     wrapper.open();
   }
@@ -510,6 +516,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 
   openNotePicker(): void {
+    closeFloatingSelects();
     const wrapper = new NotePickerModalWrapper(this.app, this);
     wrapper.open();
   }
@@ -524,6 +531,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 
   syncSubscribedKnowledge(): void {
+    closeFloatingSelects();
     const wrapper = new TopicPickerModalWrapper(this.app, this);
     wrapper.open();
   }
@@ -605,6 +613,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       showError(t('notice.fillCredentials'));
       return;
     }
+    closeFloatingSelects();
     const wrapper = new LocalUploadModalWrapper(this.app, this);
     wrapper.open();
   }
