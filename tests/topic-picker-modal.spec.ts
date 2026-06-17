@@ -326,8 +326,8 @@ describe('TopicPickerModal', () => {
     });
     await flush();
 
-    expect(container.querySelector('.getnote-picker-body > .getnote-topic-filter-bar')).toBeNull();
-    expect(container.querySelector('.getnote-picker > .getnote-topic-filter-bar')).not.toBeNull();
+    expect(container.querySelector('.getnote-picker-body > .getnote-topic-toolbar')).toBeNull();
+    expect(container.querySelector('.getnote-picker > .getnote-topic-toolbar')).not.toBeNull();
   });
 
   it('filters active knowledge-base contents by the selected tag dropdown', async () => {

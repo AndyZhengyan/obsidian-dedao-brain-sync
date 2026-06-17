@@ -126,6 +126,7 @@ export function SettingsComponent({
     });
   };
   const handleChildAttachmentChange = (kind: 'image' | 'audio' | 'video' | 'document', value: boolean) => {
+    if (!allAttachmentsOn) return; // disabled when master is off
     updateSetting('attachmentImport', {
       ...attachmentImport,
       [kind]: value,
@@ -785,7 +786,8 @@ export function SettingsComponent({
                 <span className="getnote-scheduled-row-label">{t(`settings.attachment.${kind}`)}</span>
                 <span className="getnote-scheduled-row-control">
                   <Toggle
-                    value={attachmentImport[kind] !== false}
+                    value={allAttachmentsOn ? attachmentImport[kind] !== false : false}
+                    disabled={!allAttachmentsOn}
                     onChange={(value) => handleChildAttachmentChange(kind, value)}
                   />
                 </span>

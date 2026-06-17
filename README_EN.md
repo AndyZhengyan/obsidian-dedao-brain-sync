@@ -16,10 +16,12 @@ Bidirectionally sync your notes, highlights, links, recordings, and AI summaries
 
 ## 🎉 1.3.1 — Latest Update
 
-- **🛠️ Compact settings disclosure**: "Enable scheduled sync" and "Download attachments" now expose an inline "More / Collapse" hyperlink next to the master toggle — no extra row.
-- **🏷️ Tag dropdown self-seeds**: The first time you open settings, the tag dropdown is pre-populated from the first 20 notes. Typing a non-matching tag in the search box lets you add it on the fly.
-- **📜 No nested scrollbars**: The tag dropdown no longer has two scrollbars stacked.
-- **🖱️ Single-click attachment master**: Master toggle is now declarative, eliminating the race that required two clicks.
+- **🗂️ Scheduled sync settings, centralized**: Sync range (start date / max days), note types, tag filter, and target knowledge bases are now grouped under the "Enable scheduled sync" disclosure panel.
+- **🛠️ Compact settings disclosure**: "Enable scheduled sync" and "Download attachments" expose an inline "More / Collapse" hyperlink next to the master toggle — no extra row.
+- **🏷️ Tag management improvements**: Settings tab now self-seeds the tag cache from the first 20 notes on first open. Tag dropdowns in filter modals are read-only; only "Scheduled sync" allows creating new tags.
+- **📜 Cleaner tag dropdowns**: Removed nested scrollbars; fixed checkbox size so long labels wrap without stretching the checkbox; dropdown menu text is no longer bold.
+- **🖱️ Attachment master toggle fix**: Master toggle is now declarative and works on a single click. Child toggles turn off and become disabled when the master is off.
+- **🎛️ Knowledge-base sync modal rework**: Renamed title to "Select Knowledge Bases to Sync"; scope radio, tag filter, search, and blogger filter are combined into a single top toolbar row.
 
 The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 

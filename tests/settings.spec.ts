@@ -769,7 +769,7 @@ describe('SettingsComponent auth credentials', () => {
     expect(childToggles.every(toggle => toggle.classList.contains('is-enabled'))).toBe(true);
   });
 
-  it('still honours legacy attachmentImport values from older user data.json', async () => {
+  it('disables child attachment toggles when the master is off', async () => {
     const updateSetting = vi.fn();
     const settings = makeSettings({
       attachmentImport: { image: true, audio: false, video: true, document: false },
@@ -802,14 +802,13 @@ describe('SettingsComponent auth credentials', () => {
     const audioToggle = audioRow!.querySelector('.checkbox-container');
     expect(audioToggle).toBeTruthy();
     expect(audioToggle!.classList.contains('is-enabled')).toBe(false);
+    expect(audioToggle!.classList.contains('is-disabled')).toBe(true);
 
     await act(() => {
       audioToggle!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    expect(updateSetting).toHaveBeenCalledWith('attachmentImport', expect.objectContaining({
-      audio: true,
-    }));
+    expect(updateSetting).not.toHaveBeenCalledWith('attachmentImport', expect.anything());
   });
 
   it('stores note type filters inside scheduled sync settings', async () => {

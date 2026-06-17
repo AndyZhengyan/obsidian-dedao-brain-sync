@@ -191,6 +191,8 @@ export function NotePickerModal({ token, clientId, authMode, onConfirm, onCancel
           value={syncTags}
           options={availableTags}
           onChange={setSyncTags}
+          placeholder={t('noteTags.searchPlaceholder')}
+          allowCreate={false}
         />
         <div className="getnote-picker-actions">
           <button onClick={handleSelectAll}>{t('picker.selectAll')}</button>

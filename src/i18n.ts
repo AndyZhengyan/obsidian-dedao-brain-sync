@@ -210,7 +210,7 @@ export const translations: Record<string, Record<string, string>> = {
     'picker.type.unknown': '其他',
 
     // === Topic Picker ===
-    'topicPicker.title': '选择订阅专题',
+    'topicPicker.title': '选择要同步的知识库',
     'topicPicker.error': '加载失败',
     'topicPicker.retry': '重试',
     'topicPicker.empty': '暂无订阅专题',
@@ -531,7 +531,7 @@ export const translations: Record<string, Record<string, string>> = {
     'picker.type.unknown': 'Other',
 
     // === Topic Picker ===
-    'topicPicker.title': 'Select Subscribed Topics',
+    'topicPicker.title': 'Select Knowledge Bases to Sync',
     'topicPicker.error': 'Failed to load',
     'topicPicker.retry': 'Retry',
     'topicPicker.empty': 'No subscribed topics',

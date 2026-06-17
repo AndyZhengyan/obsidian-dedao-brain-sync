@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 interface ToggleProps {
   value: boolean;
   onChange: (value: boolean) => void;
+  disabled?: boolean;
 }
 
 /**
@@ -18,7 +19,7 @@ interface ToggleProps {
  * `new ToggleComponent(hostEl)`; here we just inline the resulting
  * structure so the visual treatment stays identical.
  */
-export function Toggle({ value, onChange }: ToggleProps) {
+export function Toggle({ value, onChange, disabled }: ToggleProps) {
   const [currentValue, setCurrentValue] = useState(value);
   const onChangeRef = useRef(onChange);
 
@@ -36,20 +37,34 @@ export function Toggle({ value, onChange }: ToggleProps) {
   };
 
   const handleChange = (event: Event) => {
+    if (disabled) {
+      event.preventDefault();
+      return;
+    }
     applyValue((event.target as HTMLInputElement).checked);
   };
 
   const handleContainerClick = (event: MouseEvent) => {
+    if (disabled) {
+      event.preventDefault();
+      return;
+    }
     if (event.target instanceof HTMLInputElement) return;
     applyValue(!currentValue);
   };
 
   return (
     <div
-      className={`checkbox-container${currentValue ? ' is-enabled' : ''}`}
+      className={`checkbox-container${currentValue ? ' is-enabled' : ''}${disabled ? ' is-disabled' : ''}`}
       onClick={handleContainerClick}
+      aria-disabled={disabled}
     >
-      <input type="checkbox" checked={currentValue} onChange={handleChange} />
+      <input
+        type="checkbox"
+        checked={currentValue}
+        disabled={disabled}
+        onChange={handleChange}
+      />
     </div>
   );
 }

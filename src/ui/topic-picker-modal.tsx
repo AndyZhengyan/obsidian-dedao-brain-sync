@@ -386,71 +386,71 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
         )}
       </div>
       {activeTopic && !activeTopic.loading && !activeTopic.error && (
-        <div className="getnote-topic-scope-selector" role="group" aria-label={t('topicPicker.scope')}>
-          <label>
-            <input
-              data-topic-scope-all
-              type="radio"
-              name="topicSyncScope"
-              checked={syncAllActive}
-              onChange={() => setSyncAllActive(true)}
-            />
-            <span>{t('topicPicker.scope.all')}</span>
-          </label>
-          <label>
-            <input
-              data-topic-scope-selected
-              type="radio"
-              name="topicSyncScope"
-              checked={!syncAllActive}
-              onChange={() => setSyncAllActive(false)}
-            />
-            <span>{t('topicPicker.scope.selected')}</span>
-          </label>
-        </div>
-      )}
-      {activeTopic && syncAllActive && (
-        <div className="getnote-input-hint getnote-topic-scope-hint">{t('topicPicker.scope.allHint')}</div>
-      )}
-      {activeTopic && !activeTopic.loading && !activeTopic.error && (
-        <div className="getnote-topic-filter-bar">
-          <TagSelect
-            value={syncTags}
-            options={activeTagOptions}
-            onChange={(value) => {
-              setSelectAllActive(false);
-              pruneSelectedItemsByTags(value);
-              setSyncTags(value);
-            }}
-            placeholder={t('noteTags.searchPlaceholder')}
-            allowCreate={false}
-          />
-          {!syncAllActive && activeTopic.contents.length > 0 && (
-            <input
-              data-topic-search
-              type="text"
-              className="getnote-input"
-              placeholder={t('picker.search')}
-              value={searchQuery}
-              onInput={(event) => {
-                setSelectAllActive(false);
-                setSearchQuery((event.target as HTMLInputElement).value);
-              }}
-            />
+        <div className="getnote-topic-toolbar">
+          <div className="getnote-topic-scope-selector" role="group" aria-label={t('topicPicker.scope')}>
+            <label>
+              <input
+                data-topic-scope-all
+                type="radio"
+                name="topicSyncScope"
+                checked={syncAllActive}
+                onChange={() => setSyncAllActive(true)}
+              />
+              <span>{t('topicPicker.scope.all')}</span>
+            </label>
+            <label>
+              <input
+                data-topic-scope-selected
+                type="radio"
+                name="topicSyncScope"
+                checked={!syncAllActive}
+                onChange={() => setSyncAllActive(false)}
+              />
+              <span>{t('topicPicker.scope.selected')}</span>
+            </label>
+          </div>
+          {syncAllActive && (
+            <div className="getnote-input-hint getnote-topic-scope-hint">{t('topicPicker.scope.allHint')}</div>
           )}
-          {bloggers.length > 0 && (
-            <select
-              data-topic-blogger-filter
-              value={bloggerFilter}
-              onChange={(event) => {
+          <div className="getnote-topic-filter-bar">
+            <TagSelect
+              value={syncTags}
+              options={activeTagOptions}
+              onChange={(value) => {
                 setSelectAllActive(false);
-                setBloggerFilter((event.target as HTMLSelectElement).value);
+                pruneSelectedItemsByTags(value);
+                setSyncTags(value);
               }}
-            >
-              <option value="">{t('topicPicker.allBloggers')}</option>
-              {bloggers.map(blogger => <option key={blogger} value={blogger}>{blogger}</option>)}
-            </select>
-          )}
+              placeholder={t('noteTags.searchPlaceholder')}
+              allowCreate={false}
+            />
+            {!syncAllActive && activeTopic.contents.length > 0 && (
+              <input
+                data-topic-search
+                type="text"
+                className="getnote-input"
+                placeholder={t('picker.search')}
+                value={searchQuery}
+                onInput={(event) => {
+                  setSelectAllActive(false);
+                  setSearchQuery((event.target as HTMLInputElement).value);
+                }}
+              />
+            )}
+            {bloggers.length > 0 && (
+              <select
+                data-topic-blogger-filter
+                value={bloggerFilter}
+                onChange={(event) => {
+                  setSelectAllActive(false);
+                  setBloggerFilter((event.target as HTMLSelectElement).value);
+                }}
+              >
+                <option value="">{t('topicPicker.allBloggers')}</option>
+                {bloggers.map(blogger => <option key={blogger} value={blogger}>{blogger}</option>)}
+              </select>
+            )}
+          </div>
         </div>
       )}
       {!activeTopic && !topicsLoading && !topicsError && topics.length > 0 && (
