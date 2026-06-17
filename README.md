@@ -1,4 +1,4 @@
-# 得到大脑（原Get笔记）Sync
+# 最好用的 【得到大脑 🔄 Obsidian】 插件
 
 [中文](./README.md) | [English](./README_EN.md)
 
