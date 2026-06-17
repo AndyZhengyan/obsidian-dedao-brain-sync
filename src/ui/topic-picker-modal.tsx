@@ -422,6 +422,8 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
               pruneSelectedItemsByTags(value);
               setSyncTags(value);
             }}
+            placeholder={t('noteTags.searchPlaceholder')}
+            allowCreate={false}
           />
           {!syncAllActive && activeTopic.contents.length > 0 && (
             <input

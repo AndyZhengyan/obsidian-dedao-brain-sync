@@ -56,6 +56,52 @@ function renderSettings(
   return { container, updateSetting, openLocalUpload };
 }
 
+/**
+ * Stateful renderSettings variant for tests that exercise the attachment
+ * master toggle. With the declarative Toggle pattern, the visual child state
+ * is derived from `settings.attachmentImport` on every render — so a no-op
+ * vi.fn() updateSetting would leave the DOM out of sync. This helper holds
+ * the settings object in a closure-level mutable ref, mutates it in response
+ * to updateSetting calls, and re-renders so children pick up the new value.
+ */
+function renderStatefulSettings(
+  initial: Settings,
+  options: Parameters<typeof renderSettings>[3] = {}
+): { container: HTMLElement; settings: Settings; updateSetting: ReturnType<typeof vi.fn> } {
+  const settings: Settings = JSON.parse(JSON.stringify(initial));
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+
+  const rerender = () => {
+    render(
+      h(SettingsComponent, {
+        settings,
+        updateSetting: updateSetting as unknown as <K extends keyof Settings>(key: K, value: Settings[K]) => void,
+        startSync: vi.fn(),
+        isSyncing: options.isSyncing ?? false,
+        openNotePicker: vi.fn(),
+        startSubscribedKnowledgeSync: options.startSubscribedKnowledgeSync ?? vi.fn(),
+        openLocalUpload: vi.fn(),
+        startAutoSync: vi.fn(),
+        stopAutoSync: vi.fn(),
+        cancelSync: vi.fn(),
+        app: new App(),
+        syncProgress: options.syncProgress,
+        initialKnowledgeBaseCache: options.initialKnowledgeBaseCache,
+      }),
+      container
+    );
+  };
+
+  const updateSetting = vi.fn(<K extends keyof Settings>(key: K, value: Settings[K]) => {
+    (settings as unknown as Record<string, unknown>)[key] = value as unknown;
+    rerender();
+  });
+
+  rerender();
+  return { container, settings, updateSetting };
+}
+
 function inputValue(input: Element, value: string) {
   (input as HTMLInputElement).value = value;
   input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: value }));
@@ -662,7 +708,7 @@ describe('SettingsComponent auth credentials', () => {
 
     const detail = container.querySelector('.getnote-scheduled-options-detail');
     expect(detail).toBeTruthy();
-    const disclosure = container.querySelector('.getnote-attachment-section-disclosure') as HTMLButtonElement;
+    const disclosure = container.querySelector('.getnote-attachment-master-row .getnote-inline-disclosure') as HTMLButtonElement;
     expect(disclosure).toBeTruthy();
     expect(detail!.classList.contains('getnote-hidden')).toBe(true);
     await act(() => {
@@ -673,30 +719,9 @@ describe('SettingsComponent auth credentials', () => {
   });
 
   it('flips all four child toggles when the master attachment toggle is clicked', async () => {
-    const updateSetting = vi.fn();
-    const settings = makeSettings({
+    const { container, updateSetting } = renderStatefulSettings(makeSettings({
       attachmentImport: { image: true, audio: true, video: true, document: true },
-    });
-    const container = document.createElement('div');
-    document.body.appendChild(container);
-    await act(async () => {
-      render(
-        h(SettingsComponent, {
-          settings,
-          updateSetting,
-          startSync: vi.fn(),
-          isSyncing: false,
-          openNotePicker: vi.fn(),
-          startSubscribedKnowledgeSync: vi.fn(),
-          openLocalUpload: vi.fn(),
-          startAutoSync: vi.fn(),
-          stopAutoSync: vi.fn(),
-          cancelSync: vi.fn(),
-          app: new App(),
-        }),
-        container
-      );
-    });
+    }));
     await new Promise(r => setTimeout(r, 50));
 
     const masterRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
@@ -716,15 +741,14 @@ describe('SettingsComponent auth credentials', () => {
       video: false,
       document: false,
     });
-    const childToggles = Array.from(container.querySelectorAll('.getnote-scheduled-options .checkbox-container'));
+    const childToggles = Array.from(container.querySelectorAll('.getnote-attachment-options .checkbox-container'));
     expect(childToggles.every(toggle => !toggle.classList.contains('is-enabled'))).toBe(true);
   });
 
   it('enables all child toggles when a mixed attachment master is clicked', async () => {
-    const updateSetting = vi.fn();
-    const { container } = renderSettings(makeSettings({
+    const { container, updateSetting } = renderStatefulSettings(makeSettings({
       attachmentImport: { image: true, audio: false, video: true, document: false },
-    }), updateSetting);
+    }));
 
     await new Promise(r => setTimeout(r, 50));
     const masterRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
@@ -741,7 +765,7 @@ describe('SettingsComponent auth credentials', () => {
       video: true,
       document: true,
     });
-    const childToggles = Array.from(container.querySelectorAll('.getnote-scheduled-options .checkbox-container'));
+    const childToggles = Array.from(container.querySelectorAll('.getnote-attachment-options .checkbox-container'));
     expect(childToggles.every(toggle => toggle.classList.contains('is-enabled'))).toBe(true);
   });
 
@@ -845,7 +869,7 @@ describe('SettingsComponent auth credentials', () => {
       maxDays: 30,
     }));
 
-    const disclosure = container.querySelector('.getnote-scheduled-section-disclosure') as HTMLButtonElement;
+    const disclosure = container.querySelector('.getnote-scheduled-row .getnote-inline-disclosure') as HTMLButtonElement;
     expect(disclosure).toBeTruthy();
     const details = container.querySelector('.getnote-scheduled-rows');
     expect(details).toBeTruthy();

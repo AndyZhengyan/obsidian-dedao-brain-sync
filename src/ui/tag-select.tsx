@@ -12,6 +12,19 @@ interface TagSelectProps {
   options: string[];
   onChange: (value: string[]) => void;
   placeholder?: string;
+  /**
+   * Whether the user can type a non-matching tag and add it on the fly.
+   * Default: true. Disable in read-only filter contexts (e.g. the topic
+   * picker, which should only filter by tags already present in the data).
+   */
+  allowCreate?: boolean;
+  /**
+   * Notify the parent when a brand-new tag is added via the search box so
+   * the upstream cache can be merged (otherwise the new tag would be lost
+   * on the next refresh). Optional — when omitted, the new tag is only
+   * added to the local selection.
+   */
+  onCreateTag?: (tag: string) => void;
 }
 
 function summarize(value: string[]): string {
@@ -24,7 +37,7 @@ function matchesFilter(tag: string, query: string): boolean {
   return tag.toLowerCase().includes(query.toLowerCase());
 }
 
-export function TagSelect({ value, onChange, options, placeholder }: TagSelectProps) {
+export function TagSelect({ value, onChange, options, placeholder, allowCreate = true, onCreateTag }: TagSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const rootRef = useRef<HTMLDivElement>(null);
@@ -34,6 +47,27 @@ export function TagSelect({ value, onChange, options, placeholder }: TagSelectPr
   const selectedSet = new Set(value);
   const allSelected = value.length === 0;
   const visibleOptions = options.filter(tag => matchesFilter(tag, search));
+  // The search box doubles as a creator: if the user types text that
+  // doesn't match any existing option (case-insensitive), the typed value
+  // is offered as a "create new tag" action. Pressing Enter on the input
+  // (or clicking the row) commits it to the selection and the upstream
+  // cache.
+  const trimmedSearch = search.trim();
+  const exactMatchExists = trimmedSearch.length > 0
+    && options.some(tag => tag.toLowerCase() === trimmedSearch.toLowerCase());
+  const showCreateRow = allowCreate && trimmedSearch.length > 0 && !exactMatchExists;
+
+  const commitNewTag = (raw: string) => {
+    const tag = raw.trim();
+    if (!tag) return;
+    if (value.some(t => t.toLowerCase() === tag.toLowerCase())) {
+      setSearch('');
+      return;
+    }
+    onCreateTag?.(tag);
+    onChange(Array.from(new Set([...value, tag])));
+    setSearch('');
+  };
 
   const handleToggle = (tag: string, checked: boolean) => {
     if (checked) {
@@ -109,6 +143,12 @@ export function TagSelect({ value, onChange, options, placeholder }: TagSelectPr
               placeholder={placeholder ?? t('noteTags.searchPlaceholder')}
               value={search}
               onInput={(e) => setSearch((e.target as HTMLInputElement).value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && showCreateRow) {
+                  e.preventDefault();
+                  commitNewTag(trimmedSearch);
+                }
+              }}
             />
           </div>
           <div className="getnote-tag-select-options">
@@ -120,8 +160,17 @@ export function TagSelect({ value, onChange, options, placeholder }: TagSelectPr
               />
               <span>{t('noteTags.all')}</span>
             </label>
-            {visibleOptions.length === 0 && (
+            {visibleOptions.length === 0 && !showCreateRow && (
               <div className="getnote-tag-select-empty">{t('noteTags.noOptions')}</div>
+            )}
+            {showCreateRow && (
+              <button
+                type="button"
+                className="getnote-tag-select-create"
+                onClick={() => commitNewTag(trimmedSearch)}
+              >
+                {t('noteTags.create', { tag: trimmedSearch })}
+              </button>
             )}
             {visibleOptions.map(tag => (
               <label className="getnote-tag-select-option" key={tag}>

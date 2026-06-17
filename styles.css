@@ -463,6 +463,30 @@
   background: transparent;
 }
 
+/* Inline disclosure sits next to a toggle on the same row, styled as a
+   subtle hyperlink. Toggling it expands a children block below. */
+.getnote-inline-disclosure {
+  margin-left: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-accent);
+  font-size: var(--font-ui-small);
+  text-decoration: underline;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.getnote-inline-disclosure:hover {
+  color: var(--text-accent-hover, var(--text-accent));
+  text-decoration: underline;
+}
+
+.getnote-scheduled-row-control .getnote-inline-disclosure {
+  /* keep the hyperlink visually balanced with the toggle next to it */
+  line-height: 1.4;
+}
+
 .getnote-disclosure-caret {
   display: inline-flex;
   align-items: center;
@@ -792,8 +816,28 @@
 }
 
 .getnote-tag-select-options {
-  max-height: 190px;
-  overflow-y: auto;
+  /* options container deliberately has no max-height/overflow — the outer
+     .getnote-tag-select-menu already constrains height and scrolls, so adding
+     it again here produces a nested scrollbar. */
+}
+
+.getnote-tag-select-create {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 0 0 4px;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-accent);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.getnote-tag-select-create:hover {
+  background: var(--background-modifier-hover);
 }
 
 .getnote-local-upload {
@@ -824,15 +868,31 @@
 }
 
 .getnote-topic-filter-bar {
-  display: grid;
-  grid-template-columns: minmax(150px, 0.38fr) minmax(0, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 8px;
   padding: 0 0 8px;
 }
 
+.getnote-topic-filter-bar .getnote-tag-select {
+  flex: 0 0 auto;
+  min-width: 140px;
+  max-width: 180px;
+}
+
+.getnote-topic-filter-bar input,
+.getnote-topic-filter-bar select {
+  flex: 1 1 0;
+  min-width: 120px;
+}
+
+.getnote-topic-filter-bar > .getnote-tag-select:only-child,
 .getnote-topic-filter-bar > input:only-child,
-.getnote-topic-filter-bar > .getnote-tag-select:only-child {
-  grid-column: 1 / -1;
+.getnote-topic-filter-bar > select:only-child {
+  width: 100%;
+  max-width: none;
+  flex: 1 1 100%;
 }
 
 .getnote-topic-list-search {
@@ -853,14 +913,6 @@
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 600;
-}
-
-.getnote-topic-filter-bar select,
-.getnote-topic-filter-bar input,
-.getnote-topic-filter-bar .getnote-tag-select {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
 }
 
 .getnote-picker-search input {

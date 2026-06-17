@@ -14,14 +14,12 @@ Bidirectionally sync your notes, highlights, links, recordings, and AI summaries
 
 * * *
 
-## 🎉 1.3.0 — Latest Update
+## 🎉 1.3.1 — Latest Update
 
-- **🗂️ Card-based note picker**: See titles, summaries, content previews, tags, types, and update times at a glance.
-- **🏷️ Tag whitelist sync**: Filter manual, scheduled, and knowledge-base syncs by selected tags.
-- **📚 More precise scheduled sync**: Choose the knowledge bases and note types included in automatic sync.
-- **📎 Attachment controls by category**: Toggle image, audio, video, and document imports independently.
-- **🔄 Better sync management**: Reset sync checkpoints and see type/tag filters in sync history.
-- **🛠️ Stability fixes**: Improved knowledge-base, append-note, and tag handling.
+- **🛠️ Compact settings disclosure**: "Enable scheduled sync" and "Download attachments" now expose an inline "More / Collapse" hyperlink next to the master toggle — no extra row.
+- **🏷️ Tag dropdown self-seeds**: The first time you open settings, the tag dropdown is pre-populated from the first 20 notes. Typing a non-matching tag in the search box lets you add it on the fly.
+- **📜 No nested scrollbars**: The tag dropdown no longer has two scrollbars stacked.
+- **🖱️ Single-click attachment master**: Master toggle is now declarative, eliminating the race that required two clicks.
 
 The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 
@@ -232,6 +230,11 @@ The plugin substitutes placeholders with the note's `created_at` timestamp. Plac
 | Sync interval | Scheduled sync interval in minutes | `30` |
 | Startup sync | Run a sync once when Obsidian starts | on |
 | Note types to sync | Restrict which note types this sync method handles | all types |
+| Sync tags | Tag whitelist; empty means sync all tags; multi-select dropdown, unmatched values can be added inline | empty |
+| Scheduled sync knowledge bases | Restrict scheduled sync to selected knowledge bases; empty means no filter | empty |
+| Download attachments | Master switch; disabling skips all attachment downloads | on |
+| Attachment categories | Independently toggle image / audio / video / document downloads | all on |
+| Reset sync checkpoint | On the scheduled sync row, reset `lastSyncEndTimestamp` so the next run starts from the configured start date | — |
 
 ## Sync model
 
@@ -269,6 +272,7 @@ The upload direction is manual, selective, and create-only:
 - Audio downloads only work when the detail endpoint returns a valid HTTPS audio attachment.
 - Download sync may update already-synced files. If you plan heavy manual editing, write personal additions in a separate note or via backlinks.
 - Upload sync is currently create-only: it does not overwrite remote content, and it never runs automatically.
+- The "Sync tags" dropdown reads from a local cache. The first time you open settings, the plugin seeds that cache from the first 20 notes; running a sync once replaces it with the full set of observed tags.
 
 ## Development
 

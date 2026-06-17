@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, type MutableRef } from 'preact/hooks';
+import { useState, useCallback, useRef, useEffect } from 'preact/hooks';
 import { SettingItem } from './setting-item';
 import { SyncButton } from './sync-button';
 import { OAuthButton } from './oauth-button';
@@ -8,7 +8,7 @@ import { TagSelect } from '../ui/tag-select';
 import { KnowledgeBaseSelect } from '../ui/knowledge-base-select';
 import { Toggle } from './toggle';
 import { getAuthCredentials, type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressDetail } from '../types';
-import { App, AbstractInputSuggest, ToggleComponent } from 'obsidian';
+import { App, AbstractInputSuggest } from 'obsidian';
 import { fetchNotes } from '../api';
 import { t } from '../i18n';
 import { ExternalLink } from './external-link';
@@ -105,87 +105,32 @@ export function SettingsComponent({
   const [pendingStartDate, setPendingStartDate] = useState(settings.syncStartDate);
 
   const folderInputRef = useRef<HTMLInputElement>(null);
-  const masterAttachmentRef = useRef<HTMLDivElement>(null);
-  const childAttachmentRefs: Record<'image' | 'audio' | 'video' | 'document', MutableRef<HTMLDivElement | null>> = {
-    image: useRef<HTMLDivElement>(null),
-    audio: useRef<HTMLDivElement>(null),
-    video: useRef<HTMLDivElement>(null),
-    document: useRef<HTMLDivElement>(null),
+
+  // Attachment toggles are now driven by declarative Preact state (no more
+  // imperative useRef + ToggleComponent.useEffect plumbing). The previous
+  // version had two competing useEffects (master + reactive sync) calling
+  // setValue on the same imperative toggle, which intermittently reverted
+  // the user's click on the first tap. A single source of truth
+  // (settings.attachmentImport) keeps master and children consistent.
+  const attachmentImport = settings.attachmentImport ?? {};
+  const attachmentKinds = ['image', 'audio', 'video', 'document'] as const;
+  const allAttachmentsOn = attachmentKinds.every(
+    k => attachmentImport[k as 'image' | 'audio' | 'video' | 'document'] !== false,
+  );
+  const handleMasterAttachmentChange = (value: boolean) => {
+    updateSetting('attachmentImport', {
+      image: value,
+      audio: value,
+      video: value,
+      document: value,
+    });
   };
-  const childTogglesRef = useRef<Record<'image' | 'audio' | 'video' | 'document', ToggleComponent | null>>({
-    image: null,
-    audio: null,
-    video: null,
-    document: null,
-  });
-  const masterToggleRef = useRef<ToggleComponent | null>(null);
-
-  useEffect(() => {
-    if (!masterAttachmentRef.current) return;
-    const toggle = new ToggleComponent(masterAttachmentRef.current);
-    masterToggleRef.current = toggle;
-    const attachmentImport = settings.attachmentImport;
-    const allOn = ['image', 'audio', 'video', 'document'].every(
-      k => attachmentImport?.[k as 'image' | 'audio' | 'video' | 'document'] !== false,
-    );
-    toggle.setValue(allOn);
-    toggle.onChange((nextValue) => {
-      (Object.keys(childTogglesRef.current) as Array<'image' | 'audio' | 'video' | 'document'>)
-        .forEach(kind => childTogglesRef.current[kind]?.setValue(nextValue));
-      updateSetting('attachmentImport', {
-        image: nextValue,
-        audio: nextValue,
-        video: nextValue,
-        document: nextValue,
-      });
+  const handleChildAttachmentChange = (kind: 'image' | 'audio' | 'video' | 'document', value: boolean) => {
+    updateSetting('attachmentImport', {
+      ...attachmentImport,
+      [kind]: value,
     });
-    return () => {
-      toggle.toggleEl.replaceWith(document.createTextNode(''));
-      masterToggleRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    (['image', 'audio', 'video', 'document'] as const).forEach((kind) => {
-      const container = childAttachmentRefs[kind].current;
-      if (!container || childTogglesRef.current[kind]) return;
-      const toggle = new ToggleComponent(container);
-      childTogglesRef.current[kind] = toggle;
-      toggle.setValue(settings.attachmentImport?.[kind] !== false);
-      toggle.onChange((value) => {
-        const next = {
-          ...settings.attachmentImport,
-          [kind]: value,
-        };
-        masterToggleRef.current?.setValue(
-          (['image', 'audio', 'video', 'document'] as const).every(key => next[key] !== false)
-        );
-        updateSetting('attachmentImport', next);
-      });
-    });
-    return () => {
-      (Object.keys(childTogglesRef.current) as Array<'image' | 'audio' | 'video' | 'document'>).forEach((kind) => {
-        const t = childTogglesRef.current[kind];
-        if (t) {
-          t.toggleEl.replaceWith(document.createTextNode(''));
-          childTogglesRef.current[kind] = null;
-        }
-      });
-    };
-  }, []);
-
-  useEffect(() => {
-    (['image', 'audio', 'video', 'document'] as const).forEach((kind) => {
-      const t = childTogglesRef.current[kind];
-      if (!t) return;
-      t.setValue(settings.attachmentImport?.[kind] !== false);
-    });
-    const attachmentImport = settings.attachmentImport;
-    const allOn = ['image', 'audio', 'video', 'document'].every(
-      k => attachmentImport?.[k as 'image' | 'audio' | 'video' | 'document'] !== false,
-    );
-    masterToggleRef.current?.setValue(allOn);
-  }, [settings.attachmentImport]);
+  };
 
   useEffect(() => {
     if (!settings.syncStartDate && !settings.lastSyncEndTimestamp) {
@@ -195,6 +140,40 @@ export function SettingsComponent({
       const day = String(d.getDate()).padStart(2, '0');
       updateSetting('syncStartDate', `${y}-${m}-${day}`);
     }
+  }, []);
+
+  // Lazily seed the tag cache from the first page of notes the first time
+  // the settings tab is opened with an empty cache. This avoids an empty
+  // "Tags" dropdown before the user has run a sync. We only run once per
+  // session (guarded by lastUpdated === 0); later runs come from the sync
+  // engine populating observedTags.
+  useEffect(() => {
+    const cache = settings.tagCache;
+    if (!cache || (cache.tags && cache.tags.length > 0)) return;
+    if (cache?.lastUpdated && cache.lastUpdated > 0) return;
+    if (!credentials.token) return;
+    if (credentials.authMode !== 'web' && !credentials.clientId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = await fetchNotes({
+          token: credentials.token,
+          clientId: credentials.clientId,
+          authMode: credentials.authMode,
+          sinceId: '0',
+        });
+        if (cancelled) return;
+        const observed = result.notes.flatMap(n => (n.tags ?? []).map(t => t.name)).filter(Boolean);
+        if (observed.length === 0) return;
+        updateSetting('tagCache', {
+          tags: Array.from(new Set(observed)).sort((a, b) => a.localeCompare(b)),
+          lastUpdated: Date.now(),
+        });
+      } catch {
+        // Network failure is non-fatal — user can still sync to populate.
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -622,22 +601,23 @@ export function SettingsComponent({
         <div className="getnote-scheduled-control">
           <div className="getnote-scheduled-row">
             <span>{t('settings.scheduled.enabled')}</span>
-            <Toggle
-              value={scheduledEnabled}
-              onChange={handleScheduledEnabled}
-            />
+            <span className="getnote-scheduled-row-control">
+              <Toggle
+                value={scheduledEnabled}
+                onChange={handleScheduledEnabled}
+              />
+              {scheduledEnabled && (
+                <button
+                  type="button"
+                  className="getnote-inline-disclosure"
+                  aria-expanded={scheduledDetailsOpen}
+                  onClick={() => setScheduledDetailsOpen(prev => !prev)}
+                >
+                  {scheduledDetailsOpen ? t('settings.collapse') : t('settings.expand')}
+                </button>
+              )}
+            </span>
           </div>
-          {scheduledEnabled && (
-            <button
-              type="button"
-              className="getnote-section-disclosure getnote-scheduled-section-disclosure"
-              aria-expanded={scheduledDetailsOpen}
-              onClick={() => setScheduledDetailsOpen(prev => !prev)}
-            >
-              <span>{t('settings.scheduled.section')}</span>
-              <span className={`getnote-disclosure-caret${scheduledDetailsOpen ? ' is-open' : ''}`} />
-            </button>
-          )}
           <div
             className={`getnote-scheduled-rows${scheduledEnabled && scheduledDetailsOpen ? '' : ' getnote-hidden'}`}
           >
@@ -681,6 +661,12 @@ export function SettingsComponent({
                   onChange={(value) => {
                     setSyncTags(value);
                     updateSetting('syncTags', value);
+                  }}
+                  onCreateTag={(tag) => {
+                    const existing = settings.tagCache?.tags ?? [];
+                    if (existing.some(t => t.toLowerCase() === tag.toLowerCase())) return;
+                    const merged = Array.from(new Set([...existing, tag])).sort((a, b) => a.localeCompare(b));
+                    updateSetting('tagCache', { tags: merged, lastUpdated: Date.now() });
                   }}
                   placeholder={t('settings.syncTags.placeholder')}
                 />
@@ -782,24 +768,26 @@ export function SettingsComponent({
           <div className="getnote-scheduled-row getnote-attachment-master-row">
             <span className="getnote-scheduled-row-label">{t('settings.attachment.master')}</span>
             <span className="getnote-scheduled-row-control">
-              <div ref={masterAttachmentRef} />
+              <Toggle value={allAttachmentsOn} onChange={handleMasterAttachmentChange} />
+              <button
+                type="button"
+                className="getnote-inline-disclosure"
+                aria-expanded={attachmentDetailsOpen}
+                onClick={() => setAttachmentDetailsOpen(prev => !prev)}
+              >
+                {attachmentDetailsOpen ? t('settings.collapse') : t('settings.expand')}
+              </button>
             </span>
           </div>
-          <button
-            type="button"
-            className="getnote-section-disclosure getnote-attachment-section-disclosure"
-            aria-expanded={attachmentDetailsOpen}
-            onClick={() => setAttachmentDetailsOpen(prev => !prev)}
-          >
-            <span>{t('settings.attachment.types')}</span>
-            <span className={`getnote-disclosure-caret${attachmentDetailsOpen ? ' is-open' : ''}`} />
-          </button>
           <div className={`getnote-scheduled-options-detail getnote-attachment-options${attachmentDetailsOpen ? '' : ' getnote-hidden'}`}>
-            {(['image', 'audio', 'video', 'document'] as const).map(kind => (
+            {attachmentKinds.map(kind => (
               <div className="getnote-scheduled-row getnote-nested-row getnote-attachment-option" key={kind}>
                 <span className="getnote-scheduled-row-label">{t(`settings.attachment.${kind}`)}</span>
                 <span className="getnote-scheduled-row-control">
-                  <div ref={childAttachmentRefs[kind]} />
+                  <Toggle
+                    value={attachmentImport[kind] !== false}
+                    onChange={(value) => handleChildAttachmentChange(kind, value)}
+                  />
                 </span>
               </div>
             ))}
