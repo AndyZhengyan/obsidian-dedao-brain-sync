@@ -1,6 +1,6 @@
 import { App, TFile } from 'obsidian';
 import { fetchAllNotes, fetchNoteChildren, fetchNoteDetail, fetchSubscribedKnowledgeNotes } from './api';
-import { formatDateTime, formatTimestampPrefix, renderNote, generateDisplayTitle } from './note-parser';
+import { formatDateTime, formatTimestampPrefix, renderNote, renderNoteWithTemplate, generateDisplayTitle } from './note-parser';
 import { getCategoryDir } from './types';
 import { getAuthCredentials, type GetNoteNote, type Settings, type SyncResult, type SyncResultItem, type SyncScopeOptions } from './types';
 import { applyTagFilter } from './utils/tag-aggregator';
@@ -489,6 +489,36 @@ export class SyncEngine {
     return index;
   }
 
+  private async readTemplateFile(): Promise<string | null> {
+    const templatePath = this.settings.templateFilePath?.trim();
+    if (!templatePath) return null;
+
+    const templateFile = this.app.vault.getAbstractFileByPath(templatePath);
+    if (!templateFile || typeof templateFile !== 'object' || !('path' in templateFile)) {
+      console.warn(`[DedaoBrain] Template file not found: ${templatePath}`);
+      return null;
+    }
+
+    try {
+      return await this.app.vault.read(templateFile as TFile);
+    } catch (err) {
+      console.warn(`[DedaoBrain] Failed to read template file ${templatePath}:`, err);
+      return null;
+    }
+  }
+
+  private async renderNewNote(
+    note: GetNoteNote,
+    parentFileName?: string,
+    childFileNames?: string[]
+  ): Promise<string> {
+    const template = await this.readTemplateFile();
+    if (!template) {
+      return renderNote(note, note.assetFileName, parentFileName, childFileNames);
+    }
+    return renderNoteWithTemplate(note, template, note.assetFileName, parentFileName, childFileNames);
+  }
+
   private async writeNote(
     note: GetNoteNote,
     uidIndex: Map<string, TFile>,
@@ -514,9 +544,8 @@ export class SyncEngine {
         }
       }
 
-      const content = renderNote(note, note.assetFileName, parentFileName, childFileNames);
-
       if (existingByUid) {
+        const content = renderNote(note, note.assetFileName, parentFileName, childFileNames);
         const contentChanged = this.isContentChanged(existingByUid, note) || hasImageAssetPaths(note);
         const pathChanged = existingByUid.path !== targetPath;
 
@@ -528,12 +557,14 @@ export class SyncEngine {
         await this.app.vault.modify(existingByUid, content);
         return { status: 'updated', file: existingByUid };
       } else if (existingAtTarget instanceof TFile) {
+        const content = renderNote(note, note.assetFileName, parentFileName, childFileNames);
         // File exists at target path but wasn't in uidIndex - check content
         const contentChanged = this.isContentChanged(existingAtTarget, note) || hasImageAssetPaths(note);
         await this.app.vault.modify(existingAtTarget, content);
         uidIndex.set(note.note_id, existingAtTarget);
         return { status: contentChanged ? 'updated' : 'skipped', file: existingAtTarget };
       } else {
+        const content = await this.renderNewNote(note, parentFileName, childFileNames);
         try {
           await this.app.vault.create(targetPath, content);
           const created = this.app.vault.getAbstractFileByPath(targetPath);

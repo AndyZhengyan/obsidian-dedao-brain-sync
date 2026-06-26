@@ -188,6 +188,23 @@ describe('SettingsComponent auth credentials', () => {
     expect(startSubscribedKnowledgeSync).toHaveBeenCalledTimes(1);
   });
 
+  it('saves the template file path from settings', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      templateFilePath: 'Templates/default.md',
+    }));
+
+    expect(container.textContent).toContain('模板文件路径');
+    const input = Array.from(container.querySelectorAll('input'))
+      .find((item): item is HTMLInputElement => item.value === 'Templates/default.md');
+    expect(input).toBeTruthy();
+
+    await act(() => {
+      inputValue(input!, 'Templates/reading-note.md');
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('templateFilePath', 'Templates/reading-note.md');
+  });
+
   it('hides knowledge-base sync in Web API mode', () => {
     const { container } = renderSettings(makeSettings({
       authMode: 'web',

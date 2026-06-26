@@ -22,6 +22,7 @@ function makeMockApp() {
         [...files.values()]
           .filter((f) => f.path.endsWith('.md'))
           .map((f) => ({ path: f.path })),
+      read: vi.fn().mockImplementation(async (file: { path: string }) => files.get(file.path)?.content ?? ''),
       createFolder: vi.fn().mockResolvedValue(undefined),
       create: vi.fn().mockImplementation((path: string, data: string) => {
         files.set(path, { path, content: data, frontmatter: {} });
@@ -71,6 +72,7 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
     clientId: 'test-client',
     webCsrfToken: '',
     folderName: '得到大脑',
+    templateFilePath: '',
     maxDays: 30,
     syncStartDate: '',
     lastSyncEndTimestamp: '',
@@ -189,6 +191,123 @@ describe('SyncEngine — filterRecentNotes', () => {
     const note = makeNote({ note_id: 'boundary', updated_at: at5days });
     // @ts-ignore
     expect(engine['filterRecentNotes']([note])).toHaveLength(1);
+  });
+});
+
+describe('SyncEngine — template file rendering', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('applies a vault template to newly created notes and merges template tags', async () => {
+    const note = makeNote({
+      note_id: 'templated',
+      title: '模板笔记',
+      content: '远端正文',
+      tags: [{ name: '远端' }],
+    });
+    const app = makeMockApp();
+    app.vault._addFile(
+      'Templates/dedao.md',
+      [
+        '---',
+        'project: "{{title}}"',
+        'uid: "template-uid-should-not-win"',
+        'tags: ["模板", "远端"]',
+        '---',
+        '# {{title}}',
+        '',
+        '模板头',
+        '',
+        '{{content}}',
+        '',
+        '模板尾',
+      ].join('\n')
+    );
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ data: { notes: [note], has_more: false, next_cursor: '' } }) as Response
+    );
+
+    try {
+      const engine = new SyncEngine(app as any, makeSettings({
+        maxDays: 0,
+        templateFilePath: 'Templates/dedao.md',
+      }));
+
+      await engine.syncNoteIds(['templated']);
+
+      const created = vi.mocked(app.vault.create).mock.calls[0]?.[1] as string;
+      expect(created).toContain('project: "模板笔记"');
+      expect(created).toContain('uid: "templated"');
+      expect(created).not.toContain('template-uid-should-not-win');
+      expect(created).toContain('tags: ["远端", "模板"]');
+      expect(created).toContain('# 模板笔记');
+      expect(created).toContain('模板头\n\n远端正文\n\n模板尾');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('appends note content when the template omits the content placeholder', async () => {
+    const note = makeNote({
+      note_id: 'append_content',
+      title: '追加正文',
+      content: '得到正文',
+    });
+    const app = makeMockApp();
+    app.vault._addFile('Templates/no-content.md', '固定模板块');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ data: { notes: [note], has_more: false, next_cursor: '' } }) as Response
+    );
+
+    try {
+      const engine = new SyncEngine(app as any, makeSettings({
+        maxDays: 0,
+        templateFilePath: 'Templates/no-content.md',
+      }));
+
+      await engine.syncNoteIds(['append_content']);
+
+      const created = vi.mocked(app.vault.create).mock.calls[0]?.[1] as string;
+      expect(created).toContain('固定模板块\n\n得到正文');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('does not reapply the template when updating an existing synced note', async () => {
+    const note = makeNote({
+      note_id: 'existing_template',
+      title: '已有笔记',
+      content: '新的远端正文',
+      updated_at: '2026-04-29T10:00:00+08:00',
+    });
+    const app = makeMockApp();
+    app.vault._addFile(
+      '得到大脑/纯文本/已有笔记.md',
+      '---\nuid: "existing_template"\nmodified: 2026-04-28 10:00:00\n---\n用户改过的旧内容',
+      { uid: 'existing_template', modified: '2026-04-28 10:00:00' }
+    );
+    app.vault._addFile('Templates/dedao.md', '模板标记\n\n{{content}}');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ data: { notes: [note], has_more: false, next_cursor: '' } }) as Response
+    );
+
+    try {
+      const engine = new SyncEngine(app as any, makeSettings({
+        maxDays: 0,
+        templateFilePath: 'Templates/dedao.md',
+      }));
+
+      await engine.syncNoteIds(['existing_template']);
+
+      const modified = vi.mocked(app.vault.modify).mock.calls[0]?.[1] as string;
+      expect(modified).toContain('新的远端正文');
+      expect(modified).not.toContain('模板标记');
+      expect(app.vault.create).not.toHaveBeenCalled();
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
   });
 });
 

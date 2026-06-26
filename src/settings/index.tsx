@@ -87,6 +87,7 @@ export function SettingsComponent({
   const [showApiToken, setShowApiToken] = useState(false);
   const [folderName, setFolderName] = useState(settings.folderName);
   const [filenamePrefix, setFilenamePrefix] = useState(settings.filenamePrefix);
+  const [templateFilePath, setTemplateFilePath] = useState(settings.templateFilePath);
   // Only show actual lastSyncEndTimestamp — do NOT fallback to syncStartDate
   const lastSyncedTo = settings.lastSyncEndTimestamp || '';
   const [scheduledEnabled, setScheduledEnabled] = useState(settings.scheduledSync.enabled);
@@ -241,6 +242,14 @@ export function SettingsComponent({
     (value: string) => {
       setFilenamePrefix(value);
       updateSetting('filenamePrefix', value);
+    },
+    [updateSetting]
+  );
+
+  const handleTemplateFilePathChange = useCallback(
+    (value: string) => {
+      setTemplateFilePath(value);
+      updateSetting('templateFilePath', value.trim());
     },
     [updateSetting]
   );
@@ -590,6 +599,19 @@ export function SettingsComponent({
           placeholder={t('settings.prefix.placeholder')}
           value={filenamePrefix}
           onInput={(e) => handleFilenamePrefixChange((e.target as HTMLInputElement).value)}
+        />
+      </SettingItem>
+
+      <SettingItem
+        name={t('settings.templateFile.label')}
+        description={t('settings.templateFile.desc')}
+      >
+        <input
+          type="text"
+          className="getnote-input"
+          placeholder={t('settings.templateFile.placeholder')}
+          value={templateFilePath}
+          onInput={(e) => handleTemplateFilePathChange((e.target as HTMLInputElement).value)}
         />
       </SettingItem>
 
