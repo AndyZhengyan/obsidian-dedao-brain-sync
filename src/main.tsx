@@ -1,6 +1,6 @@
-import { App, Modal, Notice, Plugin, getLanguage, type DataAdapter, type TFile } from 'obsidian';
+import { App, ItemView, Modal, Notice, Plugin, getLanguage, type DataAdapter, type Editor, type Menu, type TFile, type WorkspaceLeaf } from 'obsidian';
 import ReactDOM from 'react-dom';
-import { DEFAULT_SETTINGS, getAuthCredentials, migrateEnabledNoteTypes, type Settings, type SyncHistoryScope, type SyncProgressDetail, type SyncHistoryEntry, type SyncResult, type SyncScopeOptions } from './types';
+import { DEFAULT_SETTINGS, getAuthCredentials, migrateEnabledNoteTypes, type RecallSearchResult, type Settings, type SyncHistoryScope, type SyncProgressDetail, type SyncHistoryEntry, type SyncResult, type SyncScopeOptions } from './types';
 import { GetNoteSettingsTab } from './settings-tab';
 import { SyncEngine, SyncCancelledError } from './sync';
 import { showError, showNotice, showSuccess } from './ui/notice';
@@ -12,10 +12,13 @@ import { initI18n, t } from './i18n';
 import { ReverseSyncEngine, type ReverseSyncResult } from './reverse-sync';
 import { migrateSyncedNoteTags } from './tag-migration';
 import { getLastQuotaState, resetQuotaState } from './api-clients/openapi-client';
+import { fetchRecallSearch } from './api';
 import { mergeTagCache } from './utils/tag-aggregator';
+import { SearchPanel, findSyncedNoteFile } from './ui/search-view';
 
 const MAX_SYNC_HISTORY = 20;
 const TAG_MIGRATION_VERSION = 2;
+const SEARCH_VIEW_TYPE = 'dedao-brain-search-view';
 const LEGACY_PLUGIN_IDS = ['obsidian-getnote-importer', 'getnote-importer'] as const;
 const PLUGIN_DATA_FILE = 'data.json';
 const LEGACY_PLUGIN_MIGRATION_NOTICE = '已经从旧的 GetNote Importer 迁移成功，请手动停止和卸载 GetNote Importer';
@@ -180,6 +183,7 @@ export default class GetNoteSyncPlugin extends Plugin {
 
     this.settingsTab = new GetNoteSettingsTab(this.app, this);
     this.addSettingTab(this.settingsTab);
+    this.registerView(SEARCH_VIEW_TYPE, (leaf) => new GetNoteSearchView(leaf, this));
 
     this.addCommand({
       id: 'sync-notes',
@@ -193,7 +197,24 @@ export default class GetNoteSyncPlugin extends Plugin {
       callback: () => this.openLocalUploadModal(),
     });
 
+    this.addCommand({
+      id: 'open-search-view',
+      name: t('command.search'),
+      callback: () => void this.openSearchView(),
+    });
+
     this.addRibbonIcon('book-lock', t('ribbon.tooltip'), () => this.openManualSyncModal());
+    this.addRibbonIcon('search', t('ribbon.searchTooltip'), () => void this.openSearchView());
+    this.registerEvent(this.app.workspace.on('editor-menu', (menu: Menu, editor: Editor) => {
+      const selectedText = editor.getSelection().trim();
+      if (!selectedText) return;
+      menu.addItem(item => {
+        item
+          .setTitle(t('search.contextMenu'))
+          .setIcon('search')
+          .onClick(() => void this.openSearchView(selectedText));
+      });
+    }));
 
     // Clear stale quota-exhausted state if it's from a prior UTC+8 day
     await this.clearStaleQuotaState();
@@ -216,6 +237,7 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   onunload(): void {
     this.stopAutoSync();
+    this.app.workspace.detachLeavesOfType(SEARCH_VIEW_TYPE);
   }
 
   async saveSettings(): Promise<void> {
@@ -530,6 +552,47 @@ export default class GetNoteSyncPlugin extends Plugin {
     }, noteIds);
   }
 
+  async syncSearchResult(noteId: string): Promise<void> {
+    await this.runSync('selective', { maxDays: 0, syncStartDate: '' }, [noteId]);
+  }
+
+  async openSearchView(query = ''): Promise<void> {
+    let leaf: WorkspaceLeaf | null = this.app.workspace.getLeavesOfType(SEARCH_VIEW_TYPE)[0] ?? null;
+    if (!leaf) {
+      leaf = this.app.workspace.getRightLeaf(false);
+      if (!leaf) return;
+      await leaf.setViewState({ type: SEARCH_VIEW_TYPE, active: true });
+    }
+    this.app.workspace.revealLeaf(leaf);
+    const view = leaf.view;
+    if (view instanceof GetNoteSearchView) {
+      view.setQuery(query, Boolean(query));
+    }
+  }
+
+  async searchRecall(query: string, signal: AbortSignal): Promise<RecallSearchResult[]> {
+    const credentials = getAuthCredentials(this.settings);
+    if (!credentials.token || !credentials.clientId) {
+      throw new Error(t('notice.fillCredentials'));
+    }
+    return fetchRecallSearch({
+      query,
+      token: credentials.token,
+      clientId: credentials.clientId,
+      authMode: credentials.authMode,
+      signal,
+      topK: 10,
+    });
+  }
+
+  findSyncedNoteFile(noteId: string): TFile | null {
+    return findSyncedNoteFile(this.app, this.settings.folderName, noteId);
+  }
+
+  async openLocalNote(file: TFile): Promise<void> {
+    await this.app.workspace.getLeaf(false).openFile(file);
+  }
+
   syncSubscribedKnowledge(): void {
     closeFloatingSelects();
     const wrapper = new TopicPickerModalWrapper(this.app, this);
@@ -712,6 +775,55 @@ export default class GetNoteSyncPlugin extends Plugin {
       },
       status ?? (error || result.failed > 0 ? 'failed' : 'success'),
       error ?? (result.failed > 0 ? t('reverseSync.failedCount', { failed: result.failed }) : undefined)
+    );
+  }
+}
+
+class GetNoteSearchView extends ItemView {
+  private query = '';
+  private autoSearchKey = 0;
+
+  constructor(leaf: WorkspaceLeaf, private plugin: GetNoteSyncPlugin) {
+    super(leaf);
+  }
+
+  getViewType(): string {
+    return SEARCH_VIEW_TYPE;
+  }
+
+  getDisplayText(): string {
+    return t('search.title');
+  }
+
+  getIcon(): string {
+    return 'search';
+  }
+
+  async onOpen(): Promise<void> {
+    this.render();
+  }
+
+  async onClose(): Promise<void> {
+    ReactDOM.unmountComponentAtNode(this.contentEl);
+  }
+
+  setQuery(query: string, autoSearch: boolean): void {
+    this.query = query;
+    if (autoSearch) this.autoSearchKey += 1;
+    this.render();
+  }
+
+  private render(): void {
+    ReactDOM.render(
+      <SearchPanel
+        initialQuery={this.query}
+        autoSearchKey={this.autoSearchKey}
+        onSearch={(query, signal) => this.plugin.searchRecall(query, signal)}
+        resolveLocalFile={(noteId) => this.plugin.findSyncedNoteFile(noteId)}
+        onOpenLocal={(file) => this.plugin.openLocalNote(file)}
+        onSyncNote={(noteId) => this.plugin.syncSearchResult(noteId)}
+      />,
+      this.contentEl
     );
   }
 }

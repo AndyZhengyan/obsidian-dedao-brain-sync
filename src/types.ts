@@ -57,6 +57,16 @@ export interface ListResponse {
   };
 }
 
+export interface RecallSearchResult {
+  note_id: string;
+  title: string;
+  content: string;
+  note_type: NoteType;
+  updated_at?: string;
+  created_at?: string;
+  score?: number;
+}
+
 // 内部使用类型
 
 export interface ScheduledSyncSettings {

@@ -1,4 +1,4 @@
-import type { GetNoteNote, Attachment, SubscribedTopic, ApiQuotaState } from '../types';
+import type { GetNoteNote, Attachment, RecallSearchResult, SubscribedTopic, ApiQuotaState } from '../types';
 import { t } from '../i18n';
 
 export const GETNOTE_LIST_LIMIT = 20;
@@ -57,6 +57,45 @@ function normalizeListData(value: unknown): { notes: GetNoteNote[]; hasMore: boo
   const notes = Array.isArray(data.notes) ? data.notes as GetNoteNote[] : [];
   const hasMore = Boolean(data.has_more ?? data.hasMore);
   return { notes, hasMore };
+}
+
+function stringValue(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  return '';
+}
+
+function normalizeRecallResults(value: unknown): RecallSearchResult[] {
+  if (!isRecord(value)) return [];
+  const data = normalizeData(value);
+  const rawResults = readArray(data, ['results', 'list', 'notes']);
+  return rawResults
+    .map((raw): RecallSearchResult | null => {
+      if (!isRecord(raw)) return null;
+      const source = isRecord(raw.note) ? raw.note : raw;
+      const noteId = stringValue(source.note_id ?? source.id ?? source.resource_id ?? raw.note_id ?? raw.id);
+      if (!noteId) return null;
+      const title = stringValue(source.title ?? raw.title);
+      const content = stringValue(source.content ?? source.snippet ?? source.summary ?? raw.content ?? raw.snippet);
+      const noteType = stringValue(source.note_type ?? raw.note_type) || 'plain_text';
+      const updatedAt = stringValue(source.updated_at ?? raw.updated_at);
+      const createdAt = stringValue(source.created_at ?? raw.created_at);
+      const score = typeof raw.score === 'number'
+        ? raw.score
+        : typeof source.score === 'number'
+          ? source.score
+          : undefined;
+      return {
+        note_id: noteId,
+        title,
+        content,
+        note_type: noteType,
+        ...(updatedAt ? { updated_at: updatedAt } : {}),
+        ...(createdAt ? { created_at: createdAt } : {}),
+        ...(score !== undefined ? { score } : {}),
+      };
+    })
+    .filter((result): result is RecallSearchResult => Boolean(result));
 }
 
 function normalizeAudio(value: unknown): string | undefined {
@@ -232,6 +271,34 @@ export async function fetchNotes(options: FetchNotesOptions): Promise<{ notes: G
     url, { method: 'GET', headers: buildHeaders(token, clientId) }, 3, signal
   );
   return normalizeListData(data);
+}
+
+export async function fetchRecallSearch(options: {
+  query: string;
+  token: string;
+  clientId: string;
+  topK?: number;
+  signal?: AbortSignal;
+}): Promise<RecallSearchResult[]> {
+  const url = 'https://openapi.biji.com/open/api/v1/resource/recall';
+  const body = JSON.stringify({
+    query: options.query,
+    top_k: options.topK ?? 10,
+  });
+  const data = await apiRequest<Record<string, unknown>>(
+    url,
+    {
+      method: 'POST',
+      headers: {
+        ...buildHeaders(options.token, options.clientId),
+        'Content-Type': 'application/json',
+      },
+      body,
+    },
+    2,
+    options.signal
+  );
+  return normalizeRecallResults(data);
 }
 
 function readArray(value: Record<string, unknown>, keys: string[]): unknown[] {

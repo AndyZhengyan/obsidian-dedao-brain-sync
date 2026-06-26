@@ -209,6 +209,22 @@ export const translations: Record<string, Record<string, string>> = {
     'picker.type.audio_note': '录音笔记',
     'picker.type.unknown': '其他',
 
+    // === Search View ===
+    'search.title': '得到大脑搜索',
+    'search.placeholder': '搜索得到大脑笔记...',
+    'search.submit': '搜索',
+    'search.searching': '搜索中...',
+    'search.emptyHint': '输入关键词后搜索',
+    'search.noResults': '没有搜索结果',
+    'search.openLocal': '打开本地笔记',
+    'search.syncLocal': '同步到本地',
+    'search.syncing': '同步中...',
+    'search.synced': '已同步',
+    'search.syncFailed': '同步失败',
+    'search.openapiOnly': '得到大脑搜索第一版仅支持 OpenAPI 鉴权',
+    'search.noSelection': '请先选中要搜索的文字',
+    'search.contextMenu': '用选中文字搜索得到大脑',
+
     // === Topic Picker ===
     'topicPicker.title': '选择要同步的知识库',
     'topicPicker.error': '加载失败',
@@ -317,7 +333,9 @@ export const translations: Record<string, Record<string, string>> = {
     'command.sync': '同步笔记',
     'command.reverseSync': '写回得到大脑',
     'command.uploadLocal': '上传本地笔记到得到大脑',
+    'command.search': '打开得到大脑搜索',
     'ribbon.tooltip': '同步得到大脑',
+    'ribbon.searchTooltip': '搜索得到大脑',
   },
 
   en: {
@@ -530,6 +548,22 @@ export const translations: Record<string, Record<string, string>> = {
     'picker.type.audio_note': 'Audio Note',
     'picker.type.unknown': 'Other',
 
+    // === Search View ===
+    'search.title': 'Dedao Brain Search',
+    'search.placeholder': 'Search Dedao Brain notes...',
+    'search.submit': 'Search',
+    'search.searching': 'Searching...',
+    'search.emptyHint': 'Enter keywords to search',
+    'search.noResults': 'No results',
+    'search.openLocal': 'Open local note',
+    'search.syncLocal': 'Sync locally',
+    'search.syncing': 'Syncing...',
+    'search.synced': 'Synced',
+    'search.syncFailed': 'Sync failed',
+    'search.openapiOnly': 'Dedao Brain search currently supports OpenAPI auth only',
+    'search.noSelection': 'Select text before searching',
+    'search.contextMenu': 'Search selected text in Dedao Brain',
+
     // === Topic Picker ===
     'topicPicker.title': 'Select Knowledge Bases to Sync',
     'topicPicker.error': 'Failed to load',
@@ -638,7 +672,9 @@ export const translations: Record<string, Record<string, string>> = {
     'command.sync': 'Sync Notes',
     'command.reverseSync': 'Write Back to Dedao Brain',
     'command.uploadLocal': 'Upload Local Notes to Dedao Brain',
+    'command.search': 'Open Dedao Brain Search',
     'ribbon.tooltip': 'Sync Dedao Brain',
+    'ribbon.searchTooltip': 'Search Dedao Brain',
   },
 };
 
