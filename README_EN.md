@@ -42,7 +42,7 @@ The README keeps only the current release highlights. See [GitHub Releases](http
 
 | Feature | Description |
 | --- | --- |
-| Incremental sync | New notes are created, existing notes are updated, unchanged notes are skipped. |
+| Incremental sync | Notes missing locally are created; existing local notes are skipped by default and never overwritten. |
 | Sync by date | Pull notes from Dedao Brain by start date or "last N days". |
 | Sync by note | Pick specific notes from the remote list. |
 | Sync by knowledge base | Manually choose a subscribed knowledge base and sync its content locally. |
@@ -125,6 +125,8 @@ Click `Sync by date` on the settings page, or run the command:
 ```text
 Dedao Brain Sync: Sync notes
 ```
+
+Download sync uses a conservative default: if the same note already exists locally, the plugin skips it and does not overwrite your Obsidian content. To pull a remote note again, delete the corresponding local file and run sync again; as long as the remote note still exists, the plugin recreates it as a locally missing note.
 
 ### Pick specific remote notes
 
@@ -271,7 +273,7 @@ The upload direction is manual, selective, and create-only:
 - The plugin depends on the availability and response format of the Dedao Brain OpenAPI / Web API.
 - OpenAPI requires a PRO membership; Temporary auth relies on a browser session and can expire.
 - Audio downloads only work when the detail endpoint returns a valid HTTPS audio attachment.
-- Download sync may update already-synced files. If you plan heavy manual editing, write personal additions in a separate note or via backlinks.
+- Download sync does not overwrite the same note when it already exists locally. To pull remote content again, delete the corresponding local file first, then sync.
 - Upload sync is currently create-only: it does not overwrite remote content, and it never runs automatically.
 - The "Sync tags" dropdown reads from a local cache. The first time you open settings, the plugin seeds that cache from the first 20 notes; running a sync once replaces it with the full set of observed tags.
 

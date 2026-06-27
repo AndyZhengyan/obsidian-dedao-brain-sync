@@ -73,7 +73,6 @@ function isSafeAttachmentUrl(url: string): boolean {
 }
 
 const IMAGE_EXT_PATTERN = /\.(png|jpg|jpeg|gif|webp|bmp|svg)(\?|$)/i;
-const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'] as const;
 
 function extractImageExtension(url: string): string {
   const match = url.match(IMAGE_EXT_PATTERN);
@@ -119,21 +118,6 @@ function isDownloadableAttachment(
   const kind = classifyAttachmentUrl(attachment.url);
   if (kind === 'other') return true; // never silently drop unrecognized
   return isAttachmentTypeEnabled(settings.attachmentImport, kind);
-}
-
-function hasDownloadedImageAssets(
-  vault: App['vault'],
-  assetDir: string,
-  baseFilename: string,
-  imageCount: number
-): boolean {
-  for (let index = 0; index < imageCount; index++) {
-    const hasImage = IMAGE_EXTENSIONS.some(ext =>
-      Boolean(vault.getAbstractFileByPath(`${assetDir}/${imageAssetFilename(baseFilename, ext, index)}`))
-    );
-    if (!hasImage) return false;
-  }
-  return true;
 }
 
 function hasImageAssetPaths(note: GetNoteNote): boolean {
@@ -450,47 +434,10 @@ export class SyncEngine {
   private preCheckNote(
     note: GetNoteNote,
     uidIndex: Map<string, TFile>,
-    categoryOverride?: string
+    _categoryOverride?: string
   ): { exists: boolean; file?: TFile } {
     const existingFile = uidIndex.get(note.note_id);
     if (!existingFile) return { exists: false };
-
-    const contentChanged = this.isContentChanged(existingFile, note);
-    if (contentChanged) return { exists: false, file: existingFile };
-    if (hasImageAssetPaths(note)) return { exists: false, file: existingFile };
-    if (LINK_NOTE_TYPES.has(note.note_type)) return { exists: false, file: existingFile };
-
-    const categoryDir = categoryOverride ?? getCategoryDir(note.note_type);
-    const assetDir = `${this.settings.folderName}/${categoryDir}/asset`;
-    const baseFilename = this.getFileName(note);
-
-    if (AUDIO_NOTE_TYPES.has(note.note_type) && isAttachmentTypeEnabled(this.settings.attachmentImport, 'audio')) {
-      if (
-        !this.app.vault.getAbstractFileByPath(`${assetDir}/${baseFilename}_audio.mp3`) ||
-        !this.app.vault.getAbstractFileByPath(`${assetDir}/${baseFilename}_transcript.md`)
-      ) {
-        return { exists: false, file: existingFile };
-      }
-    }
-
-    const imageAttachments = (note.attachments ?? []).filter(isImageAttachment);
-    if (isAttachmentTypeEnabled(this.settings.attachmentImport, 'image') && imageAttachments.length > 0) {
-      if (!hasDownloadedImageAssets(this.app.vault, assetDir, baseFilename, imageAttachments.length)) {
-        return { exists: false, file: existingFile };
-      }
-    }
-
-    const genericAttachments = (note.attachments ?? []).filter(
-      a => !isImageAttachment(a) && a.type !== 'audio' && isDownloadableAttachment(a, this.settings)
-    );
-    if (genericAttachments.length > 0) {
-      const missingGenericAsset = genericAttachments.some((attachment, index) => {
-        const kind = classifyAttachmentUrl(attachment.url);
-        const filename = genericAssetFilename(baseFilename, attachment.url, index, kind);
-        return !this.app.vault.getAbstractFileByPath(`${assetDir}/${filename}`);
-      });
-      if (missingGenericAsset) return { exists: false, file: existingFile };
-    }
 
     return { exists: true, file: existingFile };
   }
@@ -551,16 +498,7 @@ export class SyncEngine {
       const content = renderNote(note, note.assetFileName, parentFileName, childFileNames);
 
       if (existingByUid) {
-        const contentChanged = this.isContentChanged(existingByUid, note) || hasImageAssetPaths(note) || Boolean(note.linkOriginalFileName);
-        const pathChanged = existingByUid.path !== targetPath;
-
-        if (!contentChanged && !pathChanged) return { status: 'skipped', file: existingByUid };
-
-        if (pathChanged) {
-          await this.app.vault.rename(existingByUid, targetPath);
-        }
-        await this.app.vault.modify(existingByUid, content);
-        return { status: 'updated', file: existingByUid };
+        return { status: 'skipped', file: existingByUid };
       } else if (existingAtTarget instanceof TFile) {
         // File exists at target path but wasn't in uidIndex - check content
         const contentChanged = this.isContentChanged(existingAtTarget, note) || hasImageAssetPaths(note) || Boolean(note.linkOriginalFileName);
@@ -891,6 +829,37 @@ export class SyncEngine {
     });
   }
 
+  private buildPreviouslySyncedNoteIdSet(): Set<string> {
+    const noteIds = new Set<string>();
+    for (const entry of this.settings.syncHistory ?? []) {
+      if (entry.status !== 'success') continue;
+      for (const item of entry.result.items ?? []) {
+        if (item.status !== 'failed') {
+          noteIds.add(item.noteId);
+        }
+      }
+    }
+    return noteIds;
+  }
+
+  private filterNotesByDateRangeOrMissingLocal(
+    notes: GetNoteNote[],
+    uidIndex: Map<string, TFile>,
+    previouslySyncedNoteIds: Set<string>
+  ): GetNoteNote[] {
+    const { syncStartDate } = this.scopeOptions;
+    if (!syncStartDate) return notes;
+
+    const startTime = parseSyncBoundaryTime(syncStartDate);
+    if (startTime === null) return notes;
+
+    return notes.filter(note => {
+      const updated = parseNoteUpdatedTime(note);
+      if (updated !== null && updated > startTime) return true;
+      return updated === startTime && previouslySyncedNoteIds.has(note.note_id) && !uidIndex.has(note.note_id);
+    });
+  }
+
   private filterNotesByType(notes: GetNoteNote[]): GetNoteNote[] {
     const enabledNoteTypes = this.scopeOptions.enabledNoteTypes;
     if (enabledNoteTypes === undefined) return notes;
@@ -916,6 +885,7 @@ export class SyncEngine {
   async sync(modal?: SyncModal): Promise<SyncResult> {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
     const uidIndex = this.buildUidIndex();
+    const previouslySyncedNoteIds = this.buildPreviouslySyncedNoteIdSet();
     const seenNoteIds = new Set<string>();
     const observedTagNames = new Set<string>();
     const controller = new AbortController();
@@ -952,7 +922,7 @@ export class SyncEngine {
         this.onProgress?.({ page: pageCount, percent: 0 });
 
         const recentNotes = this.filterRecentNotes(notes);
-        const filtered = this.filterNotesByDateRange(recentNotes);
+        const filtered = this.filterNotesByDateRangeOrMissingLocal(recentNotes, uidIndex, previouslySyncedNoteIds);
         const typeFiltered = this.filterNotesByType(filtered);
         for (const note of typeFiltered) {
           if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
@@ -1202,25 +1172,20 @@ export class SyncEngine {
             const percent = Math.round((fetchedCount / noteIds.length) * 100);
             this.onProgress?.({ processed: fetchedCount, total: noteIds.length, percent });
           }
-          const noteForPreCheck = this.needsImageDetail(note)
-            ? await this.enrichAudioNote(note, controller.signal)
-            : note;
-          // Pre-check: skip if note and attachments already exist and are up-to-date.
+          // Pre-check: skip if the same note already exists locally.
           // Uses UID-based lookup so renamed/moved files are still found.
-          const preCheck = this.preCheckNote(noteForPreCheck, uidIndex);
+          const preCheck = this.preCheckNote(note, uidIndex);
           if (preCheck.exists) {
             if (parentMatchesTags) {
               result.skipped++;
-              this.recordItem(result, noteForPreCheck, { status: 'skipped' });
+              this.recordItem(result, note, { status: 'skipped' });
             }
-            const mayHaveAppendNotes = (noteForPreCheck.children_count ?? 0) > 0 || Boolean(noteForPreCheck.children_ids?.length);
+            const mayHaveAppendNotes = (note.children_count ?? 0) > 0 || Boolean(note.children_ids?.length);
             if (!mayHaveAppendNotes) {
               continue;
             }
           }
-          const noteToWrite = noteForPreCheck === note
-            ? await this.enrichAudioNote(note, controller.signal)
-            : noteForPreCheck;
+          const noteToWrite = await this.enrichAudioNote(note, controller.signal);
 
           const appendNotes = this.filterNotesByTags(await this.fetchAppendNotes(noteToWrite, controller.signal, result));
           if (!parentMatchesTags && appendNotes.length === 0) continue;

@@ -58,6 +58,13 @@ interface SettingsComponentProps {
   initialKnowledgeBaseCache?: { entries: Array<{ topicId: string; name: string; source?: 'subscribed' | 'created' }>; cacheUpdatedAt?: number };
 }
 
+function getLocalDateInputValue(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function SettingsComponent({
   settings,
   updateSetting,
@@ -135,11 +142,7 @@ export function SettingsComponent({
 
   useEffect(() => {
     if (!settings.syncStartDate && !settings.lastSyncEndTimestamp) {
-      const d = new Date();
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      updateSetting('syncStartDate', `${y}-${m}-${day}`);
+      updateSetting('syncStartDate', getLocalDateInputValue());
     }
   }, []);
 
@@ -251,7 +254,7 @@ export function SettingsComponent({
 
   const handleResetCheckpointClick = () => {
     if (isSyncing) return;
-    setPendingStartDate(settings.syncStartDate);
+    setPendingStartDate(getLocalDateInputValue());
     setResetDialogOpen(true);
   };
 
