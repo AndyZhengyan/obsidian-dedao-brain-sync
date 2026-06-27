@@ -61,6 +61,7 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
     webCsrfToken: '',
     folderName: '得到大脑',
     filenamePrefix: '',
+    templateFilePath: '',
     maxDays: 30,
     syncStartDate: '',
     lastSyncEndTimestamp: '',

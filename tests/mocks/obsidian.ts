@@ -27,6 +27,8 @@ export class Vault extends Events {
   create = async (_path: string, _data: string) => {};
   modify = async (_file: unknown, _data: string) => {};
   getAbstractFileByPath(_path: string): unknown { return null; }
+  getAllFolders(): TFolder[] { return []; }
+  getMarkdownFiles(): TFile[] { return []; }
 }
 
 // ---- Workspace ----
@@ -233,8 +235,17 @@ export async function requestUrl(_request: unknown): Promise<{
 }
 
 // ---- AbstractInputSuggest (minimal stub for FolderSuggest tests) ----
+export const abstractInputSuggestInstances: AbstractInputSuggest<unknown>[] = [];
+
 export abstract class AbstractInputSuggest<T> {
-  constructor(_app: unknown, _inputEl: HTMLElement) {}
+  app: App;
+  inputEl: HTMLElement;
+
+  constructor(app: App, inputEl: HTMLElement) {
+    this.app = app;
+    this.inputEl = inputEl;
+    abstractInputSuggestInstances.push(this as unknown as AbstractInputSuggest<unknown>);
+  }
   abstract getSuggestions(_query: string): T[];
   abstract renderSuggestion(_value: T, _el: HTMLElement): void;
   selectSuggestion(_value: T, _evt: MouseEvent | KeyboardEvent): void {}

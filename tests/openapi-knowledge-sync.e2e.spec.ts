@@ -64,6 +64,7 @@ function makeSettings(): Settings {
     syncStartDate: '',
     lastSyncEndTimestamp: '',
     filenamePrefix: '',
+    templateFilePath: '',
     scheduledSync: { enabled: false, intervalMinutes: 30, syncOnStart: false },
     syncHistory: [],
   };

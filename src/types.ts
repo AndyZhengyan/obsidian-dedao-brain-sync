@@ -113,6 +113,7 @@ export interface Settings {
   webCsrfToken: string;
   folderName: string;
   filenamePrefix: string;
+  templateFilePath: string;
   maxDays: number;
   syncStartDate: string;  // ISO date string, empty means no limit
   lastSyncEndTimestamp: string;  // ISO datetime of last synced note's updated_at
@@ -178,6 +179,7 @@ export const DEFAULT_SETTINGS: Settings = {
   webCsrfToken: '',
   folderName: '得到大脑',
   filenamePrefix: '',
+  templateFilePath: '',
   maxDays: 30,
   syncStartDate: '',
   lastSyncEndTimestamp: '',

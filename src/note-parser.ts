@@ -28,6 +28,21 @@ function sanitizeObsidianTag(tag: string): string {
   return tag.trim().replace(/\s+/g, '-');
 }
 
+const PLUGIN_FRONTMATTER_KEYS = new Set([
+  'uid',
+  'title',
+  'created',
+  'modified',
+  'source',
+  'note_type',
+  'tags',
+  'parent_id',
+  'prime_id',
+  'is_child_note',
+  'children_count',
+  'children_ids',
+]);
+
 /**
  * 从笔记内容生成回退标题（取第一个标点前的文字，不超过20字）
  */
@@ -75,7 +90,7 @@ export function formatTimestampPrefix(format: string, isoDate: string): string {
 /**
  * 生成 frontmatter
  */
-function buildFrontmatter(note: GetNoteNote): string {
+function buildFrontmatter(note: GetNoteNote, extraLines: string[] = []): string {
   const tags = note.tags
     .map(t => sanitizeObsidianTag(t.name))
     .filter(Boolean)
@@ -89,6 +104,7 @@ function buildFrontmatter(note: GetNoteNote): string {
 
   const lines = [
     '---',
+    ...extraLines,
     `uid: "${note.note_id}"`,
     `title: "${title}"`,
     `created: ${formatDateTime(note.created_at)}`,
@@ -166,7 +182,7 @@ function buildAssetBlock(assetPaths: string[]): string {
     const safePaths = groups.images
       .map(p => {
         if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(p)) return null;
-        if (/[<>{}|`\x00-\x1f]/.test(p)) return null;
+        if (/[<>{}|\`\x00-\x1f]/.test(p)) return null;
         return relativeAssetPath(p);
       })
       .filter((p): p is string => Boolean(p))
@@ -201,19 +217,130 @@ function buildAssetBlock(assetPaths: string[]): string {
   return lines.join('\n');
 }
 
+interface TemplateParts {
+  frontmatterLines: string[];
+  body: string;
+}
+
+function splitTemplate(template: string): TemplateParts {
+  const normalized = template.replace(/\r\n/g, '\n');
+  if (!normalized.startsWith('---\n')) {
+    return { frontmatterLines: [], body: normalized };
+  }
+
+  const lines = normalized.split('\n');
+  const closeIndex = lines.findIndex((line, index) => index > 0 && line.trim() === '---');
+  if (closeIndex < 0) {
+    return { frontmatterLines: [], body: normalized };
+  }
+
+  return {
+    frontmatterLines: lines.slice(1, closeIndex),
+    body: lines.slice(closeIndex + 1).join('\n'),
+  };
+}
+
+function unquoteYamlValue(value: string): string {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+function parseInlineTagList(value: string): string[] {
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+  if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) {
+    return [unquoteYamlValue(trimmed)].filter(Boolean);
+  }
+
+  return trimmed
+    .slice(1, -1)
+    .split(',')
+    .map(unquoteYamlValue)
+    .filter(Boolean);
+}
+
+function cleanTemplateFrontmatter(lines: string[]): { lines: string[]; tags: string[] } {
+  const kept: string[] = [];
+  const tags: string[] = [];
+  let inTagsBlock = false;
+
+  for (const line of lines) {
+    const keyMatch = /^([A-Za-z0-9_-]+)\s*:(.*)$/.exec(line);
+    if (keyMatch) {
+      inTagsBlock = false;
+      const key = keyMatch[1];
+      const value = keyMatch[2];
+      if (key === 'tags') {
+        tags.push(...parseInlineTagList(value));
+        inTagsBlock = value.trim() === '';
+        continue;
+      }
+      if (PLUGIN_FRONTMATTER_KEYS.has(key)) {
+        continue;
+      }
+    } else if (inTagsBlock) {
+      const itemMatch = /^\s*-\s*(.+)$/.exec(line);
+      if (itemMatch) {
+        tags.push(unquoteYamlValue(itemMatch[1]));
+        continue;
+      }
+      if (!line.trim()) {
+        continue;
+      }
+      inTagsBlock = false;
+    }
+    kept.push(line);
+  }
+
+  return { lines: kept, tags };
+}
+
+function mergeTags(noteTags: GetNoteNote['tags'], templateTags: string[]): GetNoteNote['tags'] {
+  const merged: GetNoteNote['tags'] = [];
+  const seen = new Set<string>();
+  const add = (name: string | undefined) => {
+    const trimmed = name?.trim();
+    if (!trimmed) return;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    merged.push({ name: trimmed });
+  };
+  for (const tag of noteTags) add(tag.name);
+  for (const tag of templateTags) add(tag);
+  return merged;
+}
+
+function applyTemplatePlaceholders(value: string, note: GetNoteNote, body: string): string {
+  const title = generateDisplayTitle(note) || note.title || '';
+  return value
+    .replace(/\{\{title\}\}/g, title)
+    .replace(/\{\{content\}\}/g, body);
+}
+
+function appendBody(templateBody: string, body: string): string {
+  if (!templateBody.trim()) return body;
+  const separator = templateBody.endsWith('\n\n')
+    ? ''
+    : templateBody.endsWith('\n')
+      ? '\n'
+      : '\n\n';
+  return `${templateBody}${separator}${body}`;
+}
+
 function buildLinkOriginalBlock(note: GetNoteNote): string {
   if (!note.linkOriginal?.content || !note.linkOriginalFileName) return '';
   return `---\n> 📄 链接原文\n> [[${note.linkOriginalFileName}]]\n---\n`;
 }
 
-/**
- * 将 GetNoteNote 渲染为完整的 Markdown 字符串
- */
-export function renderNote(note: GetNoteNote, assetFileName?: string, parentFileName?: string, childFileNames?: string[]): string {
-  const frontmatter = buildFrontmatter(note);
+function buildBody(note: GetNoteNote, assetFileName?: string, parentFileName?: string, childFileNames?: string[]): string {
   let body = note.content || '';
-
-  body = buildLinkOriginalBlock(note) + body;
 
   const hasAudioAttachment = note.assetPaths?.some(path => /_audio\.mp3$/i.test(path));
   const hasTranscript = Boolean(note.audio);
@@ -240,10 +367,39 @@ export function renderNote(note: GetNoteNote, assetFileName?: string, parentFile
     body += '\n> 📎 附件\n> _(附件将在下次完整同步时显示)_\n';
   }
 
-  // 添加主子文档互链
   body += buildRelationLinks(note, parentFileName, childFileNames);
+  return body;
+}
 
-  return frontmatter + body;
+/**
+ * 将 GetNoteNote 渲染为完整的 Markdown 字符串
+ */
+export function renderNote(note: GetNoteNote, assetFileName?: string, parentFileName?: string, childFileNames?: string[]): string {
+  const frontmatter = buildFrontmatter(note);
+  return frontmatter + buildLinkOriginalBlock(note) + buildBody(note, assetFileName, parentFileName, childFileNames);
+}
+
+export function renderNoteWithTemplate(
+  note: GetNoteNote,
+  template: string,
+  assetFileName?: string,
+  parentFileName?: string,
+  childFileNames?: string[]
+): string {
+  const parts = splitTemplate(template);
+  const cleaned = cleanTemplateFrontmatter(parts.frontmatterLines);
+  const noteWithMergedTags = {
+    ...note,
+    tags: mergeTags(note.tags, cleaned.tags),
+  };
+  const body = buildBody(note, assetFileName, parentFileName, childFileNames);
+  const templateBody = applyTemplatePlaceholders(parts.body, noteWithMergedTags, body);
+  const renderedBody = buildLinkOriginalBlock(note) + (parts.body.includes('{{content}}')
+    ? templateBody
+    : appendBody(templateBody, body));
+  const extraLines = cleaned.lines.map(line => applyTemplatePlaceholders(line, noteWithMergedTags, body));
+
+  return buildFrontmatter(noteWithMergedTags, extraLines) + renderedBody;
 }
 
 /**
