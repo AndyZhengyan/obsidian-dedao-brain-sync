@@ -125,6 +125,8 @@ function mockOpenExternal() {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   vi.mocked(fetchNotes).mockClear();
   abstractInputSuggestInstances.length = 0;
   initI18n('zh-CN');
@@ -587,6 +589,8 @@ describe('SettingsComponent auth credentials', () => {
   });
 
   it('reveals the inline start date editor when the reset button is clicked', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 5, 27, 8, 30));
     const { container } = renderSettings(makeSettings({
       syncStartDate: '2026-01-01',
       lastSyncEndTimestamp: '2026-06-12T15:30:00+08:00',
@@ -606,7 +610,7 @@ describe('SettingsComponent auth credentials', () => {
     expect(editorRow).toBeTruthy();
     const dateInput = editorRow!.querySelector('input[type="date"]') as HTMLInputElement;
     expect(dateInput).toBeTruthy();
-    expect(dateInput.value).toBe('2026-01-01');
+    expect(dateInput.value).toBe('2026-06-27');
     expect(dateInput.readOnly).toBe(false);
 
     const saveButton = Array.from(container.querySelectorAll('button'))
@@ -719,7 +723,9 @@ describe('SettingsComponent auth credentials', () => {
     expect(checkpointRow!.textContent).toContain(expectedLocal);
   });
 
-  it('uses the previous syncStartDate as the default value when reset is clicked', async () => {
+  it('uses local today as the default value when reset is clicked', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 5, 27, 8, 30));
     const { container } = renderSettings(makeSettings({
       syncStartDate: '2025-12-15',
       lastSyncEndTimestamp: '2026-06-12T15:30:00+08:00',
@@ -734,7 +740,7 @@ describe('SettingsComponent auth credentials', () => {
     const editorRow = Array.from(container.querySelectorAll('.getnote-scheduled-row'))
       .find(node => node.textContent?.includes('同步起始日期'));
     const dateInput = editorRow!.querySelector('input[type="date"]') as HTMLInputElement;
-    expect(dateInput.value).toBe('2025-12-15');
+    expect(dateInput.value).toBe('2026-06-27');
   });
 
   it('renders the attachment download section with a master toggle and four child toggles', async () => {

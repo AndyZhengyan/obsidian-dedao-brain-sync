@@ -275,7 +275,7 @@ describe('SyncEngine — template file rendering', () => {
     }
   });
 
-  it('does not reapply the template when updating an existing synced note', async () => {
+  it('does not reapply the template when an existing synced note is skipped', async () => {
     const note = makeNote({
       note_id: 'existing_template',
       title: '已有笔记',
@@ -299,11 +299,10 @@ describe('SyncEngine — template file rendering', () => {
         templateFilePath: 'Templates/dedao.md',
       }));
 
-      await engine.syncNoteIds(['existing_template']);
+      const result = await engine.syncNoteIds(['existing_template']);
 
-      const modified = vi.mocked(app.vault.modify).mock.calls[0]?.[1] as string;
-      expect(modified).toContain('新的远端正文');
-      expect(modified).not.toContain('模板标记');
+      expect(result.skipped).toBe(1);
+      expect(app.vault.modify).not.toHaveBeenCalled();
       expect(app.vault.create).not.toHaveBeenCalled();
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
@@ -1253,6 +1252,148 @@ describe('SyncEngine — lastSyncEndTimestamp boundary re-check', () => {
     vi.mocked(globalThis.fetch).mockRestore();
   });
 
+  it('recreates a previously synced boundary note when the local file is missing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        data: {
+          notes: [
+            makeNote({
+              note_id: 'deleted_local_note',
+              title: '本地误删笔记',
+              updated_at: '2026-05-10T12:00:00+08:00',
+            }),
+          ],
+          has_more: false,
+          next_cursor: '',
+        },
+      }) as Response
+    );
+
+    const app = makeMockApp();
+    app.vault._addFolder('得到大脑/纯文本');
+    const engine = new SyncEngine(
+      app as any,
+      makeSettings({
+        maxDays: 0,
+        syncHistory: [
+          {
+            id: 'previous-sync',
+            startedAt: 1,
+            finishedAt: 2,
+            durationMs: 1,
+            timestamp: 2,
+            type: 'auto',
+            mode: 'auto',
+            status: 'success',
+            scope: { maxDays: 0, syncStartDate: '2026-05-09T12:00:00+08:00' },
+            result: {
+              created: 1,
+              updated: 0,
+              skipped: 0,
+              failed: 0,
+              total: 1,
+              items: [
+                {
+                  noteId: 'deleted_local_note',
+                  title: '本地误删笔记',
+                  noteType: 'plain_text',
+                  updatedAt: '2026-05-10T12:00:00+08:00',
+                  status: 'created',
+                },
+              ],
+              lastNoteTimestamp: '2026-05-10T12:00:00+08:00',
+            },
+          },
+        ],
+      }),
+      undefined,
+      { syncStartDate: '2026-05-10T12:00:00+08:00', maxDays: 0 }
+    );
+
+    const result = await engine.sync();
+
+    expect(result.total).toBe(1);
+    expect(result.created).toBe(1);
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        noteId: 'deleted_local_note',
+        status: 'created',
+      }),
+    ]);
+    expect(app.vault.create).toHaveBeenCalledWith(
+      '得到大脑/纯文本/本地误删笔记.md',
+      expect.stringContaining('uid: "deleted_local_note"')
+    );
+    vi.mocked(globalThis.fetch).mockRestore();
+  });
+
+  it('does not recreate a previously synced missing note older than the boundary', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        data: {
+          notes: [
+            makeNote({
+              note_id: 'old_deleted_local_note',
+              title: '旧本地误删笔记',
+              updated_at: '2026-05-10T11:59:59+08:00',
+            }),
+          ],
+          has_more: false,
+          next_cursor: '',
+        },
+      }) as Response
+    );
+
+    const app = makeMockApp();
+    app.vault._addFolder('得到大脑/纯文本');
+    const engine = new SyncEngine(
+      app as any,
+      makeSettings({
+        maxDays: 0,
+        syncHistory: [
+          {
+            id: 'previous-sync',
+            startedAt: 1,
+            finishedAt: 2,
+            durationMs: 1,
+            timestamp: 2,
+            type: 'auto',
+            mode: 'auto',
+            status: 'success',
+            scope: { maxDays: 0, syncStartDate: '2026-05-09T12:00:00+08:00' },
+            result: {
+              created: 1,
+              updated: 0,
+              skipped: 0,
+              failed: 0,
+              total: 1,
+              items: [
+                {
+                  noteId: 'old_deleted_local_note',
+                  title: '旧本地误删笔记',
+                  noteType: 'plain_text',
+                  updatedAt: '2026-05-10T11:59:59+08:00',
+                  status: 'created',
+                },
+              ],
+              lastNoteTimestamp: '2026-05-10T11:59:59+08:00',
+            },
+          },
+        ],
+      }),
+      undefined,
+      { syncStartDate: '2026-05-10T12:00:00+08:00', maxDays: 0 }
+    );
+
+    const result = await engine.sync();
+
+    expect(result.total).toBe(0);
+    expect(result.created).toBe(0);
+    expect(result.lastNoteTimestamp).toBeUndefined();
+    expect(app.vault.create).not.toHaveBeenCalled();
+    vi.mocked(globalThis.fetch).mockRestore();
+  });
+
   it('newer notes (> boundary) pass the > filter and advance lastSyncEndTimestamp', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       mockFetchResponse({
@@ -1374,6 +1515,30 @@ describe('SyncEngine — writeNote', () => {
     // @ts-ignore
     const result = await engine['writeNote'](note, index);
     expect(result.status).toBe('skipped');
+  });
+
+  it('有相同 uid 的笔记即使远端更新也跳过且不覆盖本地内容', async () => {
+    const app = makeMockApp();
+    app.vault._addFile(
+      '得到大脑/纯文本/本地编辑.md',
+      '---\nuid: "local_edit"\nmodified: "2026-04-28 10:00:00"\n---\n本地手动修改',
+      { uid: 'local_edit', modified: '2026-04-28 10:00:00' }
+    );
+    app.vault._addFolder('得到大脑/纯文本');
+    const engine = new SyncEngine(app as any, makeSettings());
+    const note = makeNote({
+      note_id: 'local_edit',
+      title: '本地编辑',
+      content: '远端新内容',
+      updated_at: '2026-04-29T10:00:00+08:00',
+    });
+    const index = new Map<string, any>([['local_edit', { path: '得到大脑/纯文本/本地编辑.md' }]]);
+
+    // @ts-ignore
+    const result = await engine['writeNote'](note, index);
+
+    expect(result.status).toBe('skipped');
+    expect(app.vault.modify).not.toHaveBeenCalled();
   });
 });
 
@@ -1717,7 +1882,7 @@ describe('SyncEngine — audio note sync', () => {
     }
   });
 
-  it('图片笔记已存在但缺少图片时按笔记同步会补下载并重写 md 引用', async () => {
+  it('图片笔记已存在但缺少图片时按笔记同步也保守跳过', async () => {
     const imageNote = makeNote({
       note_id: 'image_existing',
       title: '已有图片笔记',
@@ -1777,11 +1942,11 @@ describe('SyncEngine — audio note sync', () => {
       const engine = new SyncEngine(app as any, makeSettings());
       const result = await engine.syncNoteIds(['image_existing']);
 
-      expect(result.updated).toBe(1);
-      expect(app.vault.getAbstractFileByPath('得到大脑/图片笔记/asset/已有图片笔记_image.png')).toBeTruthy();
-      const modifiedContent = vi.mocked(app.vault.modify).mock.calls[0]?.[1] as string;
-      expect(modifiedContent).toContain('> 📷 图片');
-      expect(modifiedContent).toContain('> ![](asset/已有图片笔记_image.png)');
+      expect(result.skipped).toBe(1);
+      expect(result.updated).toBe(0);
+      expect(app.vault.getAbstractFileByPath('得到大脑/图片笔记/asset/已有图片笔记_image.png')).toBeNull();
+      expect(app.vault.createBinary).not.toHaveBeenCalled();
+      expect(app.vault.modify).not.toHaveBeenCalled();
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
     }
@@ -1916,7 +2081,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       expect(result.exists).toBe(false);
     });
 
-    it('uid 命中但内容已修改时返回 { exists: false, file }', () => {
+    it('uid 命中但内容已修改时仍返回 { exists: true }', () => {
       const app = makeMockApp();
       app.vault._addFile(
         '得到大脑/纯文本/test.md',
@@ -1932,7 +2097,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       const index = new Map([['note_changed', { path: '得到大脑/纯文本/test.md' }]]);
       // @ts-ignore
       const result = engine['preCheckNote'](note, index);
-      expect(result.exists).toBe(false);
+      expect(result.exists).toBe(true);
       expect(result.file).toBeDefined();
     });
 
@@ -1980,7 +2145,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       expect(result.exists).toBe(true);
     });
 
-    it('音频笔记：缺少音频文件时返回 { exists: false }', () => {
+    it('音频笔记：缺少音频文件时仍返回 { exists: true }', () => {
       const app = makeMockApp();
       app.vault._addFile(
         '得到大脑/录音笔记/test.md',
@@ -2000,10 +2165,10 @@ describe('SyncEngine — selective sync cancellation', () => {
       const index = new Map([['audio_missing_mp3', { path: '得到大脑/录音笔记/test.md' }]]);
       // @ts-ignore
       const result = engine['preCheckNote'](note, index);
-      expect(result.exists).toBe(false);
+      expect(result.exists).toBe(true);
     });
 
-    it('音频笔记：缺少转写文件时返回 { exists: false }', () => {
+    it('音频笔记：缺少转写文件时仍返回 { exists: true }', () => {
       const app = makeMockApp();
       app.vault._addFile(
         '得到大脑/录音笔记/test.md',
@@ -2023,7 +2188,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       const index = new Map([['audio_missing_transcript', { path: '得到大脑/录音笔记/test.md' }]]);
       // @ts-ignore
       const result = engine['preCheckNote'](note, index);
-      expect(result.exists).toBe(false);
+      expect(result.exists).toBe(true);
     });
 
     it('非音频笔记忽略附件检查直接通过', () => {
@@ -3138,7 +3303,7 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
     }
   });
 
-  it('syncKnowledgeBases 非空时拉取并按 note_id + 内容比对跳过未变更的笔记', async () => {
+  it('syncKnowledgeBases 非空时本地已有 note_id 的笔记会保守跳过', async () => {
     const fakeNotes = [
       {
         id: 'blogger:kb-1:1',
@@ -3204,8 +3369,8 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
 
       // 跨库路径被触发
       expect(fetchSubscribedSpy).toHaveBeenCalled();
-      // 修改后的 kb-1 应被标记为 updated
-      expect(result.items?.some(item => item.noteId === 'blogger_kb-1' && item.status === 'updated')).toBe(true);
+      // 本地已存在的 kb-1 即使远端更新也应被标记为 skipped
+      expect(result.items?.some(item => item.noteId === 'blogger_kb-1' && item.status === 'skipped')).toBe(true);
       // kb-2 应被标记为 created
       expect(result.items?.some(item => item.noteId === 'blogger_kb-2' && item.status === 'created')).toBe(true);
     } finally {
@@ -3276,7 +3441,7 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
     }
   });
 
-  it('跨库同步：音频笔记正文未变但本地缺音频文件时触发补下载（不跳过）', async () => {
+  it('跨库同步：音频笔记本地已存在但缺音频文件时也保守跳过', async () => {
     const noteId = 'cross_kb_audio_missing';
     const fakeNotes = [
       {
@@ -3373,15 +3538,14 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
 
       const result = await engine.sync();
 
-      // 正文未变 + audio 缺失 → 跨库路径不能简单地 skip，必须走补下载
+      // 本地已有同 UID Markdown 时默认跳过，不补下载附件或覆盖正文。
       const itemsForNote = result.items?.filter(item => item.noteId === noteId) ?? [];
       expect(itemsForNote.length).toBeGreaterThan(0);
       const statuses = itemsForNote.map(item => item.status);
-      // 不允许出现纯 skipped（缺附件时必须重写或下载）
-      expect(statuses).not.toEqual(['skipped']);
-      // 必须尝试下载音频
+      expect(statuses).toEqual(['skipped']);
+      // 不应尝试下载音频
       const fetchCalls = vi.mocked(globalThis.fetch).mock.calls.map(call => String(call[0]));
-      expect(fetchCalls.some(url => url === 'https://cdn.example.com/cross-kb.mp3')).toBe(true);
+      expect(fetchCalls.some(url => url === 'https://cdn.example.com/cross-kb.mp3')).toBe(false);
     } finally {
       vi.doUnmock('../src/api');
       vi.resetModules();
