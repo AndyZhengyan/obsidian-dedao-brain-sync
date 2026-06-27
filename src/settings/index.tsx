@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'preact/hooks';
+import { useState, useCallback, useRef, useEffect } from 'preact/hooks';
 import { SettingItem } from './setting-item';
 import { SyncButton } from './sync-button';
 import { OAuthButton } from './oauth-button';
@@ -27,6 +27,39 @@ class FolderSuggest extends AbstractInputSuggest<string> {
       .getAllFolders()
       .map(f => f.path)
       .filter(path => !query || path.toLowerCase().includes(query.toLowerCase()));
+  }
+
+  renderSuggestion(value: string, el: HTMLElement): void {
+    el.setText(value);
+  }
+
+  selectSuggestion(value: string): void {
+    this.el.value = value;
+    this.el.dispatchEvent(new Event('input'));
+    this.close();
+  }
+}
+
+class TemplateFileSuggest extends AbstractInputSuggest<string> {
+  private el: HTMLInputElement;
+
+  constructor(app: App, inputEl: HTMLInputElement, onSelect: (value: string) => void) {
+    super(app, inputEl);
+    this.el = inputEl;
+    this.onSelect((value) => onSelect(value));
+  }
+
+  getSuggestions(query: string): string[] {
+    const normalizedQuery = (query ?? '').trim().toLowerCase();
+    return Array.from(new Set(
+      this.app.vault
+        .getMarkdownFiles()
+        .map(file => file.path)
+        .filter(Boolean),
+    ))
+      .filter(path => !normalizedQuery || path.toLowerCase().includes(normalizedQuery))
+      .sort((a, b) => a.localeCompare(b))
+      .slice(0, 50);
   }
 
   renderSuggestion(value: string, el: HTMLElement): void {
@@ -106,15 +139,7 @@ export function SettingsComponent({
   const [pendingStartDate, setPendingStartDate] = useState(settings.syncStartDate);
 
   const folderInputRef = useRef<HTMLInputElement>(null);
-
-  const templateFilePaths = useMemo(() => {
-    return Array.from(new Set(
-      app.vault
-        .getMarkdownFiles()
-        .map(file => file.path)
-        .filter(Boolean),
-    )).sort((a, b) => a.localeCompare(b));
-  }, [app]);
+  const templateFileInputRef = useRef<HTMLInputElement>(null);
 
   // Attachment toggles are now driven by declarative Preact state (no more
   // imperative useRef + ToggleComponent.useEffect plumbing). The previous
@@ -194,6 +219,18 @@ export function SettingsComponent({
     const suggest = new FolderSuggest(app, inputEl, (value) => {
       setFolderName(value);
       updateSetting('folderName', value);
+    });
+
+    return () => suggest.close();
+  }, [app]);
+
+  useEffect(() => {
+    const inputEl = templateFileInputRef.current;
+    if (!inputEl) return;
+
+    const suggest = new TemplateFileSuggest(app, inputEl, (value) => {
+      setTemplateFilePath(value);
+      updateSetting('templateFilePath', value);
     });
 
     return () => suggest.close();
@@ -616,18 +653,13 @@ export function SettingsComponent({
         description={t('settings.templateFile.desc')}
       >
         <input
+          ref={templateFileInputRef}
           type="text"
           className="getnote-input"
           placeholder={t('settings.templateFile.placeholder')}
           value={templateFilePath}
-          list="getnote-template-file-list"
           onInput={(e) => handleTemplateFilePathChange((e.target as HTMLInputElement).value)}
         />
-        <datalist id="getnote-template-file-list">
-          {templateFilePaths.map(path => (
-            <option key={path} value={path} />
-          ))}
-        </datalist>
       </SettingItem>
 
       <div className="getnote-settings-divider" />

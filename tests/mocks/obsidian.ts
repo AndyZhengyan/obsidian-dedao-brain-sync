@@ -235,6 +235,8 @@ export async function requestUrl(_request: unknown): Promise<{
 }
 
 // ---- AbstractInputSuggest (minimal stub for FolderSuggest tests) ----
+export const abstractInputSuggestInstances: AbstractInputSuggest<unknown>[] = [];
+
 export abstract class AbstractInputSuggest<T> {
   app: App;
   inputEl: HTMLElement;
@@ -242,6 +244,7 @@ export abstract class AbstractInputSuggest<T> {
   constructor(app: App, inputEl: HTMLElement) {
     this.app = app;
     this.inputEl = inputEl;
+    abstractInputSuggestInstances.push(this as unknown as AbstractInputSuggest<unknown>);
   }
   abstract getSuggestions(_query: string): T[];
   abstract renderSuggestion(_value: T, _el: HTMLElement): void;

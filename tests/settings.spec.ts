@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { h, render } from 'preact';
 import { act } from 'preact/test-utils';
 import { App } from 'obsidian';
-import { TFile } from './mocks/obsidian';
+import { abstractInputSuggestInstances, TFile } from './mocks/obsidian';
 import { fetchNotes } from '../src/api';
 import { initI18n } from '../src/i18n';
 import { SettingsComponent } from '../src/settings';
@@ -126,6 +126,7 @@ function mockOpenExternal() {
 
 afterEach(() => {
   vi.mocked(fetchNotes).mockClear();
+  abstractInputSuggestInstances.length = 0;
   initI18n('zh-CN');
   render(null, document.body);
   document.body.innerHTML = '';
@@ -229,21 +230,28 @@ describe('SettingsComponent auth credentials', () => {
     const input = Array.from(container.querySelectorAll('input'))
       .find((item): item is HTMLInputElement => item.placeholder === '例如 Templates/得到大脑模板.md');
     expect(input).toBeTruthy();
-    expect(input!.getAttribute('list')).toBe('getnote-template-file-list');
+    const templateSuggest = abstractInputSuggestInstances.find(instance => instance.inputEl === input);
+    expect(templateSuggest).toBeTruthy();
 
-    const options = Array.from(container.querySelectorAll('#getnote-template-file-list option'));
-    expect(options.map(item => item.getAttribute('value'))).toEqual([
+    expect(templateSuggest!.getSuggestions(undefined as unknown as string)).toEqual([
       'Templates/default.md',
       'Templates/reading-note',
       'Templates/reading-note.md',
       '得到大脑/纯文本/已有同步笔记.md',
     ]);
+    expect(templateSuggest!.getSuggestions('read')).toEqual([
+      'Templates/reading-note',
+      'Templates/reading-note.md',
+    ]);
 
+    const inputListener = vi.fn();
+    input!.addEventListener('input', inputListener);
     await act(() => {
-      inputValue(input!, 'Templates/reading-note');
+      templateSuggest!.selectSuggestion('Templates/reading-note', new KeyboardEvent('keydown'));
     });
 
     expect(input!.value).toBe('Templates/reading-note');
+    expect(inputListener).toHaveBeenCalledTimes(1);
     expect(rendered.updateSetting).toHaveBeenCalledWith('templateFilePath', 'Templates/reading-note');
   });
 
