@@ -409,48 +409,47 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
               <span>{t('topicPicker.scope.selected')}</span>
             </label>
           </div>
-          {syncAllActive && (
-            <div className="getnote-input-hint getnote-topic-scope-hint">{t('topicPicker.scope.allHint')}</div>
-          )}
-          <div className="getnote-topic-filter-bar">
-            <TagSelect
-              value={syncTags}
-              options={activeTagOptions}
-              onChange={(value) => {
-                setSelectAllActive(false);
-                pruneSelectedItemsByTags(value);
-                setSyncTags(value);
-              }}
-              placeholder={t('noteTags.searchPlaceholder')}
-              allowCreate={false}
-            />
-            {!syncAllActive && activeTopic.contents.length > 0 && (
-              <input
-                data-topic-search
-                type="text"
-                className="getnote-input"
-                placeholder={t('picker.search')}
-                value={searchQuery}
-                onInput={(event) => {
+          {!syncAllActive && (
+            <div className="getnote-topic-filter-bar">
+              <TagSelect
+                value={syncTags}
+                options={activeTagOptions}
+                onChange={(value) => {
                   setSelectAllActive(false);
-                  setSearchQuery((event.target as HTMLInputElement).value);
+                  pruneSelectedItemsByTags(value);
+                  setSyncTags(value);
                 }}
+                placeholder={t('noteTags.searchPlaceholder')}
+                allowCreate={false}
               />
-            )}
-            {bloggers.length > 0 && (
-              <select
-                data-topic-blogger-filter
-                value={bloggerFilter}
-                onChange={(event) => {
-                  setSelectAllActive(false);
-                  setBloggerFilter((event.target as HTMLSelectElement).value);
-                }}
-              >
-                <option value="">{t('topicPicker.allBloggers')}</option>
-                {bloggers.map(blogger => <option key={blogger} value={blogger}>{blogger}</option>)}
-              </select>
-            )}
-          </div>
+              {activeTopic.contents.length > 0 && (
+                <input
+                  data-topic-search
+                  type="text"
+                  className="getnote-input"
+                  placeholder={t('picker.search')}
+                  value={searchQuery}
+                  onInput={(event) => {
+                    setSelectAllActive(false);
+                    setSearchQuery((event.target as HTMLInputElement).value);
+                  }}
+                />
+              )}
+              {bloggers.length > 0 && (
+                <select
+                  data-topic-blogger-filter
+                  value={bloggerFilter}
+                  onChange={(event) => {
+                    setSelectAllActive(false);
+                    setBloggerFilter((event.target as HTMLSelectElement).value);
+                  }}
+                >
+                  <option value="">{t('topicPicker.allBloggers')}</option>
+                  {bloggers.map(blogger => <option key={blogger} value={blogger}>{blogger}</option>)}
+                </select>
+              )}
+            </div>
+          )}
         </div>
       )}
       {!activeTopic && !topicsLoading && !topicsError && topics.length > 0 && (
@@ -533,7 +532,10 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
             <button onClick={() => void openTopic(activeTopic.topic)}>{t('topicPicker.retry')}</button>
           </div>
         )}
-        {activeTopic && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length === 0 && (
+        {activeTopic && syncAllActive && !activeTopic.loading && !activeTopic.error && (
+          <div className="getnote-picker-empty getnote-topic-scope-hint">{t('topicPicker.scope.allHint')}</div>
+        )}
+        {activeTopic && !syncAllActive && !activeTopic.loading && !activeTopic.error && activeTopic.contents.length === 0 && (
           <div className="getnote-picker-empty">{t('topicPicker.emptyContent')}</div>
         )}
         {activeTopic && !syncAllActive && !activeTopic.loading && !activeTopic.error && visibleItems.map(item => (

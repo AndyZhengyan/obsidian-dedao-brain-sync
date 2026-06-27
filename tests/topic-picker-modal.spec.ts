@@ -658,6 +658,12 @@ describe('TopicPickerModal', () => {
     expect(container.textContent).toContain('同步该知识库的全部内容');
     expect(container.textContent).toContain('将同步全部内容');
     expect(container.querySelector('[data-topic-select-all]')).toBeNull();
+    expect(container.querySelector('.getnote-topic-filter-bar')).toBeNull();
+    expect(container.querySelector('[data-topic-search]')).toBeNull();
+    expect(container.querySelector('[data-topic-blogger-filter]')).toBeNull();
+    expect(container.querySelector('.getnote-note-card')).toBeNull();
+    expect(container.querySelector('.getnote-picker-body .getnote-topic-scope-hint')?.textContent)
+      .toContain('同步该知识库的全部内容');
     expect((container.querySelector('.mod-cta') as HTMLButtonElement).disabled).toBe(false);
     await act(async () => {
       (container.querySelector('.mod-cta') as HTMLButtonElement).click();
