@@ -66,6 +66,7 @@ function NoteRow({ note, checked, onChange, onTagClick }: { note: GetNoteNote; c
       tabIndex={0}
       onClick={toggleSelection}
       onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
         if (e.key !== ' ' && e.key !== 'Enter') return;
         e.preventDefault();
         toggleSelection();

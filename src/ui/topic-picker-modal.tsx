@@ -310,7 +310,6 @@ export function TopicPickerModal({ token, clientId, authMode, onConfirm, onCance
           ? { createdTopicIds: [activeTopic.topic.topic_id] }
           : { topicIds: [activeTopic.topic.topic_id] }),
         knowledgeBaseName: activeTopic.topic.name || activeTopic.topic.topic_id,
-        ...(syncTags.length > 0 ? { syncTags } : {}),
       });
       return;
     }

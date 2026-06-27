@@ -570,6 +570,30 @@ describe('NotePickerModal card layout (#138)', () => {
     expect(searchInput.value).toContain('工作');
   });
 
+  it('does not toggle card selection when a tag chip handles keyboard activation', async () => {
+    const notes: GetNoteNote[] = [
+      makeNote({ note_id: 'tagged', title: '笔记', tags: [{ name: '工作' }] }),
+    ];
+    const container = await renderPickerWithNotes(notes, {
+      token: 'web-token',
+      clientId: '',
+      authMode: 'web',
+    });
+
+    const tagButton = container.querySelector('.getnote-note-card-tag') as HTMLButtonElement;
+    const card = container.querySelector('.getnote-note-card') as HTMLElement;
+    const checkbox = card.querySelector('.getnote-note-card-checkbox') as HTMLInputElement;
+    const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+
+    await act(() => {
+      tagButton.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(checkbox.checked).toBe(false);
+    expect(card.classList.contains('is-selected')).toBe(false);
+  });
+
   it('selects a note when clicking anywhere on its card', async () => {
     const onConfirm = vi.fn();
     const notes: GetNoteNote[] = [
