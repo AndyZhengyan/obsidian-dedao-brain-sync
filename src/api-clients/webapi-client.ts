@@ -1,4 +1,4 @@
-import type { GetNoteNote, Attachment, SubscribedTopic } from '../types';
+import type { GetNoteNote, Attachment, LinkOriginal, SubscribedTopic } from '../types';
 import { t } from '../i18n';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -77,6 +77,16 @@ function normalizeNoteDetailData(value: unknown): Partial<GetNoteNote> | null {
     ? source.children_ids.map(id => String(id))
     : undefined;
   return { ...detail, attachments, audio, children_ids: childrenIds };
+}
+
+function normalizeLinkOriginal(value: unknown): LinkOriginal | null {
+  if (!isRecord(value)) return null;
+  const source = isRecord(value.c) ? value.c : value;
+  const content = typeof source.content === 'string' ? source.content.trim() : '';
+  if (!content) return null;
+  const title = typeof source.title === 'string' && source.title.trim() ? source.title.trim() : undefined;
+  const url = typeof source.url === 'string' && source.url.trim() ? source.url.trim() : undefined;
+  return { ...(title ? { title } : {}), ...(url ? { url } : {}), content };
 }
 
 function tryParseJsonObject(text: string): Record<string, unknown> {
@@ -443,6 +453,23 @@ export async function fetchNoteDetail(
   // noteDetail.note_id is required — throw if missing (e.g. error response body)
   if (!noteDetail || !noteDetail.note_id) throw new Error(t('error.fetchNoteDetailFailed'));
   return noteDetail;
+}
+
+export async function fetchNoteOriginal(
+  detailId: string,
+  token: string,
+  signal?: AbortSignal
+): Promise<LinkOriginal | null> {
+  const url = `https://get-notes.luojilab.com/voicenotes/web/notes/${encodeURIComponent(detailId)}/original`;
+  const data = await apiRequest<{ h?: unknown; c?: unknown; message?: string }>(url, {
+    method: 'GET',
+    headers: buildHeaders(token),
+  }, 2, signal);
+  if (data.message) {
+    if (data.message === 'LoginRequired') throw new Error(t('error.webApiLoginRequired'));
+    throw new Error(data.message ? t('error.apiGenericWithMsg', { msg: data.message }) : t('error.apiGeneric'));
+  }
+  return normalizeLinkOriginal(data);
 }
 export async function fetchNoteChildren(
   parentPrimeId: string,

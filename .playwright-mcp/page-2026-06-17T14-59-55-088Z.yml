@@ -1,0 +1,3522 @@
+- generic [ref=e3]:
+  - link "Skip to content" [ref=e4] [cursor=pointer]:
+    - /url: "#VPContent"
+  - banner:
+    - generic:
+      - generic:
+        - generic:
+          - link "OpenViking" [ref=e6] [cursor=pointer]:
+            - /url: https://www.openviking.ai/
+            - generic [ref=e7]: OpenViking
+          - generic [ref=e8]:
+            - button "Search docs" [ref=e10] [cursor=pointer]:
+              - generic [ref=e11]: Search docs
+              - generic [ref=e12]: Ctrl K
+            - navigation "Main Navigation" [ref=e13]:
+              - generic [ref=e14]: Main Navigation
+              - link "指南" [ref=e15] [cursor=pointer]:
+                - /url: /zh/getting-started/01-introduction
+                - generic [ref=e16]: 指南
+              - link "API 参考" [ref=e17] [cursor=pointer]:
+                - /url: /zh/api/01-overview
+                - generic [ref=e18]: API 参考
+              - link "常见问题" [ref=e19] [cursor=pointer]:
+                - /url: /zh/faq/faq
+                - generic [ref=e20]: 常见问题
+              - link "关于" [ref=e21] [cursor=pointer]:
+                - /url: /zh/about/01-about-us
+                - generic [ref=e22]: 关于
+            - button "切换语言" [ref=e24] [cursor=pointer]
+            - button "extra navigation" [ref=e29] [cursor=pointer]
+  - button "页面导航" [ref=e34] [cursor=pointer]: 页面导航
+  - complementary [ref=e36]:
+    - navigation "Sidebar Navigation" [ref=e38]:
+      - generic [ref=e39]: Sidebar Navigation
+      - generic [ref=e41]:
+        - button "快速开始 toggle section" [ref=e42] [cursor=pointer]:
+          - heading "快速开始" [level=2] [ref=e44]
+          - button "toggle section" [ref=e45]
+        - generic [ref=e47]:
+          - link "简介" [ref=e51] [cursor=pointer]:
+            - /url: /zh/getting-started/01-introduction
+            - paragraph [ref=e52]: 简介
+          - link "快速开始" [ref=e56] [cursor=pointer]:
+            - /url: /zh/getting-started/02-quickstart
+            - paragraph [ref=e57]: 快速开始
+          - link "快速开始：服务端模式" [ref=e61] [cursor=pointer]:
+            - /url: /zh/getting-started/03-quickstart-server
+            - paragraph [ref=e62]: 快速开始：服务端模式
+          - link "OpenViking 安装 SOP（For Agent）" [ref=e66] [cursor=pointer]:
+            - /url: /zh/getting-started/04-setup-for-agent
+            - paragraph [ref=e67]: OpenViking 安装 SOP（For Agent）
+          - link "OpenViking CLI 配置指南" [ref=e71] [cursor=pointer]:
+            - /url: /zh/getting-started/05-cli-setup
+            - paragraph [ref=e72]: OpenViking CLI 配置指南
+      - button "核心概念 toggle section" [ref=e75] [cursor=pointer]:
+        - heading "核心概念" [level=2] [ref=e77]
+        - button "toggle section" [ref=e78]
+      - generic [ref=e81]:
+        - button "指南 toggle section" [ref=e82] [cursor=pointer]:
+          - heading "指南" [level=2] [ref=e84]
+          - button "toggle section" [ref=e85]
+        - generic [ref=e87]:
+          - link "配置" [ref=e91] [cursor=pointer]:
+            - /url: /zh/guides/01-configuration
+            - paragraph [ref=e92]: 配置
+          - link "火山引擎模型购买指南" [ref=e96] [cursor=pointer]:
+            - /url: /zh/guides/02-volcengine-purchase-guide
+            - paragraph [ref=e97]: 火山引擎模型购买指南
+          - link "服务端部署" [ref=e101] [cursor=pointer]:
+            - /url: /zh/guides/03-deployment
+            - paragraph [ref=e102]: 服务端部署
+          - link "认证" [ref=e106] [cursor=pointer]:
+            - /url: /zh/guides/04-authentication
+            - paragraph [ref=e107]: 认证
+          - link "可观测性与排障" [ref=e111] [cursor=pointer]:
+            - /url: /zh/guides/05-observability
+            - paragraph [ref=e112]: 可观测性与排障
+          - link "MCP 集成指南" [ref=e116] [cursor=pointer]:
+            - /url: /zh/guides/06-mcp-integration
+            - paragraph [ref=e117]: MCP 集成指南
+          - link "操作级 Telemetry 参考" [ref=e121] [cursor=pointer]:
+            - /url: /zh/guides/07-operation-telemetry
+            - paragraph [ref=e122]: 操作级 Telemetry 参考
+          - link "加密指南" [ref=e126] [cursor=pointer]:
+            - /url: /zh/guides/08-encryption
+            - paragraph [ref=e127]: 加密指南
+          - link "OVPack 导入导出" [ref=e131] [cursor=pointer]:
+            - /url: /zh/guides/09-ovpack
+            - paragraph [ref=e132]: OVPack 导入导出
+          - link "OpenViking Prompt 说明与自定义指南" [ref=e136] [cursor=pointer]:
+            - /url: /zh/guides/10-prompt-guide
+            - paragraph [ref=e137]: OpenViking Prompt 说明与自定义指南
+          - link "使用 Prometheus 和 Grafana 查看 OpenViking 指标" [ref=e141] [cursor=pointer]:
+            - /url: /zh/guides/11-grafana-prometheus
+            - paragraph [ref=e142]: 使用 Prometheus 和 Grafana 查看 OpenViking 指标
+          - link "OAuth 2.1 接入指南" [ref=e146] [cursor=pointer]:
+            - /url: /zh/guides/11-oauth
+            - paragraph [ref=e147]: OAuth 2.1 接入指南
+          - link "公网访问与反向代理" [ref=e151] [cursor=pointer]:
+            - /url: /zh/guides/12-public-access
+            - paragraph [ref=e152]: 公网访问与反向代理
+          - link "使用真实问答验证 Vikingbot 指标" [ref=e156] [cursor=pointer]:
+            - /url: /zh/guides/12-vikingbot-metrics-validation
+            - paragraph [ref=e157]: 使用真实问答验证 Vikingbot 指标
+          - link "多写存储指南" [ref=e161] [cursor=pointer]:
+            - /url: /zh/guides/13-multi-write-storage
+            - paragraph [ref=e162]: 多写存储指南
+          - link "RAGFS 缓存" [ref=e166] [cursor=pointer]:
+            - /url: /zh/guides/13-ragfs-cache
+            - paragraph [ref=e167]: RAGFS 缓存
+      - button "Agent 集成 toggle section" [ref=e170] [cursor=pointer]:
+        - heading "Agent 集成" [level=2] [ref=e172]
+        - button "toggle section" [ref=e173]
+      - button "迁移指南 toggle section" [ref=e177] [cursor=pointer]:
+        - heading "迁移指南" [level=2] [ref=e179]
+        - button "toggle section" [ref=e180]
+  - generic [ref=e186]:
+    - generic [ref=e188]:
+      - button "Copy markdown" [ref=e189] [cursor=pointer]:
+        - img [ref=e191]
+        - text: Copy markdown
+      - button "More options" [ref=e194] [cursor=pointer]:
+        - img [ref=e195]
+    - main [ref=e197]:
+      - generic [ref=e199]:
+        - heading "配置 Permalink to \"配置\"" [level=1] [ref=e200]:
+          - text: 配置
+          - link "Permalink to \"配置\"" [ref=e201] [cursor=pointer]:
+            - /url: "#配置"
+            - text: "#"
+        - paragraph [ref=e202]:
+          - text: OpenViking 使用 JSON 配置文件（
+          - code [ref=e203]: ov.conf
+          - text: ）进行设置。配置文件支持 Embedding、VLM、Rerank、存储、解析器等多个模块的配置。
+        - paragraph [ref=e204]: 首次配置推荐优先使用：
+        - generic [ref=e205]:
+          - button "Copy Code" [ref=e206] [cursor=pointer]
+          - generic [ref=e207]: bash
+          - code [ref=e209]:
+            - generic [ref=e210]: openviking-server init
+            - generic [ref=e211]: openviking-server doctor
+        - paragraph [ref=e212]:
+          - code [ref=e213]: openviking-server init
+          - text: 会分别引导你填写 Embedding 和 VLM 的配置。对于
+          - code [ref=e214]: OpenAI
+          - text: 、
+          - code [ref=e215]: Volcengine
+          - text: 、
+          - code [ref=e216]: Kimi
+          - text: 、
+          - code [ref=e217]: GLM
+          - text: 这类 API 型 VLM，按提示填写对应的 VLM API Key；如果要使用 Codex 作为 VLM，请选择
+          - code [ref=e218]: OpenAI Codex
+          - text: ，向导会自动帮你处理已有 Codex 鉴权的导入，或直接引导你完成登录。
+        - heading "快速开始 Permalink to \"快速开始\"" [level=2] [ref=e219]:
+          - text: 快速开始
+          - link "Permalink to \"快速开始\"" [ref=e220] [cursor=pointer]:
+            - /url: "#快速开始"
+            - text: "#"
+        - paragraph [ref=e221]:
+          - text: 在项目目录创建
+          - code [ref=e222]: ~/.openviking/ov.conf
+          - text: ：
+        - generic [ref=e223]:
+          - button "Copy Code" [ref=e224] [cursor=pointer]
+          - generic [ref=e225]: json
+          - code [ref=e227]:
+            - generic [ref=e228]: "{"
+            - generic [ref=e229]: "\"storage\": {"
+            - generic [ref=e230]: "\"workspace\": \"./data\","
+            - generic [ref=e231]: "\"vectordb\": {"
+            - generic [ref=e232]: "\"name\": \"context\","
+            - generic [ref=e233]: "\"backend\": \"local\""
+            - generic [ref=e234]: "},"
+            - generic [ref=e235]: "\"agfs\": {"
+            - generic [ref=e236]: "\"backend\": \"local\""
+            - generic [ref=e237]: "}"
+            - generic [ref=e238]: "},"
+            - generic [ref=e239]: "\"embedding\": {"
+            - generic [ref=e240]: "\"dense\": {"
+            - generic [ref=e241]: "\"api_base\" : \"<api-endpoint>\","
+            - generic [ref=e242]: "\"api_key\" : \"<your-api-key>\","
+            - generic [ref=e243]: "\"provider\" : \"<provider-type>\","
+            - generic [ref=e244]: "\"dimension\": 1024,"
+            - generic [ref=e245]: "\"model\" : \"<model-name>\""
+            - generic [ref=e246]: "}"
+            - generic [ref=e247]: "},"
+            - generic [ref=e248]: "\"vlm\": {"
+            - generic [ref=e249]: "\"api_base\" : \"<api-endpoint>\","
+            - generic [ref=e250]: "\"api_key\" : \"<your-api-key>\","
+            - generic [ref=e251]: "\"provider\" : \"<provider-type>\","
+            - generic [ref=e252]: "\"model\" : \"<model-name>\""
+            - generic [ref=e253]: "}"
+            - generic [ref=e254]: "}"
+        - paragraph [ref=e255]:
+          - text: 如果
+          - code [ref=e256]: provider
+          - text: 是
+          - code [ref=e257]: openai-codex
+          - text: ，并且 Codex OAuth 已经就绪，则
+          - code [ref=e258]: vlm.api_key
+          - text: 可以省略。
+        - heading "配置示例 Permalink to \"配置示例\"" [level=2] [ref=e259]:
+          - text: 配置示例
+          - link "Permalink to \"配置示例\"" [ref=e260] [cursor=pointer]:
+            - /url: "#配置示例"
+            - text: "#"
+        - group [ref=e261]:
+          - generic "火山引擎（豆包模型）" [ref=e262]
+        - group [ref=e263]:
+          - generic "OpenAI 模型" [ref=e264]
+        - group [ref=e265]:
+          - generic "火山引擎 Embedding + Codex VLM" [ref=e266]
+        - group [ref=e267]:
+          - generic "火山引擎 Embedding + Kimi Coding VLM" [ref=e268]
+        - group [ref=e269]:
+          - generic "火山引擎 Embedding + GLM Coding Plan VLM" [ref=e270]
+        - heading "配置部分 Permalink to \"配置部分\"" [level=2] [ref=e271]:
+          - text: 配置部分
+          - link "Permalink to \"配置部分\"" [ref=e272] [cursor=pointer]:
+            - /url: "#配置部分"
+            - text: "#"
+        - heading "embedding Permalink to \"embedding\"" [level=3] [ref=e273]:
+          - text: embedding
+          - link "Permalink to \"embedding\"" [ref=e274] [cursor=pointer]:
+            - /url: "#embedding"
+            - text: "#"
+        - paragraph [ref=e275]: 用于向量搜索的 Embedding 模型配置，支持 dense、sparse 和 hybrid 三种模式。
+        - heading "Dense Embedding Permalink to \"Dense Embedding\"" [level=4] [ref=e276]:
+          - text: Dense Embedding
+          - link "Permalink to \"Dense Embedding\"" [ref=e277] [cursor=pointer]:
+            - /url: "#dense-embedding"
+            - text: "#"
+        - generic [ref=e278]:
+          - button "Copy Code" [ref=e279] [cursor=pointer]
+          - generic [ref=e280]: json
+          - code [ref=e282]:
+            - generic [ref=e283]: "{"
+            - generic [ref=e284]: "\"embedding\": {"
+            - generic [ref=e285]: "\"max_concurrent\": 10,"
+            - generic [ref=e286]: "\"max_retries\": 3,"
+            - generic [ref=e287]: "\"text_source\": \"content_only\","
+            - generic [ref=e288]: "\"max_input_tokens\": 4096,"
+            - generic [ref=e289]: "\"dense\": {"
+            - generic [ref=e290]: "\"provider\": \"volcengine\","
+            - generic [ref=e291]: "\"api_key\": \"your-api-key\","
+            - generic [ref=e292]: "\"model\": \"doubao-embedding-vision-251215\","
+            - generic [ref=e293]: "\"dimension\": 1024,"
+            - generic [ref=e294]: "\"input\": \"multimodal\","
+            - generic [ref=e295]: "\"batch_size\": 32"
+            - generic [ref=e296]: "}"
+            - generic [ref=e297]: "}"
+            - generic [ref=e298]: "}"
+        - paragraph [ref=e299]:
+          - strong [ref=e300]: 参数
+        - table [ref=e301]:
+          - rowgroup [ref=e302]:
+            - row "参数 类型 说明" [ref=e303]:
+              - columnheader "参数" [ref=e304]
+              - columnheader "类型" [ref=e305]
+              - columnheader "说明" [ref=e306]
+          - rowgroup [ref=e307]:
+            - row "max_concurrent int 最大并发 Embedding 请求数（embedding.max_concurrent，默认：10）" [ref=e308]:
+              - cell "max_concurrent" [ref=e309]:
+                - code [ref=e310]: max_concurrent
+              - cell "int" [ref=e311]
+              - cell "最大并发 Embedding 请求数（embedding.max_concurrent，默认：10）" [ref=e312]:
+                - text: 最大并发 Embedding 请求数（
+                - code [ref=e313]: embedding.max_concurrent
+                - text: ，默认：
+                - code [ref=e314]: "10"
+                - text: ）
+            - row "max_retries int Embedding provider 瞬时错误的最大重试次数（embedding.max_retries，默认：3；0 表示禁用重试）" [ref=e315]:
+              - cell "max_retries" [ref=e316]:
+                - code [ref=e317]: max_retries
+              - cell "int" [ref=e318]
+              - cell "Embedding provider 瞬时错误的最大重试次数（embedding.max_retries，默认：3；0 表示禁用重试）" [ref=e319]:
+                - text: Embedding provider 瞬时错误的最大重试次数（
+                - code [ref=e320]: embedding.max_retries
+                - text: ，默认：
+                - code [ref=e321]: "3"
+                - text: ；
+                - code [ref=e322]: "0"
+                - text: 表示禁用重试）
+            - row "text_source str 文本文件向量化时使用的文本来源。content_only 读取原文内容；summary_first 优先使用摘要，没有摘要时回退到原文；summary_only 只使用摘要。默认：content_only" [ref=e323]:
+              - cell "text_source" [ref=e324]:
+                - code [ref=e325]: text_source
+              - cell "str" [ref=e326]
+              - cell "文本文件向量化时使用的文本来源。content_only 读取原文内容；summary_first 优先使用摘要，没有摘要时回退到原文；summary_only 只使用摘要。默认：content_only" [ref=e327]:
+                - text: 文本文件向量化时使用的文本来源。
+                - code [ref=e328]: content_only
+                - text: 读取原文内容；
+                - code [ref=e329]: summary_first
+                - text: 优先使用摘要，没有摘要时回退到原文；
+                - code [ref=e330]: summary_only
+                - text: 只使用摘要。默认：
+                - code [ref=e331]: content_only
+            - row "max_input_tokens int 使用原文内容向量化时，发送给 embedding 模型的最大估算 token 数。默认：4096" [ref=e332]:
+              - cell "max_input_tokens" [ref=e333]:
+                - code [ref=e334]: max_input_tokens
+              - cell "int" [ref=e335]
+              - cell "使用原文内容向量化时，发送给 embedding 模型的最大估算 token 数。默认：4096" [ref=e336]:
+                - text: 使用原文内容向量化时，发送给 embedding 模型的最大估算 token 数。默认：
+                - code [ref=e337]: "4096"
+            - row "provider str \"openai\"、\"azure\"、\"volcengine\"、\"vikingdb\"、\"jina\"、\"ollama\"、\"gemini\"、\"voyage\"、\"dashscope\"、\"minimax\"、\"cohere\"、\"litellm\" 或 \"local\"" [ref=e338]:
+              - cell "provider" [ref=e339]:
+                - code [ref=e340]: provider
+              - cell "str" [ref=e341]
+              - cell "\"openai\"、\"azure\"、\"volcengine\"、\"vikingdb\"、\"jina\"、\"ollama\"、\"gemini\"、\"voyage\"、\"dashscope\"、\"minimax\"、\"cohere\"、\"litellm\" 或 \"local\"" [ref=e342]:
+                - code [ref=e343]: "\"openai\""
+                - text: 、
+                - code [ref=e344]: "\"azure\""
+                - text: 、
+                - code [ref=e345]: "\"volcengine\""
+                - text: 、
+                - code [ref=e346]: "\"vikingdb\""
+                - text: 、
+                - code [ref=e347]: "\"jina\""
+                - text: 、
+                - code [ref=e348]: "\"ollama\""
+                - text: 、
+                - code [ref=e349]: "\"gemini\""
+                - text: 、
+                - code [ref=e350]: "\"voyage\""
+                - text: 、
+                - code [ref=e351]: "\"dashscope\""
+                - text: 、
+                - code [ref=e352]: "\"minimax\""
+                - text: 、
+                - code [ref=e353]: "\"cohere\""
+                - text: 、
+                - code [ref=e354]: "\"litellm\""
+                - text: 或
+                - code [ref=e355]: "\"local\""
+            - row "api_key str API Key" [ref=e356]:
+              - cell "api_key" [ref=e357]:
+                - code [ref=e358]: api_key
+              - cell "str" [ref=e359]
+              - cell "API Key" [ref=e360]
+            - row "model str 模型名称" [ref=e361]:
+              - cell "model" [ref=e362]:
+                - code [ref=e363]: model
+              - cell "str" [ref=e364]
+              - cell "模型名称" [ref=e365]
+            - row "dimension int 向量维度" [ref=e366]:
+              - cell "dimension" [ref=e367]:
+                - code [ref=e368]: dimension
+              - cell "int" [ref=e369]
+              - cell "向量维度" [ref=e370]
+            - row "input str 输入类型：\"text\" 或 \"multimodal\"" [ref=e371]:
+              - cell "input" [ref=e372]:
+                - code [ref=e373]: input
+              - cell "str" [ref=e374]
+              - cell "输入类型：\"text\" 或 \"multimodal\"" [ref=e375]:
+                - text: 输入类型：
+                - code [ref=e376]: "\"text\""
+                - text: 或
+                - code [ref=e377]: "\"multimodal\""
+            - row "batch_size int 批量请求大小" [ref=e378]:
+              - cell "batch_size" [ref=e379]:
+                - code [ref=e380]: batch_size
+              - cell "int" [ref=e381]
+              - cell "批量请求大小" [ref=e382]
+            - row "encoding_format str （仅 OpenAI / Azure）Embedding 值的传输格式：\"float\" 或 \"base64\"。留空时使用 OpenAI Python SDK 默认值；当上游网关无法正确处理 base64 embedding payload 时，可设置为 \"float\"。" [ref=e383]:
+              - cell "encoding_format" [ref=e384]:
+                - code [ref=e385]: encoding_format
+              - cell "str" [ref=e386]
+              - cell "（仅 OpenAI / Azure）Embedding 值的传输格式：\"float\" 或 \"base64\"。留空时使用 OpenAI Python SDK 默认值；当上游网关无法正确处理 base64 embedding payload 时，可设置为 \"float\"。" [ref=e387]:
+                - text: （仅 OpenAI / Azure）Embedding 值的传输格式：
+                - code [ref=e388]: "\"float\""
+                - text: 或
+                - code [ref=e389]: "\"base64\""
+                - text: 。留空时使用 OpenAI Python SDK 默认值；当上游网关无法正确处理 base64 embedding payload 时，可设置为
+                - code [ref=e390]: "\"float\""
+                - text: 。
+        - paragraph [ref=e391]:
+          - code [ref=e392]: embedding.max_retries
+          - text: 仅对瞬时错误生效，例如
+          - code [ref=e393]: "429"
+          - text: 、
+          - code [ref=e394]: 5xx
+          - text: 、超时和连接错误；
+          - code [ref=e395]: "400"
+          - text: 、
+          - code [ref=e396]: "401"
+          - text: 、
+          - code [ref=e397]: "403"
+          - text: 、
+          - code [ref=e398]: AccountOverdue
+          - text: 这类永久错误不会自动重试。退避策略为指数退避，初始延迟
+          - code [ref=e399]: 0.5s
+          - text: ，上限
+          - code [ref=e400]: 8s
+          - text: ，并带随机抖动。
+        - heading "Embedding 熔断（Circuit Breaker） Permalink to \"Embedding 熔断（Circuit Breaker）\"" [level=4] [ref=e401]:
+          - text: Embedding 熔断（Circuit Breaker）
+          - link "Permalink to \"Embedding 熔断（Circuit Breaker）\"" [ref=e402] [cursor=pointer]:
+            - /url: "#embedding-熔断-circuit-breaker"
+            - text: "#"
+        - paragraph [ref=e403]:
+          - text: 当 embedding provider 出现连续瞬时错误（如
+          - code [ref=e404]: "429"
+          - text: 、
+          - code [ref=e405]: 5xx
+          - text: ）时，OpenViking 会触发熔断，在一段时间内暂停调用 provider，并将 embedding 任务重新入队。超过基础
+          - code [ref=e406]: reset_timeout
+          - text: 后进入 HALF_OPEN，允许一次探测请求；如果探测失败，则下一次
+          - code [ref=e407]: reset_timeout
+          - text: 翻倍（上限为
+          - code [ref=e408]: max_reset_timeout
+          - text: ）。
+        - generic [ref=e409]:
+          - button "Copy Code" [ref=e410] [cursor=pointer]
+          - generic [ref=e411]: json
+          - code [ref=e413]:
+            - generic [ref=e414]: "{"
+            - generic [ref=e415]: "\"embedding\": {"
+            - generic [ref=e416]: "\"circuit_breaker\": {"
+            - generic [ref=e417]: "\"failure_threshold\": 5,"
+            - generic [ref=e418]: "\"reset_timeout\": 60,"
+            - generic [ref=e419]: "\"max_reset_timeout\": 600"
+            - generic [ref=e420]: "}"
+            - generic [ref=e421]: "}"
+            - generic [ref=e422]: "}"
+        - table [ref=e423]:
+          - rowgroup [ref=e424]:
+            - row "参数 类型 说明" [ref=e425]:
+              - columnheader "参数" [ref=e426]
+              - columnheader "类型" [ref=e427]
+              - columnheader "说明" [ref=e428]
+          - rowgroup [ref=e429]:
+            - row "circuit_breaker.failure_threshold int 连续失败多少次后熔断（默认：5）" [ref=e430]:
+              - cell "circuit_breaker.failure_threshold" [ref=e431]:
+                - code [ref=e432]: circuit_breaker.failure_threshold
+              - cell "int" [ref=e433]
+              - cell "连续失败多少次后熔断（默认：5）" [ref=e434]:
+                - text: 连续失败多少次后熔断（默认：
+                - code [ref=e435]: "5"
+                - text: ）
+            - row "circuit_breaker.reset_timeout float 基础恢复等待时间（秒，默认：60）" [ref=e436]:
+              - cell "circuit_breaker.reset_timeout" [ref=e437]:
+                - code [ref=e438]: circuit_breaker.reset_timeout
+              - cell "float" [ref=e439]
+              - cell "基础恢复等待时间（秒，默认：60）" [ref=e440]:
+                - text: 基础恢复等待时间（秒，默认：
+                - code [ref=e441]: "60"
+                - text: ）
+            - row "circuit_breaker.max_reset_timeout float 指数退避后的最大恢复等待时间（秒，默认：600）" [ref=e442]:
+              - cell "circuit_breaker.max_reset_timeout" [ref=e443]:
+                - code [ref=e444]: circuit_breaker.max_reset_timeout
+              - cell "float" [ref=e445]
+              - cell "指数退避后的最大恢复等待时间（秒，默认：600）" [ref=e446]:
+                - text: 指数退避后的最大恢复等待时间（秒，默认：
+                - code [ref=e447]: "600"
+                - text: ）
+        - paragraph [ref=e448]:
+          - strong [ref=e449]: 可用模型
+        - table [ref=e450]:
+          - rowgroup [ref=e451]:
+            - row "模型 维度 输入类型 说明" [ref=e452]:
+              - columnheader "模型" [ref=e453]
+              - columnheader "维度" [ref=e454]
+              - columnheader "输入类型" [ref=e455]
+              - columnheader "说明" [ref=e456]
+          - rowgroup [ref=e457]:
+            - row "doubao-embedding-vision-251215 1024 multimodal 推荐" [ref=e458]:
+              - cell "doubao-embedding-vision-251215" [ref=e459]:
+                - code [ref=e460]: doubao-embedding-vision-251215
+              - cell "1024" [ref=e461]
+              - cell "multimodal" [ref=e462]
+              - cell "推荐" [ref=e463]
+            - row "doubao-embedding-250615 1024 text 仅文本" [ref=e464]:
+              - cell "doubao-embedding-250615" [ref=e465]:
+                - code [ref=e466]: doubao-embedding-250615
+              - cell "1024" [ref=e467]
+              - cell "text" [ref=e468]
+              - cell "仅文本" [ref=e469]
+        - paragraph [ref=e470]:
+          - text: 使用
+          - code [ref=e471]: "input: \"multimodal\""
+          - text: 时，OpenViking 可以嵌入文本、图片（PNG、JPG 等）和混合内容。
+        - paragraph [ref=e472]:
+          - strong [ref=e473]: "支持的 provider:"
+        - list [ref=e474]:
+          - listitem [ref=e475]:
+            - code [ref=e476]: openai
+            - text: ": OpenAI Embedding API"
+          - listitem [ref=e477]:
+            - code [ref=e478]: azure
+            - text: ": Azure OpenAI Embedding API"
+          - listitem [ref=e479]:
+            - code [ref=e480]: volcengine
+            - text: ": 火山引擎 Embedding API"
+          - listitem [ref=e481]:
+            - code [ref=e482]: vikingdb
+            - text: ": VikingDB Embedding API"
+          - listitem [ref=e483]:
+            - code [ref=e484]: jina
+            - text: ": Jina AI Embedding API"
+          - listitem [ref=e485]:
+            - code [ref=e486]: ollama
+            - text: ": Ollama 本地 OpenAI 兼容 Embedding API"
+          - listitem [ref=e487]:
+            - code [ref=e488]: voyage
+            - text: ": Voyage AI Embedding API"
+          - listitem [ref=e489]:
+            - code [ref=e490]: minimax
+            - text: ": MiniMax Embedding API"
+          - listitem [ref=e491]:
+            - code [ref=e492]: cohere
+            - text: ": Cohere Embedding API"
+          - listitem [ref=e493]:
+            - code [ref=e494]: gemini
+            - text: ": Google Gemini Embedding API（仅文本；需安装"
+            - code [ref=e495]: google-genai>=1.0.0
+            - text: ）
+          - listitem [ref=e496]:
+            - code [ref=e497]: dashscope
+            - text: ": DashScope（阿里通义）Embedding API"
+          - listitem [ref=e498]:
+            - code [ref=e499]: litellm
+            - text: ": LiteLLM Embedding API"
+          - listitem [ref=e500]:
+            - code [ref=e501]: local
+            - text: ": 本地 GGUF embedding 模型"
+        - paragraph [ref=e502]:
+          - strong [ref=e503]: "OpenAI 兼容 provider 的 JSON float embedding 示例:"
+        - generic [ref=e504]:
+          - button "Copy Code" [ref=e505] [cursor=pointer]
+          - generic [ref=e506]: json
+          - code [ref=e508]:
+            - generic [ref=e509]: "{"
+            - generic [ref=e510]: "\"embedding\": {"
+            - generic [ref=e511]: "\"dense\": {"
+            - generic [ref=e512]: "\"provider\": \"openai\","
+            - generic [ref=e513]: "\"api_key\": \"your-api-key\","
+            - generic [ref=e514]: "\"api_base\": \"https://your-openai-compatible-endpoint/v1\","
+            - generic [ref=e515]: "\"model\": \"text-embedding-3-large\","
+            - generic [ref=e516]: "\"dimension\": 3072,"
+            - generic [ref=e517]: "\"encoding_format\": \"float\""
+            - generic [ref=e518]: "}"
+            - generic [ref=e519]: "}"
+            - generic [ref=e520]: "}"
+        - paragraph [ref=e521]:
+          - code [ref=e522]: encoding_format
+          - text: 是可选字段，只会传给
+          - code [ref=e523]: "provider: \"openai\""
+          - text: 和
+          - code [ref=e524]: "provider: \"azure\""
+          - text: 。留空时使用 OpenAI Python SDK 默认行为；如果 OpenAI 兼容上游网关无法正确反序列化 base64 embedding payload，可设置为
+          - code [ref=e525]: "\"float\""
+          - text: 。
+        - paragraph [ref=e526]:
+          - strong [ref=e527]: "Azure OpenAI provider 的 JSON float embedding 示例:"
+        - generic [ref=e528]:
+          - button "Copy Code" [ref=e529] [cursor=pointer]
+          - generic [ref=e530]: json
+          - code [ref=e532]:
+            - generic [ref=e533]: "{"
+            - generic [ref=e534]: "\"embedding\": {"
+            - generic [ref=e535]: "\"dense\": {"
+            - generic [ref=e536]: "\"provider\": \"azure\","
+            - generic [ref=e537]: "\"api_key\": \"your-azure-api-key\","
+            - generic [ref=e538]: "\"api_base\": \"https://your-resource-name.openai.azure.com\","
+            - generic [ref=e539]: "\"api_version\": \"2025-01-01-preview\","
+            - generic [ref=e540]: "\"model\": \"your-embedding-deployment-name\","
+            - generic [ref=e541]: "\"dimension\": 3072,"
+            - generic [ref=e542]: "\"encoding_format\": \"float\""
+            - generic [ref=e543]: "}"
+            - generic [ref=e544]: "}"
+            - generic [ref=e545]: "}"
+        - paragraph [ref=e546]:
+          - text: 对于 Azure OpenAI，
+          - code [ref=e547]: model
+          - text: 必须填写 Azure 中配置的 embedding deployment name。
+        - paragraph [ref=e548]:
+          - strong [ref=e549]: "minimax provider 配置示例:"
+        - generic [ref=e550]:
+          - button "Copy Code" [ref=e551] [cursor=pointer]
+          - generic [ref=e552]: json
+          - code [ref=e554]:
+            - generic [ref=e555]: "{"
+            - generic [ref=e556]: "\"embedding\": {"
+            - generic [ref=e557]: "\"dense\": {"
+            - generic [ref=e558]: "\"provider\": \"minimax\","
+            - generic [ref=e559]: "\"api_key\": \"your-minimax-api-key\","
+            - generic [ref=e560]: "\"model\": \"embo-01\","
+            - generic [ref=e561]: "\"dimension\": 1536,"
+            - generic [ref=e562]: "\"query_param\": \"query\","
+            - generic [ref=e563]: "\"document_param\": \"db\","
+            - generic [ref=e564]: "\"extra_headers\": {"
+            - generic [ref=e565]: "\"GroupId\": \"your-group-id\""
+            - generic [ref=e566]: "}"
+            - generic [ref=e567]: "}"
+            - generic [ref=e568]: "}"
+            - generic [ref=e569]: "}"
+        - paragraph [ref=e570]:
+          - strong [ref=e571]: "vikingdb provider 配置示例:"
+        - generic [ref=e572]:
+          - button "Copy Code" [ref=e573] [cursor=pointer]
+          - generic [ref=e574]: json
+          - code [ref=e576]:
+            - generic [ref=e577]: "{"
+            - generic [ref=e578]: "\"embedding\": {"
+            - generic [ref=e579]: "\"dense\": {"
+            - generic [ref=e580]: "\"provider\": \"vikingdb\","
+            - generic [ref=e581]: "\"model\": \"bge_large_zh\","
+            - generic [ref=e582]: "\"ak\": \"your-access-key\","
+            - generic [ref=e583]: "\"sk\": \"your-secret-key\","
+            - generic [ref=e584]: "\"region\": \"cn-beijing\","
+            - generic [ref=e585]: "\"dimension\": 1024"
+            - generic [ref=e586]: "}"
+            - generic [ref=e587]: "}"
+            - generic [ref=e588]: "}"
+        - paragraph [ref=e589]:
+          - strong [ref=e590]: "jina provider 配置示例:"
+        - generic [ref=e591]:
+          - button "Copy Code" [ref=e592] [cursor=pointer]
+          - generic [ref=e593]: json
+          - code [ref=e595]:
+            - generic [ref=e596]: "{"
+            - generic [ref=e597]: "\"embedding\": {"
+            - generic [ref=e598]: "\"dense\": {"
+            - generic [ref=e599]: "\"provider\": \"jina\","
+            - generic [ref=e600]: "\"api_key\": \"jina_xxx\","
+            - generic [ref=e601]: "\"model\": \"jina-embeddings-v5-text-small\","
+            - generic [ref=e602]: "\"dimension\": 1024"
+            - generic [ref=e603]: "}"
+            - generic [ref=e604]: "}"
+            - generic [ref=e605]: "}"
+        - paragraph [ref=e606]: "可用 Jina 模型:"
+        - list [ref=e607]:
+          - listitem [ref=e608]:
+            - code [ref=e609]: jina-embeddings-v5-text-small
+            - text: ": 677M 参数, 1024 维, 最大序列长度 32768 (默认)"
+          - listitem [ref=e610]:
+            - code [ref=e611]: jina-embeddings-v5-text-nano
+            - text: ": 239M 参数, 768 维, 最大序列长度 8192"
+        - paragraph [ref=e612]:
+          - strong [ref=e613]: "本地部署 (GGUF/MLX):"
+          - text: Jina 嵌入模型是开源的, 在
+          - link "Hugging Face" [ref=e614] [cursor=pointer]:
+            - /url: https://huggingface.co/jinaai
+          - text: 上提供 GGUF 和 MLX 格式。可以使用任何 OpenAI 兼容的推理服务器 (如 llama.cpp、MLX、vLLM) 本地运行, 并将
+          - code [ref=e615]: api_base
+          - text: "指向本地端点:"
+        - generic [ref=e616]:
+          - button "Copy Code" [ref=e617] [cursor=pointer]
+          - generic [ref=e618]: json
+          - code [ref=e620]:
+            - generic [ref=e621]: "{"
+            - generic [ref=e622]: "\"embedding\": {"
+            - generic [ref=e623]: "\"dense\": {"
+            - generic [ref=e624]: "\"provider\": \"jina\","
+            - generic [ref=e625]: "\"api_key\": \"local\","
+            - generic [ref=e626]: "\"api_base\": \"http://localhost:8080/v1\","
+            - generic [ref=e627]: "\"model\": \"jina-embeddings-v5-text-nano\","
+            - generic [ref=e628]: "\"dimension\": 768"
+            - generic [ref=e629]: "}"
+            - generic [ref=e630]: "}"
+            - generic [ref=e631]: "}"
+        - paragraph [ref=e632]:
+          - text: "获取 API Key:"
+          - link "https://jina.ai" [ref=e633] [cursor=pointer]:
+            - /url: https://jina.ai
+        - paragraph [ref=e634]:
+          - strong [ref=e635]: "gemini provider 配置示例:"
+        - blockquote [ref=e636]:
+          - paragraph [ref=e637]:
+            - strong [ref=e638]: 注意：
+            - text: 需安装
+            - code [ref=e639]: pip install "google-genai>=1.0.0"
+            - text: 。异步批量嵌入：
+            - code [ref=e640]: pip install "openviking[gemini-async]"
+            - text: 。
+        - generic [ref=e641]:
+          - button "Copy Code" [ref=e642] [cursor=pointer]
+          - generic [ref=e643]: json
+          - code [ref=e645]:
+            - generic [ref=e646]: "{"
+            - generic [ref=e647]: "\"embedding\": {"
+            - generic [ref=e648]: "\"dense\": {"
+            - generic [ref=e649]: "\"provider\": \"gemini\","
+            - generic [ref=e650]: "\"api_key\": \"your-google-api-key\","
+            - generic [ref=e651]: "\"model\": \"gemini-embedding-2-preview\","
+            - generic [ref=e652]: "\"dimension\": 3072"
+            - generic [ref=e653]: "}"
+            - generic [ref=e654]: "}"
+            - generic [ref=e655]: "}"
+        - paragraph [ref=e656]: "可用 Gemini 嵌入模型:"
+        - list [ref=e657]:
+          - listitem [ref=e658]:
+            - code [ref=e659]: gemini-embedding-2-preview
+            - text: ": 8192 token 输入限制, 1–3072 输出维度 (MRL)"
+          - listitem [ref=e660]:
+            - code [ref=e661]: gemini-embedding-001
+            - text: ": 2048 token 输入限制, 1–3072 输出维度 (MRL)"
+          - listitem [ref=e662]:
+            - code [ref=e663]: text-embedding-004
+            - text: ": 2048 token 输入限制, 768 输出维度（固定）"
+        - paragraph [ref=e664]:
+          - text: "推荐维度:"
+          - code [ref=e665]: "768"
+          - text: 、
+          - code [ref=e666]: "1536"
+          - text: 或
+          - code [ref=e667]: "3072"
+          - text: "（默认:"
+          - code [ref=e668]: "3072"
+          - text: ）。
+        - paragraph [ref=e669]:
+          - text: "获取 API Key:"
+          - link "https://aistudio.google.com/apikey" [ref=e670] [cursor=pointer]:
+            - /url: https://aistudio.google.com/apikey
+        - paragraph [ref=e671]:
+          - strong [ref=e672]: "DashScope（阿里通义）provider 配置示例:"
+        - generic [ref=e673]:
+          - button "Copy Code" [ref=e674] [cursor=pointer]
+          - generic [ref=e675]: json
+          - code [ref=e677]:
+            - generic [ref=e678]: "{"
+            - generic [ref=e679]: "\"embedding\": {"
+            - generic [ref=e680]: "\"dense\": {"
+            - generic [ref=e681]: "\"provider\": \"dashscope\","
+            - generic [ref=e682]: "\"api_key\": \"${DASHSCOPE_API_KEY}\","
+            - generic [ref=e683]: "\"model\": \"text-embedding-v4\","
+            - generic [ref=e684]: "\"dimension\": 1024"
+            - generic [ref=e685]: "}"
+            - generic [ref=e686]: "}"
+            - generic [ref=e687]: "}"
+        - paragraph [ref=e688]:
+          - strong [ref=e689]: "可用 DashScope 模型:"
+        - table [ref=e690]:
+          - rowgroup [ref=e691]:
+            - row "模型 维度 输入类型 说明" [ref=e692]:
+              - columnheader "模型" [ref=e693]
+              - columnheader "维度" [ref=e694]
+              - columnheader "输入类型" [ref=e695]
+              - columnheader "说明" [ref=e696]
+          - rowgroup [ref=e697]:
+            - row "text-embedding-v3 1024 text 针对中文优化" [ref=e698]:
+              - cell "text-embedding-v3" [ref=e699]:
+                - code [ref=e700]: text-embedding-v3
+              - cell "1024" [ref=e701]
+              - cell "text" [ref=e702]
+              - cell "针对中文优化" [ref=e703]
+            - row "text-embedding-v4 1024 text 针对中文优化" [ref=e704]:
+              - cell "text-embedding-v4" [ref=e705]:
+                - code [ref=e706]: text-embedding-v4
+              - cell "1024" [ref=e707]
+              - cell "text" [ref=e708]
+              - cell "针对中文优化" [ref=e709]
+            - row "tongyi-embedding-vision-plus 1152 multimodal 支持通过 enable_fusion 启用融合向量" [ref=e710]:
+              - cell "tongyi-embedding-vision-plus" [ref=e711]:
+                - code [ref=e712]: tongyi-embedding-vision-plus
+              - cell "1152" [ref=e713]
+              - cell "multimodal" [ref=e714]
+              - cell "支持通过 enable_fusion 启用融合向量" [ref=e715]:
+                - text: 支持通过
+                - code [ref=e716]: enable_fusion
+                - text: 启用融合向量
+            - row "tongyi-embedding-vision-flash 768 multimodal 更快，成本更低" [ref=e717]:
+              - cell "tongyi-embedding-vision-flash" [ref=e718]:
+                - code [ref=e719]: tongyi-embedding-vision-flash
+              - cell "768" [ref=e720]
+              - cell "multimodal" [ref=e721]
+              - cell "更快，成本更低" [ref=e722]
+            - row "qwen3-vl-embedding 2560 multimodal 文本 + 图像 + 视频" [ref=e723]:
+              - cell "qwen3-vl-embedding" [ref=e724]:
+                - code [ref=e725]: qwen3-vl-embedding
+              - cell "2560" [ref=e726]
+              - cell "multimodal" [ref=e727]
+              - cell "文本 + 图像 + 视频" [ref=e728]
+            - row "qwen2.5-vl-embedding 1024 multimodal 文本 + 图像 + 视频" [ref=e729]:
+              - cell "qwen2.5-vl-embedding" [ref=e730]:
+                - code [ref=e731]: qwen2.5-vl-embedding
+              - cell "1024" [ref=e732]
+              - cell "multimodal" [ref=e733]
+              - cell "文本 + 图像 + 视频" [ref=e734]
+        - paragraph [ref=e735]:
+          - strong [ref=e736]: 多模态参数
+          - text: "（仅文本+图像/视频模型支持）:"
+        - table [ref=e737]:
+          - rowgroup [ref=e738]:
+            - row "参数 类型 默认值 说明" [ref=e739]:
+              - columnheader "参数" [ref=e740]
+              - columnheader "类型" [ref=e741]
+              - columnheader "默认值" [ref=e742]
+              - columnheader "说明" [ref=e743]
+          - rowgroup [ref=e744]:
+            - 'row "input_type str \"multimodal\" 或 \"text\" 嵌入模式（默认: \"multimodal\"）" [ref=e745]':
+              - cell "input_type" [ref=e746]:
+                - code [ref=e747]: input_type
+              - cell "str" [ref=e748]
+              - cell "\"multimodal\" 或 \"text\"" [ref=e749]:
+                - code [ref=e750]: "\"multimodal\""
+                - text: 或
+                - code [ref=e751]: "\"text\""
+              - 'cell "嵌入模式（默认: \"multimodal\"）" [ref=e752]':
+                - text: "嵌入模式（默认:"
+                - code [ref=e753]: "\"multimodal\""
+                - text: ）
+            - row "enable_fusion bool false 为 tongyi-embedding-vision-* 模型启用融合向量" [ref=e754]:
+              - cell "enable_fusion" [ref=e755]:
+                - code [ref=e756]: enable_fusion
+              - cell "bool" [ref=e757]
+              - cell "false" [ref=e758]:
+                - code [ref=e759]: "false"
+              - cell "为 tongyi-embedding-vision-* 模型启用融合向量" [ref=e760]:
+                - text: 为
+                - code [ref=e761]: tongyi-embedding-vision-*
+                - text: 模型启用融合向量
+            - row "res_level int 2 图像分辨率级别（1=高，2=中，3=低）" [ref=e762]:
+              - cell "res_level" [ref=e763]:
+                - code [ref=e764]: res_level
+              - cell "int" [ref=e765]
+              - cell "2" [ref=e766]:
+                - code [ref=e767]: "2"
+              - cell "图像分辨率级别（1=高，2=中，3=低）" [ref=e768]
+            - row "max_video_frames int 16 视频最大嵌入帧数" [ref=e769]:
+              - cell "max_video_frames" [ref=e770]:
+                - code [ref=e771]: max_video_frames
+              - cell "int" [ref=e772]
+              - cell "16" [ref=e773]:
+                - code [ref=e774]: "16"
+              - cell "视频最大嵌入帧数" [ref=e775]
+        - paragraph [ref=e776]:
+          - strong [ref=e777]: 端点选择
+          - text: — DashScope 为中国区（
+          - code [ref=e778]: cn
+          - text: ）和国际区（
+          - code [ref=e779]: intl
+          - text: ）提供
+          - code [ref=e780]: api_base
+          - text: "默认值:"
+        - table [ref=e781]:
+          - rowgroup [ref=e782]:
+            - row "区域 api_base 说明" [ref=e783]:
+              - columnheader "区域" [ref=e784]
+              - columnheader "api_base" [ref=e785]:
+                - code [ref=e786]: api_base
+              - columnheader "说明" [ref=e787]
+          - rowgroup [ref=e788]:
+            - row "中国 https://dashscope.aliyuncs.com（默认） 推荐中国大陆用户使用" [ref=e789]:
+              - cell "中国" [ref=e790]
+              - cell "https://dashscope.aliyuncs.com（默认）" [ref=e791]:
+                - code [ref=e792]: https://dashscope.aliyuncs.com
+                - text: （默认）
+              - cell "推荐中国大陆用户使用" [ref=e793]
+            - row "国际 https://dashscope-intl.aliyuncs.com 推荐中国境外用户使用" [ref=e794]:
+              - cell "国际" [ref=e795]
+              - cell "https://dashscope-intl.aliyuncs.com" [ref=e796]:
+                - code [ref=e797]: https://dashscope-intl.aliyuncs.com
+              - cell "推荐中国境外用户使用" [ref=e798]
+        - paragraph [ref=e799]: 也支持设置完整 URL 来自定义端点地址。
+        - paragraph [ref=e800]:
+          - text: "获取 API Key:"
+          - link "https://dashscope.console.aliyun.com/api-key" [ref=e801] [cursor=pointer]:
+            - /url: https://dashscope.console.aliyun.com/api-key
+        - paragraph [ref=e802]:
+          - strong [ref=e803]: 非对称检索
+          - text: "（索引和查询使用不同的 task type）:"
+        - generic [ref=e804]:
+          - button "Copy Code" [ref=e805] [cursor=pointer]
+          - generic [ref=e806]: json
+          - code [ref=e808]:
+            - generic [ref=e809]: "{"
+            - generic [ref=e810]: "\"embedding\": {"
+            - generic [ref=e811]: "\"dense\": {"
+            - generic [ref=e812]: "\"provider\": \"gemini\","
+            - generic [ref=e813]: "\"api_key\": \"your-google-api-key\","
+            - generic [ref=e814]: "\"model\": \"gemini-embedding-2-preview\","
+            - generic [ref=e815]: "\"dimension\": 3072,"
+            - generic [ref=e816]: "\"query_param\": \"RETRIEVAL_QUERY\","
+            - generic [ref=e817]: "\"document_param\": \"RETRIEVAL_DOCUMENT\""
+            - generic [ref=e818]: "}"
+            - generic [ref=e819]: "}"
+            - generic [ref=e820]: "}"
+        - paragraph [ref=e821]:
+          - text: "支持的 task type:"
+          - code [ref=e822]: RETRIEVAL_QUERY
+          - text: 、
+          - code [ref=e823]: RETRIEVAL_DOCUMENT
+          - text: 、
+          - code [ref=e824]: SEMANTIC_SIMILARITY
+          - text: 、
+          - code [ref=e825]: CLASSIFICATION
+          - text: 、
+          - code [ref=e826]: CLUSTERING
+          - text: 、
+          - code [ref=e827]: CODE_RETRIEVAL_QUERY
+          - text: 、
+          - code [ref=e828]: QUESTION_ANSWERING
+          - text: 、
+          - code [ref=e829]: FACT_VERIFICATION
+          - text: 。
+        - heading "Sparse Embedding Permalink to \"Sparse Embedding\"" [level=4] [ref=e830]:
+          - text: Sparse Embedding
+          - link "Permalink to \"Sparse Embedding\"" [ref=e831] [cursor=pointer]:
+            - /url: "#sparse-embedding"
+            - text: "#"
+        - blockquote [ref=e832]:
+          - paragraph [ref=e833]:
+            - strong [ref=e834]: 注意：
+            - text: 火山引擎的 Sparse embedding 从
+            - code [ref=e835]: doubao-embedding-vision-251215
+            - text: 模型版本起支持。
+        - generic [ref=e836]:
+          - button "Copy Code" [ref=e837] [cursor=pointer]
+          - generic [ref=e838]: json
+          - code [ref=e840]:
+            - generic [ref=e841]: "{"
+            - generic [ref=e842]: "\"embedding\": {"
+            - generic [ref=e843]: "\"sparse\": {"
+            - generic [ref=e844]: "\"provider\": \"volcengine\","
+            - generic [ref=e845]: "\"api_key\": \"your-api-key\","
+            - generic [ref=e846]: "\"model\": \"doubao-embedding-vision-251215\""
+            - generic [ref=e847]: "}"
+            - generic [ref=e848]: "}"
+            - generic [ref=e849]: "}"
+        - heading "Hybrid Embedding Permalink to \"Hybrid Embedding\"" [level=4] [ref=e850]:
+          - text: Hybrid Embedding
+          - link "Permalink to \"Hybrid Embedding\"" [ref=e851] [cursor=pointer]:
+            - /url: "#hybrid-embedding"
+            - text: "#"
+        - paragraph [ref=e852]: 支持两种方式：
+        - paragraph [ref=e853]:
+          - strong [ref=e854]: 方式一：使用单一混合模型
+        - generic [ref=e855]:
+          - button "Copy Code" [ref=e856] [cursor=pointer]
+          - generic [ref=e857]: json
+          - code [ref=e859]:
+            - generic [ref=e860]: "{"
+            - generic [ref=e861]: "\"embedding\": {"
+            - generic [ref=e862]: "\"hybrid\": {"
+            - generic [ref=e863]: "\"provider\": \"volcengine\","
+            - generic [ref=e864]: "\"api_key\": \"your-api-key\","
+            - generic [ref=e865]: "\"model\": \"doubao-embedding-hybrid\","
+            - generic [ref=e866]: "\"dimension\": 1024"
+            - generic [ref=e867]: "}"
+            - generic [ref=e868]: "}"
+            - generic [ref=e869]: "}"
+        - paragraph [ref=e870]:
+          - strong [ref=e871]: 方式二：组合 dense + sparse
+        - generic [ref=e872]:
+          - button "Copy Code" [ref=e873] [cursor=pointer]
+          - generic [ref=e874]: json
+          - code [ref=e876]:
+            - generic [ref=e877]: "{"
+            - generic [ref=e878]: "\"embedding\": {"
+            - generic [ref=e879]: "\"dense\": {"
+            - generic [ref=e880]: "\"provider\": \"volcengine\","
+            - generic [ref=e881]: "\"api_key\": \"your-api-key\","
+            - generic [ref=e882]: "\"model\": \"doubao-embedding-vision-251215\","
+            - generic [ref=e883]: "\"dimension\": 1024"
+            - generic [ref=e884]: "},"
+            - generic [ref=e885]: "\"sparse\": {"
+            - generic [ref=e886]: "\"provider\": \"volcengine\","
+            - generic [ref=e887]: "\"api_key\": \"your-api-key\","
+            - generic [ref=e888]: "\"model\": \"doubao-embedding-vision-251215\""
+            - generic [ref=e889]: "}"
+            - generic [ref=e890]: "}"
+            - generic [ref=e891]: "}"
+        - heading "vlm Permalink to \"vlm\"" [level=3] [ref=e892]:
+          - text: vlm
+          - link "Permalink to \"vlm\"" [ref=e893] [cursor=pointer]:
+            - /url: "#vlm"
+            - text: "#"
+        - paragraph [ref=e894]: 用于语义提取（L0/L1 生成）的视觉语言模型。
+        - generic [ref=e895]:
+          - button "Copy Code" [ref=e896] [cursor=pointer]
+          - generic [ref=e897]: json
+          - code [ref=e899]:
+            - generic [ref=e900]: "{"
+            - generic [ref=e901]: "\"vlm\": {"
+            - generic [ref=e902]: "\"provider\": \"volcengine\","
+            - generic [ref=e903]: "\"api_key\": \"your-api-key\","
+            - generic [ref=e904]: "\"model\": \"doubao-seed-2-0-pro-260215\","
+            - generic [ref=e905]: "\"api_base\": \"https://ark.cn-beijing.volces.com/api/v3\","
+            - generic [ref=e906]: "\"max_retries\": 3"
+            - generic [ref=e907]: "}"
+            - generic [ref=e908]: "}"
+        - paragraph [ref=e909]:
+          - strong [ref=e910]: 参数
+        - table [ref=e911]:
+          - rowgroup [ref=e912]:
+            - row "参数 类型 说明" [ref=e913]:
+              - columnheader "参数" [ref=e914]
+              - columnheader "类型" [ref=e915]
+              - columnheader "说明" [ref=e916]
+          - rowgroup [ref=e917]:
+            - row "api_key str API Key。openai-codex 在 Codex OAuth 可用时可省略；使用 provider 原生凭据的 litellm 路由也可省略" [ref=e918]:
+              - cell "api_key" [ref=e919]:
+                - code [ref=e920]: api_key
+              - cell "str" [ref=e921]
+              - cell "API Key。openai-codex 在 Codex OAuth 可用时可省略；使用 provider 原生凭据的 litellm 路由也可省略" [ref=e922]:
+                - text: API Key。
+                - code [ref=e923]: openai-codex
+                - text: 在 Codex OAuth 可用时可省略；使用 provider 原生凭据的
+                - code [ref=e924]: litellm
+                - text: 路由也可省略
+            - row "forward_api_key bool 仅 LiteLLM 使用。覆盖是否把 api_key 透传给 LiteLLM。默认情况下，OpenViking 不会把占位 key 透传给 bedrock/、sagemaker/、vertex_ai/ 等 AWS/GCP 原生鉴权路由；如果明确使用 LiteLLM 的 Bedrock bearer-token API-key 鉴权，可设为 true" [ref=e925]:
+              - cell "forward_api_key" [ref=e926]:
+                - code [ref=e927]: forward_api_key
+              - cell "bool" [ref=e928]
+              - cell "仅 LiteLLM 使用。覆盖是否把 api_key 透传给 LiteLLM。默认情况下，OpenViking 不会把占位 key 透传给 bedrock/、sagemaker/、vertex_ai/ 等 AWS/GCP 原生鉴权路由；如果明确使用 LiteLLM 的 Bedrock bearer-token API-key 鉴权，可设为 true" [ref=e929]:
+                - text: 仅 LiteLLM 使用。覆盖是否把
+                - code [ref=e930]: api_key
+                - text: 透传给 LiteLLM。默认情况下，OpenViking 不会把占位 key 透传给
+                - code [ref=e931]: bedrock/
+                - text: 、
+                - code [ref=e932]: sagemaker/
+                - text: 、
+                - code [ref=e933]: vertex_ai/
+                - text: 等 AWS/GCP 原生鉴权路由；如果明确使用 LiteLLM 的 Bedrock bearer-token API-key 鉴权，可设为
+                - code [ref=e934]: "true"
+            - row "model str 模型名称" [ref=e935]:
+              - cell "model" [ref=e936]:
+                - code [ref=e937]: model
+              - cell "str" [ref=e938]
+              - cell "模型名称" [ref=e939]
+            - row "api_base str API 端点（可选）" [ref=e940]:
+              - cell "api_base" [ref=e941]:
+                - code [ref=e942]: api_base
+              - cell "str" [ref=e943]
+              - cell "API 端点（可选）" [ref=e944]
+            - row "thinking bool 启用思考模式（仅对部分火山模型生效，默认：false）" [ref=e945]:
+              - cell "thinking" [ref=e946]:
+                - code [ref=e947]: thinking
+              - cell "bool" [ref=e948]
+              - cell "启用思考模式（仅对部分火山模型生效，默认：false）" [ref=e949]:
+                - text: 启用思考模式（仅对部分火山模型生效，默认：
+                - code [ref=e950]: "false"
+                - text: ）
+            - row "max_concurrent int 语义处理阶段 LLM 最大并发调用数（默认：64）" [ref=e951]:
+              - cell "max_concurrent" [ref=e952]:
+                - code [ref=e953]: max_concurrent
+              - cell "int" [ref=e954]
+              - cell "语义处理阶段 LLM 最大并发调用数（默认：64）" [ref=e955]:
+                - text: 语义处理阶段 LLM 最大并发调用数（默认：
+                - code [ref=e956]: "64"
+                - text: ）
+            - row "max_retries int VLM provider 瞬时错误的最大重试次数（默认：3；0 表示禁用重试）" [ref=e957]:
+              - cell "max_retries" [ref=e958]:
+                - code [ref=e959]: max_retries
+              - cell "int" [ref=e960]
+              - cell "VLM provider 瞬时错误的最大重试次数（默认：3；0 表示禁用重试）" [ref=e961]:
+                - text: VLM provider 瞬时错误的最大重试次数（默认：
+                - code [ref=e962]: "3"
+                - text: ；
+                - code [ref=e963]: "0"
+                - text: 表示禁用重试）
+            - row "backup object 可选的备用 VLM 配置（结构与 vlm 相同），当主 VLM 遇到限流、5xx、超时或连接失败等可重试错误时自动切换。仅支持 1 层备用 — 备用 VLM 本身不能再嵌套 backup" [ref=e964]:
+              - cell "backup" [ref=e965]:
+                - code [ref=e966]: backup
+              - cell "object" [ref=e967]
+              - cell "可选的备用 VLM 配置（结构与 vlm 相同），当主 VLM 遇到限流、5xx、超时或连接失败等可重试错误时自动切换。仅支持 1 层备用 — 备用 VLM 本身不能再嵌套 backup" [ref=e968]:
+                - text: 可选的备用 VLM 配置（结构与
+                - code [ref=e969]: vlm
+                - text: 相同），当主 VLM 遇到限流、
+                - code [ref=e970]: 5xx
+                - text: 、超时或连接失败等可重试错误时自动切换。仅支持 1 层备用 — 备用 VLM 本身不能再嵌套
+                - code [ref=e971]: backup
+            - row "timeout float 单次 VLM API 请求的 HTTP 超时时间（秒），传递给底层 OpenAI/LiteLLM 客户端。慢端点（如 DashScope、本地推理）可调大。必须 > 0（默认：60.0）" [ref=e972]:
+              - cell "timeout" [ref=e973]:
+                - code [ref=e974]: timeout
+              - cell "float" [ref=e975]
+              - cell "单次 VLM API 请求的 HTTP 超时时间（秒），传递给底层 OpenAI/LiteLLM 客户端。慢端点（如 DashScope、本地推理）可调大。必须 > 0（默认：60.0）" [ref=e976]:
+                - text: 单次 VLM API 请求的 HTTP 超时时间（秒），传递给底层 OpenAI/LiteLLM 客户端。慢端点（如 DashScope、本地推理）可调大。必须
+                - code [ref=e977]: "> 0"
+                - text: （默认：
+                - code [ref=e978]: "60.0"
+                - text: ）
+            - row "extra_headers object 兼容 HTTP provider 的自定义请求头。kimi 默认已注入所需订阅请求头，也支持在这里覆盖或扩展" [ref=e979]:
+              - cell "extra_headers" [ref=e980]:
+                - code [ref=e981]: extra_headers
+              - cell "object" [ref=e982]
+              - cell "兼容 HTTP provider 的自定义请求头。kimi 默认已注入所需订阅请求头，也支持在这里覆盖或扩展" [ref=e983]:
+                - text: 兼容 HTTP provider 的自定义请求头。
+                - code [ref=e984]: kimi
+                - text: 默认已注入所需订阅请求头，也支持在这里覆盖或扩展
+            - 'row "extra_request_body object 传给 OpenAI 兼容 completion 请求的额外 JSON body 字段，可用于 Ollama {\"think\": false} 等 provider 专有参数" [ref=e985]':
+              - cell "extra_request_body" [ref=e986]:
+                - code [ref=e987]: extra_request_body
+              - cell "object" [ref=e988]
+              - 'cell "传给 OpenAI 兼容 completion 请求的额外 JSON body 字段，可用于 Ollama {\"think\": false} 等 provider 专有参数" [ref=e989]':
+                - text: 传给 OpenAI 兼容 completion 请求的额外 JSON body 字段，可用于 Ollama
+                - code [ref=e990]: "{\"think\": false}"
+                - text: 等 provider 专有参数
+            - row "stream bool 启用流式模式（OpenAI 兼容 provider 可用，默认：false）" [ref=e991]:
+              - cell "stream" [ref=e992]:
+                - code [ref=e993]: stream
+              - cell "bool" [ref=e994]
+              - cell "启用流式模式（OpenAI 兼容 provider 可用，默认：false）" [ref=e995]:
+                - text: 启用流式模式（OpenAI 兼容 provider 可用，默认：
+                - code [ref=e996]: "false"
+                - text: ）
+        - paragraph [ref=e997]:
+          - code [ref=e998]: vlm.max_retries
+          - text: 仅对瞬时错误生效，例如
+          - code [ref=e999]: "429"
+          - text: 、
+          - code [ref=e1000]: 5xx
+          - text: 、超时和连接错误；认证、鉴权、欠费等永久错误不会自动重试。退避策略为指数退避，初始延迟
+          - code [ref=e1001]: 0.5s
+          - text: ，上限
+          - code [ref=e1002]: 8s
+          - text: ，并带随机抖动。
+        - paragraph [ref=e1003]:
+          - strong [ref=e1004]: 可用模型
+        - table [ref=e1005]:
+          - rowgroup [ref=e1006]:
+            - row "模型 说明" [ref=e1007]:
+              - columnheader "模型" [ref=e1008]
+              - columnheader "说明" [ref=e1009]
+          - rowgroup [ref=e1010]:
+            - row "doubao-seed-2-0-pro-260215 推荐用于语义提取" [ref=e1011]:
+              - cell "doubao-seed-2-0-pro-260215" [ref=e1012]:
+                - code [ref=e1013]: doubao-seed-2-0-pro-260215
+              - cell "推荐用于语义提取" [ref=e1014]
+            - row "doubao-pro-32k 用于更长上下文" [ref=e1015]:
+              - cell "doubao-pro-32k" [ref=e1016]:
+                - code [ref=e1017]: doubao-pro-32k
+              - cell "用于更长上下文" [ref=e1018]
+        - paragraph [ref=e1019]: 添加资源时，VLM 生成：
+        - list [ref=e1020]:
+          - listitem [ref=e1021]:
+            - strong [ref=e1022]: L0（摘要）
+            - text: ：~100 token 摘要
+          - listitem [ref=e1023]:
+            - strong [ref=e1024]: L1（概览）
+            - text: ：~2k token 概览，包含导航信息
+        - paragraph [ref=e1025]: 如果未配置 VLM，L0/L1 将直接从内容生成（语义性较弱），多模态资源的描述可能有限。
+        - paragraph [ref=e1026]:
+          - strong [ref=e1027]: 支持的 provider：
+        - list [ref=e1028]:
+          - listitem [ref=e1029]:
+            - code [ref=e1030]: volcengine
+            - text: ：火山引擎 VLM API
+          - listitem [ref=e1031]:
+            - code [ref=e1032]: openai
+            - text: ：OpenAI 兼容 VLM API
+          - listitem [ref=e1033]:
+            - code [ref=e1034]: openai-codex
+            - text: ：通过 ChatGPT/Codex OAuth 使用 Codex VLM
+          - listitem [ref=e1035]:
+            - code [ref=e1036]: kimi
+            - text: ：Kimi Coding 订阅端点，内置 provider 默认配置
+          - listitem [ref=e1037]:
+            - code [ref=e1038]: glm
+            - text: ：Z.AI GLM Coding Plan 端点，使用 OpenAI 兼容请求格式
+          - listitem [ref=e1039]:
+            - code [ref=e1040]: litellm
+            - text: ：LiteLLM VLM API，支持
+            - code [ref=e1041]: bedrock/
+            - text: 、
+            - code [ref=e1042]: sagemaker/
+            - text: 、
+            - code [ref=e1043]: vertex_ai/
+            - text: 、
+            - code [ref=e1044]: azure/
+            - text: 等显式 LiteLLM 路由
+        - paragraph [ref=e1045]:
+          - text: 对于
+          - code [ref=e1046]: openai-codex
+          - text: ，请通过
+          - code [ref=e1047]: openviking-server init
+          - text: 完成鉴权，再使用
+          - code [ref=e1048]: openviking-server doctor
+          - text: 做校验。
+        - paragraph [ref=e1049]:
+          - text: 对于
+          - code [ref=e1050]: litellm
+          - text: ，当底层路由使用环境变量或 provider 原生凭据时可以省略
+          - code [ref=e1051]: api_key
+          - text: ，例如 Bedrock/SageMaker 的 AWS IAM/IRSA，或 Vertex AI 的 ADC/service-account 凭据。Azure 路由仍会正常使用
+          - code [ref=e1052]: api_key
+          - text: 。如果明确要使用 LiteLLM 的 Bedrock bearer-token API-key 鉴权，请设置
+          - code [ref=e1053]: forward_api_key=true
+          - text: 。
+        - paragraph [ref=e1054]:
+          - strong [ref=e1055]: 自定义 HTTP Headers
+        - paragraph [ref=e1056]:
+          - text: 对于 OpenAI 兼容的 provider（如 OpenRouter），可以通过
+          - code [ref=e1057]: extra_headers
+          - text: 添加自定义 HTTP 请求头：
+        - generic [ref=e1058]:
+          - button "Copy Code" [ref=e1059] [cursor=pointer]
+          - generic [ref=e1060]: json
+          - code [ref=e1062]:
+            - generic [ref=e1063]: "{"
+            - generic [ref=e1064]: "\"vlm\": {"
+            - generic [ref=e1065]: "\"provider\": \"openai\","
+            - generic [ref=e1066]: "\"api_key\": \"your-api-key\","
+            - generic [ref=e1067]: "\"model\": \"gpt-4o\","
+            - generic [ref=e1068]: "\"api_base\": \"https://openrouter.ai/api/v1\","
+            - generic [ref=e1069]: "\"extra_headers\": {"
+            - generic [ref=e1070]: "\"HTTP-Referer\": \"https://your-site.com\","
+            - generic [ref=e1071]: "\"X-Title\": \"Your App Name\""
+            - generic [ref=e1072]: "}"
+            - generic [ref=e1073]: "}"
+            - generic [ref=e1074]: "}"
+        - paragraph [ref=e1075]: 常见使用场景：
+        - list [ref=e1076]:
+          - listitem [ref=e1077]:
+            - strong [ref=e1078]: OpenRouter
+            - text: ": 需要"
+            - code [ref=e1079]: HTTP-Referer
+            - text: 和
+            - code [ref=e1080]: X-Title
+            - text: 来标识应用
+          - listitem [ref=e1081]:
+            - strong [ref=e1082]: Kimi Coding
+            - text: ": 需要自定义 user agent 或追加订阅请求头时可以在这里覆盖"
+          - listitem [ref=e1083]:
+            - strong [ref=e1084]: 自定义代理
+            - text: ": 添加认证头或追踪头"
+          - listitem [ref=e1085]:
+            - strong [ref=e1086]: API 网关
+            - text: ": 添加版本或路由标识"
+        - paragraph [ref=e1087]:
+          - strong [ref=e1088]: 自定义请求 Body
+        - paragraph [ref=e1089]:
+          - text: 对于接受 provider 专有 JSON body 字段的 OpenAI 兼容 provider，可以通过
+          - code [ref=e1090]: extra_request_body
+          - text: 配置。OpenViking 会把这些字段合并到 OpenAI SDK 或 LiteLLM 发送的
+          - code [ref=e1091]: extra_body
+          - text: 中：
+        - generic [ref=e1092]:
+          - button "Copy Code" [ref=e1093] [cursor=pointer]
+          - generic [ref=e1094]: json
+          - code [ref=e1096]:
+            - generic [ref=e1097]: "{"
+            - generic [ref=e1098]: "\"vlm\": {"
+            - generic [ref=e1099]: "\"provider\": \"litellm\","
+            - generic [ref=e1100]: "\"api_key\": \"ollama\","
+            - generic [ref=e1101]: "\"model\": \"ollama/llama3.1\","
+            - generic [ref=e1102]: "\"api_base\": \"http://127.0.0.1:11434\","
+            - generic [ref=e1103]: "\"extra_request_body\": {"
+            - generic [ref=e1104]: "\"think\": false"
+            - generic [ref=e1105]: "}"
+            - generic [ref=e1106]: "}"
+            - generic [ref=e1107]: "}"
+        - paragraph [ref=e1108]:
+          - strong [ref=e1109]: 流式模式
+        - paragraph [ref=e1110]:
+          - text: 对于返回 SSE（Server-Sent Events）格式响应的 OpenAI 兼容 provider，启用
+          - code [ref=e1111]: stream
+          - text: 模式：
+        - generic [ref=e1112]:
+          - button "Copy Code" [ref=e1113] [cursor=pointer]
+          - generic [ref=e1114]: json
+          - code [ref=e1116]:
+            - generic [ref=e1117]: "{"
+            - generic [ref=e1118]: "\"vlm\": {"
+            - generic [ref=e1119]: "\"provider\": \"openai\","
+            - generic [ref=e1120]: "\"api_key\": \"your-api-key\","
+            - generic [ref=e1121]: "\"model\": \"gpt-4o\","
+            - generic [ref=e1122]: "\"api_base\": \"https://api.example.com/v1\","
+            - generic [ref=e1123]: "\"stream\": true"
+            - generic [ref=e1124]: "}"
+            - generic [ref=e1125]: "}"
+        - blockquote [ref=e1126]:
+          - paragraph [ref=e1127]:
+            - strong [ref=e1128]: 注意
+            - text: ": OpenAI SDK 需要"
+            - code [ref=e1129]: stream=true
+            - text: 才能正确解析 SSE 响应。使用强制返回 SSE 格式的 provider 时，必须将此选项设置为
+            - code [ref=e1130]: "true"
+            - text: 。
+        - heading "query_planner Permalink to \"query_planner\"" [level=3] [ref=e1131]:
+          - text: query_planner
+          - link "Permalink to \"query_planner\"" [ref=e1132] [cursor=pointer]:
+            - /url: "#query-planner"
+            - text: "#"
+        - paragraph [ref=e1133]:
+          - text: 可选的轻量模型配置，用于检索前的意图分析和 query 规划/改写。配置结构与
+          - code [ref=e1134]: vlm
+          - text: 相同，但只影响
+          - code [ref=e1135]: search()
+          - text: 的意图分析和 query expansion。未配置或配置为空时，OpenViking 会回退到
+          - code [ref=e1136]: vlm
+          - text: ，保持向后兼容。
+        - blockquote [ref=e1137]:
+          - paragraph [ref=e1138]:
+            - text: 在
+            - code [ref=e1139]: openviking-server init
+            - text: 里可勾选启用本地轻量 query planner，向导会自动拉取 Ollama 模型并写入
+            - code [ref=e1140]: query_planner
+            - text: 配置。对于已知的 query planner 模型，
+            - code [ref=e1141]: search()
+            - text: 会在运行时自动选择匹配的内置 prompt；不在映射表中的模型继续使用
+            - code [ref=e1142]: retrieval.intent_analysis
+            - text: 。
+        - paragraph [ref=e1143]:
+          - text: 推荐优先使用本地 Ollama 模型
+          - link "guoxuter/ov_intent_analysis_sft:v7_q8" [ref=e1144] [cursor=pointer]:
+            - /url: https://ollama.com/guoxuter/ov_intent_analysis_sft:v7_q8
+            - code [ref=e1145]: guoxuter/ov_intent_analysis_sft:v7_q8
+          - text: 。该模型基于 Qwen3.5-0.8B 进行微调，可本地部署，适合用小模型承担检索规划：在闲聊、问候或上下文已足够的场景下拒绝检索，从而减少不必要的记忆注入和 token 消耗；需要检索时，再生成面向
+          - code [ref=e1146]: skill
+          - text: 、
+          - code [ref=e1147]: resource
+          - text: 、
+          - code [ref=e1148]: memory
+          - text: 的结构化查询。此前的
+          - link "v4_q8" [ref=e1149] [cursor=pointer]:
+            - /url: https://ollama.com/guoxuter/ov_intent_analysis_sft:v4_q8
+            - code [ref=e1150]: v4_q8
+          - text: 版本仍作为可选项继续支持。
+        - paragraph [ref=e1151]: 使用前请先拉取模型，并确保 Ollama 服务可访问：
+        - generic [ref=e1152]:
+          - button "Copy Code" [ref=e1153] [cursor=pointer]
+          - generic [ref=e1154]: bash
+          - code [ref=e1156]:
+            - generic [ref=e1157]: ollama pull guoxuter/ov_intent_analysis_sft:v7_q8
+        - paragraph [ref=e1158]: 然后在 OpenViking 配置中添加：
+        - generic [ref=e1159]:
+          - button "Copy Code" [ref=e1160] [cursor=pointer]
+          - generic [ref=e1161]: json
+          - code [ref=e1163]:
+            - generic [ref=e1164]: "{"
+            - generic [ref=e1165]: "\"query_planner\": {"
+            - generic [ref=e1166]: "\"provider\": \"litellm\","
+            - generic [ref=e1167]: "\"model\": \"ollama/guoxuter/ov_intent_analysis_sft:v7_q8\","
+            - generic [ref=e1168]: "\"api_base\": \"http://127.0.0.1:11434\","
+            - generic [ref=e1169]: "\"temperature\": 0.0,"
+            - generic [ref=e1170]: "\"timeout\": 60,"
+            - generic [ref=e1171]: "\"extra_request_body\": {"
+            - generic [ref=e1172]: "\"think\": false"
+            - generic [ref=e1173]: "}"
+            - generic [ref=e1174]: "}"
+            - generic [ref=e1175]: "}"
+        - paragraph [ref=e1176]:
+          - text: 对于
+          - code [ref=e1177]: ollama/guoxuter/ov_intent_analysis_sft:v7_q8
+          - text: （以及
+          - code [ref=e1178]: v4_q8
+          - text: ），OpenViking 会在 search 阶段自动使用对应的内置 prompt（分别为
+          - code [ref=e1179]: retrieval.ov_intent_analysis_sft_v7
+          - text: 和
+          - code [ref=e1180]: retrieval.ov_intent_analysis_sft_v4
+          - text: ），不需要替换 prompt 文件，也不需要设置
+          - code [ref=e1181]: prompts.templates_dir
+          - text: 。如果使用未映射的模型，OpenViking 会继续使用默认的
+          - code [ref=e1182]: retrieval.intent_analysis
+          - text: prompt。
+        - paragraph [ref=e1183]:
+          - text: 这样可以用小模型承担检索规划，降低延迟，同时保留更强的
+          - code [ref=e1184]: vlm
+          - text: 处理语义提取、记忆提取和多模态内容。
+        - heading "feishu Permalink to \"feishu\"" [level=3] [ref=e1185]:
+          - text: feishu
+          - link "Permalink to \"feishu\"" [ref=e1186] [cursor=pointer]:
+            - /url: "#feishu"
+            - text: "#"
+        - paragraph [ref=e1187]:
+          - text: 飞书/Lark 云端文档解析配置。支持的 URL 格式详见
+          - link "资源管理" [ref=e1188] [cursor=pointer]:
+            - /url: ./../api/02-resources
+          - text: 。
+        - generic [ref=e1189]:
+          - button "Copy Code" [ref=e1190] [cursor=pointer]
+          - generic [ref=e1191]: json
+          - code [ref=e1193]:
+            - generic [ref=e1194]: "{"
+            - generic [ref=e1195]: "\"feishu\": {"
+            - generic [ref=e1196]: "\"app_id\": \"\","
+            - generic [ref=e1197]: "\"app_secret\": \"\","
+            - generic [ref=e1198]: "\"domain\": \"https://open.feishu.cn\","
+            - generic [ref=e1199]: "\"max_rows_per_sheet\": 1000,"
+            - generic [ref=e1200]: "\"max_records_per_table\": 1000"
+            - generic [ref=e1201]: "}"
+            - generic [ref=e1202]: "}"
+        - table [ref=e1203]:
+          - rowgroup [ref=e1204]:
+            - row "参数 类型 说明" [ref=e1205]:
+              - columnheader "参数" [ref=e1206]
+              - columnheader "类型" [ref=e1207]
+              - columnheader "说明" [ref=e1208]
+          - rowgroup [ref=e1209]:
+            - row "app_id str 飞书应用 ID（也可通过 FEISHU_APP_ID 环境变量设置）" [ref=e1210]:
+              - cell "app_id" [ref=e1211]:
+                - code [ref=e1212]: app_id
+              - cell "str" [ref=e1213]
+              - cell "飞书应用 ID（也可通过 FEISHU_APP_ID 环境变量设置）" [ref=e1214]:
+                - text: 飞书应用 ID（也可通过
+                - code [ref=e1215]: FEISHU_APP_ID
+                - text: 环境变量设置）
+            - row "app_secret str 飞书应用密钥（也可通过 FEISHU_APP_SECRET 环境变量设置）" [ref=e1216]:
+              - cell "app_secret" [ref=e1217]:
+                - code [ref=e1218]: app_secret
+              - cell "str" [ref=e1219]
+              - cell "飞书应用密钥（也可通过 FEISHU_APP_SECRET 环境变量设置）" [ref=e1220]:
+                - text: 飞书应用密钥（也可通过
+                - code [ref=e1221]: FEISHU_APP_SECRET
+                - text: 环境变量设置）
+            - row "domain str 飞书 API 域名。Lark 国际版请设为 https://open.larksuite.com" [ref=e1222]:
+              - cell "domain" [ref=e1223]:
+                - code [ref=e1224]: domain
+              - cell "str" [ref=e1225]
+              - cell "飞书 API 域名。Lark 国际版请设为 https://open.larksuite.com" [ref=e1226]:
+                - text: 飞书 API 域名。Lark 国际版请设为
+                - code [ref=e1227]: https://open.larksuite.com
+            - row "max_rows_per_sheet int 电子表格每个 sheet 最大导入行数（默认 1000）" [ref=e1228]:
+              - cell "max_rows_per_sheet" [ref=e1229]:
+                - code [ref=e1230]: max_rows_per_sheet
+              - cell "int" [ref=e1231]
+              - cell "电子表格每个 sheet 最大导入行数（默认 1000）" [ref=e1232]:
+                - text: 电子表格每个 sheet 最大导入行数（默认
+                - code [ref=e1233]: "1000"
+                - text: ）
+            - row "max_records_per_table int 多维表格每个表最大导入记录数（默认 1000）" [ref=e1234]:
+              - cell "max_records_per_table" [ref=e1235]:
+                - code [ref=e1236]: max_records_per_table
+              - cell "int" [ref=e1237]
+              - cell "多维表格每个表最大导入记录数（默认 1000）" [ref=e1238]:
+                - text: 多维表格每个表最大导入记录数（默认
+                - code [ref=e1239]: "1000"
+                - text: ）
+        - paragraph [ref=e1240]:
+          - strong [ref=e1241]: 依赖
+          - text: ：
+          - code [ref=e1242]: pip install 'openviking[bot-feishu]'
+        - paragraph [ref=e1243]:
+          - strong [ref=e1244]: Lark 国际版
+          - text: ：对于 Lark URL（
+          - code [ref=e1245]: "*.larksuite.com"
+          - text: ），请将
+          - code [ref=e1246]: domain
+          - text: 设为
+          - code [ref=e1247]: https://open.larksuite.com
+          - text: 。
+        - heading "code Permalink to \"code\"" [level=3] [ref=e1248]:
+          - text: code
+          - link "Permalink to \"code\"" [ref=e1249] [cursor=pointer]:
+            - /url: "#code"
+            - text: "#"
+        - paragraph [ref=e1250]:
+          - text: 通过
+          - code [ref=e1251]: code_summary_mode
+          - text: 控制代码文件的摘要生成方式。以下两种写法等价：
+        - generic [ref=e1252]:
+          - button "Copy Code" [ref=e1253] [cursor=pointer]
+          - generic [ref=e1254]: json
+          - code [ref=e1256]:
+            - generic [ref=e1257]: "{"
+            - generic [ref=e1258]: "\"code\": {"
+            - generic [ref=e1259]: "\"code_summary_mode\": \"ast\""
+            - generic [ref=e1260]: "}"
+            - generic [ref=e1261]: "}"
+        - generic [ref=e1262]:
+          - button "Copy Code" [ref=e1263] [cursor=pointer]
+          - generic [ref=e1264]: json
+          - code [ref=e1266]:
+            - generic [ref=e1267]: "{"
+            - generic [ref=e1268]: "\"parsers\": {"
+            - generic [ref=e1269]: "\"code\": {"
+            - generic [ref=e1270]: "\"code_summary_mode\": \"ast\""
+            - generic [ref=e1271]: "}"
+            - generic [ref=e1272]: "}"
+            - generic [ref=e1273]: "}"
+        - paragraph [ref=e1274]:
+          - text: 将
+          - code [ref=e1275]: code_summary_mode
+          - text: 设置为以下三个值之一：
+        - table [ref=e1276]:
+          - rowgroup [ref=e1277]:
+            - row "值 说明 默认" [ref=e1278]:
+              - columnheader "值" [ref=e1279]
+              - columnheader "说明" [ref=e1280]
+              - columnheader "默认" [ref=e1281]
+          - rowgroup [ref=e1282]:
+            - row "\"ast\" 对 ≥100 行的代码文件提取 AST 骨架（类名、方法签名、首行注释、import），跳过 LLM 调用。推荐用于大规模代码索引 ✓" [ref=e1283]:
+              - cell "\"ast\"" [ref=e1284]:
+                - code [ref=e1285]: "\"ast\""
+              - cell "对 ≥100 行的代码文件提取 AST 骨架（类名、方法签名、首行注释、import），跳过 LLM 调用。推荐用于大规模代码索引" [ref=e1286]:
+                - text: 对 ≥100 行的代码文件提取 AST 骨架（类名、方法签名、首行注释、import），跳过 LLM 调用。
+                - strong [ref=e1287]: 推荐用于大规模代码索引
+              - cell "✓" [ref=e1288]
+            - row "\"llm\" 全部走 LLM 生成摘要（成本较高）" [ref=e1289]:
+              - cell "\"llm\"" [ref=e1290]:
+                - code [ref=e1291]: "\"llm\""
+              - cell "全部走 LLM 生成摘要（成本较高）" [ref=e1292]
+              - cell [ref=e1293]
+            - row "\"ast_llm\" 先提取 AST 骨架（含完整注释），再将骨架作为上下文辅助 LLM 生成摘要（质量最高，成本居中）" [ref=e1294]:
+              - cell "\"ast_llm\"" [ref=e1295]:
+                - code [ref=e1296]: "\"ast_llm\""
+              - cell "先提取 AST 骨架（含完整注释），再将骨架作为上下文辅助 LLM 生成摘要（质量最高，成本居中）" [ref=e1297]
+              - cell [ref=e1298]
+        - paragraph [ref=e1299]: AST 提取支持：Python、JavaScript/TypeScript、Rust、Go、Java、C/C++。其他语言、提取失败或骨架为空时自动 fallback 到 LLM。
+        - paragraph [ref=e1300]:
+          - text: 详见
+          - link "代码骨架提取" [ref=e1301] [cursor=pointer]:
+            - /url: ./../concepts/06-extraction#代码骨架提取ast-模式
+          - text: 。
+        - heading "远程资源网络防护 Permalink to \"远程资源网络防护\"" [level=4] [ref=e1302]:
+          - text: 远程资源网络防护
+          - link "Permalink to \"远程资源网络防护\"" [ref=e1303] [cursor=pointer]:
+            - /url: "#远程资源网络防护"
+            - text: "#"
+        - paragraph [ref=e1304]:
+          - text: 通过 URL 拉取资源时，OpenViking 会拒绝环回、链路本地、私有及其他非公网目标，以及不在代码托管白名单中的主机，并抛出
+          - code [ref=e1305]: PermissionDeniedError
+          - text: 。要从自建 GitHub Enterprise / GitLab / Azure DevOps 拉取代码，请将主机加入
+          - code [ref=e1306]: code
+          - text: 下对应的白名单：
+        - table [ref=e1307]:
+          - rowgroup [ref=e1308]:
+            - row "字段 类型 说明 默认值" [ref=e1309]:
+              - columnheader "字段" [ref=e1310]
+              - columnheader "类型" [ref=e1311]
+              - columnheader "说明" [ref=e1312]
+              - columnheader "默认值" [ref=e1313]
+          - rowgroup [ref=e1314]:
+            - row "github_domains list[str] 允许的 GitHub 主机（在此添加你的 GitHub Enterprise 主机） [\"github.com\", \"www.github.com\"]" [ref=e1315]:
+              - cell "github_domains" [ref=e1316]:
+                - code [ref=e1317]: github_domains
+              - cell "list[str]" [ref=e1318]
+              - cell "允许的 GitHub 主机（在此添加你的 GitHub Enterprise 主机）" [ref=e1319]
+              - cell "[\"github.com\", \"www.github.com\"]" [ref=e1320]:
+                - code [ref=e1321]: "[\"github.com\", \"www.github.com\"]"
+            - row "gitlab_domains list[str] 允许的 GitLab 主机（在此添加你的自建 GitLab 主机） [\"gitlab.com\", \"www.gitlab.com\"]" [ref=e1322]:
+              - cell "gitlab_domains" [ref=e1323]:
+                - code [ref=e1324]: gitlab_domains
+              - cell "list[str]" [ref=e1325]
+              - cell "允许的 GitLab 主机（在此添加你的自建 GitLab 主机）" [ref=e1326]
+              - cell "[\"gitlab.com\", \"www.gitlab.com\"]" [ref=e1327]:
+                - code [ref=e1328]: "[\"gitlab.com\", \"www.gitlab.com\"]"
+            - row "azure_devops_domains list[str] 允许的 Azure DevOps 主机 [\"dev.azure.com\", \"ssh.dev.azure.com\", \"vs-ssh.visualstudio.com\"]" [ref=e1329]:
+              - cell "azure_devops_domains" [ref=e1330]:
+                - code [ref=e1331]: azure_devops_domains
+              - cell "list[str]" [ref=e1332]
+              - cell "允许的 Azure DevOps 主机" [ref=e1333]
+              - cell "[\"dev.azure.com\", \"ssh.dev.azure.com\", \"vs-ssh.visualstudio.com\"]" [ref=e1334]:
+                - code [ref=e1335]: "[\"dev.azure.com\", \"ssh.dev.azure.com\", \"vs-ssh.visualstudio.com\"]"
+            - row "code_hosting_domains list[str] 额外的通用代码托管主机 [\"github.com\", \"gitlab.com\"]" [ref=e1336]:
+              - cell "code_hosting_domains" [ref=e1337]:
+                - code [ref=e1338]: code_hosting_domains
+              - cell "list[str]" [ref=e1339]
+              - cell "额外的通用代码托管主机" [ref=e1340]
+              - cell "[\"github.com\", \"gitlab.com\"]" [ref=e1341]:
+                - code [ref=e1342]: "[\"github.com\", \"gitlab.com\"]"
+        - paragraph [ref=e1343]:
+          - text: 要从私有/内网地址（例如内部镜像）拉取，请将顶层的
+          - code [ref=e1344]: allow_private_networks
+          - text: 设为
+          - code [ref=e1345]: "true"
+          - text: （默认关闭，因此仅允许公网地址）：
+        - generic [ref=e1346]:
+          - button "Copy Code" [ref=e1347] [cursor=pointer]
+          - generic [ref=e1348]: json
+          - code [ref=e1350]:
+            - generic [ref=e1351]: "{"
+            - generic [ref=e1352]: "\"allow_private_networks\": false,"
+            - generic [ref=e1353]: "\"code\": {"
+            - generic [ref=e1354]: "\"github_domains\": [\"github.com\", \"github.example.com\"]"
+            - generic [ref=e1355]: "}"
+            - generic [ref=e1356]: "}"
+        - paragraph [ref=e1357]:
+          - code [ref=e1358]: PermissionDeniedError
+          - text: 的报错信息会指明针对被拦截主机应添加的具体配置键。
+        - heading "rerank Permalink to \"rerank\"" [level=3] [ref=e1359]:
+          - text: rerank
+          - link "Permalink to \"rerank\"" [ref=e1360] [cursor=pointer]:
+            - /url: "#rerank"
+            - text: "#"
+        - paragraph [ref=e1361]: 用于搜索结果精排的 Rerank 模型。支持 VikingDB (火山引擎)、Cohere 和 OpenAI 兼容接口。
+        - paragraph [ref=e1362]:
+          - strong [ref=e1363]: "火山引擎 (VikingDB):"
+        - generic [ref=e1364]:
+          - button "Copy Code" [ref=e1365] [cursor=pointer]
+          - generic [ref=e1366]: json
+          - code [ref=e1368]:
+            - generic [ref=e1369]: "{"
+            - generic [ref=e1370]: "\"rerank\": {"
+            - generic [ref=e1371]: "\"provider\": \"vikingdb\","
+            - generic [ref=e1372]: "\"ak\": \"your-access-key\","
+            - generic [ref=e1373]: "\"sk\": \"your-secret-key\","
+            - generic [ref=e1374]: "\"model_name\": \"doubao-seed-rerank\","
+            - generic [ref=e1375]: "\"model_version\": \"251028\""
+            - generic [ref=e1376]: "}"
+            - generic [ref=e1377]: "}"
+        - paragraph [ref=e1378]:
+          - strong [ref=e1379]: "OpenAI 兼容提供方 (如 DashScope):"
+        - generic [ref=e1380]:
+          - button "Copy Code" [ref=e1381] [cursor=pointer]
+          - generic [ref=e1382]: json
+          - code [ref=e1384]:
+            - generic [ref=e1385]: "{"
+            - generic [ref=e1386]: "\"rerank\": {"
+            - generic [ref=e1387]: "\"provider\": \"openai\","
+            - generic [ref=e1388]: "\"api_key\": \"your-api-key\","
+            - generic [ref=e1389]: "\"api_base\": \"https://dashscope.aliyuncs.com/compatible-api/v1/reranks\","
+            - generic [ref=e1390]: "\"model\": \"qwen3-vl-rerank\","
+            - generic [ref=e1391]: "\"threshold\": 0.1"
+            - generic [ref=e1392]: "}"
+            - generic [ref=e1393]: "}"
+        - paragraph [ref=e1394]:
+          - strong [ref=e1395]: 参数
+        - table [ref=e1396]:
+          - rowgroup [ref=e1397]:
+            - row "参数 类型 说明" [ref=e1398]:
+              - columnheader "参数" [ref=e1399]
+              - columnheader "类型" [ref=e1400]
+              - columnheader "说明" [ref=e1401]
+          - rowgroup [ref=e1402]:
+            - row "provider str \"vikingdb\"、\"cohere\" 或 \"openai\"。省略时基于字段自动识别。" [ref=e1403]:
+              - cell "provider" [ref=e1404]:
+                - code [ref=e1405]: provider
+              - cell "str" [ref=e1406]
+              - cell "\"vikingdb\"、\"cohere\" 或 \"openai\"。省略时基于字段自动识别。" [ref=e1407]:
+                - code [ref=e1408]: "\"vikingdb\""
+                - text: 、
+                - code [ref=e1409]: "\"cohere\""
+                - text: 或
+                - code [ref=e1410]: "\"openai\""
+                - text: 。省略时基于字段自动识别。
+            - row "ak str VikingDB Access Key（仅 vikingdb 提供方使用）" [ref=e1411]:
+              - cell "ak" [ref=e1412]:
+                - code [ref=e1413]: ak
+              - cell "str" [ref=e1414]
+              - cell "VikingDB Access Key（仅 vikingdb 提供方使用）" [ref=e1415]:
+                - text: VikingDB Access Key（仅
+                - code [ref=e1416]: vikingdb
+                - text: 提供方使用）
+            - row "sk str VikingDB Secret Key（仅 vikingdb 提供方使用）" [ref=e1417]:
+              - cell "sk" [ref=e1418]:
+                - code [ref=e1419]: sk
+              - cell "str" [ref=e1420]
+              - cell "VikingDB Secret Key（仅 vikingdb 提供方使用）" [ref=e1421]:
+                - text: VikingDB Secret Key（仅
+                - code [ref=e1422]: vikingdb
+                - text: 提供方使用）
+            - row "model_name str 模型名称（仅 vikingdb 提供方使用，默认：doubao-seed-rerank）" [ref=e1423]:
+              - cell "model_name" [ref=e1424]:
+                - code [ref=e1425]: model_name
+              - cell "str" [ref=e1426]
+              - cell "模型名称（仅 vikingdb 提供方使用，默认：doubao-seed-rerank）" [ref=e1427]:
+                - text: 模型名称（仅
+                - code [ref=e1428]: vikingdb
+                - text: 提供方使用，默认：
+                - code [ref=e1429]: doubao-seed-rerank
+                - text: ）
+            - row "api_key str API Key（用于 openai 或 cohere 提供方）" [ref=e1430]:
+              - cell "api_key" [ref=e1431]:
+                - code [ref=e1432]: api_key
+              - cell "str" [ref=e1433]
+              - cell "API Key（用于 openai 或 cohere 提供方）" [ref=e1434]:
+                - text: API Key（用于
+                - code [ref=e1435]: openai
+                - text: 或
+                - code [ref=e1436]: cohere
+                - text: 提供方）
+            - row "api_base str 接口地址（用于 openai 提供方）" [ref=e1437]:
+              - cell "api_base" [ref=e1438]:
+                - code [ref=e1439]: api_base
+              - cell "str" [ref=e1440]
+              - cell "接口地址（用于 openai 提供方）" [ref=e1441]:
+                - text: 接口地址（用于
+                - code [ref=e1442]: openai
+                - text: 提供方）
+            - row "model str 模型名称（用于 openai 提供方）" [ref=e1443]:
+              - cell "model" [ref=e1444]:
+                - code [ref=e1445]: model
+              - cell "str" [ref=e1446]
+              - cell "模型名称（用于 openai 提供方）" [ref=e1447]:
+                - text: 模型名称（用于
+                - code [ref=e1448]: openai
+                - text: 提供方）
+            - row "threshold float 分数阈值，范围为 0.0 到 1.0。低于此值的结果会被过滤。默认：0.1" [ref=e1449]:
+              - cell "threshold" [ref=e1450]:
+                - code [ref=e1451]: threshold
+              - cell "float" [ref=e1452]
+              - cell "分数阈值，范围为 0.0 到 1.0。低于此值的结果会被过滤。默认：0.1" [ref=e1453]:
+                - text: 分数阈值，范围为
+                - code [ref=e1454]: "0.0"
+                - text: 到
+                - code [ref=e1455]: "1.0"
+                - text: 。低于此值的结果会被过滤。默认：
+                - code [ref=e1456]: "0.1"
+            - row "extra_headers object 自定义 HTTP 请求头（OpenAI 兼容 provider 可用，可选）" [ref=e1457]:
+              - cell "extra_headers" [ref=e1458]:
+                - code [ref=e1459]: extra_headers
+              - cell "object" [ref=e1460]
+              - cell "自定义 HTTP 请求头（OpenAI 兼容 provider 可用，可选）" [ref=e1461]
+        - paragraph [ref=e1462]:
+          - strong [ref=e1463]: "支持的提供方:"
+        - list [ref=e1464]:
+          - listitem [ref=e1465]:
+            - code [ref=e1466]: vikingdb
+            - text: ": 火山引擎 VikingDB Rerank API (使用 AK/SK)"
+          - listitem [ref=e1467]:
+            - code [ref=e1468]: cohere
+            - text: ": Cohere Rerank API"
+          - listitem [ref=e1469]:
+            - code [ref=e1470]: openai
+            - text: ": OpenAI 兼容的 Rerank 接口"
+        - paragraph [ref=e1471]: 如果未配置 Rerank，搜索仅使用向量相似度。
+        - heading "retrieval Permalink to \"retrieval\"" [level=3] [ref=e1472]:
+          - text: retrieval
+          - link "Permalink to \"retrieval\"" [ref=e1473] [cursor=pointer]:
+            - /url: "#retrieval"
+            - text: "#"
+        - paragraph [ref=e1474]: 最终搜索分数的召回排序配置。
+        - generic [ref=e1475]:
+          - button "Copy Code" [ref=e1476] [cursor=pointer]
+          - generic [ref=e1477]: json
+          - code [ref=e1479]:
+            - generic [ref=e1480]: "{"
+            - generic [ref=e1481]: "\"retrieval\": {"
+            - generic [ref=e1482]: "\"hotness_alpha\": 0.0,"
+            - generic [ref=e1483]: "\"score_propagation_alpha\": 1.0"
+            - generic [ref=e1484]: "}"
+            - generic [ref=e1485]: "}"
+        - table [ref=e1486]:
+          - rowgroup [ref=e1487]:
+            - row "参数 类型 说明 默认值" [ref=e1488]:
+              - columnheader "参数" [ref=e1489]
+              - columnheader "类型" [ref=e1490]
+              - columnheader "说明" [ref=e1491]
+              - columnheader "默认值" [ref=e1492]
+          - rowgroup [ref=e1493]:
+            - row "hotness_alpha float hotness 分数在最终召回分数中的混合权重。0.0 表示关闭 hotness boost，最终分数等于语义相似度；1.0 表示只使用 hotness。有效范围：0.0 到 1.0。 0.0" [ref=e1494]:
+              - cell "hotness_alpha" [ref=e1495]:
+                - code [ref=e1496]: hotness_alpha
+              - cell "float" [ref=e1497]
+              - cell "hotness 分数在最终召回分数中的混合权重。0.0 表示关闭 hotness boost，最终分数等于语义相似度；1.0 表示只使用 hotness。有效范围：0.0 到 1.0。" [ref=e1498]:
+                - text: hotness 分数在最终召回分数中的混合权重。
+                - code [ref=e1499]: "0.0"
+                - text: 表示关闭 hotness boost，最终分数等于语义相似度；
+                - code [ref=e1500]: "1.0"
+                - text: 表示只使用 hotness。有效范围：
+                - code [ref=e1501]: "0.0"
+                - text: 到
+                - code [ref=e1502]: "1.0"
+                - text: 。
+              - cell "0.0" [ref=e1503]:
+                - code [ref=e1504]: "0.0"
+            - row "score_propagation_alpha float 层级检索中，子节点自身分数与父节点传播分数混合时，子节点自身分数的权重。1.0 表示忽略父节点分数（仅使用语义相似度）；0.5 表示与父节点分数等权混合；0.0 表示只使用父节点分数。有效范围：0.0 到 1.0。 1.0" [ref=e1505]:
+              - cell "score_propagation_alpha" [ref=e1506]:
+                - code [ref=e1507]: score_propagation_alpha
+              - cell "float" [ref=e1508]
+              - cell "层级检索中，子节点自身分数与父节点传播分数混合时，子节点自身分数的权重。1.0 表示忽略父节点分数（仅使用语义相似度）；0.5 表示与父节点分数等权混合；0.0 表示只使用父节点分数。有效范围：0.0 到 1.0。" [ref=e1509]:
+                - text: 层级检索中，子节点自身分数与父节点传播分数混合时，子节点自身分数的权重。
+                - code [ref=e1510]: "1.0"
+                - text: 表示忽略父节点分数（仅使用语义相似度）；
+                - code [ref=e1511]: "0.5"
+                - text: 表示与父节点分数等权混合；
+                - code [ref=e1512]: "0.0"
+                - text: 表示只使用父节点分数。有效范围：
+                - code [ref=e1513]: "0.0"
+                - text: 到
+                - code [ref=e1514]: "1.0"
+                - text: 。
+              - cell "1.0" [ref=e1515]:
+                - code [ref=e1516]: "1.0"
+        - paragraph [ref=e1517]:
+          - text: 如果需要分数严格反映向量相似度，保持
+          - code [ref=e1518]: hotness_alpha
+          - text: 为
+          - code [ref=e1519]: "0.0"
+          - text: 。只有当希望高频访问或最近更新的上下文获得排序提升时，才将它设置为大于
+          - code [ref=e1520]: "0.0"
+          - text: 。
+        - heading "storage Permalink to \"storage\"" [level=3] [ref=e1521]:
+          - text: storage
+          - link "Permalink to \"storage\"" [ref=e1522] [cursor=pointer]:
+            - /url: "#storage"
+            - text: "#"
+        - paragraph [ref=e1523]: 用于存储上下文数据 ，包括文件存储（RAGFS）和向量库存储（VectorDB）。
+        - heading "根级配置 Permalink to \"根级配置\"" [level=4] [ref=e1524]:
+          - text: 根级配置
+          - link "Permalink to \"根级配置\"" [ref=e1525] [cursor=pointer]:
+            - /url: "#根级配置"
+            - text: "#"
+        - table [ref=e1526]:
+          - rowgroup [ref=e1527]:
+            - row "参数 类型 说明 默认值" [ref=e1528]:
+              - columnheader "参数" [ref=e1529]
+              - columnheader "类型" [ref=e1530]
+              - columnheader "说明" [ref=e1531]
+              - columnheader "默认值" [ref=e1532]
+          - rowgroup [ref=e1533]:
+            - row "workspace str 本地数据存储路径（主要配置） \"./data\"" [ref=e1534]:
+              - cell "workspace" [ref=e1535]:
+                - code [ref=e1536]: workspace
+              - cell "str" [ref=e1537]
+              - cell "本地数据存储路径（主要配置）" [ref=e1538]
+              - cell "\"./data\"" [ref=e1539]
+            - row "skip_process_lock bool 是否跳过 storage.workspace 的启动进程锁检查。启用后，OpenViking 不会检查或创建 .openviking.pid 锁文件。 false" [ref=e1540]:
+              - cell "skip_process_lock" [ref=e1541]:
+                - code [ref=e1542]: skip_process_lock
+              - cell "bool" [ref=e1543]
+              - cell "是否跳过 storage.workspace 的启动进程锁检查。启用后，OpenViking 不会检查或创建 .openviking.pid 锁文件。" [ref=e1544]:
+                - text: 是否跳过
+                - code [ref=e1545]: storage.workspace
+                - text: 的启动进程锁检查。启用后，OpenViking 不会检查或创建
+                - code [ref=e1546]: .openviking.pid
+                - text: 锁文件。
+              - cell "false" [ref=e1547]:
+                - code [ref=e1548]: "false"
+            - 'row "agfs object RAGFS（Rust 实现的 AGFS）配置 {}" [ref=e1549]':
+              - cell "agfs" [ref=e1550]:
+                - code [ref=e1551]: agfs
+              - cell "object" [ref=e1552]
+              - cell "RAGFS（Rust 实现的 AGFS）配置" [ref=e1553]
+              - 'cell "{}" [ref=e1554]'
+            - 'row "vectordb object 向量库存储配置 {}" [ref=e1555]':
+              - cell "vectordb" [ref=e1556]:
+                - code [ref=e1557]: vectordb
+              - cell "object" [ref=e1558]
+              - cell "向量库存储配置" [ref=e1559]
+              - 'cell "{}" [ref=e1560]'
+        - generic [ref=e1561]:
+          - button "Copy Code" [ref=e1562] [cursor=pointer]
+          - generic [ref=e1563]: json
+          - code [ref=e1565]:
+            - generic [ref=e1566]: "{"
+            - generic [ref=e1567]: "\"storage\": {"
+            - generic [ref=e1568]: "\"workspace\": \"./data\","
+            - generic [ref=e1569]: "\"agfs\": {"
+            - generic [ref=e1570]: "\"backend\": \"local\","
+            - generic [ref=e1571]: "\"timeout\": 10"
+            - generic [ref=e1572]: "},"
+            - generic [ref=e1573]: "\"vectordb\": {"
+            - generic [ref=e1574]: "\"backend\": \"local\""
+            - generic [ref=e1575]: "}"
+            - generic [ref=e1576]: "}"
+            - generic [ref=e1577]: "}"
+        - heading "agfs (RAGFS) Permalink to \"agfs (RAGFS)\"" [level=4] [ref=e1578]:
+          - text: agfs (RAGFS)
+          - link "Permalink to \"agfs (RAGFS)\"" [ref=e1579] [cursor=pointer]:
+            - /url: "#agfs-ragfs"
+            - text: "#"
+        - table [ref=e1580]:
+          - rowgroup [ref=e1581]:
+            - row "参数 类型 说明 默认值" [ref=e1582]:
+              - columnheader "参数" [ref=e1583]
+              - columnheader "类型" [ref=e1584]
+              - columnheader "说明" [ref=e1585]
+              - columnheader "默认值" [ref=e1586]
+          - rowgroup [ref=e1587]:
+            - row "backend str \"local\"、\"s3\" 或 \"memory\" \"local\"" [ref=e1588]:
+              - cell "backend" [ref=e1589]:
+                - code [ref=e1590]: backend
+              - cell "str" [ref=e1591]
+              - cell "\"local\"、\"s3\" 或 \"memory\"" [ref=e1592]:
+                - code [ref=e1593]: "\"local\""
+                - text: 、
+                - code [ref=e1594]: "\"s3\""
+                - text: 或
+                - code [ref=e1595]: "\"memory\""
+              - cell "\"local\"" [ref=e1596]:
+                - code [ref=e1597]: "\"local\""
+            - row "timeout float 请求超时时间（秒） 10.0" [ref=e1598]:
+              - cell "timeout" [ref=e1599]:
+                - code [ref=e1600]: timeout
+              - cell "float" [ref=e1601]
+              - cell "请求超时时间（秒）" [ref=e1602]
+              - cell "10.0" [ref=e1603]:
+                - code [ref=e1604]: "10.0"
+            - row "backups object 多写存储配置。配置后顶层 backend 作为 primary，backups.items[] 作为 backup null" [ref=e1605]:
+              - cell "backups" [ref=e1606]:
+                - code [ref=e1607]: backups
+              - cell "object" [ref=e1608]
+              - cell "多写存储配置。配置后顶层 backend 作为 primary，backups.items[] 作为 backup" [ref=e1609]:
+                - text: 多写存储配置。配置后顶层
+                - code [ref=e1610]: backend
+                - text: 作为 primary，
+                - code [ref=e1611]: backups.items[]
+                - text: 作为 backup
+              - cell "null" [ref=e1612]:
+                - code [ref=e1613]: "null"
+            - row "redirects array 多写存储的文件重定向策略。命中后文件写入指定 backup，而不是 primary []" [ref=e1614]:
+              - cell "redirects" [ref=e1615]:
+                - code [ref=e1616]: redirects
+              - cell "array" [ref=e1617]
+              - cell "多写存储的文件重定向策略。命中后文件写入指定 backup，而不是 primary" [ref=e1618]
+              - cell "[]" [ref=e1619]:
+                - code [ref=e1620]: "[]"
+            - 'row "queuefs object QueueFS 配置。控制 /queue 的命名空间模式、后端和运行时参数 { \"mode\": \"shared\", \"backend\": \"sqlite\", \"recover_stale_sec\": 0, \"busy_timeout_ms\": 5000 }" [ref=e1621]':
+              - cell "queuefs" [ref=e1622]:
+                - code [ref=e1623]: queuefs
+              - cell "object" [ref=e1624]
+              - cell "QueueFS 配置。控制 /queue 的命名空间模式、后端和运行时参数" [ref=e1625]:
+                - text: QueueFS 配置。控制
+                - code [ref=e1626]: /queue
+                - text: 的命名空间模式、后端和运行时参数
+              - 'cell "{ \"mode\": \"shared\", \"backend\": \"sqlite\", \"recover_stale_sec\": 0, \"busy_timeout_ms\": 5000 }" [ref=e1627]':
+                - code [ref=e1628]: "{ \"mode\": \"shared\", \"backend\": \"sqlite\", \"recover_stale_sec\": 0, \"busy_timeout_ms\": 5000 }"
+            - 'row "queue_db_path str（可选） 旧版兼容字段，用于覆盖 QueueFS 的 sqlite 数据库文件路径。已被 storage.agfs.queuefs.db_path 取代。未设置时默认为 {storage.workspace}/_system/queue/queue.db。适用于 workspace 卷不支持 sqlite 的场景（例如某些网络文件系统） null" [ref=e1629]':
+              - cell "queue_db_path" [ref=e1630]:
+                - code [ref=e1631]: queue_db_path
+              - cell "str（可选）" [ref=e1632]
+              - 'cell "旧版兼容字段，用于覆盖 QueueFS 的 sqlite 数据库文件路径。已被 storage.agfs.queuefs.db_path 取代。未设置时默认为 {storage.workspace}/_system/queue/queue.db。适用于 workspace 卷不支持 sqlite 的场景（例如某些网络文件系统）" [ref=e1633]':
+                - text: 旧版兼容字段，用于覆盖 QueueFS 的 sqlite 数据库文件路径。已被
+                - code [ref=e1634]: storage.agfs.queuefs.db_path
+                - text: 取代。未设置时默认为
+                - code [ref=e1635]: "{storage.workspace}/_system/queue/queue.db"
+                - text: 。适用于 workspace 卷不支持 sqlite 的场景（例如某些网络文件系统）
+              - cell "null" [ref=e1636]:
+                - code [ref=e1637]: "null"
+            - row "s3 object S3 backend configuration (when backend is 's3') -" [ref=e1638]:
+              - cell "s3" [ref=e1639]:
+                - code [ref=e1640]: s3
+              - cell "object" [ref=e1641]
+              - cell "S3 backend configuration (when backend is 's3')" [ref=e1642]
+              - cell "-" [ref=e1643]
+        - paragraph [ref=e1644]:
+          - strong [ref=e1645]: 配置示例
+        - paragraph [ref=e1646]: RAGFS 默认使用 Rust binding 模式，通过 Rust 实现直接访问文件系统。
+        - generic [ref=e1647]:
+          - paragraph [ref=e1648]: WARNING
+          - paragraph [ref=e1649]:
+            - code [ref=e1650]: storage.agfs
+            - text: 已不再支持 AGFS HTTP client 模式，也无需再配置旧的 HTTP client 入口。当前 AGFS / RAGFS 文件系统访问仅通过 Rust binding（
+            - code [ref=e1651]: RAGFSBindingClient
+            - text: ）在进程内完成。这不影响 OpenViking server 的 HTTP API、
+            - code [ref=e1652]: ov
+            - text: CLI，或
+            - code [ref=e1653]: AsyncHTTPClient
+            - text: /
+            - code [ref=e1654]: SyncHTTPClient
+            - text: 访问 OpenViking 服务端的能力。
+        - heading "多写存储配置 Permalink to \"多写存储配置\"" [level=5] [ref=e1655]:
+          - text: 多写存储配置
+          - link "Permalink to \"多写存储配置\"" [ref=e1656] [cursor=pointer]:
+            - /url: "#多写存储配置"
+            - text: "#"
+        - paragraph [ref=e1657]:
+          - code [ref=e1658]: storage.agfs.backups
+          - text: 用于启用多写存储。未配置时，OpenViking 保持单 backend 模式。
+        - generic [ref=e1659]:
+          - button "Copy Code" [ref=e1660] [cursor=pointer]
+          - generic [ref=e1661]: json
+          - code [ref=e1663]:
+            - generic [ref=e1664]: "{"
+            - generic [ref=e1665]: "\"storage\": {"
+            - generic [ref=e1666]: "\"workspace\": \"./data\","
+            - generic [ref=e1667]: "\"agfs\": {"
+            - generic [ref=e1668]: "\"backend\": \"local\","
+            - generic [ref=e1669]: "\"redirects\": ["
+            - generic [ref=e1670]: "{"
+            - generic [ref=e1671]: "\"type\": \"FileExtensionPolicy\","
+            - generic [ref=e1672]: "\"extensions\": [\"(pdf|ppt|zip)\"],"
+            - generic [ref=e1673]: "\"target\": [\"s3-backup\"]"
+            - generic [ref=e1674]: "}"
+            - generic [ref=e1675]: "],"
+            - generic [ref=e1676]: "\"backups\": {"
+            - generic [ref=e1677]: "\"sync_type\": \"async\","
+            - generic [ref=e1678]: "\"items\": ["
+            - generic [ref=e1679]: "{"
+            - generic [ref=e1680]: "\"name\": \"s3-backup\","
+            - generic [ref=e1681]: "\"backend\": \"s3\","
+            - generic [ref=e1682]: "\"s3\": {"
+            - generic [ref=e1683]: "\"bucket\": \"openviking-backup\","
+            - generic [ref=e1684]: "\"region\": \"cn-beijing\","
+            - generic [ref=e1685]: "\"endpoint\": \"https://tos-s3-cn-beijing.volces.com\","
+            - generic [ref=e1686]: "\"access_key\": \"your-ak\","
+            - generic [ref=e1687]: "\"secret_key\": \"your-sk\","
+            - generic [ref=e1688]: "\"prefix\": \"multi-write\""
+            - generic [ref=e1689]: "}"
+            - generic [ref=e1690]: "}"
+            - generic [ref=e1691]: "]"
+            - generic [ref=e1692]: "}"
+            - generic [ref=e1693]: "}"
+            - generic [ref=e1694]: "}"
+            - generic [ref=e1695]: "}"
+        - paragraph [ref=e1696]:
+          - code [ref=e1697]: backups
+          - text: 常用字段：
+        - table [ref=e1698]:
+          - rowgroup [ref=e1699]:
+            - row "参数 类型 说明 默认值" [ref=e1700]:
+              - columnheader "参数" [ref=e1701]
+              - columnheader "类型" [ref=e1702]
+              - columnheader "说明" [ref=e1703]
+              - columnheader "默认值" [ref=e1704]
+          - rowgroup [ref=e1705]:
+            - row "sync_type str 多写同步模式，支持 \"async\" 或 \"sync\" \"async\"" [ref=e1706]:
+              - cell "sync_type" [ref=e1707]:
+                - code [ref=e1708]: sync_type
+              - cell "str" [ref=e1709]
+              - cell "多写同步模式，支持 \"async\" 或 \"sync\"" [ref=e1710]:
+                - text: 多写同步模式，支持
+                - code [ref=e1711]: "\"async\""
+                - text: 或
+                - code [ref=e1712]: "\"sync\""
+              - cell "\"async\"" [ref=e1713]:
+                - code [ref=e1714]: "\"async\""
+            - row "write_ack_count int sync 模式下返回前需要的 backup 确认数 全部 backup" [ref=e1715]:
+              - cell "write_ack_count" [ref=e1716]:
+                - code [ref=e1717]: write_ack_count
+              - cell "int" [ref=e1718]
+              - cell "sync 模式下返回前需要的 backup 确认数" [ref=e1719]:
+                - code [ref=e1720]: sync
+                - text: 模式下返回前需要的 backup 确认数
+              - cell "全部 backup" [ref=e1721]
+            - row "write_ack_timeout_ms int sync 模式下等待 backup 确认的超时时间，单位毫秒 null" [ref=e1722]:
+              - cell "write_ack_timeout_ms" [ref=e1723]:
+                - code [ref=e1724]: write_ack_timeout_ms
+              - cell "int" [ref=e1725]
+              - cell "sync 模式下等待 backup 确认的超时时间，单位毫秒" [ref=e1726]:
+                - code [ref=e1727]: sync
+                - text: 模式下等待 backup 确认的超时时间，单位毫秒
+              - cell "null" [ref=e1728]:
+                - code [ref=e1729]: "null"
+            - row "write_concurrency int 异步 backup 写入并发上限 null" [ref=e1730]:
+              - cell "write_concurrency" [ref=e1731]:
+                - code [ref=e1732]: write_concurrency
+              - cell "int" [ref=e1733]
+              - cell "异步 backup 写入并发上限" [ref=e1734]
+              - cell "null" [ref=e1735]:
+                - code [ref=e1736]: "null"
+            - row "items array backup backend 列表，每个 item 复用普通 backend 配置并增加 name、operations、excludes、encryption 等字段 []" [ref=e1737]:
+              - cell "items" [ref=e1738]:
+                - code [ref=e1739]: items
+              - cell "array" [ref=e1740]
+              - cell "backup backend 列表，每个 item 复用普通 backend 配置并增加 name、operations、excludes、encryption 等字段" [ref=e1741]:
+                - text: backup backend 列表，每个 item 复用普通 backend 配置并增加
+                - code [ref=e1742]: name
+                - text: 、
+                - code [ref=e1743]: operations
+                - text: 、
+                - code [ref=e1744]: excludes
+                - text: 、
+                - code [ref=e1745]: encryption
+                - text: 等字段
+              - cell "[]" [ref=e1746]:
+                - code [ref=e1747]: "[]"
+        - paragraph [ref=e1748]:
+          - code [ref=e1749]: redirects
+          - text: 常用字段：
+        - table [ref=e1750]:
+          - rowgroup [ref=e1751]:
+            - row "参数 类型 说明 默认值" [ref=e1752]:
+              - columnheader "参数" [ref=e1753]
+              - columnheader "类型" [ref=e1754]
+              - columnheader "说明" [ref=e1755]
+              - columnheader "默认值" [ref=e1756]
+          - rowgroup [ref=e1757]:
+            - row "type str 策略类型，支持 \"FileExtensionPolicy\" 或 \"FileOverSizePolicy\" 必填" [ref=e1758]:
+              - cell "type" [ref=e1759]:
+                - code [ref=e1760]: type
+              - cell "str" [ref=e1761]
+              - cell "策略类型，支持 \"FileExtensionPolicy\" 或 \"FileOverSizePolicy\"" [ref=e1762]:
+                - text: 策略类型，支持
+                - code [ref=e1763]: "\"FileExtensionPolicy\""
+                - text: 或
+                - code [ref=e1764]: "\"FileOverSizePolicy\""
+              - cell "必填" [ref=e1765]
+            - row "extensions array FileExtensionPolicy 使用的扩展名正则列表，例如 [\"(pdf|ppt)\"] []" [ref=e1766]:
+              - cell "extensions" [ref=e1767]:
+                - code [ref=e1768]: extensions
+              - cell "array" [ref=e1769]
+              - cell "FileExtensionPolicy 使用的扩展名正则列表，例如 [\"(pdf|ppt)\"]" [ref=e1770]:
+                - code [ref=e1771]: FileExtensionPolicy
+                - text: 使用的扩展名正则列表，例如
+                - code [ref=e1772]: "[\"(pdf|ppt)\"]"
+              - cell "[]" [ref=e1773]:
+                - code [ref=e1774]: "[]"
+            - row "max_size_mb int FileOverSizePolicy 使用的文件大小阈值，单位 MB null" [ref=e1775]:
+              - cell "max_size_mb" [ref=e1776]:
+                - code [ref=e1777]: max_size_mb
+              - cell "int" [ref=e1778]
+              - cell "FileOverSizePolicy 使用的文件大小阈值，单位 MB" [ref=e1779]:
+                - code [ref=e1780]: FileOverSizePolicy
+                - text: 使用的文件大小阈值，单位 MB
+              - cell "null" [ref=e1781]:
+                - code [ref=e1782]: "null"
+            - row "target array 命中策略后写入的 backup name 列表 必填" [ref=e1783]:
+              - cell "target" [ref=e1784]:
+                - code [ref=e1785]: target
+              - cell "array" [ref=e1786]
+              - cell "命中策略后写入的 backup name 列表" [ref=e1787]:
+                - text: 命中策略后写入的 backup
+                - code [ref=e1788]: name
+                - text: 列表
+              - cell "必填" [ref=e1789]
+        - paragraph [ref=e1790]: 按文件大小重定向示例：
+        - generic [ref=e1791]:
+          - button "Copy Code" [ref=e1792] [cursor=pointer]
+          - generic [ref=e1793]: json
+          - code [ref=e1795]:
+            - generic [ref=e1796]: "{"
+            - generic [ref=e1797]: "\"type\": \"FileOverSizePolicy\","
+            - generic [ref=e1798]: "\"max_size_mb\": 100,"
+            - generic [ref=e1799]: "\"target\": [\"s3-backup\"]"
+            - generic [ref=e1800]: "}"
+        - paragraph [ref=e1801]: 注意：
+        - list [ref=e1802]:
+          - listitem [ref=e1803]:
+            - code [ref=e1804]: redirects
+            - text: 配置在顶层
+            - code [ref=e1805]: storage.agfs
+            - text: ，表示 primary 的重定向策略。
+          - listitem [ref=e1806]:
+            - code [ref=e1807]: target
+            - text: 必须引用
+            - code [ref=e1808]: backups.items[]
+            - text: 中已经定义的 backup
+            - code [ref=e1809]: name
+            - text: 。
+          - listitem [ref=e1810]: 命中 redirect 的文件仍会通过普通文件系统 API 呈现为可读、可列举的文件。
+        - paragraph [ref=e1811]:
+          - text: 更多配置示例见
+          - link "多写存储指南" [ref=e1812] [cursor=pointer]:
+            - /url: ./13-multi-write-storage
+          - text: 。
+        - heading "QueueFS 配置 Permalink to \"QueueFS 配置\"" [level=5] [ref=e1813]:
+          - text: QueueFS 配置
+          - link "Permalink to \"QueueFS 配置\"" [ref=e1814] [cursor=pointer]:
+            - /url: "#queuefs-配置"
+            - text: "#"
+        - table [ref=e1815]:
+          - rowgroup [ref=e1816]:
+            - row "参数 类型 说明 默认值" [ref=e1817]:
+              - columnheader "参数" [ref=e1818]
+              - columnheader "类型" [ref=e1819]
+              - columnheader "说明" [ref=e1820]
+              - columnheader "默认值" [ref=e1821]
+          - rowgroup [ref=e1822]:
+            - row "mode str QueueFS 命名空间模式：\"shared\" 使用 /queue；\"worker\" 为每个 worker 隔离到 /queue/worker-<index|pid> \"shared\"" [ref=e1823]:
+              - cell "mode" [ref=e1824]:
+                - code [ref=e1825]: mode
+              - cell "str" [ref=e1826]
+              - cell "QueueFS 命名空间模式：\"shared\" 使用 /queue；\"worker\" 为每个 worker 隔离到 /queue/worker-<index|pid>" [ref=e1827]:
+                - text: QueueFS 命名空间模式：
+                - code [ref=e1828]: "\"shared\""
+                - text: 使用
+                - code [ref=e1829]: /queue
+                - text: ；
+                - code [ref=e1830]: "\"worker\""
+                - text: 为每个 worker 隔离到
+                - code [ref=e1831]: /queue/worker-<index|pid>
+              - cell "\"shared\"" [ref=e1832]:
+                - code [ref=e1833]: "\"shared\""
+            - row "backend str QueueFS 后端：\"memory\"、\"sqlite\" 或 \"sqlite3\" \"sqlite\"" [ref=e1834]:
+              - cell "backend" [ref=e1835]:
+                - code [ref=e1836]: backend
+              - cell "str" [ref=e1837]
+              - cell "QueueFS 后端：\"memory\"、\"sqlite\" 或 \"sqlite3\"" [ref=e1838]:
+                - text: QueueFS 后端：
+                - code [ref=e1839]: "\"memory\""
+                - text: 、
+                - code [ref=e1840]: "\"sqlite\""
+                - text: 或
+                - code [ref=e1841]: "\"sqlite3\""
+              - cell "\"sqlite\"" [ref=e1842]:
+                - code [ref=e1843]: "\"sqlite\""
+            - row "db_path str（可选） 当 backend 为 \"sqlite\" 或 \"sqlite3\" 时使用的 QueueFS sqlite 数据库路径 null" [ref=e1844]:
+              - cell "db_path" [ref=e1845]:
+                - code [ref=e1846]: db_path
+              - cell "str（可选）" [ref=e1847]
+              - cell "当 backend 为 \"sqlite\" 或 \"sqlite3\" 时使用的 QueueFS sqlite 数据库路径" [ref=e1848]:
+                - text: 当 backend 为
+                - code [ref=e1849]: "\"sqlite\""
+                - text: 或
+                - code [ref=e1850]: "\"sqlite3\""
+                - text: 时使用的 QueueFS sqlite 数据库路径
+              - cell "null" [ref=e1851]:
+                - code [ref=e1852]: "null"
+            - row "recover_stale_sec int 启动时恢复超过该秒数的 processing 队列消息；0 表示恢复全部 stale processing 消息 0" [ref=e1853]:
+              - cell "recover_stale_sec" [ref=e1854]:
+                - code [ref=e1855]: recover_stale_sec
+              - cell "int" [ref=e1856]
+              - cell "启动时恢复超过该秒数的 processing 队列消息；0 表示恢复全部 stale processing 消息" [ref=e1857]:
+                - text: 启动时恢复超过该秒数的
+                - code [ref=e1858]: processing
+                - text: 队列消息；
+                - code [ref=e1859]: "0"
+                - text: 表示恢复全部 stale processing 消息
+              - cell "0" [ref=e1860]:
+                - code [ref=e1861]: "0"
+            - row "busy_timeout_ms int QueueFS sqlite 的 busy timeout，单位毫秒 5000" [ref=e1862]:
+              - cell "busy_timeout_ms" [ref=e1863]:
+                - code [ref=e1864]: busy_timeout_ms
+              - cell "int" [ref=e1865]
+              - cell "QueueFS sqlite 的 busy timeout，单位毫秒" [ref=e1866]
+              - cell "5000" [ref=e1867]:
+                - code [ref=e1868]: "5000"
+        - paragraph [ref=e1869]: 说明：
+        - list [ref=e1870]:
+          - listitem [ref=e1871]:
+            - text: 即使主 AGFS 存储后端是
+            - code [ref=e1872]: local
+            - text: 、
+            - code [ref=e1873]: s3
+            - text: 或
+            - code [ref=e1874]: memory
+            - text: ，QueueFS 默认仍使用
+            - code [ref=e1875]: sqlite
+            - text: 。
+          - listitem [ref=e1876]:
+            - code [ref=e1877]: mode=shared
+            - text: 会继续使用历史上的全局队列命名空间
+            - code [ref=e1878]: /queue
+            - text: ；
+            - code [ref=e1879]: mode=worker
+            - text: 会为每个 worker 隔离到
+            - code [ref=e1880]: /queue/worker-<index|pid>
+            - text: 。
+          - listitem [ref=e1881]:
+            - code [ref=e1882]: db_path
+            - text: 仅在 QueueFS backend 为
+            - code [ref=e1883]: sqlite
+            - text: 或
+            - code [ref=e1884]: sqlite3
+            - text: 时生效。
+          - listitem [ref=e1885]:
+            - text: 如果同时设置了
+            - code [ref=e1886]: storage.agfs.queuefs.db_path
+            - text: 和旧字段
+            - code [ref=e1887]: storage.agfs.queue_db_path
+            - text: ，以前者为准。
+          - listitem [ref=e1888]:
+            - text: 如果 QueueFS backend 为
+            - code [ref=e1889]: memory
+            - text: ，则
+            - code [ref=e1890]: db_path
+            - text: 和旧字段
+            - code [ref=e1891]: queue_db_path
+            - text: 都会被忽略。
+        - paragraph [ref=e1892]: 示例：
+        - generic [ref=e1893]:
+          - button "Copy Code" [ref=e1894] [cursor=pointer]
+          - generic [ref=e1895]: json
+          - code [ref=e1897]:
+            - generic [ref=e1898]: "{"
+            - generic [ref=e1899]: "\"storage\": {"
+            - generic [ref=e1900]: "\"workspace\": \"./data\","
+            - generic [ref=e1901]: "\"agfs\": {"
+            - generic [ref=e1902]: "\"backend\": \"local\","
+            - generic [ref=e1903]: "\"queuefs\": {"
+            - generic [ref=e1904]: "\"mode\": \"shared\","
+            - generic [ref=e1905]: "\"backend\": \"sqlite\","
+            - generic [ref=e1906]: "\"db_path\": \"./data/_system/queue/custom-queue.db\""
+            - generic [ref=e1907]: "}"
+            - generic [ref=e1908]: "}"
+            - generic [ref=e1909]: "}"
+            - generic [ref=e1910]: "}"
+        - generic [ref=e1911]:
+          - button "Copy Code" [ref=e1912] [cursor=pointer]
+          - generic [ref=e1913]: json
+          - code [ref=e1915]:
+            - generic [ref=e1916]: "{"
+            - generic [ref=e1917]: "\"storage\": {"
+            - generic [ref=e1918]: "\"workspace\": \"./data\","
+            - generic [ref=e1919]: "\"agfs\": {"
+            - generic [ref=e1920]: "\"backend\": \"local\","
+            - generic [ref=e1921]: "\"queuefs\": {"
+            - generic [ref=e1922]: "\"mode\": \"worker\","
+            - generic [ref=e1923]: "\"backend\": \"memory\""
+            - generic [ref=e1924]: "}"
+            - generic [ref=e1925]: "}"
+            - generic [ref=e1926]: "}"
+            - generic [ref=e1927]: "}"
+        - paragraph [ref=e1928]: 旧字段兼容示例：
+        - generic [ref=e1929]:
+          - button "Copy Code" [ref=e1930] [cursor=pointer]
+          - generic [ref=e1931]: json
+          - code [ref=e1933]:
+            - generic [ref=e1934]: "{"
+            - generic [ref=e1935]: "\"storage\": {"
+            - generic [ref=e1936]: "\"workspace\": \"./data\","
+            - generic [ref=e1937]: "\"agfs\": {"
+            - generic [ref=e1938]: "\"backend\": \"local\","
+            - generic [ref=e1939]: "\"queue_db_path\": \"./data/_system/queue/queue.db\""
+            - generic [ref=e1940]: "}"
+            - generic [ref=e1941]: "}"
+            - generic [ref=e1942]: "}"
+        - heading "S3 后端配置 Permalink to \"S3 后端配置\"" [level=5] [ref=e1943]:
+          - text: S3 后端配置
+          - link "Permalink to \"S3 后端配置\"" [ref=e1944] [cursor=pointer]:
+            - /url: "#s3-后端配置"
+            - text: "#"
+        - table [ref=e1945]:
+          - rowgroup [ref=e1946]:
+            - row "参数 类型 说明 默认值" [ref=e1947]:
+              - columnheader "参数" [ref=e1948]
+              - columnheader "类型" [ref=e1949]
+              - columnheader "说明" [ref=e1950]
+              - columnheader "默认值" [ref=e1951]
+          - rowgroup [ref=e1952]:
+            - row "bucket str S3 存储桶名称 null" [ref=e1953]:
+              - cell "bucket" [ref=e1954]:
+                - code [ref=e1955]: bucket
+              - cell "str" [ref=e1956]
+              - cell "S3 存储桶名称" [ref=e1957]
+              - cell "null" [ref=e1958]
+            - row "region str 存储桶所在的 AWS 区域（例如 us-east-1, cn-beijing） null" [ref=e1959]:
+              - cell "region" [ref=e1960]:
+                - code [ref=e1961]: region
+              - cell "str" [ref=e1962]
+              - cell "存储桶所在的 AWS 区域（例如 us-east-1, cn-beijing）" [ref=e1963]
+              - cell "null" [ref=e1964]
+            - row "access_key str S3 访问密钥 ID null" [ref=e1965]:
+              - cell "access_key" [ref=e1966]:
+                - code [ref=e1967]: access_key
+              - cell "str" [ref=e1968]
+              - cell "S3 访问密钥 ID" [ref=e1969]
+              - cell "null" [ref=e1970]
+            - row "secret_key str 与访问密钥 ID 对应的 S3 秘密访问密钥 null" [ref=e1971]:
+              - cell "secret_key" [ref=e1972]:
+                - code [ref=e1973]: secret_key
+              - cell "str" [ref=e1974]
+              - cell "与访问密钥 ID 对应的 S3 秘密访问密钥" [ref=e1975]
+              - cell "null" [ref=e1976]
+            - row "endpoint str 自定义 S3 端点，对于 MinIO 或 LocalStack 等 S3 兼容服务是必需的。可以填完整 URL（https://... 或 http://...），也可以只填主机名；只填主机名时会根据 use_ssl 自动补 https:// 或 http:// null" [ref=e1977]:
+              - cell "endpoint" [ref=e1978]:
+                - code [ref=e1979]: endpoint
+              - cell "str" [ref=e1980]
+              - cell "自定义 S3 端点，对于 MinIO 或 LocalStack 等 S3 兼容服务是必需的。可以填完整 URL（https://... 或 http://...），也可以只填主机名；只填主机名时会根据 use_ssl 自动补 https:// 或 http://" [ref=e1981]:
+                - text: 自定义 S3 端点，对于 MinIO 或 LocalStack 等 S3 兼容服务是必需的。可以填完整 URL（
+                - code [ref=e1982]: https://...
+                - text: 或
+                - code [ref=e1983]: http://...
+                - text: ），也可以只填主机名；只填主机名时会根据
+                - code [ref=e1984]: use_ssl
+                - text: 自动补
+                - code [ref=e1985]: https://
+                - text: 或
+                - code [ref=e1986]: http://
+              - cell "null" [ref=e1987]
+            - row "prefix str 用于命名空间隔离的可选键前缀 \"\"" [ref=e1988]:
+              - cell "prefix" [ref=e1989]:
+                - code [ref=e1990]: prefix
+              - cell "str" [ref=e1991]
+              - cell "用于命名空间隔离的可选键前缀" [ref=e1992]
+              - cell "\"\"" [ref=e1993]
+            - row "use_ssl bool 为 S3 连接启用/禁用 SSL（HTTPS）。也用于决定 endpoint 仅填主机名时自动补的协议前缀 true" [ref=e1994]:
+              - cell "use_ssl" [ref=e1995]:
+                - code [ref=e1996]: use_ssl
+              - cell "bool" [ref=e1997]
+              - cell "为 S3 连接启用/禁用 SSL（HTTPS）。也用于决定 endpoint 仅填主机名时自动补的协议前缀" [ref=e1998]:
+                - text: 为 S3 连接启用/禁用 SSL（HTTPS）。也用于决定
+                - code [ref=e1999]: endpoint
+                - text: 仅填主机名时自动补的协议前缀
+              - cell "true" [ref=e2000]
+            - row "use_path_style bool true 表示对 MinIO 和某些 S3 兼容服务使用 PathStyle；false 表示对 TOS 和某些 S3 兼容服务使用 VirtualHostStyle true" [ref=e2001]:
+              - cell "use_path_style" [ref=e2002]:
+                - code [ref=e2003]: use_path_style
+              - cell "bool" [ref=e2004]
+              - cell "true 表示对 MinIO 和某些 S3 兼容服务使用 PathStyle；false 表示对 TOS 和某些 S3 兼容服务使用 VirtualHostStyle" [ref=e2005]
+              - cell "true" [ref=e2006]
+            - row "auto_detect_content_type bool 上传时根据 object key / 文件名后缀自动推断 MIME 类型，并写入 S3 对象的 Content-Type false" [ref=e2007]:
+              - cell "auto_detect_content_type" [ref=e2008]:
+                - code [ref=e2009]: auto_detect_content_type
+              - cell "bool" [ref=e2010]
+              - cell "上传时根据 object key / 文件名后缀自动推断 MIME 类型，并写入 S3 对象的 Content-Type" [ref=e2011]:
+                - text: 上传时根据 object key / 文件名后缀自动推断 MIME 类型，并写入 S3 对象的
+                - code [ref=e2012]: Content-Type
+              - cell "false" [ref=e2013]
+            - row "directory_marker_mode str 目录 marker 的持久化方式，可选 none、empty、nonempty \"empty\"" [ref=e2014]:
+              - cell "directory_marker_mode" [ref=e2015]:
+                - code [ref=e2016]: directory_marker_mode
+              - cell "str" [ref=e2017]
+              - cell "目录 marker 的持久化方式，可选 none、empty、nonempty" [ref=e2018]:
+                - text: 目录 marker 的持久化方式，可选
+                - code [ref=e2019]: none
+                - text: 、
+                - code [ref=e2020]: empty
+                - text: 、
+                - code [ref=e2021]: nonempty
+              - cell "\"empty\"" [ref=e2022]:
+                - code [ref=e2023]: "\"empty\""
+            - row "normalize_encoding_chars str 需要在 S3 object key 中转义为 !HH 十六进制字节的字符集合；空字符串表示关闭编码 \"?#%+@\"" [ref=e2024]:
+              - cell "normalize_encoding_chars" [ref=e2025]:
+                - code [ref=e2026]: normalize_encoding_chars
+              - cell "str" [ref=e2027]
+              - cell "需要在 S3 object key 中转义为 !HH 十六进制字节的字符集合；空字符串表示关闭编码" [ref=e2028]:
+                - text: 需要在 S3 object key 中转义为
+                - code [ref=e2029]: "!HH"
+                - text: 十六进制字节的字符集合；空字符串表示关闭编码
+              - cell "\"?#%+@\"" [ref=e2030]:
+                - code [ref=e2031]: "\"?#%+@\""
+        - paragraph [ref=e2032]:
+          - code [ref=e2033]: directory_marker_mode
+          - text: 用来控制 RAGFS 在 S3 中如何落目录对象：
+        - list [ref=e2034]:
+          - listitem [ref=e2035]:
+            - code [ref=e2036]: empty
+            - text: 是默认值。RAGFS 会写入 0 字节目录 marker，并保留空目录语义。
+          - listitem [ref=e2037]:
+            - code [ref=e2038]: nonempty
+            - text: 会写入非空目录 marker。对于 TOS 这类拒绝 0 字节目录 marker 的 S3 兼容后端，应使用这个模式。
+          - listitem [ref=e2039]:
+            - code [ref=e2040]: none
+            - text: 会让 RAGFS 采用更接近原生 S3 prefix 的目录语义，不再创建目录 marker 对象。此时空目录不会被持久化，只有目录下至少存在一个子对象后，相关目录才可能被发现。
+        - paragraph [ref=e2041]: 典型选择：
+        - list [ref=e2042]:
+          - listitem [ref=e2043]:
+            - text: 对 MinIO、SeaweedFS 以及大多数 PathStyle 后端，保持默认
+            - code [ref=e2044]: empty
+            - text: 即可。
+          - listitem [ref=e2045]:
+            - text: 对 TOS 或其他拒绝 0 字节目录 marker 的 VirtualHostStyle 后端，使用
+            - code [ref=e2046]: nonempty
+            - text: 。
+          - listitem [ref=e2047]:
+            - text: 如果你想完全使用 prefix 风格行为，并且不需要持久化空目录，可以使用
+            - code [ref=e2048]: none
+            - text: 。
+        - paragraph [ref=e2049]:
+          - code [ref=e2050]: normalize_encoding_chars
+          - text: 用来控制 RAGFS 在发起 S3 请求前需要重写哪些字符：
+        - list [ref=e2051]:
+          - listitem [ref=e2052]:
+            - text: 默认值是
+            - code [ref=e2053]: "\"?#%+@\""
+            - text: ，所以只会转义
+            - code [ref=e2054]: "?"
+            - text: 、
+            - code [ref=e2055]: "#"
+            - text: 、
+            - code [ref=e2056]: "%"
+            - text: 、
+            - code [ref=e2057]: +
+            - text: 、
+            - code [ref=e2058]: "@"
+            - text: 。
+          - listitem [ref=e2059]:
+            - text: 被转义的字节会编码成
+            - code [ref=e2060]: "!HH"
+            - text: ，其中
+            - code [ref=e2061]: HH
+            - text: 是该字节的大写十六进制值。
+          - listitem [ref=e2062]:
+            - text: 没有列在
+            - code [ref=e2063]: normalize_encoding_chars
+            - text: 里的字符，包括中文和其他 Unicode 字符，都会保持原样。
+          - listitem [ref=e2064]:
+            - text: 设为
+            - code [ref=e2065]: "\"\""
+            - text: 时，会在 object key 中保留原始路径段。
+        - paragraph [ref=e2066]:
+          - code [ref=e2067]: auto_detect_content_type
+          - text: 默认关闭，以兼容历史行为。开启后，RAGFS 会根据 object key / 文件名后缀推断 MIME 类型，并写入 S3 对象的
+          - code [ref=e2068]: Content-Type
+          - text: ：
+        - list [ref=e2069]:
+          - listitem [ref=e2070]: 探测依据是 object key / 文件名后缀，不做文件内容 sniff。
+          - listitem [ref=e2071]:
+            - text: key 以
+            - code [ref=e2072]: /
+            - text: 结尾的目录 marker 不会写
+            - code [ref=e2073]: Content-Type
+            - text: 。
+          - listitem [ref=e2074]:
+            - text: 无法识别的后缀会回退到
+            - code [ref=e2075]: application/octet-stream
+            - text: 。
+        - paragraph [ref=e2076]: 示例：
+        - generic [ref=e2077]:
+          - button "Copy Code" [ref=e2078] [cursor=pointer]
+          - generic [ref=e2079]: json
+          - code [ref=e2081]:
+            - generic [ref=e2082]: "{"
+            - generic [ref=e2083]: "\"storage\": {"
+            - generic [ref=e2084]: "\"agfs\": {"
+            - generic [ref=e2085]: "\"backend\": \"s3\","
+            - generic [ref=e2086]: "\"s3\": {"
+            - generic [ref=e2087]: "\"bucket\": \"my-bucket\","
+            - generic [ref=e2088]: "\"endpoint\": \"s3.amazonaws.com\","
+            - generic [ref=e2089]: "\"region\": \"us-east-1\","
+            - generic [ref=e2090]: "\"access_key\": \"your-ak\","
+            - generic [ref=e2091]: "\"secret_key\": \"your-sk\","
+            - generic [ref=e2092]: "\"auto_detect_content_type\": true"
+            - generic [ref=e2093]: "}"
+            - generic [ref=e2094]: "}"
+            - generic [ref=e2095]: "}"
+            - generic [ref=e2096]: "}"
+        - group [ref=e2097]:
+          - generic "PathStyle S3" [ref=e2098]
+          - text: 支持 PathStyle 模式的 S3 存储， 如 MinIO、SeaweedFS.
+        - group [ref=e2099]:
+          - generic "VirtualHostStyle S3" [ref=e2100]
+          - text: 支持 VirtualHostStyle 模式的 S3 存储， 如 TOS.
+        - heading "vectordb Permalink to \"vectordb\"" [level=4] [ref=e2101]:
+          - text: vectordb
+          - link "Permalink to \"vectordb\"" [ref=e2102] [cursor=pointer]:
+            - /url: "#vectordb"
+            - text: "#"
+        - paragraph [ref=e2103]: 向量库存储的配置
+        - table [ref=e2104]:
+          - rowgroup [ref=e2105]:
+            - row "参数 类型 说明 默认值" [ref=e2106]:
+              - columnheader "参数" [ref=e2107]
+              - columnheader "类型" [ref=e2108]
+              - columnheader "说明" [ref=e2109]
+              - columnheader "默认值" [ref=e2110]
+          - rowgroup [ref=e2111]:
+            - 'row "backend str VectorDB 后端类型: ''local''（基于文件）, ''http''（远程服务）, ''volcengine''（云上 VikingDB）, ''vikingdb''（私有部署）, ''qdrant'' 或 ''opengauss'' \"local\"" [ref=e2112]':
+              - cell "backend" [ref=e2113]:
+                - code [ref=e2114]: backend
+              - cell "str" [ref=e2115]
+              - 'cell "VectorDB 后端类型: ''local''（基于文件）, ''http''（远程服务）, ''volcengine''（云上 VikingDB）, ''vikingdb''（私有部署）, ''qdrant'' 或 ''opengauss''" [ref=e2116]'
+              - cell "\"local\"" [ref=e2117]
+            - row "name str VectorDB 的集合名称 \"context\"" [ref=e2118]:
+              - cell "name" [ref=e2119]:
+                - code [ref=e2120]: name
+              - cell "str" [ref=e2121]
+              - cell "VectorDB 的集合名称" [ref=e2122]
+              - cell "\"context\"" [ref=e2123]
+            - row "url str 'http' 类型的远程服务 URL（例如 'http://localhost:5000'） null" [ref=e2124]:
+              - cell "url" [ref=e2125]:
+                - code [ref=e2126]: url
+              - cell "str" [ref=e2127]
+              - cell "'http' 类型的远程服务 URL（例如 'http://localhost:5000'）" [ref=e2128]:
+                - text: "'http' 类型的远程服务 URL（例如 '"
+                - link "http://localhost:5000" [ref=e2129] [cursor=pointer]:
+                  - /url: http://localhost:5000
+                - text: "'）"
+              - cell "null" [ref=e2130]
+            - row "project_name str 项目名称（别名 project） \"default\"" [ref=e2131]:
+              - cell "project_name" [ref=e2132]:
+                - code [ref=e2133]: project_name
+              - cell "str" [ref=e2134]
+              - cell "项目名称（别名 project）" [ref=e2135]
+              - cell "\"default\"" [ref=e2136]
+            - row "distance_metric str 向量相似度搜索的距离度量（例如 'cosine', 'l2', 'ip'） \"cosine\"" [ref=e2137]:
+              - cell "distance_metric" [ref=e2138]:
+                - code [ref=e2139]: distance_metric
+              - cell "str" [ref=e2140]
+              - cell "向量相似度搜索的距离度量（例如 'cosine', 'l2', 'ip'）" [ref=e2141]
+              - cell "\"cosine\"" [ref=e2142]
+            - row "dimension int 向量嵌入的维度 0" [ref=e2143]:
+              - cell "dimension" [ref=e2144]:
+                - code [ref=e2145]: dimension
+              - cell "int" [ref=e2146]
+              - cell "向量嵌入的维度" [ref=e2147]
+              - cell "0" [ref=e2148]
+            - row "sparse_weight float 混合向量搜索的稀疏权重，仅在使用混合索引时生效 0.0" [ref=e2149]:
+              - cell "sparse_weight" [ref=e2150]:
+                - code [ref=e2151]: sparse_weight
+              - cell "float" [ref=e2152]
+              - cell "混合向量搜索的稀疏权重，仅在使用混合索引时生效" [ref=e2153]
+              - cell "0.0" [ref=e2154]
+            - row "volcengine object 'volcengine' 类型的 VikingDB 配置 -" [ref=e2155]:
+              - cell "volcengine" [ref=e2156]:
+                - code [ref=e2157]: volcengine
+              - cell "object" [ref=e2158]
+              - cell "'volcengine' 类型的 VikingDB 配置" [ref=e2159]
+              - cell "-" [ref=e2160]
+            - row "vikingdb object 'vikingdb' 类型的私有部署配置 -" [ref=e2161]:
+              - cell "vikingdb" [ref=e2162]:
+                - code [ref=e2163]: vikingdb
+              - cell "object" [ref=e2164]
+              - cell "'vikingdb' 类型的私有部署配置" [ref=e2165]
+              - cell "-" [ref=e2166]
+            - row "qdrant object 'qdrant' 类型的 Qdrant 配置 -" [ref=e2167]:
+              - cell "qdrant" [ref=e2168]:
+                - code [ref=e2169]: qdrant
+              - cell "object" [ref=e2170]
+              - cell "'qdrant' 类型的 Qdrant 配置" [ref=e2171]
+              - cell "-" [ref=e2172]
+            - row "opengauss object 'opengauss' 原生向量后端配置 -" [ref=e2173]:
+              - cell "opengauss" [ref=e2174]:
+                - code [ref=e2175]: opengauss
+              - cell "object" [ref=e2176]
+              - cell "'opengauss' 原生向量后端配置" [ref=e2177]
+              - cell "-" [ref=e2178]
+        - paragraph [ref=e2179]: 默认使用本地模式
+        - generic [ref=e2180]:
+          - button "Copy Code" [ref=e2181] [cursor=pointer]
+          - code [ref=e2183]:
+            - generic [ref=e2184]: "{"
+            - generic [ref=e2185]: "\"storage\": {"
+            - generic [ref=e2186]: "\"vectordb\": {"
+            - generic [ref=e2187]: "\"backend\": \"local\""
+            - generic [ref=e2188]: "}"
+            - generic [ref=e2189]: "}"
+            - generic [ref=e2190]: "}"
+        - group [ref=e2191]:
+          - generic "volcengine vikingDB" [ref=e2192]
+          - text: 支持火山引擎云上部署的 VikingDB
+        - group [ref=e2193]:
+          - generic "openGauss" [ref=e2194]
+        - heading "配置文件 Permalink to \"配置文件\"" [level=2] [ref=e2195]:
+          - text: 配置文件
+          - link "Permalink to \"配置文件\"" [ref=e2196] [cursor=pointer]:
+            - /url: "#配置文件"
+            - text: "#"
+        - paragraph [ref=e2197]: OpenViking 使用两个配置文件：
+        - table [ref=e2198]:
+          - rowgroup [ref=e2199]:
+            - row "配置文件 用途 默认路径" [ref=e2200]:
+              - columnheader "配置文件" [ref=e2201]
+              - columnheader "用途" [ref=e2202]
+              - columnheader "默认路径" [ref=e2203]
+          - rowgroup [ref=e2204]:
+            - row "ov.conf SDK 嵌入模式 + 服务端配置 ~/.openviking/ov.conf" [ref=e2205]:
+              - cell "ov.conf" [ref=e2206]:
+                - code [ref=e2207]: ov.conf
+              - cell "SDK 嵌入模式 + 服务端配置" [ref=e2208]
+              - cell "~/.openviking/ov.conf" [ref=e2209]:
+                - code [ref=e2210]: ~/.openviking/ov.conf
+            - row "ovcli.conf HTTP 客户端和 CLI 连接远程服务端 ~/.openviking/ovcli.conf" [ref=e2211]:
+              - cell "ovcli.conf" [ref=e2212]:
+                - code [ref=e2213]: ovcli.conf
+              - cell "HTTP 客户端和 CLI 连接远程服务端" [ref=e2214]
+              - cell "~/.openviking/ovcli.conf" [ref=e2215]:
+                - code [ref=e2216]: ~/.openviking/ovcli.conf
+        - paragraph [ref=e2217]: 配置文件放在默认路径时，OpenViking 自动加载，无需额外设置。
+        - paragraph [ref=e2218]: 如果配置文件在其他位置，有两种指定方式：
+        - generic [ref=e2219]:
+          - button "Copy Code" [ref=e2220] [cursor=pointer]
+          - generic [ref=e2221]: bash
+          - code [ref=e2223]:
+            - generic [ref=e2224]: "# 方式一：环境变量"
+            - generic [ref=e2225]: export OPENVIKING_CONFIG_FILE=/path/to/ov.conf
+            - generic [ref=e2226]: export OPENVIKING_CLI_CONFIG_FILE=/path/to/ovcli.conf
+            - generic [ref=e2227]: "# 方式二：命令行参数（仅 serve 命令）"
+            - generic [ref=e2228]: openviking-server --config /path/to/ov.conf
+        - heading "ov.conf Permalink to \"ov.conf\"" [level=3] [ref=e2229]:
+          - text: ov.conf
+          - link "Permalink to \"ov.conf\"" [ref=e2230] [cursor=pointer]:
+            - /url: "#ov-conf"
+            - text: "#"
+        - paragraph [ref=e2231]:
+          - text: 本文档上方各配置段（embedding、vlm、rerank、storage）均属于
+          - code [ref=e2232]: ov.conf
+          - text: 。SDK 嵌入模式和服务端共用此文件。
+        - paragraph [ref=e2233]:
+          - text: 如需配置 memory 相关行为，可在
+          - code [ref=e2234]: ov.conf
+          - text: 中添加
+          - code [ref=e2235]: memory
+          - text: 段：
+        - generic [ref=e2236]:
+          - button "Copy Code" [ref=e2237] [cursor=pointer]
+          - generic [ref=e2238]: json
+          - code [ref=e2240]:
+            - generic [ref=e2241]: "{"
+            - generic [ref=e2242]: "\"memory\": {"
+            - generic [ref=e2243]: "\"version\": \"v2\""
+            - generic [ref=e2244]: "}"
+            - generic [ref=e2245]: "}"
+        - table [ref=e2246]:
+          - rowgroup [ref=e2247]:
+            - row "字段 说明 默认值" [ref=e2248]:
+              - columnheader "字段" [ref=e2249]
+              - columnheader "说明" [ref=e2250]
+              - columnheader "默认值" [ref=e2251]
+          - rowgroup [ref=e2252]:
+            - row "version 记忆实现版本。仅支持 \"v2\"（#2264 已移除旧版 \"v1\"；传入 \"v1\" 会在配置加载时抛出 ValueError）。 \"v2\"" [ref=e2253]:
+              - cell "version" [ref=e2254]:
+                - code [ref=e2255]: version
+              - cell "记忆实现版本。仅支持 \"v2\"（#2264 已移除旧版 \"v1\"；传入 \"v1\" 会在配置加载时抛出 ValueError）。" [ref=e2256]:
+                - text: 记忆实现版本。仅支持
+                - code [ref=e2257]: "\"v2\""
+                - text: （#2264 已移除旧版
+                - code [ref=e2258]: "\"v1\""
+                - text: ；传入
+                - code [ref=e2259]: "\"v1\""
+                - text: 会在配置加载时抛出
+                - code [ref=e2260]: ValueError
+                - text: ）。
+              - cell "\"v2\"" [ref=e2261]:
+                - code [ref=e2262]: "\"v2\""
+        - heading "ovcli.conf Permalink to \"ovcli.conf\"" [level=3] [ref=e2263]:
+          - text: ovcli.conf
+          - link "Permalink to \"ovcli.conf\"" [ref=e2264] [cursor=pointer]:
+            - /url: "#ovcli-conf"
+            - text: "#"
+        - paragraph [ref=e2265]:
+          - text: 你可以手动编辑此文件，也可以用
+          - code [ref=e2266]: ov config
+          - text: 交互式生成。如果你维护着多个服务端的配置，可以用
+          - code [ref=e2267]: ov config switch
+          - text: 在它们之间切换。
+        - paragraph [ref=e2268]:
+          - text: 如需按步骤配置 CLI，请阅读
+          - link "OpenViking CLI 配置指南" [ref=e2269] [cursor=pointer]:
+            - /url: ./../getting-started/05-cli-setup
+          - text: 。
+        - paragraph [ref=e2270]:
+          - text: HTTP 客户端（
+          - code [ref=e2271]: SyncHTTPClient
+          - text: /
+          - code [ref=e2272]: AsyncHTTPClient
+          - text: ）和 CLI 工具连接远程服务端的配置文件：
+        - generic [ref=e2273]:
+          - button "Copy Code" [ref=e2274] [cursor=pointer]
+          - generic [ref=e2275]: json
+          - code [ref=e2277]:
+            - generic [ref=e2278]: "{"
+            - generic [ref=e2279]: "\"url\": \"http://localhost:1933\","
+            - generic [ref=e2280]: "\"api_key\": \"your-secret-key\","
+            - generic [ref=e2281]: "\"profile\": false,"
+            - generic [ref=e2282]: "\"upload\": {"
+            - generic [ref=e2283]: "\"mode\": \"local\","
+            - generic [ref=e2284]: "\"ignore_dirs\": \"node_modules,.cache,.nx\","
+            - generic [ref=e2285]: "\"include\": \"*.md,*.pdf\","
+            - generic [ref=e2286]: "\"exclude\": \"*.tmp,*.log\""
+            - generic [ref=e2287]: "}"
+            - generic [ref=e2288]: "}"
+        - table [ref=e2289]:
+          - rowgroup [ref=e2290]:
+            - row "字段 说明 默认值" [ref=e2291]:
+              - columnheader "字段" [ref=e2292]
+              - columnheader "说明" [ref=e2293]
+              - columnheader "默认值" [ref=e2294]
+          - rowgroup [ref=e2295]:
+            - row "url 服务端地址 （必填）" [ref=e2296]:
+              - cell "url" [ref=e2297]:
+                - code [ref=e2298]: url
+              - cell "服务端地址" [ref=e2299]
+              - cell "（必填）" [ref=e2300]
+            - row "api_key API Key 认证（root key 或 user key） null（无认证）" [ref=e2301]:
+              - cell "api_key" [ref=e2302]:
+                - code [ref=e2303]: api_key
+              - cell "API Key 认证（root key 或 user key）" [ref=e2304]
+              - cell "null（无认证）" [ref=e2305]:
+                - code [ref=e2306]: "null"
+                - text: （无认证）
+            - row "account 可选的 trusted 模式 account 身份 header null" [ref=e2307]:
+              - cell "account" [ref=e2308]:
+                - code [ref=e2309]: account
+              - cell "可选的 trusted 模式 account 身份 header" [ref=e2310]
+              - cell "null" [ref=e2311]:
+                - code [ref=e2312]: "null"
+            - row "user 可选的 trusted 模式 user 身份 header null" [ref=e2313]:
+              - cell "user" [ref=e2314]:
+                - code [ref=e2315]: user
+              - cell "可选的 trusted 模式 user 身份 header" [ref=e2316]
+              - cell "null" [ref=e2317]:
+                - code [ref=e2318]: "null"
+            - row "profile 是否默认给 HTTP 请求追加 profile=1。对 Python HTTP client 和 ov CLI 都生效；也可通过 CLI 的 --profile 单次开启。是否真正生效还取决于服务端是否开启 server.profile_enabled。 false" [ref=e2319]:
+              - cell "profile" [ref=e2320]:
+                - code [ref=e2321]: profile
+              - cell "是否默认给 HTTP 请求追加 profile=1。对 Python HTTP client 和 ov CLI 都生效；也可通过 CLI 的 --profile 单次开启。是否真正生效还取决于服务端是否开启 server.profile_enabled。" [ref=e2322]:
+                - text: 是否默认给 HTTP 请求追加
+                - code [ref=e2323]: profile=1
+                - text: 。对 Python HTTP client 和
+                - code [ref=e2324]: ov
+                - text: CLI 都生效；也可通过 CLI 的
+                - code [ref=e2325]: "--profile"
+                - text: 单次开启。是否真正生效还取决于服务端是否开启
+                - code [ref=e2326]: server.profile_enabled
+                - text: 。
+              - cell "false" [ref=e2327]:
+                - code [ref=e2328]: "false"
+            - row "upload.ignore_dirs add-resource 默认忽略目录列表（CSV） null" [ref=e2329]:
+              - cell "upload.ignore_dirs" [ref=e2330]:
+                - code [ref=e2331]: upload.ignore_dirs
+              - cell "add-resource 默认忽略目录列表（CSV）" [ref=e2332]:
+                - code [ref=e2333]: add-resource
+                - text: 默认忽略目录列表（CSV）
+              - cell "null" [ref=e2334]:
+                - code [ref=e2335]: "null"
+            - row "upload.include add-resource 默认包含模式（CSV） null" [ref=e2336]:
+              - cell "upload.include" [ref=e2337]:
+                - code [ref=e2338]: upload.include
+              - cell "add-resource 默认包含模式（CSV）" [ref=e2339]:
+                - code [ref=e2340]: add-resource
+                - text: 默认包含模式（CSV）
+              - cell "null" [ref=e2341]:
+                - code [ref=e2342]: "null"
+            - row "upload.exclude add-resource 默认排除模式（CSV） null" [ref=e2343]:
+              - cell "upload.exclude" [ref=e2344]:
+                - code [ref=e2345]: upload.exclude
+              - cell "add-resource 默认排除模式（CSV）" [ref=e2346]:
+                - code [ref=e2347]: add-resource
+                - text: 默认排除模式（CSV）
+              - cell "null" [ref=e2348]:
+                - code [ref=e2349]: "null"
+            - row "upload.mode 临时上传后端：\"local\"（仅当前实例本地磁盘）或 \"shared\"（分布式共享存储，当消费请求可能落到不同实例时必需）。可通过 OPENVIKING_UPLOAD_MODE 单次覆盖。 null（使用服务端 temp_upload.default_mode，默认仍为 \"local\"）" [ref=e2350]:
+              - cell "upload.mode" [ref=e2351]:
+                - code [ref=e2352]: upload.mode
+              - cell "临时上传后端：\"local\"（仅当前实例本地磁盘）或 \"shared\"（分布式共享存储，当消费请求可能落到不同实例时必需）。可通过 OPENVIKING_UPLOAD_MODE 单次覆盖。" [ref=e2353]:
+                - text: 临时上传后端：
+                - code [ref=e2354]: "\"local\""
+                - text: （仅当前实例本地磁盘）或
+                - code [ref=e2355]: "\"shared\""
+                - text: （分布式共享存储，当消费请求可能落到不同实例时必需）。可通过
+                - code [ref=e2356]: OPENVIKING_UPLOAD_MODE
+                - text: 单次覆盖。
+              - cell "null（使用服务端 temp_upload.default_mode，默认仍为 \"local\"）" [ref=e2357]:
+                - code [ref=e2358]: "null"
+                - text: （使用服务端
+                - code [ref=e2359]: temp_upload.default_mode
+                - text: ，默认仍为
+                - code [ref=e2360]: "\"local\""
+                - text: ）
+        - paragraph [ref=e2361]:
+          - text: 本地目录上传会默认遵循
+          - code [ref=e2362]: .gitignore
+          - text: （根目录和子目录，含
+          - code [ref=e2363]: "!"
+          - text: 反向规则）。
+          - code [ref=e2364]: ignore_dirs/include/exclude
+          - text: 会在此基础上进一步过滤。
+        - paragraph [ref=e2365]: trusted 网关部署下，也可以在单次命令里用 CLI 参数覆盖这些身份字段：
+        - generic [ref=e2366]:
+          - button "Copy Code" [ref=e2367] [cursor=pointer]
+          - generic [ref=e2368]: bash
+          - code [ref=e2370]:
+            - generic [ref=e2371]: openviking --account acme --user alice ls viking://
+        - paragraph [ref=e2372]:
+          - text: 对于
+          - code [ref=e2373]: add-resource
+          - text: ，上传过滤参数会与
+          - code [ref=e2374]: ovcli.conf
+          - text: 默认值做合并（追加），不会覆盖：
+        - generic [ref=e2375]:
+          - button "Copy Code" [ref=e2376] [cursor=pointer]
+          - generic [ref=e2377]: bash
+          - code [ref=e2379]:
+            - generic [ref=e2380]: "# ovcli.conf: upload.exclude=\"*.log\""
+            - generic [ref=e2381]: openviking add-resource ./docs --exclude "*.tmp"
+            - generic [ref=e2382]: "# 实际发送给服务端的 exclude: \"*.log,*.tmp\""
+        - paragraph [ref=e2383]:
+          - text: 详见
+          - link "服务部署" [ref=e2384] [cursor=pointer]:
+            - /url: ./03-deployment
+          - text: 。
+        - heading "server 段 Permalink to \"server 段\"" [level=2] [ref=e2385]:
+          - text: server 段
+          - link "Permalink to \"server 段\"" [ref=e2386] [cursor=pointer]:
+            - /url: "#server-段"
+            - text: "#"
+        - paragraph [ref=e2387]:
+          - text: 将 OpenViking 作为 HTTP 服务运行时，在
+          - code [ref=e2388]: ov.conf
+          - text: 中添加
+          - code [ref=e2389]: server
+          - text: 段：
+        - generic [ref=e2390]:
+          - button "Copy Code" [ref=e2391] [cursor=pointer]
+          - generic [ref=e2392]: json
+          - code [ref=e2394]:
+            - generic [ref=e2395]: "{"
+            - generic [ref=e2396]: "\"server\": {"
+            - generic [ref=e2397]: "\"host\": \"127.0.0.1\","
+            - generic [ref=e2398]: "\"port\": 1933,"
+            - generic [ref=e2399]: "\"auth_mode\": \"api_key\","
+            - generic [ref=e2400]: "\"root_api_key\": \"your-secret-root-key\","
+            - generic [ref=e2401]: "\"profile_enabled\": false,"
+            - generic [ref=e2402]: "\"cors_origins\": [\"*\"],"
+            - generic [ref=e2403]: "\"public_base_url\": \"https://ov.example.com\","
+            - generic [ref=e2404]: "\"upload_signed_ttl_seconds\": 600,"
+            - generic [ref=e2405]: "\"temp_upload\": {"
+            - generic [ref=e2406]: "\"default_mode\": \"local\","
+            - generic [ref=e2407]: "\"shared_max_size_bytes\": 536870912,"
+            - generic [ref=e2408]: "\"shared_prefix\": \"viking://upload\""
+            - generic [ref=e2409]: "}"
+            - generic [ref=e2410]: "}"
+            - generic [ref=e2411]: "}"
+        - table [ref=e2412]:
+          - rowgroup [ref=e2413]:
+            - row "字段 类型 说明 默认值" [ref=e2414]:
+              - columnheader "字段" [ref=e2415]
+              - columnheader "类型" [ref=e2416]
+              - columnheader "说明" [ref=e2417]
+              - columnheader "默认值" [ref=e2418]
+          - rowgroup [ref=e2419]:
+            - row "host str 绑定地址 127.0.0.1" [ref=e2420]:
+              - cell "host" [ref=e2421]:
+                - code [ref=e2422]: host
+              - cell "str" [ref=e2423]
+              - cell "绑定地址" [ref=e2424]
+              - cell "127.0.0.1" [ref=e2425]:
+                - code [ref=e2426]: 127.0.0.1
+            - row "port int 绑定端口 1933" [ref=e2427]:
+              - cell "port" [ref=e2428]:
+                - code [ref=e2429]: port
+              - cell "int" [ref=e2430]
+              - cell "绑定端口" [ref=e2431]
+              - cell "1933" [ref=e2432]:
+                - code [ref=e2433]: "1933"
+            - row "auth_mode str 认证模式：\"api_key\" 或 \"trusted\"。默认值为 \"api_key\" \"api_key\"" [ref=e2434]:
+              - cell "auth_mode" [ref=e2435]:
+                - code [ref=e2436]: auth_mode
+              - cell "str" [ref=e2437]
+              - cell "认证模式：\"api_key\" 或 \"trusted\"。默认值为 \"api_key\"" [ref=e2438]:
+                - text: 认证模式：
+                - code [ref=e2439]: "\"api_key\""
+                - text: 或
+                - code [ref=e2440]: "\"trusted\""
+                - text: 。默认值为
+                - code [ref=e2441]: "\"api_key\""
+              - cell "\"api_key\"" [ref=e2442]:
+                - code [ref=e2443]: "\"api_key\""
+            - row "root_api_key str Root API Key。在 api_key 模式下启用多租户认证；在 trusted 模式下它只是可选附加保护，不负责解析普通用户身份 null" [ref=e2444]:
+              - cell "root_api_key" [ref=e2445]:
+                - code [ref=e2446]: root_api_key
+              - cell "str" [ref=e2447]
+              - cell "Root API Key。在 api_key 模式下启用多租户认证；在 trusted 模式下它只是可选附加保护，不负责解析普通用户身份" [ref=e2448]:
+                - text: Root API Key。在
+                - code [ref=e2449]: api_key
+                - text: 模式下启用多租户认证；在
+                - code [ref=e2450]: trusted
+                - text: 模式下它只是可选附加保护，不负责解析普通用户身份
+              - cell "null" [ref=e2451]:
+                - code [ref=e2452]: "null"
+            - row "profile_enabled bool 是否允许 HTTP 请求通过 profile=1 开启请求级 cProfile。关闭时服务端会忽略该请求参数；开启后，CLI 可以显示返回的 profile，而 Python HTTP client 默认只触发服务端 profile，不会把顶层 profile 字段自动附着到大多数 SDK 返回值上。 false" [ref=e2453]:
+              - cell "profile_enabled" [ref=e2454]:
+                - code [ref=e2455]: profile_enabled
+              - cell "bool" [ref=e2456]
+              - cell "是否允许 HTTP 请求通过 profile=1 开启请求级 cProfile。关闭时服务端会忽略该请求参数；开启后，CLI 可以显示返回的 profile，而 Python HTTP client 默认只触发服务端 profile，不会把顶层 profile 字段自动附着到大多数 SDK 返回值上。" [ref=e2457]:
+                - text: 是否允许 HTTP 请求通过
+                - code [ref=e2458]: profile=1
+                - text: 开启请求级 cProfile。关闭时服务端会忽略该请求参数；开启后，CLI 可以显示返回的
+                - code [ref=e2459]: profile
+                - text: ，而 Python HTTP client 默认只触发服务端 profile，不会把顶层
+                - code [ref=e2460]: profile
+                - text: 字段自动附着到大多数 SDK 返回值上。
+              - cell "false" [ref=e2461]:
+                - code [ref=e2462]: "false"
+            - row "cors_origins list CORS 允许的来源 [\"*\"]" [ref=e2463]:
+              - cell "cors_origins" [ref=e2464]:
+                - code [ref=e2465]: cors_origins
+              - cell "list" [ref=e2466]
+              - cell "CORS 允许的来源" [ref=e2467]
+              - cell "[\"*\"]" [ref=e2468]:
+                - code [ref=e2469]: "[\"*\"]"
+            - row "public_base_url str MCP add_resource 工具向客户端返回的上传指令里使用的对外可见 base URL。解析顺序：环境变量 OPENVIKING_PUBLIC_BASE_URL → 本字段 → 请求头 X-Forwarded-Host / X-Forwarded-Proto → 请求头 Host → 监听地址兜底。当 server 部署在反向代理后且代理不转发 X-Forwarded-* 时，请显式设置本字段（或环境变量）。 null" [ref=e2470]:
+              - cell "public_base_url" [ref=e2471]:
+                - code [ref=e2472]: public_base_url
+              - cell "str" [ref=e2473]
+              - cell "MCP add_resource 工具向客户端返回的上传指令里使用的对外可见 base URL。解析顺序：环境变量 OPENVIKING_PUBLIC_BASE_URL → 本字段 → 请求头 X-Forwarded-Host / X-Forwarded-Proto → 请求头 Host → 监听地址兜底。当 server 部署在反向代理后且代理不转发 X-Forwarded-* 时，请显式设置本字段（或环境变量）。" [ref=e2474]:
+                - text: MCP
+                - code [ref=e2475]: add_resource
+                - text: 工具向客户端返回的上传指令里使用的对外可见 base URL。解析顺序：环境变量
+                - code [ref=e2476]: OPENVIKING_PUBLIC_BASE_URL
+                - text: → 本字段 → 请求头
+                - code [ref=e2477]: X-Forwarded-Host
+                - text: /
+                - code [ref=e2478]: X-Forwarded-Proto
+                - text: → 请求头
+                - code [ref=e2479]: Host
+                - text: → 监听地址兜底。当 server 部署在反向代理后且代理不转发
+                - code [ref=e2480]: X-Forwarded-*
+                - text: 时，请显式设置本字段（或环境变量）。
+              - cell "null" [ref=e2481]:
+                - code [ref=e2482]: "null"
+            - row "upload_signed_ttl_seconds int MCP add_resource 为本地文件上传 mint 的一次性 token 在签名端点 POST /api/v1/resources/temp_upload_signed 上的过期时间（秒）。 600（10 分钟）" [ref=e2483]:
+              - cell "upload_signed_ttl_seconds" [ref=e2484]:
+                - code [ref=e2485]: upload_signed_ttl_seconds
+              - cell "int" [ref=e2486]
+              - cell "MCP add_resource 为本地文件上传 mint 的一次性 token 在签名端点 POST /api/v1/resources/temp_upload_signed 上的过期时间（秒）。" [ref=e2487]:
+                - text: MCP
+                - code [ref=e2488]: add_resource
+                - text: 为本地文件上传 mint 的一次性 token 在签名端点
+                - code [ref=e2489]: POST /api/v1/resources/temp_upload_signed
+                - text: 上的过期时间（秒）。
+              - cell "600（10 分钟）" [ref=e2490]:
+                - code [ref=e2491]: "600"
+                - text: （10 分钟）
+            - row "temp_upload.default_mode str POST /api/v1/resources/temp_upload 的服务端默认模式（客户端未显式传 upload_mode 时使用）：\"local\"（仅当前实例本地磁盘，单机默认行为）或 \"shared\"（分布式共享存储，多副本部署可跨实例消费）。 \"local\"" [ref=e2492]:
+              - cell "temp_upload.default_mode" [ref=e2493]:
+                - code [ref=e2494]: temp_upload.default_mode
+              - cell "str" [ref=e2495]
+              - cell "POST /api/v1/resources/temp_upload 的服务端默认模式（客户端未显式传 upload_mode 时使用）：\"local\"（仅当前实例本地磁盘，单机默认行为）或 \"shared\"（分布式共享存储，多副本部署可跨实例消费）。" [ref=e2496]:
+                - code [ref=e2497]: POST /api/v1/resources/temp_upload
+                - text: 的服务端默认模式（客户端未显式传
+                - code [ref=e2498]: upload_mode
+                - text: 时使用）：
+                - code [ref=e2499]: "\"local\""
+                - text: （仅当前实例本地磁盘，单机默认行为）或
+                - code [ref=e2500]: "\"shared\""
+                - text: （分布式共享存储，多副本部署可跨实例消费）。
+              - cell "\"local\"" [ref=e2501]:
+                - code [ref=e2502]: "\"local\""
+            - row "temp_upload.shared_max_size_bytes int shared 模式下接受的最大文件大小（字节）。超过此阈值的请求会在写入对象存储之前被拒绝。 536870912（512 MiB）" [ref=e2503]:
+              - cell "temp_upload.shared_max_size_bytes" [ref=e2504]:
+                - code [ref=e2505]: temp_upload.shared_max_size_bytes
+              - cell "int" [ref=e2506]
+              - cell "shared 模式下接受的最大文件大小（字节）。超过此阈值的请求会在写入对象存储之前被拒绝。" [ref=e2507]:
+                - code [ref=e2508]: shared
+                - text: 模式下接受的最大文件大小（字节）。超过此阈值的请求会在写入对象存储之前被拒绝。
+              - cell "536870912（512 MiB）" [ref=e2509]:
+                - code [ref=e2510]: "536870912"
+                - text: （512 MiB）
+            - row "temp_upload.shared_prefix str 分配 shared temp_file_id 对象时使用的 URI 前缀。 \"viking://upload\"" [ref=e2511]:
+              - cell "temp_upload.shared_prefix" [ref=e2512]:
+                - code [ref=e2513]: temp_upload.shared_prefix
+              - cell "str" [ref=e2514]
+              - cell "分配 shared temp_file_id 对象时使用的 URI 前缀。" [ref=e2515]:
+                - text: 分配 shared
+                - code [ref=e2516]: temp_file_id
+                - text: 对象时使用的 URI 前缀。
+              - cell "\"viking://upload\"" [ref=e2517]:
+                - code [ref=e2518]: "\"viking://upload\""
+        - paragraph [ref=e2519]:
+          - code [ref=e2520]: api_key
+          - text: 模式使用 API Key 认证，也是默认模式；
+          - code [ref=e2521]: trusted
+          - text: 模式信任上游网关或受信调用方注入的
+          - code [ref=e2522]: X-OpenViking-Account
+          - text: /
+          - code [ref=e2523]: X-OpenViking-User
+          - text: 请求头。
+        - paragraph [ref=e2524]:
+          - text: 在
+          - code [ref=e2525]: api_key
+          - text: 模式下配置
+          - code [ref=e2526]: root_api_key
+          - text: 后，服务端启用正式多租户认证，并通过 Admin API 创建工作区和用户 key。在
+          - code [ref=e2527]: trusted
+          - text: 模式下，普通请求不需要先注册 user key；每个请求都会根据注入的身份头解析成
+          - code [ref=e2528]: USER
+          - text: 。只有在
+          - code [ref=e2529]: auth_mode = "api_key"
+          - text: 且未配置
+          - code [ref=e2530]: root_api_key
+          - text: 时，服务端才会进入开发模式。
+        - paragraph [ref=e2531]:
+          - text: 启动方式和部署详情见
+          - link "服务部署" [ref=e2532] [cursor=pointer]:
+            - /url: ./03-deployment
+          - text: ，认证详情见
+          - link "认证" [ref=e2533] [cursor=pointer]:
+            - /url: ./04-authentication
+          - text: 。
+        - heading "encryption 段 Permalink to \"encryption 段\"" [level=2] [ref=e2534]:
+          - text: encryption 段
+          - link "Permalink to \"encryption 段\"" [ref=e2535] [cursor=pointer]:
+            - /url: "#encryption-段"
+            - text: "#"
+        - paragraph [ref=e2536]: 启用静态数据加密，确保多租户环境下的数据安全与隔离。加密功能对用户完全透明，API 无变化。
+        - generic [ref=e2537]:
+          - button "Copy Code" [ref=e2538] [cursor=pointer]
+          - generic [ref=e2539]: json
+          - code [ref=e2541]:
+            - generic [ref=e2542]: "{"
+            - generic [ref=e2543]: "\"encryption\": {"
+            - generic [ref=e2544]: "\"enabled\": true,"
+            - generic [ref=e2545]: "\"provider\": \"local|vault|volcengine_kms\""
+            - generic [ref=e2546]: "}"
+            - generic [ref=e2547]: "}"
+        - table [ref=e2548]:
+          - rowgroup [ref=e2549]:
+            - row "参数 类型 说明 默认值" [ref=e2550]:
+              - columnheader "参数" [ref=e2551]
+              - columnheader "类型" [ref=e2552]
+              - columnheader "说明" [ref=e2553]
+              - columnheader "默认值" [ref=e2554]
+          - rowgroup [ref=e2555]:
+            - row "enabled bool 是否启用加密 false" [ref=e2556]:
+              - cell "enabled" [ref=e2557]:
+                - code [ref=e2558]: enabled
+              - cell "bool" [ref=e2559]
+              - cell "是否启用加密" [ref=e2560]
+              - cell "false" [ref=e2561]:
+                - code [ref=e2562]: "false"
+            - row "provider str 密钥提供程序：\"local\"、\"vault\" 或 \"volcengine_kms\" -" [ref=e2563]:
+              - cell "provider" [ref=e2564]:
+                - code [ref=e2565]: provider
+              - cell "str" [ref=e2566]
+              - cell "密钥提供程序：\"local\"、\"vault\" 或 \"volcengine_kms\"" [ref=e2567]:
+                - text: 密钥提供程序：
+                - code [ref=e2568]: "\"local\""
+                - text: 、
+                - code [ref=e2569]: "\"vault\""
+                - text: 或
+                - code [ref=e2570]: "\"volcengine_kms\""
+              - cell "-" [ref=e2571]
+            - row "api_key_hashing.enabled bool 是否对 API key 字段启用 Argon2id 单向哈希（与文件级 enabled 独立控制），详见 加密指南 false" [ref=e2572]:
+              - cell "api_key_hashing.enabled" [ref=e2573]:
+                - code [ref=e2574]: api_key_hashing.enabled
+              - cell "bool" [ref=e2575]
+              - cell "是否对 API key 字段启用 Argon2id 单向哈希（与文件级 enabled 独立控制），详见 加密指南" [ref=e2576]:
+                - text: 是否对 API key 字段启用 Argon2id 单向哈希（与文件级
+                - code [ref=e2577]: enabled
+                - text: 独立控制），详见
+                - link "加密指南" [ref=e2578] [cursor=pointer]:
+                  - /url: ./08-encryption
+              - cell "false" [ref=e2579]:
+                - code [ref=e2580]: "false"
+        - heading "Local（本地文件） Permalink to \"Local（本地文件）\"" [level=3] [ref=e2581]:
+          - text: Local（本地文件）
+          - link "Permalink to \"Local（本地文件）\"" [ref=e2582] [cursor=pointer]:
+            - /url: "#local-本地文件"
+            - text: "#"
+        - paragraph [ref=e2583]: 适合开发环境和单节点部署：
+        - generic [ref=e2584]:
+          - button "Copy Code" [ref=e2585] [cursor=pointer]
+          - generic [ref=e2586]: json
+          - code [ref=e2588]:
+            - generic [ref=e2589]: "{"
+            - generic [ref=e2590]: "\"encryption\": {"
+            - generic [ref=e2591]: "\"enabled\": true,"
+            - generic [ref=e2592]: "\"provider\": \"local\","
+            - generic [ref=e2593]: "\"local\": {"
+            - generic [ref=e2594]: "\"key_file\": \"~/.openviking/master.key\""
+            - generic [ref=e2595]: "}"
+            - generic [ref=e2596]: "}"
+            - generic [ref=e2597]: "}"
+        - table [ref=e2598]:
+          - rowgroup [ref=e2599]:
+            - row "参数 类型 说明 默认值" [ref=e2600]:
+              - columnheader "参数" [ref=e2601]
+              - columnheader "类型" [ref=e2602]
+              - columnheader "说明" [ref=e2603]
+              - columnheader "默认值" [ref=e2604]
+          - rowgroup [ref=e2605]:
+            - row "local.key_file str 根密钥文件路径 ~/.openviking/master.key" [ref=e2606]:
+              - cell "local.key_file" [ref=e2607]:
+                - code [ref=e2608]: local.key_file
+              - cell "str" [ref=e2609]
+              - cell "根密钥文件路径" [ref=e2610]
+              - cell "~/.openviking/master.key" [ref=e2611]:
+                - code [ref=e2612]: ~/.openviking/master.key
+        - heading "Vault（HashiCorp Vault） Permalink to \"Vault（HashiCorp Vault）\"" [level=3] [ref=e2613]:
+          - text: Vault（HashiCorp Vault）
+          - link "Permalink to \"Vault（HashiCorp Vault）\"" [ref=e2614] [cursor=pointer]:
+            - /url: "#vault-hashicorp-vault"
+            - text: "#"
+        - paragraph [ref=e2615]: 适合生产环境和多云部署：
+        - generic [ref=e2616]:
+          - button "Copy Code" [ref=e2617] [cursor=pointer]
+          - generic [ref=e2618]: json
+          - code [ref=e2620]:
+            - generic [ref=e2621]: "{"
+            - generic [ref=e2622]: "\"encryption\": {"
+            - generic [ref=e2623]: "\"enabled\": true,"
+            - generic [ref=e2624]: "\"provider\": \"vault\","
+            - generic [ref=e2625]: "\"vault\": {"
+            - generic [ref=e2626]: "\"address\": \"https://vault.example.com:8200\","
+            - generic [ref=e2627]: "\"token\": \"vault-token-xxx\","
+            - generic [ref=e2628]: "\"mount_point\": \"transit\","
+            - generic [ref=e2629]: "\"key_name\": \"openviking-root\""
+            - generic [ref=e2630]: "}"
+            - generic [ref=e2631]: "}"
+            - generic [ref=e2632]: "}"
+        - table [ref=e2633]:
+          - rowgroup [ref=e2634]:
+            - row "参数 类型 说明 默认值" [ref=e2635]:
+              - columnheader "参数" [ref=e2636]
+              - columnheader "类型" [ref=e2637]
+              - columnheader "说明" [ref=e2638]
+              - columnheader "默认值" [ref=e2639]
+          - rowgroup [ref=e2640]:
+            - row "vault.address str Vault 服务地址 -" [ref=e2641]:
+              - cell "vault.address" [ref=e2642]:
+                - code [ref=e2643]: vault.address
+              - cell "str" [ref=e2644]
+              - cell "Vault 服务地址" [ref=e2645]
+              - cell "-" [ref=e2646]
+            - row "vault.token str Vault 访问令牌 -" [ref=e2647]:
+              - cell "vault.token" [ref=e2648]:
+                - code [ref=e2649]: vault.token
+              - cell "str" [ref=e2650]
+              - cell "Vault 访问令牌" [ref=e2651]
+              - cell "-" [ref=e2652]
+            - row "vault.mount_point str Transit 引擎挂载点 \"transit\"" [ref=e2653]:
+              - cell "vault.mount_point" [ref=e2654]:
+                - code [ref=e2655]: vault.mount_point
+              - cell "str" [ref=e2656]
+              - cell "Transit 引擎挂载点" [ref=e2657]
+              - cell "\"transit\"" [ref=e2658]:
+                - code [ref=e2659]: "\"transit\""
+            - row "vault.key_name str 根密钥名称 \"openviking-root\"" [ref=e2660]:
+              - cell "vault.key_name" [ref=e2661]:
+                - code [ref=e2662]: vault.key_name
+              - cell "str" [ref=e2663]
+              - cell "根密钥名称" [ref=e2664]
+              - cell "\"openviking-root\"" [ref=e2665]:
+                - code [ref=e2666]: "\"openviking-root\""
+        - heading "Volcengine KMS（火山引擎） Permalink to \"Volcengine KMS（火山引擎）\"" [level=3] [ref=e2667]:
+          - text: Volcengine KMS（火山引擎）
+          - link "Permalink to \"Volcengine KMS（火山引擎）\"" [ref=e2668] [cursor=pointer]:
+            - /url: "#volcengine-kms-火山引擎"
+            - text: "#"
+        - paragraph [ref=e2669]: 适合火山引擎云部署：
+        - generic [ref=e2670]:
+          - button "Copy Code" [ref=e2671] [cursor=pointer]
+          - generic [ref=e2672]: json
+          - code [ref=e2674]:
+            - generic [ref=e2675]: "{"
+            - generic [ref=e2676]: "\"encryption\": {"
+            - generic [ref=e2677]: "\"enabled\": true,"
+            - generic [ref=e2678]: "\"provider\": \"volcengine_kms\","
+            - generic [ref=e2679]: "\"volcengine_kms\": {"
+            - generic [ref=e2680]: "\"key_id\": \"kms-key-id-xxx\","
+            - generic [ref=e2681]: "\"region\": \"cn-beijing\","
+            - generic [ref=e2682]: "\"access_key\": \"AKLTxxxxxxxx\","
+            - generic [ref=e2683]: "\"secret_key\": \"Tmpxxxxxxxx\""
+            - generic [ref=e2684]: "}"
+            - generic [ref=e2685]: "}"
+            - generic [ref=e2686]: "}"
+        - table [ref=e2687]:
+          - rowgroup [ref=e2688]:
+            - row "参数 类型 说明 默认值" [ref=e2689]:
+              - columnheader "参数" [ref=e2690]
+              - columnheader "类型" [ref=e2691]
+              - columnheader "说明" [ref=e2692]
+              - columnheader "默认值" [ref=e2693]
+          - rowgroup [ref=e2694]:
+            - row "volcengine_kms.key_id str KMS 密钥 ID -" [ref=e2695]:
+              - cell "volcengine_kms.key_id" [ref=e2696]:
+                - code [ref=e2697]: volcengine_kms.key_id
+              - cell "str" [ref=e2698]
+              - cell "KMS 密钥 ID" [ref=e2699]
+              - cell "-" [ref=e2700]
+            - row "volcengine_kms.region str 区域 \"cn-beijing\"" [ref=e2701]:
+              - cell "volcengine_kms.region" [ref=e2702]:
+                - code [ref=e2703]: volcengine_kms.region
+              - cell "str" [ref=e2704]
+              - cell "区域" [ref=e2705]
+              - cell "\"cn-beijing\"" [ref=e2706]:
+                - code [ref=e2707]: "\"cn-beijing\""
+            - row "volcengine_kms.access_key str 火山引擎 Access Key -" [ref=e2708]:
+              - cell "volcengine_kms.access_key" [ref=e2709]:
+                - code [ref=e2710]: volcengine_kms.access_key
+              - cell "str" [ref=e2711]
+              - cell "火山引擎 Access Key" [ref=e2712]
+              - cell "-" [ref=e2713]
+            - row "volcengine_kms.secret_key str 火山引擎 Secret Key -" [ref=e2714]:
+              - cell "volcengine_kms.secret_key" [ref=e2715]:
+                - code [ref=e2716]: volcengine_kms.secret_key
+              - cell "str" [ref=e2717]
+              - cell "火山引擎 Secret Key" [ref=e2718]
+              - cell "-" [ref=e2719]
+        - paragraph [ref=e2720]:
+          - text: 加密功能的详细说明见
+          - link "数据加密" [ref=e2721] [cursor=pointer]:
+            - /url: ./../concepts/10-encryption
+          - text: ，完整使用流程见
+          - link "加密指南" [ref=e2722] [cursor=pointer]:
+            - /url: ./08-encryption
+          - text: 。
+        - heading "storage.transaction 段 Permalink to \"storage.transaction 段\"" [level=2] [ref=e2723]:
+          - text: storage.transaction 段
+          - link "Permalink to \"storage.transaction 段\"" [ref=e2724] [cursor=pointer]:
+            - /url: "#storage-transaction-段"
+            - text: "#"
+        - paragraph [ref=e2725]:
+          - text: 路径锁默认启用，通常无需配置。
+          - strong [ref=e2726]: 默认行为是不等待
+          - text: ：若目标路径已被其他操作锁定，操作立即失败并抛出
+          - code [ref=e2727]: LockAcquisitionError
+          - text: 。若需要等待重试，请将
+          - code [ref=e2728]: lock_timeout
+          - text: 设为正数。
+        - generic [ref=e2729]:
+          - button "Copy Code" [ref=e2730] [cursor=pointer]
+          - generic [ref=e2731]: json
+          - code [ref=e2733]:
+            - generic [ref=e2734]: "{"
+            - generic [ref=e2735]: "\"storage\": {"
+            - generic [ref=e2736]: "\"transaction\": {"
+            - generic [ref=e2737]: "\"lock_timeout\": 5.0,"
+            - generic [ref=e2738]: "\"lock_expire\": 300.0"
+            - generic [ref=e2739]: "}"
+            - generic [ref=e2740]: "}"
+            - generic [ref=e2741]: "}"
+        - table [ref=e2742]:
+          - rowgroup [ref=e2743]:
+            - row "参数 类型 说明 默认值" [ref=e2744]:
+              - columnheader "参数" [ref=e2745]
+              - columnheader "类型" [ref=e2746]
+              - columnheader "说明" [ref=e2747]
+              - columnheader "默认值" [ref=e2748]
+          - rowgroup [ref=e2749]:
+            - row "lock_timeout float 获取路径锁的等待超时（秒）。0 = 立即失败（默认）；> 0 = 最多等待此时间后抛出 LockAcquisitionError 0.0" [ref=e2750]:
+              - cell "lock_timeout" [ref=e2751]:
+                - code [ref=e2752]: lock_timeout
+              - cell "float" [ref=e2753]
+              - cell "获取路径锁的等待超时（秒）。0 = 立即失败（默认）；> 0 = 最多等待此时间后抛出 LockAcquisitionError" [ref=e2754]:
+                - text: 获取路径锁的等待超时（秒）。
+                - code [ref=e2755]: "0"
+                - text: = 立即失败（默认）；
+                - code [ref=e2756]: "> 0"
+                - text: = 最多等待此时间后抛出
+                - code [ref=e2757]: LockAcquisitionError
+              - cell "0.0" [ref=e2758]:
+                - code [ref=e2759]: "0.0"
+            - row "lock_expire float 锁失活阈值（秒）。超过此时间未被 refresh 的锁会被视为陈旧锁并回收 300.0" [ref=e2760]:
+              - cell "lock_expire" [ref=e2761]:
+                - code [ref=e2762]: lock_expire
+              - cell "float" [ref=e2763]
+              - cell "锁失活阈值（秒）。超过此时间未被 refresh 的锁会被视为陈旧锁并回收" [ref=e2764]
+              - cell "300.0" [ref=e2765]:
+                - code [ref=e2766]: "300.0"
+        - paragraph [ref=e2767]:
+          - text: 路径锁机制的详细说明见
+          - link "路径锁与崩溃恢复" [ref=e2768] [cursor=pointer]:
+            - /url: ./../concepts/09-transaction
+          - text: 。
+        - heading "Task Tracker 持久化 Permalink to \"Task Tracker 持久化\"" [level=2] [ref=e2769]:
+          - text: Task Tracker 持久化
+          - link "Permalink to \"Task Tracker 持久化\"" [ref=e2770] [cursor=pointer]:
+            - /url: "#task-tracker-持久化"
+            - text: "#"
+        - paragraph [ref=e2771]:
+          - text: 任务跟踪器记录异步任务状态，适用于返回
+          - code [ref=e2772]: task_id
+          - text: 的接口（任务类型包括
+          - code [ref=e2773]: session_commit
+          - text: 、
+          - code [ref=e2774]: add_resource
+          - text: 、
+          - code [ref=e2775]: add_skill
+          - text: 、
+          - code [ref=e2776]: admin_reindex
+          - text: ）。Task 记录始终持久化到 AGFS，因此一个实例返回的
+          - code [ref=e2777]: task_id
+          - text: 可以在另一个实例上查询，任务历史也能在重启后继续访问。
+        - paragraph [ref=e2778]:
+          - text: 无需配置
+          - code [ref=e2779]: storage.task_tracker
+          - text: 。如果旧配置里仍包含
+          - code [ref=e2780]: storage.task_tracker
+          - text: ，OpenViking 会记录 warning 并忽略它。
+        - paragraph [ref=e2781]: Task 记录文件位于所属账号的系统目录：
+        - generic [ref=e2782]:
+          - button "Copy Code" [ref=e2783] [cursor=pointer]
+          - generic [ref=e2784]: text
+          - code [ref=e2786]:
+            - generic [ref=e2787]: "/local/{account_id}/_system/tasks/{user_id}/{task_id}.json"
+        - heading "完整 Schema Permalink to \"完整 Schema\"" [level=2] [ref=e2788]:
+          - text: 完整 Schema
+          - link "Permalink to \"完整 Schema\"" [ref=e2789] [cursor=pointer]:
+            - /url: "#完整-schema"
+            - text: "#"
+        - generic [ref=e2790]:
+          - button "Copy Code" [ref=e2791] [cursor=pointer]
+          - generic [ref=e2792]: json
+          - code [ref=e2794]:
+            - generic [ref=e2795]: "{"
+            - generic [ref=e2796]: "\"embedding\": {"
+            - generic [ref=e2797]: "\"max_concurrent\": 10,"
+            - generic [ref=e2798]: "\"max_retries\": 3,"
+            - generic [ref=e2799]: "\"text_source\": \"content_only\","
+            - generic [ref=e2800]: "\"max_input_tokens\": 4096,"
+            - generic [ref=e2801]: "\"dense\": {"
+            - generic [ref=e2802]: "\"provider\": \"volcengine\","
+            - generic [ref=e2803]: "\"api_key\": \"string\","
+            - generic [ref=e2804]: "\"model\": \"string\","
+            - generic [ref=e2805]: "\"dimension\": 1024,"
+            - generic [ref=e2806]: "\"input\": \"multimodal\","
+            - generic [ref=e2807]: "\"encoding_format\": \"float|base64\""
+            - generic [ref=e2808]: "}"
+            - generic [ref=e2809]: "},"
+            - generic [ref=e2810]: "\"vlm\": {"
+            - generic [ref=e2811]: "\"provider\": \"string\","
+            - generic [ref=e2812]: "\"api_key\": \"string\","
+            - generic [ref=e2813]: "\"model\": \"string\","
+            - generic [ref=e2814]: "\"api_base\": \"string\","
+            - generic [ref=e2815]: "\"thinking\": false,"
+            - generic [ref=e2816]: "\"max_concurrent\": 64,"
+            - generic [ref=e2817]: "\"max_retries\": 3,"
+            - generic [ref=e2818]: "\"extra_headers\": {},"
+            - generic [ref=e2819]: "\"extra_request_body\": {},"
+            - generic [ref=e2820]: "\"stream\": false"
+            - generic [ref=e2821]: "},"
+            - generic [ref=e2822]: "\"rerank\": {"
+            - generic [ref=e2823]: "\"provider\": \"volcengine|openai\","
+            - generic [ref=e2824]: "\"api_key\": \"string\","
+            - generic [ref=e2825]: "\"model\": \"string\","
+            - generic [ref=e2826]: "\"api_base\": \"string\","
+            - generic [ref=e2827]: "\"threshold\": 0.1,"
+            - generic [ref=e2828]: "\"extra_headers\": {}"
+            - generic [ref=e2829]: "},"
+            - generic [ref=e2830]: "\"retrieval\": {"
+            - generic [ref=e2831]: "\"hotness_alpha\": 0.0,"
+            - generic [ref=e2832]: "\"score_propagation_alpha\": 1.0"
+            - generic [ref=e2833]: "},"
+            - generic [ref=e2834]: "\"encryption\": {"
+            - generic [ref=e2835]: "\"enabled\": false,"
+            - generic [ref=e2836]: "\"provider\": \"local|vault|volcengine_kms\","
+            - generic [ref=e2837]: "\"local\": {"
+            - generic [ref=e2838]: "\"key_file\": \"~/.openviking/master.key\""
+            - generic [ref=e2839]: "},"
+            - generic [ref=e2840]: "\"vault\": {"
+            - generic [ref=e2841]: "\"address\": \"https://vault.example.com:8200\","
+            - generic [ref=e2842]: "\"token\": \"string\","
+            - generic [ref=e2843]: "\"mount_point\": \"transit\","
+            - generic [ref=e2844]: "\"key_name\": \"openviking-root\""
+            - generic [ref=e2845]: "},"
+            - generic [ref=e2846]: "\"volcengine_kms\": {"
+            - generic [ref=e2847]: "\"key_id\": \"string\","
+            - generic [ref=e2848]: "\"region\": \"cn-beijing\","
+            - generic [ref=e2849]: "\"access_key\": \"string\","
+            - generic [ref=e2850]: "\"secret_key\": \"string\""
+            - generic [ref=e2851]: "}"
+            - generic [ref=e2852]: "},"
+            - generic [ref=e2853]: "\"storage\": {"
+            - generic [ref=e2854]: "\"workspace\": \"string\","
+            - generic [ref=e2855]: "\"agfs\": {"
+            - generic [ref=e2856]: "\"backend\": \"local|s3|memory\","
+            - generic [ref=e2857]: "\"timeout\": 10"
+            - generic [ref=e2858]: "},"
+            - generic [ref=e2859]: "\"transaction\": {"
+            - generic [ref=e2860]: "\"lock_timeout\": 0.0,"
+            - generic [ref=e2861]: "\"lock_expire\": 300.0"
+            - generic [ref=e2862]: "},"
+            - generic [ref=e2863]: "\"vectordb\": {"
+            - generic [ref=e2864]: "\"backend\": \"local|remote\","
+            - generic [ref=e2865]: "\"url\": \"string\","
+            - generic [ref=e2866]: "\"project\": \"string\""
+            - generic [ref=e2867]: "}"
+            - generic [ref=e2868]: "},"
+            - generic [ref=e2869]: "\"code\": {"
+            - generic [ref=e2870]: "\"code_summary_mode\": \"ast\""
+            - generic [ref=e2871]: "},"
+            - generic [ref=e2872]: "\"server\": {"
+            - generic [ref=e2873]: "\"host\": \"string\","
+            - generic [ref=e2874]: "\"port\": 1933,"
+            - generic [ref=e2875]: "\"root_api_key\": \"string\","
+            - generic [ref=e2876]: "\"cors_origins\": [\"string\"]"
+            - generic [ref=e2877]: "}"
+            - generic [ref=e2878]: "}"
+        - paragraph [ref=e2879]: 说明：
+        - list [ref=e2880]:
+          - listitem [ref=e2881]:
+            - code [ref=e2882]: storage.vectordb.sparse_weight
+            - text: 用于混合（dense + sparse）索引/检索的权重，仅在使用 hybrid 索引时生效；设置为 > 0 才会启用 sparse 信号。
+        - heading "故障排除 Permalink to \"故障排除\"" [level=2] [ref=e2883]:
+          - text: 故障排除
+          - link "Permalink to \"故障排除\"" [ref=e2884] [cursor=pointer]:
+            - /url: "#故障排除"
+            - text: "#"
+        - heading "API Key 错误 Permalink to \"API Key 错误\"" [level=3] [ref=e2885]:
+          - text: API Key 错误
+          - link "Permalink to \"API Key 错误\"" [ref=e2886] [cursor=pointer]:
+            - /url: "#api-key-错误"
+            - text: "#"
+        - generic [ref=e2887]:
+          - button "Copy Code" [ref=e2888] [cursor=pointer]
+          - code [ref=e2890]:
+            - generic [ref=e2891]: "Error: Invalid API key"
+        - paragraph [ref=e2892]: 检查 API Key 是否正确且有相应权限。
+        - heading "维度不匹配 Permalink to \"维度不匹配\"" [level=3] [ref=e2893]:
+          - text: 维度不匹配
+          - link "Permalink to \"维度不匹配\"" [ref=e2894] [cursor=pointer]:
+            - /url: "#维度不匹配"
+            - text: "#"
+        - generic [ref=e2895]:
+          - button "Copy Code" [ref=e2896] [cursor=pointer]
+          - code [ref=e2898]:
+            - generic [ref=e2899]: "Error: Vector dimension mismatch"
+        - paragraph [ref=e2900]:
+          - text: 确保配置中的
+          - code [ref=e2901]: dimension
+          - text: 与模型输出维度匹配。
+        - heading "VLM 超时 Permalink to \"VLM 超时\"" [level=3] [ref=e2902]:
+          - text: VLM 超时
+          - link "Permalink to \"VLM 超时\"" [ref=e2903] [cursor=pointer]:
+            - /url: "#vlm-超时"
+            - text: "#"
+        - generic [ref=e2904]:
+          - button "Copy Code" [ref=e2905] [cursor=pointer]
+          - code [ref=e2907]:
+            - generic [ref=e2908]: "Error: VLM request timeout"
+        - list [ref=e2909]:
+          - listitem [ref=e2910]: 检查网络连接
+          - listitem [ref=e2911]: 增加配置中的超时时间
+          - listitem [ref=e2912]:
+            - text: 对偶发超时，适当增大
+            - code [ref=e2913]: vlm.max_retries
+          - listitem [ref=e2914]: 尝试更小的模型
+          - listitem [ref=e2915]:
+            - text: 如为批量导入场景，结合降低
+            - code [ref=e2916]: vlm.max_concurrent
+        - heading "速率限制 Permalink to \"速率限制\"" [level=3] [ref=e2917]:
+          - text: 速率限制
+          - link "Permalink to \"速率限制\"" [ref=e2918] [cursor=pointer]:
+            - /url: "#速率限制"
+            - text: "#"
+        - generic [ref=e2919]:
+          - button "Copy Code" [ref=e2920] [cursor=pointer]
+          - code [ref=e2922]:
+            - generic [ref=e2923]: "Error: Rate limit exceeded"
+        - paragraph [ref=e2924]: 火山引擎有速率限制。考虑批量处理时添加延迟或升级套餐。
+        - list [ref=e2925]:
+          - listitem [ref=e2926]:
+            - text: 优先降低
+            - code [ref=e2927]: embedding.max_concurrent
+            - text: /
+            - code [ref=e2928]: vlm.max_concurrent
+          - listitem [ref=e2929]:
+            - text: 对偶发
+            - code [ref=e2930]: "429"
+            - text: 可保留少量
+            - code [ref=e2931]: max_retries
+            - text: ；若希望快速失败，可将其设为
+            - code [ref=e2932]: "0"
+        - heading "相关文档 Permalink to \"相关文档\"" [level=2] [ref=e2933]:
+          - text: 相关文档
+          - link "Permalink to \"相关文档\"" [ref=e2934] [cursor=pointer]:
+            - /url: "#相关文档"
+            - text: "#"
+        - list [ref=e2935]:
+          - listitem [ref=e2936]:
+            - link "火山引擎购买指南" [ref=e2937] [cursor=pointer]:
+              - /url: ./02-volcengine-purchase-guide
+            - text: "- API Key 获取"
+          - listitem [ref=e2938]:
+            - link "API 概览" [ref=e2939] [cursor=pointer]:
+              - /url: ./../api/01-overview
+            - text: "- 客户端初始化"
+          - listitem [ref=e2940]:
+            - link "服务部署" [ref=e2941] [cursor=pointer]:
+              - /url: ./03-deployment
+            - text: "- Server 配置"
+          - listitem [ref=e2942]:
+            - link "上下文层级" [ref=e2943] [cursor=pointer]:
+              - /url: ./../concepts/03-context-layers
+            - text: "- L0/L1/L2"
+    - contentinfo [ref=e2944]:
+      - link "llms.txt" [ref=e2946] [cursor=pointer]:
+        - /url: /zh/guides/01-configuration/llms.txt
+        - img [ref=e2947]
+        - text: llms.txt
+      - paragraph [ref=e2952]:
+        - text: "Last updated:"
+        - time [ref=e2953]: 2026/6/17 21:26
+      - navigation "Pager" [ref=e2954]:
+        - generic [ref=e2955]: Pager
+        - link "上一页 多写存储" [ref=e2957] [cursor=pointer]:
+          - /url: /zh/concepts/14-multi-write-storage
+          - generic [ref=e2958]: 上一页
+          - generic [ref=e2959]: 多写存储
+        - link "下一页 火山引擎模型购买指南" [ref=e2961] [cursor=pointer]:
+          - /url: /zh/guides/02-volcengine-purchase-guide
+          - generic [ref=e2962]: 下一页
+          - generic [ref=e2963]: 火山引擎模型购买指南

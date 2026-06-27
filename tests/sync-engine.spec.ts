@@ -1952,6 +1952,154 @@ describe('SyncEngine — audio note sync', () => {
   });
 });
 
+describe('SyncEngine — link original sync', () => {
+  const linkNote = makeNote({
+    note_id: 'link_001',
+    title: '链接标题',
+    content: 'AI 摘要正文',
+    note_type: 'link',
+    created_at: '2026-05-09T10:00:00+08:00',
+    updated_at: '2026-05-09T10:05:00+08:00',
+  });
+
+  it('writes OpenAPI link original content to an asset Markdown file and links it from the main note', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: unknown) => {
+      const urlStr = typeof url === 'string' ? url : (url as Request).url;
+      if (urlStr.includes('/resource/note/list')) {
+        return Promise.resolve(mockFetchResponse({
+          data: { notes: [linkNote], has_more: false, next_cursor: '' },
+        }) as Response);
+      }
+      if (urlStr.includes('/resource/note/detail')) {
+        return Promise.resolve(mockFetchResponse({
+          success: true,
+          data: {
+            note: {
+              ...linkNote,
+              web_page: {
+                title: '原网页标题',
+                url: 'https://example.com/source',
+                content: '链接原文全文',
+              },
+            },
+          },
+        }) as Response);
+      }
+      throw new Error(`Unexpected request: ${urlStr}`);
+    });
+
+    const app = makeMockApp();
+
+    try {
+      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
+      const result = await engine.sync();
+
+      expect(result.created).toBe(1);
+      const mainFile = app.vault.getAbstractFileByPath('得到大脑/链接笔记/链接标题.md') as { content: string } | null;
+      const originalFile = app.vault.getAbstractFileByPath('得到大脑/链接笔记/asset/链接标题_link_001_original.md') as { content: string } | null;
+
+      expect(mainFile?.content).toContain('AI 摘要正文');
+      expect(mainFile?.content).toContain('> 📄 链接原文');
+      expect(mainFile?.content).toContain('> [[链接标题_link_001_original]]');
+      expect(originalFile?.content).toBe('# 原网页标题\n\n来源链接：https://example.com/source\n\n链接原文全文');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('does not create an empty original asset when the remote link original is absent', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: unknown) => {
+      const urlStr = typeof url === 'string' ? url : (url as Request).url;
+      if (urlStr.includes('/resource/note/list')) {
+        return Promise.resolve(mockFetchResponse({
+          data: { notes: [linkNote], has_more: false, next_cursor: '' },
+        }) as Response);
+      }
+      if (urlStr.includes('/resource/note/detail')) {
+        return Promise.resolve(mockFetchResponse({
+          success: true,
+          data: {
+            note: {
+              ...linkNote,
+              web_page: {
+                title: '原网页标题',
+                url: 'https://example.com/source',
+                content: '',
+              },
+            },
+          },
+        }) as Response);
+      }
+      throw new Error(`Unexpected request: ${urlStr}`);
+    });
+
+    const app = makeMockApp();
+
+    try {
+      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
+      const result = await engine.sync();
+
+      expect(result.created).toBe(1);
+      const mainFile = app.vault.getAbstractFileByPath('得到大脑/链接笔记/链接标题.md') as { content: string } | null;
+      expect(mainFile?.content).not.toContain('> 📄 链接原文');
+      expect(app.vault.getAbstractFileByPath('得到大脑/链接笔记/asset/链接标题_link_001_original.md')).toBeNull();
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('refreshes a stale link original asset during selected re-sync', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: unknown) => {
+      const urlStr = typeof url === 'string' ? url : (url as Request).url;
+      if (urlStr.includes('/resource/note/list')) {
+        return Promise.resolve(mockFetchResponse({
+          data: { notes: [linkNote], has_more: false, next_cursor: '' },
+        }) as Response);
+      }
+      if (urlStr.includes('/resource/note/detail')) {
+        return Promise.resolve(mockFetchResponse({
+          success: true,
+          data: {
+            note: {
+              ...linkNote,
+              web_page: {
+                title: '原网页标题',
+                url: 'https://example.com/source',
+                content: '更新后的链接原文',
+              },
+            },
+          },
+        }) as Response);
+      }
+      throw new Error(`Unexpected request: ${urlStr}`);
+    });
+
+    const app = makeMockApp();
+    app.vault._addFolder('得到大脑/链接笔记');
+    app.vault._addFolder('得到大脑/链接笔记/asset');
+    app.vault._addFile(
+      '得到大脑/链接笔记/链接标题.md',
+      '---\nuid: "link_001"\nmodified: "2026-05-09 10:05:00"\nnote_type: link\n---\nAI 摘要正文',
+      { uid: 'link_001', modified: '2026-05-09 10:05:00' }
+    );
+    app.vault._addFile(
+      '得到大脑/链接笔记/asset/链接标题_link_001_original.md',
+      '# 原网页标题\n\n来源链接：https://example.com/source\n\n旧原文'
+    );
+
+    try {
+      const engine = new SyncEngine(app as any, makeSettings());
+      const result = await engine.syncNoteIds(['link_001']);
+
+      expect(result.skipped).toBe(1);
+      const originalFile = app.vault.getAbstractFileByPath('得到大脑/链接笔记/asset/链接标题_link_001_original.md') as { content: string } | null;
+      expect(originalFile?.content).toContain('旧原文');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+});
+
 describe('SyncEngine — selective sync cancellation', () => {
   describe('SyncEngine — preCheckNote', () => {
     it('不存在 uidIndex 时返回 { exists: false }', () => {
@@ -2073,21 +2221,21 @@ describe('SyncEngine — selective sync cancellation', () => {
       expect(result.exists).toBe(true);
     });
 
-    it('非音频笔记忽略附件检查直接通过', () => {
+    it('非音频、非链接笔记忽略附件检查直接通过', () => {
       const app = makeMockApp();
       app.vault._addFile(
-        '得到大脑/链接笔记/test.md',
+        '得到大脑/纯文本/test.md',
         '---\nuid: "note_link"\nmodified: "2026-04-28 10:00:00"\n---\n链接笔记',
         { uid: 'note_link', modified: '2026-04-28 10:00:00' }
       );
-      app.vault._addFolder('得到大脑/链接笔记');
+      app.vault._addFolder('得到大脑/纯文本');
       const engine = new SyncEngine(app as any, makeSettings());
       const note = makeNote({
         note_id: 'note_link',
-        note_type: 'link',
+        note_type: 'plain_text',
         updated_at: '2026-04-28T10:00:00+08:00',
       });
-      const index = new Map([['note_link', { path: '得到大脑/链接笔记/test.md' }]]);
+      const index = new Map([['note_link', { path: '得到大脑/纯文本/test.md' }]]);
       // @ts-ignore
       const result = engine['preCheckNote'](note, index);
       expect(result.exists).toBe(true);
@@ -2600,6 +2748,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     ]));
     expect(getFixtureRequests().map(request => request.url)).toEqual([
       'https://openapi.biji.com/open/api/v1/resource/note/list?since_id=0',
+      'https://openapi.biji.com/open/api/v1/resource/note/detail?id=open_link_2',
       'https://openapi.biji.com/open/api/v1/resource/note/list?since_id=open_link_2',
     ]);
   });
@@ -2656,6 +2805,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     ]));
     expect(getFixtureRequests().map(request => request.url)).toEqual([
       'https://get-notes.luojilab.com/voicenotes/web/notes?limit=20&since_id=&sort=create_desc',
+      'https://get-notes.luojilab.com/voicenotes/web/notes/prime_web_link_2/original',
       'https://get-notes.luojilab.com/voicenotes/web/notes?limit=20&since_id=web_link_2&sort=create_desc',
     ]);
   });
