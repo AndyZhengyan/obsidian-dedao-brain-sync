@@ -334,6 +334,11 @@ function appendBody(templateBody: string, body: string): string {
   return `${templateBody}${separator}${body}`;
 }
 
+function buildLinkOriginalBlock(note: GetNoteNote): string {
+  if (!note.linkOriginal?.content || !note.linkOriginalFileName) return '';
+  return `---\n> 📄 链接原文\n> [[${note.linkOriginalFileName}]]\n---\n`;
+}
+
 function buildBody(note: GetNoteNote, assetFileName?: string, parentFileName?: string, childFileNames?: string[]): string {
   let body = note.content || '';
 
@@ -371,7 +376,7 @@ function buildBody(note: GetNoteNote, assetFileName?: string, parentFileName?: s
  */
 export function renderNote(note: GetNoteNote, assetFileName?: string, parentFileName?: string, childFileNames?: string[]): string {
   const frontmatter = buildFrontmatter(note);
-  return frontmatter + buildBody(note, assetFileName, parentFileName, childFileNames);
+  return frontmatter + buildLinkOriginalBlock(note) + buildBody(note, assetFileName, parentFileName, childFileNames);
 }
 
 export function renderNoteWithTemplate(
@@ -389,9 +394,9 @@ export function renderNoteWithTemplate(
   };
   const body = buildBody(note, assetFileName, parentFileName, childFileNames);
   const templateBody = applyTemplatePlaceholders(parts.body, noteWithMergedTags, body);
-  const renderedBody = parts.body.includes('{{content}}')
+  const renderedBody = buildLinkOriginalBlock(note) + (parts.body.includes('{{content}}')
     ? templateBody
-    : appendBody(templateBody, body);
+    : appendBody(templateBody, body));
   const extraLines = cleaned.lines.map(line => applyTemplatePlaceholders(line, noteWithMergedTags, body));
 
   return buildFrontmatter(noteWithMergedTags, extraLines) + renderedBody;

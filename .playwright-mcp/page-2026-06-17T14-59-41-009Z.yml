@@ -1,0 +1,239 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - button "跳至内容" [ref=e3] [cursor=pointer]:
+      - generic [ref=e5]: 跳至内容
+    - button "辅助功能反馈" [ref=e6] [cursor=pointer]:
+      - generic [ref=e8]: 辅助功能反馈
+    - generic [ref=e9]:
+      - link "返回到必应搜索" [ref=e10] [cursor=pointer]:
+        - /url: /?FORM=Z9FD1
+        - heading "返回到必应搜索" [level=1] [ref=e11]
+      - search [ref=e12]:
+        - button "搜索" [ref=e15] [cursor=pointer]
+        - searchbox "在此处输入你的搜索 — 输入时会显示搜索建议" [ref=e16]: OpenMMLab OpenViking memory model recommendation
+        - button "使用图像搜索" [ref=e22] [cursor=pointer]
+    - complementary "帐户奖励和偏好设置" [ref=e24]:
+      - button "Microsoft Rewards" [ref=e25] [cursor=pointer]
+      - link "登录" [ref=e26] [cursor=pointer]:
+        - /url: javascript:void(0)
+        - generic "登录" [ref=e27]
+    - navigation "主菜单" [ref=e28]:
+      - list [ref=e29]:
+        - listitem [ref=e30]:
+          - link "全部" [ref=e31] [cursor=pointer]:
+            - /url: /?scope=web&FORM=HDRSC1
+        - listitem [ref=e32]:
+          - link "搜索" [ref=e33] [cursor=pointer]:
+            - /url: /copilotsearch?q=OpenMMLab+OpenViking+memory+model+recommendation&FORM=CSSCOP
+            - img [ref=e34]
+            - text: 搜索
+        - listitem [ref=e36]:
+          - link "图片" [ref=e37] [cursor=pointer]:
+            - /url: https://www.bing.com/ck/a?!&&p=2a3cc84d90ab1a18f604c3674c3f2a626de0796214214136e8e500719b8ac3efJmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1L2ltYWdlcy9zZWFyY2g_cT1PcGVuTU1MYWIrT3BlblZpa2luZyttZW1vcnkrbW9kZWwrcmVjb21tZW5kYXRpb24mRk9STT1IRFJTQzM&ntb=1
+        - listitem [ref=e38]:
+          - link "视频" [ref=e39] [cursor=pointer]:
+            - /url: https://www.bing.com/ck/a?!&&p=2b5d8cd03e5b433580cae0a1a3d496e27543e72152239b0b06f5c796cbbd1427JmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1L3ZpZGVvcy9zZWFyY2g_cT1PcGVuTU1MYWIrT3BlblZpa2luZyttZW1vcnkrbW9kZWwrcmVjb21tZW5kYXRpb24mRk9STT1IRFJTQzQ&ntb=1
+        - listitem [ref=e40]:
+          - link "地图" [ref=e41] [cursor=pointer]:
+            - /url: https://www.bing.com/ck/a?!&&p=ca19fe0e694108735c295c732046c7761e7f1854c4e88d6973e40cadb1f88b8dJmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1L21hcHM_cT1PcGVuTU1MYWIrT3BlblZpa2luZyttZW1vcnkrbW9kZWwrcmVjb21tZW5kYXRpb24mRk9STT1IRFJTQzY&ntb=1
+        - listitem [ref=e42]:
+          - link "Copilot" [ref=e43] [cursor=pointer]:
+            - /url: https://www.bing.com/ck/a?!&&p=082276b7246da14b7d1bfacdc344ac5f3ab8b5faec54d5fc24661b14c0c1a7b8JmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1L2NoYXQ_cHJvbXB0PU9wZW5NTUxhYitPcGVuVmlraW5nK21lbW9yeSttb2RlbCtyZWNvbW1lbmRhdGlvbiZzZW5kcXVlcnk9MSZGT1JNPVNDQ09EWA&ntb=1
+        - listitem [ref=e44]:
+          - button "更多" [ref=e45] [cursor=pointer]:
+            - img [ref=e47]
+            - text: 更多
+  - generic [ref=e49]:
+    - main "搜索结果" [ref=e50]:
+      - generic [ref=e52]: 约 5,050 个结果
+      - list [ref=e63]:
+        - listitem [ref=e64]:
+          - generic [ref=e68]:
+            - generic [ref=e70]:
+              - button "喜欢" [ref=e71]:
+                - img [ref=e72]
+              - button "不喜欢" [ref=e74]:
+                - img [ref=e75]
+            - tooltip "AI 免责声明" [ref=e77]:
+              - img [ref=e78]
+        - listitem [ref=e102]:
+          - generic [ref=e103]:
+            - link "浏览此图像" [ref=e106] [cursor=pointer]:
+              - /url: /images/search?view=detailV2&ccid=7lv/aGyC&id=DEB185DC3EB7AE90862701260030A88CC4BE5822&thid=OIP.7lv_aGyCybl0bWIG02fDNAHaDt&mediaurl=https://opengraph.githubassets.com/efb1dbd4e5f7dd834fa8d3fb69faca3f21854d8e2bb757d735de6f010e4ebc8b/volcengine/OpenViking&q=OpenMMLab+OpenViking+memory+model+recommendation&ck=6398487CE6EDC2E5C930A76EB9C30D6E&idpp=rc&expw=1200&exph=600&form=rc2idp
+            - generic [ref=e108]:
+              - link "Github" [ref=e110] [cursor=pointer]:
+                - /url: https://www.bing.com/ck/a?!&&p=4f6550a5ed784d02b355f51ff6054696fe5b95028422a56b7de9184ceefb9b1aJmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly9naXRodWIuY29tL3ZvbGNlbmdpbmUvT3BlblZpa2luZw&ntb=1
+                - generic [ref=e115]:
+                  - generic [ref=e116]: Github
+                  - generic [ref=e118]:
+                    - generic [ref=e119]: https://github.com › volcengine › OpenViking
+                    - generic [ref=e120]: 翻译此结果
+              - 'heading "GitHub - volcengine/OpenViking: OpenViking is an …" [level=2] [ref=e121]':
+                - 'link "GitHub - volcengine/OpenViking: OpenViking is an …" [ref=e122] [cursor=pointer]':
+                  - /url: https://www.bing.com/ck/a?!&&p=4f6550a5ed784d02b355f51ff6054696fe5b95028422a56b7de9184ceefb9b1aJmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly9naXRodWIuY29tL3ZvbGNlbmdpbmUvT3BlblZpa2luZw&ntb=1
+              - paragraph [ref=e123]: OpenViking abandons the fragmented vector storage model of traditional RAG and innovatively adopts a …
+        - listitem [ref=e125]:
+          - generic [ref=e126]:
+            - link "浏览此图像" [ref=e129] [cursor=pointer]:
+              - /url: /images/search?view=detailV2&ccid=/Bkte0YH&id=E309DFF836FF1B87953ED541FBE154F7B7653313&thid=OIP._Bkte0YHms6ri4JOUpUCnQHaDt&mediaurl=https://opengraph.githubassets.com/75f24bf5f59260404b95ac9378ca831cbe57c4912e98e91b366449bb0d596423/volcengine/OpenViking&q=OpenMMLab+OpenViking+memory+model+recommendation&ck=E233F98A1A5969BFEFA8EBE3E34EE4E2&idpp=rc&expw=1200&exph=600&form=rc2idp
+            - generic [ref=e131]:
+              - link "Github" [ref=e133] [cursor=pointer]:
+                - /url: https://www.bing.com/ck/a?!&&p=ed1ff187cfc5cc9614890bf76555b3cc5695b5e21f087c96c8d0ed4e43535cabJmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly9naXRodWIuY29tL3ZvbGNlbmdpbmUvT3BlblZpa2luZy9ibG9iL21haW4vUkVBRE1FX0NOLm1k&ntb=1
+                - generic [ref=e138]:
+                  - generic [ref=e139]: Github
+                  - generic [ref=e141]:
+                    - generic [ref=e142]: https://github.com › volcengine › OpenViking › bl…
+                    - generic [ref=e143]: 翻译此结果
+              - heading "OpenViking/README_CN.md at main · …" [level=2] [ref=e144]:
+                - link "OpenViking/README_CN.md at main · …" [ref=e145] [cursor=pointer]:
+                  - /url: https://www.bing.com/ck/a?!&&p=ed1ff187cfc5cc9614890bf76555b3cc5695b5e21f087c96c8d0ed4e43535cabJmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly9naXRodWIuY29tL3ZvbGNlbmdpbmUvT3BlblZpa2luZy9ibG9iL21haW4vUkVBRE1FX0NOLm1k&ntb=1
+              - paragraph [ref=e146]: OpenViking unifies the management of context (memory, resources, and skills) that Agents need through …
+        - listitem [ref=e148]:
+          - link "openviking.ai" [ref=e150] [cursor=pointer]:
+            - /url: https://www.bing.com/ck/a?!&&p=a98a474247281214f63fc88da7ac649892b8fa5dddd940a731213ccc98d0a99aJmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly9kb2NzLm9wZW52aWtpbmcuYWkv&ntb=1
+            - generic [ref=e155]:
+              - generic [ref=e156]: openviking.ai
+              - generic [ref=e158]:
+                - generic [ref=e159]: https://docs.openviking.ai
+                - generic [ref=e160]: 翻译此结果
+          - heading "OpenViking" [level=2] [ref=e161]:
+            - link "OpenViking" [ref=e162] [cursor=pointer]:
+              - /url: https://www.bing.com/ck/a?!&&p=a98a474247281214f63fc88da7ac649892b8fa5dddd940a731213ccc98d0a99aJmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly9kb2NzLm9wZW52aWtpbmcuYWkv&ntb=1
+          - paragraph [ref=e164]: A focused reference for building agent memory, resources, skills, and retrieval flows with OpenViking. Learn how OpenViking …
+        - listitem [ref=e165]:
+          - generic [ref=e166]:
+            - link "浏览此图像" [ref=e169] [cursor=pointer]:
+              - /url: /images/search?view=detailV2&ccid=flNBlVYH&id=B72DF28EF4144D19DBE7F66914D2653F03093455&thid=OIP.flNBlVYHNkkcboOtz38N9QHaEI&mediaurl=https://pic1.zhimg.com/v2-da64cc3927e88fe1c3cd11e5bebc6eef_720w.jpg?source=172ae18b&q=OpenMMLab+OpenViking+memory+model+recommendation&ck=78E70AD0F9B1E1E1A82FC5FDCEAD904F&idpp=rc&expw=720&exph=402&form=rc2idp
+            - generic [ref=e171]:
+              - link "知乎专栏" [ref=e173] [cursor=pointer]:
+                - /url: https://www.bing.com/ck/a?!&&p=1c7daf5953ae73d459735d008c41e74af19e8c3cc14df44d3f45752dd30d1be2JmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly96aHVhbmxhbi56aGlodS5jb20vcC8yMDE2NTQwNDIwMjI2Njk1ODI0&ntb=1
+                - generic [ref=e178]:
+                  - generic [ref=e179]: 知乎专栏
+                  - generic [ref=e182]: https://zhuanlan.zhihu.com
+              - heading "OpenViking × OpenClaw：给 AI Agent 装上\"长期记忆\"" [level=2] [ref=e183]:
+                - link "OpenViking × OpenClaw：给 AI Agent 装上\"长期记忆\"" [ref=e184] [cursor=pointer]:
+                  - /url: https://www.bing.com/ck/a?!&&p=1c7daf5953ae73d459735d008c41e74af19e8c3cc14df44d3f45752dd30d1be2JmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly96aHVhbmxhbi56aGlodS5jb20vcC8yMDE2NTQwNDIwMjI2Njk1ODI0&ntb=1
+              - paragraph [ref=e185]: 2026年3月15日 · 官方定义：OpenViking 是由字节跳动火山引擎 Viking 团队发起并维护的开源上下文数据 …
+        - listitem [ref=e187]:
+          - generic [ref=e188]:
+            - link "浏览此图像" [ref=e191] [cursor=pointer]:
+              - /url: /images/search?view=detailV2&ccid=oq9ScexE&id=7ED721F7ABCBE373CFA9AD28BC58BE77B77C368D&thid=OIP.oq9ScexEehiJgckQD18DNQHaFE&mediaurl=https://blog.zuoyunlai.com/wp-content/uploads/2026/04/1775551972-featured-3409-1775551972-1024x701.png&q=OpenMMLab+OpenViking+memory+model+recommendation&ck=2EE6344936FAE85F4F58D64CF1CBF0B4&idpp=rc&expw=1024&exph=701&form=rc2idp
+            - generic [ref=e193]:
+              - link "zuoyunlai.com" [ref=e195] [cursor=pointer]:
+                - /url: https://www.bing.com/ck/a?!&&p=9e9eb930bdb6307071a39228bc511e87cb984fe07af31cf091892945aae0f9b9JmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly93d3cuenVveXVubGFpLmNvbS9vcGVuY2xhdy1tZW1vcnktcGx1Z2luLWRlZXAtY29tcGFyaXNvbi1yZXBvcnQtbWVtMC12cy1vcGVudmlraW5nLXZzLXRlbmNlbnRkYi1hZ2VudC1tZW1vcnkv&ntb=1
+                - generic [ref=e200]:
+                  - generic [ref=e201]: zuoyunlai.com
+                  - generic [ref=e204]: https://www.zuoyunlai.com
+              - heading "OpenClaw记忆插件对比 Mem0 OpenViking TencentDB …" [level=2] [ref=e205]:
+                - link "OpenClaw记忆插件对比 Mem0 OpenViking TencentDB …" [ref=e206] [cursor=pointer]:
+                  - /url: https://www.bing.com/ck/a?!&&p=9e9eb930bdb6307071a39228bc511e87cb984fe07af31cf091892945aae0f9b9JmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly93d3cuenVveXVubGFpLmNvbS9vcGVuY2xhdy1tZW1vcnktcGx1Z2luLWRlZXAtY29tcGFyaXNvbi1yZXBvcnQtbWVtMC12cy1vcGVudmlraW5nLXZzLXRlbmNlbnRkYi1hZ2VudC1tZW1vcnkv&ntb=1
+              - paragraph [ref=e207]: 2026年4月7日 · 本报告对比了OpenClaw记忆插件中的Mem0、OpenViking及TencentDB Agent Memory， …
+        - listitem [ref=e209]:
+          - link "CSDN博客" [ref=e211] [cursor=pointer]:
+            - /url: https://www.bing.com/ck/a?!&&p=0fd36f96704f29a8ea9a4fa3058d4aa37f6ddf053ec25ad526d68f182488517bJmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L20wXzU5MTYzNDI1L2FydGljbGUvZGV0YWlscy8xNTkzODUxNzc&ntb=1
+            - generic [ref=e216]:
+              - generic [ref=e217]: CSDN博客
+              - generic [ref=e220]: https://blog.csdn.net › article › details
+          - heading "字节开源OpenViking全解（非常详细），Agent上下文存储从入门到精 …" [level=2] [ref=e221]:
+            - link "字节开源OpenViking全解（非常详细），Agent上下文存储从入门到精 …" [ref=e222] [cursor=pointer]:
+              - /url: https://www.bing.com/ck/a?!&&p=0fd36f96704f29a8ea9a4fa3058d4aa37f6ddf053ec25ad526d68f182488517bJmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L20wXzU5MTYzNDI1L2FydGljbGUvZGV0YWlscy8xNTkzODUxNzc&ntb=1
+          - paragraph [ref=e224]: 2026年3月23日 · OpenViking 是一个专为 AI Agent 设计的上下文数据库，用"文件系统范式"统一管理记忆、资源、技能，让 Agent 越 …
+        - listitem [ref=e225]:
+          - generic [ref=e227]:
+            - heading "其他用户还问了以下问题" [level=2] [ref=e228]:
+              - generic [ref=e229]: 其他用户还问了以下问题
+            - list [ref=e232]:
+              - listitem [ref=e233]:
+                - heading "What is openviking?" [level=3] [ref=e234]:
+                  - button "What is openviking?" [ref=e235] [cursor=pointer]:
+                    - generic [ref=e236]: What is openviking?
+                    - generic:
+                      - img
+              - listitem [ref=e237]:
+                - heading "What is openviking GitHub?" [level=3] [ref=e238]:
+                  - button "What is openviking GitHub?" [ref=e239] [cursor=pointer]:
+                    - generic [ref=e240]: What is openviking GitHub?
+                    - generic:
+                      - img
+              - listitem [ref=e241]:
+                - heading "What are the disadvantages of rag vs openviking?" [level=3] [ref=e242]:
+                  - button "What are the disadvantages of rag vs openviking?" [ref=e243] [cursor=pointer]:
+                    - generic [ref=e244]: What are the disadvantages of rag vs openviking?
+                    - generic:
+                      - img
+              - listitem [ref=e245]:
+                - heading "How accurate is openviking vs lightrag?" [level=3] [ref=e246]:
+                  - button "How accurate is openviking vs lightrag?" [ref=e247] [cursor=pointer]:
+                    - generic [ref=e248]: How accurate is openviking vs lightrag?
+                    - generic:
+                      - img
+        - listitem [ref=e250]:
+          - link "知乎专栏" [ref=e252] [cursor=pointer]:
+            - /url: https://www.bing.com/ck/a?!&&p=8f5d8bfb1f3d460107f4f0e7cdb8cbe194c6ff4a5e4c128581bf67a0334719b7JmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly96aHVhbmxhbi56aGlodS5jb20vcC8yMDE5NDUxNTYxMzY2MDQyMDYy&ntb=1
+            - generic [ref=e257]:
+              - generic [ref=e258]: 知乎专栏
+              - generic [ref=e261]: https://zhuanlan.zhihu.com
+          - heading "OpenClaw + OpenViking 记忆系统完整教程 - 知乎" [level=2] [ref=e262]:
+            - link "OpenClaw + OpenViking 记忆系统完整教程 - 知乎":
+              - /url: https://www.bing.com/ck/a?!&&p=8f5d8bfb1f3d460107f4f0e7cdb8cbe194c6ff4a5e4c128581bf67a0334719b7JmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly96aHVhbmxhbi56aGlodS5jb20vcC8yMDE5NDUxNTYxMzY2MDQyMDYy&ntb=1
+          - paragraph [ref=e264]: 1.1 什么是 AI 记忆系统？ AI 记忆系统是让 AI Agent 拥有"记忆"能力的基础设施。 没有记忆系统，AI 每次对话都是从零开始；有了记 …
+        - listitem [ref=e265]:
+          - link "openviking.ai" [ref=e267] [cursor=pointer]:
+            - /url: https://www.bing.com/ck/a?!&&p=98680f8f139d4ee9c9b09c1830278bb517b11c2b4412f9a7f6ef999bcd795162JmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly9kb2NzLm9wZW52aWtpbmcuYWkvemgvZ3VpZGVzLzAxLWNvbmZpZ3VyYXRpb24&ntb=1
+            - generic [ref=e272]:
+              - generic [ref=e273]: openviking.ai
+              - generic [ref=e276]: https://docs.openviking.ai › zh › guides
+          - heading "配置 | OpenViking" [level=2] [ref=e277]:
+            - link "配置 | OpenViking":
+              - /url: https://www.bing.com/ck/a?!&&p=98680f8f139d4ee9c9b09c1830278bb517b11c2b4412f9a7f6ef999bcd795162JmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly9kb2NzLm9wZW52aWtpbmcuYWkvemgvZ3VpZGVzLzAxLWNvbmZpZ3VyYXRpb24&ntb=1
+          - paragraph [ref=e279]: 配置结构与 vlm 相同，但只影响 search () 的意图分析和 query expansion。 未配置或配置为空时，OpenViking 会回退到 vlm，保持向 …
+        - listitem [ref=e280]:
+          - link "80aj.com" [ref=e282] [cursor=pointer]:
+            - /url: https://www.bing.com/ck/a?!&&p=7fe2b084a283f718d885bb457a4a92025126566e6292f2b28e7c3ad08f66a4f8JmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly93d3cuODBhai5jb20vMjAyNi8wMi8yMC9vcGVudmlraW5nLWJ5dGUtZGFuY2UtYWktYWdlbnQtbWVtb3J5Lw&ntb=1
+            - generic [ref=e287]:
+              - generic [ref=e288]: 80aj.com
+              - generic [ref=e291]: https://www.80aj.com › openviking-byte-dance-ai-agent-memory
+          - heading "OpenViking深度解析：字节跳动AI Agent记忆创新" [level=2] [ref=e292]:
+            - link "OpenViking深度解析：字节跳动AI Agent记忆创新":
+              - /url: https://www.bing.com/ck/a?!&&p=7fe2b084a283f718d885bb457a4a92025126566e6292f2b28e7c3ad08f66a4f8JmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly93d3cuODBhai5jb20vMjAyNi8wMi8yMC9vcGVudmlraW5nLWJ5dGUtZGFuY2UtYWktYWdlbnQtbWVtb3J5Lw&ntb=1
+          - paragraph [ref=e294]: 2026 年 1 月，字节跳动旗下火山引擎 Viking 团队在 GitHub 上开源了一个项目—— OpenViking。 它不是又一个向量数据库，也不是 …
+        - listitem [ref=e295]:
+          - link "CSDN博客" [ref=e297] [cursor=pointer]:
+            - /url: https://www.bing.com/ck/a?!&&p=1b0c05f87ba9e2c59ab29278c4c2c8321f072b4f603585330f6d0bdafe11695bJmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3hpYW90aW5nNDUxMjkyNTEwL2FydGljbGUvZGV0YWlscy8xNTk2NTU5OTU&ntb=1
+            - generic [ref=e302]:
+              - generic [ref=e303]: CSDN博客
+              - generic [ref=e306]: https://blog.csdn.net › article › details
+          - heading "OpenViking 深度解析：字节跳动为 AI Agent 造了一个“文件系统大脑“" [level=2] [ref=e307]:
+            - link "OpenViking 深度解析：字节跳动为 AI Agent 造了一个“文件系统大脑“":
+              - /url: https://www.bing.com/ck/a?!&&p=1b0c05f87ba9e2c59ab29278c4c2c8321f072b4f603585330f6d0bdafe11695bJmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3hpYW90aW5nNDUxMjkyNTEwL2FydGljbGUvZGV0YWlscy8xNTk2NTU5OTU&ntb=1
+          - paragraph [ref=e309]: 2026年4月2日 · 这个设计的妙处在于：开发者可以像管理本地文件一样管理 Agent 的大脑，直觉性极强，学习曲线几乎为零。 这是 …
+        - listitem [ref=e310]:
+          - link "某些结果已被删除" [ref=e312] [cursor=pointer]:
+            - /url: https://www.bing.com/ck/a?!&&p=08a44e921ab756786827c69342c7319159816e19fcf471e25faa892c0aebf5fcJmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cDovL2dvLm1pY3Jvc29mdC5jb20vZndsaW5rLz9MaW5rSUQ9NjE3MzUw&ntb=1
+        - listitem [ref=e313]:
+          - navigation "OpenMMLab OpenViking memory model recommendation 的更多搜索结果":
+            - list:
+              - listitem [ref=e314]:
+                - generic "第 1 页" [ref=e315]: "1"
+              - listitem [ref=e316]:
+                - link "第 2 页" [ref=e317] [cursor=pointer]:
+                  - /url: /search?q=OpenMMLab+OpenViking+memory+model+recommendation&FPIG=586B8B268D4145299A93858339BFB833&first=11&FORM=PERE
+                  - text: "2"
+              - listitem [ref=e318]:
+                - link "第 3 页" [ref=e319] [cursor=pointer]:
+                  - /url: /search?q=OpenMMLab+OpenViking+memory+model+recommendation&FPIG=586B8B268D4145299A93858339BFB833&first=21&FORM=PERE1
+                  - text: "3"
+              - listitem [ref=e320]:
+                - link "下一页" [ref=e321] [cursor=pointer]:
+                  - /url: /search?q=OpenMMLab+OpenViking+memory+model+recommendation&FPIG=586B8B268D4145299A93858339BFB833&first=11&FORM=PORE
+    - complementary "更多结果" [ref=e322]:
+      - list
+  - contentinfo [ref=e323]:
+    - generic [ref=e324]:
+      - list:
+        - listitem [ref=e325]:
+          - link "隐私" [ref=e326] [cursor=pointer]:
+            - /url: https://www.bing.com/ck/a?!&&p=cce436ce29cf3b75daaaf2dc1016a410b4f62c58217260806a892f6da8d8d970JmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cDovL2dvLm1pY3Jvc29mdC5jb20vZndsaW5rLz9MaW5rSWQ9NTIxODM5&ntb=1
+        - listitem [ref=e327]:
+          - link "条款" [ref=e328] [cursor=pointer]:
+            - /url: https://www.bing.com/ck/a?!&&p=22def87438344ff49992202957353a0f9011ebf5a705309a5f53705bc193b171JmltdHM9MTc4MTY1NDQwMA&ptn=3&ver=2&hsh=4&fclid=2e6709cf-f404-65f6-06ba-1eb4f53b646e&u=a1aHR0cDovL2dvLm1pY3Jvc29mdC5jb20vZndsaW5rLz9MaW5rSUQ9MjQ2MzM4&ntb=1

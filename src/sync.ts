@@ -1,5 +1,5 @@
 import { App, TFile } from 'obsidian';
-import { fetchAllNotes, fetchNoteChildren, fetchNoteDetail, fetchSubscribedKnowledgeNotes } from './api';
+import { fetchAllNotes, fetchNoteChildren, fetchNoteDetail, fetchNoteOriginal, fetchSubscribedKnowledgeNotes } from './api';
 import { formatDateTime, formatTimestampPrefix, renderNote, renderNoteWithTemplate, generateDisplayTitle } from './note-parser';
 import { getCategoryDir } from './types';
 import { getAuthCredentials, type GetNoteNote, type Settings, type SyncResult, type SyncResultItem, type SyncScopeOptions } from './types';
@@ -23,6 +23,10 @@ const AUDIO_NOTE_TYPES = new Set([
 
 const IMAGE_NOTE_TYPES = new Set([
   'img_text',
+]);
+
+const LINK_NOTE_TYPES = new Set([
+  'link',
 ]);
 
 function parseSyncBoundaryTime(value: string): number | null {
@@ -389,6 +393,35 @@ export class SyncEngine {
     }
   }
 
+  private async writeLinkOriginalAsset(note: GetNoteNote, categoryOverride?: string): Promise<string | null> {
+    const originalContent = note.linkOriginal?.content.trim();
+    if (!originalContent) return null;
+
+    try {
+      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const assetDir = `${categoryDir}/asset`;
+      if (!this.app.vault.getAbstractFileByPath(assetDir)) {
+        await this.app.vault.createFolder(assetDir);
+      }
+
+      const targetPath = `${assetDir}/${this.getAudioAssetBaseName(note)}_original.md`;
+      const title = note.linkOriginal?.title?.trim() || generateDisplayTitle(note) || t('picker.noTitle');
+      const url = note.linkOriginal?.url?.trim();
+      const sourceLine = url ? `来源链接：${url}\n\n` : '';
+      const content = `# ${title}\n\n${sourceLine}${originalContent}`;
+      const existing = this.app.vault.getAbstractFileByPath(targetPath);
+      if (existing) {
+        await this.app.vault.modify(existing as TFile, content);
+      } else {
+        await this.app.vault.create(targetPath, content);
+      }
+      return targetPath;
+    } catch (err) {
+      console.error('[DedaoBrain] Link original write error:', err);
+      return null;
+    }
+  }
+
   /**
    * Check if a note and all its artifacts already exist in the vault and are up to date.
    * Uses UID-based lookup so renamed/moved files are still found.
@@ -497,7 +530,7 @@ export class SyncEngine {
       } else if (existingAtTarget instanceof TFile) {
         const content = renderNote(note, note.assetFileName, parentFileName, childFileNames);
         // File exists at target path but wasn't in uidIndex - check content
-        const contentChanged = this.isContentChanged(existingAtTarget, note) || hasImageAssetPaths(note);
+        const contentChanged = this.isContentChanged(existingAtTarget, note) || hasImageAssetPaths(note) || Boolean(note.linkOriginalFileName);
         await this.app.vault.modify(existingAtTarget, content);
         uidIndex.set(note.note_id, existingAtTarget);
         return { status: contentChanged ? 'updated' : 'skipped', file: existingAtTarget };
@@ -590,6 +623,10 @@ export class SyncEngine {
     return IMAGE_NOTE_TYPES.has(note.note_type) && !(note.attachments ?? []).some(isImageAttachment);
   }
 
+  private needsLinkOriginalDetail(note: GetNoteNote): boolean {
+    return LINK_NOTE_TYPES.has(note.note_type) && !note.linkOriginal;
+  }
+
   private async enrichAudioNote(
     note: GetNoteNote,
     signal: AbortSignal,
@@ -600,7 +637,8 @@ export class SyncEngine {
     const hasImageAttachments = (note.attachments ?? []).some(isImageAttachment);
     const hasDownloadableAttachments = (note.attachments ?? []).some(a => isDownloadableAttachment(a, this.settings));
     const needsImageDetail = this.needsImageDetail(note);
-    if (!needsAudioDetail && !needsRelationDetail && !hasDownloadableAttachments && !needsImageDetail) {
+    const needsLinkOriginalDetail = this.needsLinkOriginalDetail(note);
+    if (!needsAudioDetail && !needsRelationDetail && !hasDownloadableAttachments && !needsImageDetail && !needsLinkOriginalDetail) {
       return note;
     }
     const credentials = getAuthCredentials(this.settings);
@@ -609,14 +647,15 @@ export class SyncEngine {
       !needsAudioDetail &&
       !hasImageAttachments &&
       !hasDownloadableAttachments &&
-      !needsImageDetail
+      !needsImageDetail &&
+      !needsLinkOriginalDetail
     ) {
       return note;
     }
 
     try {
       let enrichedNote = note;
-      if (needsAudioDetail || needsRelationDetail || needsImageDetail) {
+      if (needsAudioDetail || needsRelationDetail || needsImageDetail || (needsLinkOriginalDetail && credentials.authMode !== 'web')) {
         const detailId = (note as { prime_id?: string }).prime_id ?? note.note_id;
         const noteDetail = await fetchNoteDetail(
           detailId,
@@ -626,6 +665,18 @@ export class SyncEngine {
           credentials.authMode
         );
         enrichedNote = this.mergeNoteDetail(note, noteDetail);
+      }
+      if (needsLinkOriginalDetail && credentials.authMode === 'web') {
+        const detailId = (note as { prime_id?: string }).prime_id ?? note.note_id;
+        const linkOriginal = await fetchNoteOriginal(
+          detailId,
+          credentials.token,
+          signal,
+          credentials.authMode
+        );
+        if (linkOriginal) {
+          enrichedNote = { ...enrichedNote, linkOriginal };
+        }
       }
       if (needsAudioDetail && !isAttachmentTypeEnabled(this.settings.attachmentImport, 'audio')) {
         enrichedNote = {
@@ -666,6 +717,13 @@ export class SyncEngine {
       for (const [index, att] of genericAttachments.entries()) {
         const path = await this.downloadGenericAsset(enrichedNote, att, index, categoryOverride);
         if (path) assetPaths.push(path);
+      }
+
+      if (enrichedNote.linkOriginal?.content.trim()) {
+        const originalPath = await this.writeLinkOriginalAsset(enrichedNote, categoryOverride);
+        if (originalPath) {
+          enrichedNote.linkOriginalFileName = `${this.getAudioAssetBaseName(enrichedNote)}_original`;
+        }
       }
 
       if (assetPaths.length > 0) {

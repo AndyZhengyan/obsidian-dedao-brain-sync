@@ -1,0 +1,190 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "LLMRates.ai" [ref=e5] [cursor=pointer]:
+          - /url: /zh-Hans
+          - img "LLMRates.ai" [ref=e6]
+        - navigation [ref=e7]:
+          - link "首页" [ref=e8] [cursor=pointer]:
+            - /url: /zh-Hans
+          - link "价格" [ref=e9] [cursor=pointer]:
+            - /url: /zh-Hans/models
+          - link "供应商" [ref=e10] [cursor=pointer]:
+            - /url: /zh-Hans/providers
+          - link "对比" [ref=e11] [cursor=pointer]:
+            - /url: /zh-Hans/compare
+          - link "API" [ref=e12] [cursor=pointer]:
+            - /url: /zh-Hans/developers
+          - link "数据集" [ref=e13] [cursor=pointer]:
+            - /url: /zh-Hans/open-llm-pricing-dataset
+        - generic [ref=e14]:
+          - button "¥ CNY 人民币" [ref=e16] [cursor=pointer]:
+            - generic [ref=e17]: ¥
+            - generic [ref=e18]: CNY
+            - generic [ref=e19]: 人民币
+          - button "简体中文" [ref=e21] [cursor=pointer]:
+            - img [ref=e22]
+            - text: 简体中文
+    - main [ref=e25]:
+      - generic [ref=e27]:
+        - navigation [ref=e28]:
+          - link "AI 模型价格" [ref=e29] [cursor=pointer]:
+            - /url: /zh-Hans/models
+          - text: /doubao-seed-2.0-pro
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - generic [ref=e32]:
+              - img "火山方舟 logo"
+            - heading "doubao-seed-2.0-pro" [level=1] [ref=e33]
+            - generic [ref=e34]: 火山方舟
+          - generic [ref=e35]:
+            - generic [ref=e36]: Doubao
+            - generic [ref=e37]: text
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - generic [ref=e41]: 价格
+            - generic [ref=e42]:
+              - generic [ref=e43]:
+                - table [ref=e44]:
+                  - rowgroup [ref=e45]:
+                    - row "输入价格 输出价格 缓存输入" [ref=e46]:
+                      - columnheader [ref=e47]
+                      - columnheader "输入价格" [ref=e48]
+                      - columnheader "输出价格" [ref=e49]
+                      - columnheader "缓存输入" [ref=e50]
+                  - rowgroup [ref=e51]:
+                    - row "≤32K ¥3.2 ¥16 ¥0.64" [ref=e52]:
+                      - cell "≤32K" [ref=e53]
+                      - cell "¥3.2" [ref=e54]
+                      - cell "¥16" [ref=e55]
+                      - cell "¥0.64" [ref=e56]
+                    - row "32K–128K ¥4.8 ¥24 ¥0.96" [ref=e57]:
+                      - cell "32K–128K" [ref=e58]
+                      - cell "¥4.8" [ref=e59]
+                      - cell "¥24" [ref=e60]
+                      - cell "¥0.96" [ref=e61]
+                    - row "128K–256K ¥9.6 ¥48 ¥1.92" [ref=e62]:
+                      - cell "128K–256K" [ref=e63]
+                      - cell "¥9.6" [ref=e64]
+                      - cell "¥48" [ref=e65]
+                      - cell "¥1.92" [ref=e66]
+                - generic [ref=e67]:
+                  - generic [ref=e68]:
+                    - generic [ref=e69]: 批量输入
+                    - generic [ref=e70]: ¥1.6
+                  - generic [ref=e71]:
+                    - generic [ref=e72]: 批量输出
+                    - generic [ref=e73]: ¥8
+              - paragraph [ref=e74]: 每百万词元 · CNY
+              - link "查看官方价格 →" [ref=e75] [cursor=pointer]:
+                - /url: https://www.volcengine.com/docs/82379/1544106
+          - generic [ref=e76]:
+            - generic [ref=e78]: 能力
+            - generic [ref=e79]:
+              - generic [ref=e80]:
+                - generic [ref=e81]: 上下文
+                - generic [ref=e82]: 256K
+              - generic [ref=e83]:
+                - generic [ref=e84]: 最大输出
+                - generic [ref=e85]: —
+              - separator [ref=e86]
+              - generic [ref=e87]:
+                - generic [ref=e88]: 工具调用
+                - generic [ref=e89]: ✓
+              - generic [ref=e90]:
+                - generic [ref=e91]: 批量
+                - generic [ref=e92]: ✓
+              - generic [ref=e93]:
+                - generic [ref=e94]: 缓存
+                - generic [ref=e95]: ✓
+              - separator [ref=e96]
+              - link "火山方舟 →" [ref=e98] [cursor=pointer]:
+                - /url: /zh-Hans/providers/volcano-ark
+          - generic [ref=e99]:
+            - heading "相关模型" [level=2] [ref=e100]
+            - generic [ref=e101]:
+              - 'link "deepseek-r1 火山方舟 In: ¥4 Out: ¥16" [ref=e102] [cursor=pointer]':
+                - /url: /zh-Hans/models/deepseek-r1
+                - generic [ref=e103]: deepseek-r1
+                - generic [ref=e104]: 火山方舟
+                - generic [ref=e105]:
+                  - generic [ref=e106]: "In: ¥4"
+                  - generic [ref=e107]: "Out: ¥16"
+              - 'link "deepseek-v3 火山方舟 In: ¥2 Out: ¥8" [ref=e108] [cursor=pointer]':
+                - /url: /zh-Hans/models/deepseek-v3
+                - generic [ref=e109]: deepseek-v3
+                - generic [ref=e110]: 火山方舟
+                - generic [ref=e111]:
+                  - generic [ref=e112]: "In: ¥2"
+                  - generic [ref=e113]: "Out: ¥8"
+              - 'link "deepseek-v3.1 火山方舟 In: ¥4 Out: ¥12" [ref=e114] [cursor=pointer]':
+                - /url: /zh-Hans/models/deepseek-v3-1
+                - generic [ref=e115]: deepseek-v3.1
+                - generic [ref=e116]: 火山方舟
+                - generic [ref=e117]:
+                  - generic [ref=e118]: "In: ¥4"
+                  - generic [ref=e119]: "Out: ¥12"
+              - 'link "deepseek-v3.2 火山方舟 In: ¥2 Out: ¥3" [ref=e120] [cursor=pointer]':
+                - /url: /zh-Hans/models/deepseek-v3-2
+                - generic [ref=e121]: deepseek-v3.2
+                - generic [ref=e122]: 火山方舟
+                - generic [ref=e123]:
+                  - generic [ref=e124]: "In: ¥2"
+                  - generic [ref=e125]: "Out: ¥3"
+              - 'link "deepseek-v4-flash 火山方舟 In: ¥1 Out: ¥2" [ref=e126] [cursor=pointer]':
+                - /url: /zh-Hans/models/deepseek-v4-flash
+                - generic [ref=e127]: deepseek-v4-flash
+                - generic [ref=e128]: 火山方舟
+                - generic [ref=e129]:
+                  - generic [ref=e130]: "In: ¥1"
+                  - generic [ref=e131]: "Out: ¥2"
+              - 'link "deepseek-v4-pro 火山方舟 In: ¥12 Out: ¥24" [ref=e132] [cursor=pointer]':
+                - /url: /zh-Hans/models/deepseek-v4-pro
+                - generic [ref=e133]: deepseek-v4-pro
+                - generic [ref=e134]: 火山方舟
+                - generic [ref=e135]:
+                  - generic [ref=e136]: "In: ¥12"
+                  - generic [ref=e137]: "Out: ¥24"
+    - contentinfo [ref=e138]:
+      - generic [ref=e139]:
+        - generic [ref=e140]:
+          - generic [ref=e141]:
+            - link "LLMRates.ai" [ref=e142] [cursor=pointer]:
+              - /url: /zh-Hans
+              - img "LLMRates.ai" [ref=e143]
+            - paragraph [ref=e144]: 大模型与生成式 AI API 价格情报平台
+          - generic [ref=e145]:
+            - heading "Product" [level=3] [ref=e146]
+            - list [ref=e147]:
+              - listitem [ref=e148]:
+                - link "模型价格" [ref=e149] [cursor=pointer]:
+                  - /url: /zh-Hans/models
+              - listitem [ref=e150]:
+                - link "供应商" [ref=e151] [cursor=pointer]:
+                  - /url: /zh-Hans/providers
+              - listitem [ref=e152]:
+                - link "模型对比" [ref=e153] [cursor=pointer]:
+                  - /url: /zh-Hans/compare
+              - listitem [ref=e154]:
+                - link "API" [ref=e155] [cursor=pointer]:
+                  - /url: /zh-Hans/developers
+              - listitem [ref=e156]:
+                - link "开放数据集" [ref=e157] [cursor=pointer]:
+                  - /url: /zh-Hans/open-llm-pricing-dataset
+              - listitem [ref=e158]:
+                - link "GitHub" [ref=e159] [cursor=pointer]:
+                  - /url: https://github.com/llmrates/llm-pricing-dataset
+          - generic [ref=e160]:
+            - heading "Company" [level=3] [ref=e161]
+            - list [ref=e162]:
+              - listitem [ref=e163]: 关于
+              - listitem [ref=e164]:
+                - button "联系我们" [ref=e165] [cursor=pointer]
+          - generic [ref=e166]:
+            - heading "Legal" [level=3] [ref=e167]
+            - list [ref=e168]:
+              - listitem [ref=e169]: 服务条款
+        - separator [ref=e170]
+        - generic [ref=e171]: © 2026 龙讯科技 · LLMRates.ai 版权所有。
+  - alert [ref=e172]
