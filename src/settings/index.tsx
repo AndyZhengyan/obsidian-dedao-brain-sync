@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'preact/hooks';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'preact/hooks';
 import { SettingItem } from './setting-item';
 import { SyncButton } from './sync-button';
 import { OAuthButton } from './oauth-button';
@@ -106,6 +106,15 @@ export function SettingsComponent({
   const [pendingStartDate, setPendingStartDate] = useState(settings.syncStartDate);
 
   const folderInputRef = useRef<HTMLInputElement>(null);
+
+  const templateFilePaths = useMemo(() => {
+    return Array.from(new Set(
+      app.vault
+        .getMarkdownFiles()
+        .map(file => file.path)
+        .filter(Boolean),
+    )).sort((a, b) => a.localeCompare(b));
+  }, [app]);
 
   // Attachment toggles are now driven by declarative Preact state (no more
   // imperative useRef + ToggleComponent.useEffect plumbing). The previous
@@ -611,8 +620,14 @@ export function SettingsComponent({
           className="getnote-input"
           placeholder={t('settings.templateFile.placeholder')}
           value={templateFilePath}
+          list="getnote-template-file-list"
           onInput={(e) => handleTemplateFilePathChange((e.target as HTMLInputElement).value)}
         />
+        <datalist id="getnote-template-file-list">
+          {templateFilePaths.map(path => (
+            <option key={path} value={path} />
+          ))}
+        </datalist>
       </SettingItem>
 
       <div className="getnote-settings-divider" />

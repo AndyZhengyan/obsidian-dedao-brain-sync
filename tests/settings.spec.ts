@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { h, render } from 'preact';
 import { act } from 'preact/test-utils';
 import { App } from 'obsidian';
+import { TFile } from './mocks/obsidian';
 import { fetchNotes } from '../src/api';
 import { initI18n } from '../src/i18n';
 import { SettingsComponent } from '../src/settings';
@@ -31,6 +32,7 @@ function renderSettings(
     syncProgress?: { message: string; count: string; percent: number };
     startSubscribedKnowledgeSync?: () => void;
     initialKnowledgeBaseCache?: { entries: Array<{ topicId: string; name: string }>; cacheUpdatedAt?: number };
+    app?: App;
   } = {}
 ) {
   const container = document.createElement('div');
@@ -47,7 +49,7 @@ function renderSettings(
       startAutoSync: vi.fn(),
       stopAutoSync: vi.fn(),
       cancelSync: vi.fn(),
-      app: new App(),
+      app: options.app ?? new App(),
       syncProgress: options.syncProgress,
       initialKnowledgeBaseCache: options.initialKnowledgeBaseCache,
     }),
@@ -203,6 +205,46 @@ describe('SettingsComponent auth credentials', () => {
     });
 
     expect(updateSetting).toHaveBeenCalledWith('templateFilePath', 'Templates/reading-note.md');
+  });
+
+  it('suggests vault Markdown files for the template file path', async () => {
+    const app = new App();
+    vi.spyOn(app.vault, 'getMarkdownFiles').mockReturnValue([
+      new TFile('Templates/default.md'),
+      new TFile('Templates/reading-note.md'),
+      new TFile('Templates/reading-note'),
+      new TFile('得到大脑/纯文本/已有同步笔记.md'),
+    ]);
+    vi.spyOn(app.vault, 'getAllFolders').mockReturnValue([
+      { path: 'Templates' } as any,
+      { path: '得到大脑' } as any,
+    ]);
+
+    let rendered!: ReturnType<typeof renderSettings>;
+    await act(async () => {
+      rendered = renderSettings(makeSettings(), vi.fn(), vi.fn(), { app });
+      await Promise.resolve();
+    });
+    const { container } = rendered;
+    const input = Array.from(container.querySelectorAll('input'))
+      .find((item): item is HTMLInputElement => item.placeholder === '例如 Templates/得到大脑模板.md');
+    expect(input).toBeTruthy();
+    expect(input!.getAttribute('list')).toBe('getnote-template-file-list');
+
+    const options = Array.from(container.querySelectorAll('#getnote-template-file-list option'));
+    expect(options.map(item => item.getAttribute('value'))).toEqual([
+      'Templates/default.md',
+      'Templates/reading-note',
+      'Templates/reading-note.md',
+      '得到大脑/纯文本/已有同步笔记.md',
+    ]);
+
+    await act(() => {
+      inputValue(input!, 'Templates/reading-note');
+    });
+
+    expect(input!.value).toBe('Templates/reading-note');
+    expect(rendered.updateSetting).toHaveBeenCalledWith('templateFilePath', 'Templates/reading-note');
   });
 
   it('hides knowledge-base sync in Web API mode', () => {
