@@ -27,9 +27,16 @@ function resolveInitialSyncMode(initialOptions: SyncScopeOptions): SyncMode {
   return daysCutoff >= startTime ? 'days' : 'date';
 }
 
+function getLocalDateInputValue(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function ManualSyncModal({ initialOptions, tagOptions = [], onConfirm, onCancel }: ManualSyncModalProps) {
   const [syncMode, setSyncMode] = useState<SyncMode>(resolveInitialSyncMode(initialOptions));
-  const [syncStartDate, setSyncStartDate] = useState(initialOptions.syncStartDate);
+  const [syncStartDate, setSyncStartDate] = useState(initialOptions.syncStartDate || getLocalDateInputValue());
   const [maxDays, setMaxDays] = useState(String(initialOptions.maxDays));
   const [enabledNoteTypes, setEnabledNoteTypes] = useState<string[] | undefined>(initialOptions.enabledNoteTypes);
   const [syncTags, setSyncTags] = useState<string[]>(initialOptions.syncTags ?? []);

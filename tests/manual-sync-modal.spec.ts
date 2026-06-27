@@ -18,6 +18,8 @@ function renderModal(initialOptions: { syncStartDate: string; maxDays: number; e
 }
 
 afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   render(null, document.body);
   document.body.innerHTML = '';
 });
@@ -59,6 +61,35 @@ describe('ManualSyncModal filters', () => {
     });
 
     expect(onConfirm).toHaveBeenCalledWith({ syncStartDate: '2026-05-09', maxDays: 0 });
+  });
+
+  it('defaults the date field to local today when entering date mode without overwriting manual edits', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 5, 27, 8, 30));
+    const { container } = renderModal({ syncStartDate: '', maxDays: 30 });
+
+    const [dateMode, daysMode] = Array.from(container.querySelectorAll('input[name="syncMode"]')) as HTMLInputElement[];
+
+    await act(() => {
+      dateMode.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    const dateInput = container.querySelector('input[type="date"]') as HTMLInputElement;
+    expect(dateInput).toBeTruthy();
+    expect(dateInput.value).toBe('2026-06-27');
+
+    await act(() => {
+      dateInput.value = '2026-06-12';
+      dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(() => {
+      daysMode.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(() => {
+      dateMode.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect((container.querySelector('input[type="date"]') as HTMLInputElement).value).toBe('2026-06-12');
   });
 
   it('prefers the stricter filter when both date and days are present: days', async () => {
