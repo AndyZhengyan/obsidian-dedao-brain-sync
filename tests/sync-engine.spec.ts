@@ -1134,6 +1134,81 @@ describe('SyncEngine — lastSyncEndTimestamp boundary re-check', () => {
     vi.mocked(globalThis.fetch).mockRestore();
   });
 
+  it('recreates a previously synced boundary note when the local file is missing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        data: {
+          notes: [
+            makeNote({
+              note_id: 'deleted_local_note',
+              title: '本地误删笔记',
+              updated_at: '2026-05-10T12:00:00+08:00',
+            }),
+          ],
+          has_more: false,
+          next_cursor: '',
+        },
+      }) as Response
+    );
+
+    const app = makeMockApp();
+    app.vault._addFolder('得到大脑/纯文本');
+    const engine = new SyncEngine(
+      app as any,
+      makeSettings({
+        maxDays: 0,
+        syncHistory: [
+          {
+            id: 'previous-sync',
+            startedAt: 1,
+            finishedAt: 2,
+            durationMs: 1,
+            timestamp: 2,
+            type: 'auto',
+            mode: 'auto',
+            status: 'success',
+            scope: { maxDays: 0, syncStartDate: '2026-05-09T12:00:00+08:00' },
+            result: {
+              created: 1,
+              updated: 0,
+              skipped: 0,
+              failed: 0,
+              total: 1,
+              items: [
+                {
+                  noteId: 'deleted_local_note',
+                  title: '本地误删笔记',
+                  noteType: 'plain_text',
+                  updatedAt: '2026-05-10T12:00:00+08:00',
+                  status: 'created',
+                },
+              ],
+              lastNoteTimestamp: '2026-05-10T12:00:00+08:00',
+            },
+          },
+        ],
+      }),
+      undefined,
+      { syncStartDate: '2026-05-10T12:00:00+08:00', maxDays: 0 }
+    );
+
+    const result = await engine.sync();
+
+    expect(result.total).toBe(1);
+    expect(result.created).toBe(1);
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        noteId: 'deleted_local_note',
+        status: 'created',
+      }),
+    ]);
+    expect(app.vault.create).toHaveBeenCalledWith(
+      '得到大脑/纯文本/本地误删笔记.md',
+      expect.stringContaining('uid: "deleted_local_note"')
+    );
+    vi.mocked(globalThis.fetch).mockRestore();
+  });
+
   it('newer notes (> boundary) pass the > filter and advance lastSyncEndTimestamp', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       mockFetchResponse({

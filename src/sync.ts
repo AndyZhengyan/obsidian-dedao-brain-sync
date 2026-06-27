@@ -832,6 +832,37 @@ export class SyncEngine {
     });
   }
 
+  private buildPreviouslySyncedNoteIdSet(): Set<string> {
+    const noteIds = new Set<string>();
+    for (const entry of this.settings.syncHistory ?? []) {
+      if (entry.status !== 'success') continue;
+      for (const item of entry.result.items ?? []) {
+        if (item.status !== 'failed') {
+          noteIds.add(item.noteId);
+        }
+      }
+    }
+    return noteIds;
+  }
+
+  private filterNotesByDateRangeOrMissingLocal(
+    notes: GetNoteNote[],
+    uidIndex: Map<string, TFile>,
+    previouslySyncedNoteIds: Set<string>
+  ): GetNoteNote[] {
+    const { syncStartDate } = this.scopeOptions;
+    if (!syncStartDate) return notes;
+
+    const startTime = parseSyncBoundaryTime(syncStartDate);
+    if (startTime === null) return notes;
+
+    return notes.filter(note => {
+      const updated = parseNoteUpdatedTime(note);
+      if (updated !== null && updated > startTime) return true;
+      return previouslySyncedNoteIds.has(note.note_id) && !uidIndex.has(note.note_id);
+    });
+  }
+
   private filterNotesByType(notes: GetNoteNote[]): GetNoteNote[] {
     const enabledNoteTypes = this.scopeOptions.enabledNoteTypes;
     if (enabledNoteTypes === undefined) return notes;
@@ -857,6 +888,7 @@ export class SyncEngine {
   async sync(modal?: SyncModal): Promise<SyncResult> {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
     const uidIndex = this.buildUidIndex();
+    const previouslySyncedNoteIds = this.buildPreviouslySyncedNoteIdSet();
     const seenNoteIds = new Set<string>();
     const observedTagNames = new Set<string>();
     const controller = new AbortController();
@@ -893,7 +925,7 @@ export class SyncEngine {
         this.onProgress?.({ page: pageCount, percent: 0 });
 
         const recentNotes = this.filterRecentNotes(notes);
-        const filtered = this.filterNotesByDateRange(recentNotes);
+        const filtered = this.filterNotesByDateRangeOrMissingLocal(recentNotes, uidIndex, previouslySyncedNoteIds);
         const typeFiltered = this.filterNotesByType(filtered);
         for (const note of typeFiltered) {
           if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
