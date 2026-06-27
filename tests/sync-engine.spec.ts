@@ -1209,6 +1209,73 @@ describe('SyncEngine — lastSyncEndTimestamp boundary re-check', () => {
     vi.mocked(globalThis.fetch).mockRestore();
   });
 
+  it('does not recreate a previously synced missing note older than the boundary', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        data: {
+          notes: [
+            makeNote({
+              note_id: 'old_deleted_local_note',
+              title: '旧本地误删笔记',
+              updated_at: '2026-05-10T11:59:59+08:00',
+            }),
+          ],
+          has_more: false,
+          next_cursor: '',
+        },
+      }) as Response
+    );
+
+    const app = makeMockApp();
+    app.vault._addFolder('得到大脑/纯文本');
+    const engine = new SyncEngine(
+      app as any,
+      makeSettings({
+        maxDays: 0,
+        syncHistory: [
+          {
+            id: 'previous-sync',
+            startedAt: 1,
+            finishedAt: 2,
+            durationMs: 1,
+            timestamp: 2,
+            type: 'auto',
+            mode: 'auto',
+            status: 'success',
+            scope: { maxDays: 0, syncStartDate: '2026-05-09T12:00:00+08:00' },
+            result: {
+              created: 1,
+              updated: 0,
+              skipped: 0,
+              failed: 0,
+              total: 1,
+              items: [
+                {
+                  noteId: 'old_deleted_local_note',
+                  title: '旧本地误删笔记',
+                  noteType: 'plain_text',
+                  updatedAt: '2026-05-10T11:59:59+08:00',
+                  status: 'created',
+                },
+              ],
+              lastNoteTimestamp: '2026-05-10T11:59:59+08:00',
+            },
+          },
+        ],
+      }),
+      undefined,
+      { syncStartDate: '2026-05-10T12:00:00+08:00', maxDays: 0 }
+    );
+
+    const result = await engine.sync();
+
+    expect(result.total).toBe(0);
+    expect(result.created).toBe(0);
+    expect(result.lastNoteTimestamp).toBeUndefined();
+    expect(app.vault.create).not.toHaveBeenCalled();
+    vi.mocked(globalThis.fetch).mockRestore();
+  });
+
   it('newer notes (> boundary) pass the > filter and advance lastSyncEndTimestamp', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       mockFetchResponse({

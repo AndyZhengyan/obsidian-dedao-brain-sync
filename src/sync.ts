@@ -859,7 +859,7 @@ export class SyncEngine {
     return notes.filter(note => {
       const updated = parseNoteUpdatedTime(note);
       if (updated !== null && updated > startTime) return true;
-      return previouslySyncedNoteIds.has(note.note_id) && !uidIndex.has(note.note_id);
+      return updated === startTime && previouslySyncedNoteIds.has(note.note_id) && !uidIndex.has(note.note_id);
     });
   }
 
