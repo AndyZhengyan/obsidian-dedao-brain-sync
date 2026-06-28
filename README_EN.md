@@ -16,7 +16,7 @@ Bidirectionally sync your notes, highlights, links, recordings, and AI summaries
 ## 🎉 1.4.0 — Latest Update
 
 - **🔍 OpenAPI search sidebar**: Search Dedao Brain notes from the Obsidian sidebar and one-click "Open local note" or "Sync to local" from each hit. Per-item syncing state is isolated, so entries never block each other.
-- **📝 Template files for new notes**: Point to a Markdown template inside your vault and every newly synced note is rendered through it. Supports `{{title}}` and `{{content}}` placeholders plus a custom YAML header, so Dedao Brain notes can drop straight into your local note convention.
+- **📝 Template files for new notes**: Use a custom template to generate frontmatter and body for newly synced notes.
 - **🔗 Save link original content**: Link-type notes also save the original web page body for offline reading.
 - **🛡️ Conservative download policy**: Locally existing notes are skipped by default and never overwritten. Delete the local file and re-sync to re-pull a remote note.
 - **♻️ Recreate locally missing notes**: When a remote note still exists but its local file is gone, the plugin recreates it automatically.
