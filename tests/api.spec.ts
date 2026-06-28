@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createNote, fetchNoteChildren, fetchNotes, fetchNoteDetail, fetchNoteOriginal, fetchSubscribedTopics, fetchTopicContentPreviewPage } from '../src/api';
+import { createNote, fetchNoteChildren, fetchNotes, fetchNoteDetail, fetchNoteOriginal, fetchRecallSearch, fetchSubscribedTopics, fetchTopicContentPreviewPage } from '../src/api';
 import type { ListResponse } from '../src/types';
 
 // Extract the internal safeJsonParse for direct testing
@@ -257,6 +257,63 @@ describe('fetchNoteDetail', () => {
 
     try {
       await expect(fetchNoteDetail('not-exist', 'test-token', 'test-client')).rejects.toThrow('笔记不存在');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+});
+
+describe('fetchRecallSearch', () => {
+  it('calls the official OpenAPI recall endpoint and normalizes results', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockTextFetchResponse(JSON.stringify({
+        success: true,
+        data: {
+          results: [
+            {
+              note_id: 0,
+              title: '搜索结果',
+              content: '命中的正文片段',
+              note_type: 'link',
+              updated_at: '2026-05-20 10:00:00',
+              created_at: '2026-05-19 10:00:00',
+              score: 0.82,
+            },
+          ],
+        },
+      }).replace('"note_id":0', '"note_id":1909193892067130512')) as Response
+    );
+
+    try {
+      const results = await fetchRecallSearch({
+        query: 'Obsidian',
+        token: 'test-token',
+        clientId: 'test-client',
+        topK: 5,
+      });
+
+      expect(results).toEqual([
+        expect.objectContaining({
+          note_id: '1909193892067130512',
+          title: '搜索结果',
+          content: '命中的正文片段',
+          note_type: 'link',
+          updated_at: '2026-05-20 10:00:00',
+          score: 0.82,
+        }),
+      ]);
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        'https://openapi.biji.com/open/api/v1/resource/recall',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer test-token',
+            'X-Client-ID': 'test-client',
+            'Content-Type': 'application/json',
+          }),
+          body: JSON.stringify({ query: 'Obsidian', top_k: 5 }),
+        })
+      );
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
     }

@@ -32,7 +32,20 @@ export class Vault extends Events {
 }
 
 // ---- Workspace ----
-export class Workspace extends Events {}
+export class WorkspaceLeaf {
+  view: unknown = null;
+  async setViewState(_state: unknown): Promise<void> {}
+  async openFile(_file: TFile): Promise<void> {}
+}
+
+export class Workspace extends Events {
+  getLeavesOfType(_type: string): WorkspaceLeaf[] { return []; }
+  getRightLeaf(_split: boolean): WorkspaceLeaf | null { return new WorkspaceLeaf(); }
+  getLeaf(_newLeaf?: boolean): WorkspaceLeaf { return new WorkspaceLeaf(); }
+  revealLeaf(_leaf: WorkspaceLeaf): void {}
+  detachLeavesOfType(_type: string): void {}
+  onLayoutReady(callback: () => void): void { callback(); }
+}
 
 // ---- MetadataCache ----
 export class MetadataCache extends Events {
@@ -81,6 +94,43 @@ export class Plugin {
 
   loadData(): Promise<Record<string, unknown>> { return Promise.resolve({}); }
   saveData(_data: Record<string, unknown>): Promise<void> { return Promise.resolve(); }
+  addSettingTab(_tab: unknown): void {}
+  addCommand(_command: unknown): void {}
+  addRibbonIcon(_icon: string, _title: string, _callback: () => void): void {}
+  registerView(_type: string, _factory: (leaf: WorkspaceLeaf) => unknown): void {}
+  registerEvent(_eventRef: unknown): void {}
+  registerInterval(_id: number): void {}
+}
+
+// ---- ItemView ----
+export class ItemView {
+  contentEl: HTMLElement = document.createElement('div');
+  constructor(public leaf: WorkspaceLeaf) {}
+  getViewType(): string { return ''; }
+  getDisplayText(): string { return ''; }
+  getIcon(): string { return ''; }
+  async onOpen(): Promise<void> {}
+  async onClose(): Promise<void> {}
+}
+
+// ---- Menu ----
+export class MenuItem {
+  title = '';
+  icon = '';
+  callback: (() => void) | null = null;
+  setTitle(title: string): this { this.title = title; return this; }
+  setIcon(icon: string): this { this.icon = icon; return this; }
+  onClick(callback: () => void): this { this.callback = callback; return this; }
+}
+
+export class Menu {
+  items: MenuItem[] = [];
+  addItem(callback: (item: MenuItem) => void): this {
+    const item = new MenuItem();
+    callback(item);
+    this.items.push(item);
+    return this;
+  }
 }
 
 // ---- Modal ----
