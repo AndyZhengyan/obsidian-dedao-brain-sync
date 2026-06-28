@@ -13,15 +13,14 @@ Bidirectionally sync your notes, highlights, links, recordings, and AI summaries
 
 * * *
 
-## 🎉 1.3.1 — Latest Update
+## 🎉 1.4.0 — Latest Update
 
-- **🔍 OpenAPI search sidebar**: A full-text search panel powered by the OpenAPI. Search Dedao Brain notes directly from an Obsidian sidebar and one-click "Open local note" or "Sync to local" from each hit.
-- **🗂️ Scheduled sync settings, centralized**: Sync range (start date / max days), note types, tag filter, and target knowledge bases are now grouped under the "Enable scheduled sync" disclosure panel.
-- **🛠️ Compact settings disclosure**: "Enable scheduled sync" and "Download attachments" expose an inline "More / Collapse" hyperlink next to the master toggle — no extra row.
-- **🏷️ Tag management improvements**: Settings tab now self-seeds the tag cache from the first 20 notes on first open. Tag dropdowns in filter modals are read-only; only "Scheduled sync" allows creating new tags.
-- **📜 Cleaner tag dropdowns**: Removed nested scrollbars; fixed checkbox size so long labels wrap without stretching the checkbox; dropdown menu text is no longer bold.
-- **🖱️ Attachment master toggle fix**: Master toggle is now declarative and works on a single click. Child toggles turn off and become disabled when the master is off.
-- **🎛️ Knowledge-base sync modal rework**: Renamed title to "Select Knowledge Bases to Sync"; scope radio, tag filter, search, and blogger filter are combined into a single top toolbar row.
+- **🔍 OpenAPI search sidebar**: Search Dedao Brain notes from the Obsidian sidebar and one-click "Open local note" or "Sync to local" from each hit. Per-item syncing state is isolated, so entries never block each other.
+- **📝 Template files for new notes**: Use a custom template to generate frontmatter and body for newly synced notes.
+- **🔗 Save link original content**: Link-type notes also save the original web page body for offline reading.
+- **🛡️ Conservative download policy**: Locally existing notes are skipped by default and never overwritten. Delete the local file and re-sync to re-pull a remote note.
+- **♻️ Recreate locally missing notes**: When a remote note still exists but its local file is gone, the plugin recreates it automatically.
+- **✨ Sync modal and settings polish**: Knowledge-base sync modal rework, attachment master toggle fix, tag management improvements, and scheduled sync settings aggregation from 1.3.1 ship together.
 
 The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 
