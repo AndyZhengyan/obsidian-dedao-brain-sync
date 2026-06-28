@@ -123,6 +123,8 @@ export interface Settings {
   webCsrfToken: string;
   folderName: string;
   filenamePrefix: string;
+  datePathFormat: string;
+  datePathMigrationFormat: string;
   templateFilePath: string;
   maxDays: number;
   syncStartDate: string;  // ISO date string, empty means no limit
@@ -189,6 +191,8 @@ export const DEFAULT_SETTINGS: Settings = {
   webCsrfToken: '',
   folderName: '得到大脑',
   filenamePrefix: '',
+  datePathFormat: '',
+  datePathMigrationFormat: '',
   templateFilePath: '',
   maxDays: 30,
   syncStartDate: '',

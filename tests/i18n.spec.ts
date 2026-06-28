@@ -279,6 +279,11 @@ describe('t() - New settings keys', () => {
     expect(i18n.t('settings.prefix.hint')).toBe('时间格式：YYYY / MM / DD / HH / mm / ss');
   });
 
+  it('settings.datePathFormat keys', () => {
+    expect(i18n.t('settings.datePathFormat.label')).toBe('日期路径格式');
+    expect(i18n.t('settings.datePathFormat.placeholder')).toBe('例如 YYYY/MM/YYYY-MM-DD');
+  });
+
   it('settings.lastSync', () => {
     expect(i18n.t('settings.lastSync')).toBe('上次同步');
   });
@@ -304,6 +309,7 @@ describe('t() - New settings keys', () => {
     expect(i18n.t('settings.noteTypes.label')).toBe('Note Types');
     expect(i18n.t('settings.interval.hint')).toBe('Minimum 5 minutes');
     expect(i18n.t('settings.lastSync.never')).toBe('Never synced');
+    expect(i18n.t('settings.datePathFormat.label')).toBe('Date Path Format');
     expect(i18n.t('settings.onboarding')).toBe('👋 Welcome! Choose an authentication mode and enter credentials first.');
   });
 });

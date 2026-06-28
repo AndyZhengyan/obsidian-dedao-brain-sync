@@ -127,6 +127,7 @@ export function SettingsComponent({
   const [showApiToken, setShowApiToken] = useState(false);
   const [folderName, setFolderName] = useState(settings.folderName);
   const [filenamePrefix, setFilenamePrefix] = useState(settings.filenamePrefix);
+  const [datePathFormat, setDatePathFormat] = useState(settings.datePathFormat);
   const [templateFilePath, setTemplateFilePath] = useState(settings.templateFilePath);
   // Only show actual lastSyncEndTimestamp — do NOT fallback to syncStartDate
   const lastSyncedTo = settings.lastSyncEndTimestamp || '';
@@ -291,6 +292,14 @@ export function SettingsComponent({
     (value: string) => {
       setFilenamePrefix(value);
       updateSetting('filenamePrefix', value);
+    },
+    [updateSetting]
+  );
+
+  const handleDatePathFormatChange = useCallback(
+    (value: string) => {
+      setDatePathFormat(value);
+      updateSetting('datePathFormat', value);
     },
     [updateSetting]
   );
@@ -634,6 +643,20 @@ export function SettingsComponent({
           placeholder={t('settings.folder.placeholder')}
           value={folderName}
           onInput={(e) => handleFolderChange((e.target as HTMLInputElement).value)}
+        />
+      </SettingItem>
+
+      {/* 日期路径格式 */}
+      <SettingItem
+        name={t('settings.datePathFormat.label')}
+        description={t('settings.datePathFormat.desc')}
+      >
+        <input
+          type="text"
+          className="getnote-input"
+          placeholder={t('settings.datePathFormat.placeholder')}
+          value={datePathFormat}
+          onInput={(e) => handleDatePathFormatChange((e.target as HTMLInputElement).value)}
         />
       </SettingItem>
 

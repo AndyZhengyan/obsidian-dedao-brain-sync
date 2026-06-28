@@ -315,6 +315,13 @@ export default class GetNoteSyncPlugin extends Plugin {
     this.currentSyncEngine?.cancel();
   }
 
+  private pendingDatePathMigrationFormat(type: 'full' | 'selective' | 'auto', selectedIds?: string[]): string {
+    if (type === 'selective' || selectedIds?.length) return '';
+    const format = this.settings.datePathFormat?.trim() ?? '';
+    if (!format) return '';
+    return this.settings.datePathMigrationFormat === format ? '' : format;
+  }
+
   private async recordSyncHistory(
     result: SyncResult,
     type: SyncHistoryEntry['type'],
@@ -378,11 +385,15 @@ export default class GetNoteSyncPlugin extends Plugin {
     }
 
     const startedAt = Date.now();
-    const resolvedSyncStartDate = scopeOptions?.syncStartDate ?? this.settings.syncStartDate;
-    const resolvedEnabledNoteTypes = scopeOptions?.enabledNoteTypes;
-    const resolvedSyncTags = scopeOptions?.syncTags;
+    const pendingDatePathMigrationFormat = this.pendingDatePathMigrationFormat(type, selectedIds);
+    const effectiveScopeOptions = pendingDatePathMigrationFormat
+      ? { ...scopeOptions, maxDays: 0, syncStartDate: '' }
+      : scopeOptions;
+    const resolvedSyncStartDate = effectiveScopeOptions?.syncStartDate ?? this.settings.syncStartDate;
+    const resolvedEnabledNoteTypes = effectiveScopeOptions?.enabledNoteTypes;
+    const resolvedSyncTags = effectiveScopeOptions?.syncTags;
     const resolvedScope: SyncHistoryScope = {
-      maxDays: resolvedSyncStartDate ? 0 : scopeOptions?.maxDays ?? this.settings.maxDays,
+      maxDays: resolvedSyncStartDate ? 0 : effectiveScopeOptions?.maxDays ?? this.settings.maxDays,
       syncStartDate: resolvedSyncStartDate,
       ...(resolvedEnabledNoteTypes !== undefined ? { enabledNoteTypes: resolvedEnabledNoteTypes } : {}),
       ...(resolvedSyncTags !== undefined && resolvedSyncTags.length > 0 ? { syncTags: resolvedSyncTags } : {}),
@@ -395,7 +406,7 @@ export default class GetNoteSyncPlugin extends Plugin {
     this.refreshSettingsTab();
     showNotice(t('sync.started'));
 
-    const engine = new SyncEngine(this.app, this.settings, (info) => this.setProgress(info), scopeOptions);
+    const engine = new SyncEngine(this.app, this.settings, (info) => this.setProgress(info), effectiveScopeOptions);
     this.currentSyncEngine = engine;
     engine.setOnCancel(() => this.cancelSync());
     let shouldResetSyncState = type === 'auto';
@@ -405,6 +416,9 @@ export default class GetNoteSyncPlugin extends Plugin {
         ? await engine.syncNoteIds(selectedIds)
         : await engine.sync();
 
+      if (pendingDatePathMigrationFormat) {
+        this.settings.datePathMigrationFormat = pendingDatePathMigrationFormat;
+      }
       await this.recordSyncHistory(result, type, startedAt, resolvedScope);
 
         // Clear exhausted quota state on successful sync

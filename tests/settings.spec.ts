@@ -136,6 +136,23 @@ afterEach(() => {
 });
 
 describe('SettingsComponent auth credentials', () => {
+  it('renders and saves the date path format setting', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      datePathFormat: 'YYYY/MM/YYYY-MM-DD',
+    }));
+
+    expect(container.textContent).toContain('日期路径格式');
+    const input = Array.from(container.querySelectorAll('input'))
+      .find((item): item is HTMLInputElement => item.value === 'YYYY/MM/YYYY-MM-DD');
+    expect(input).toBeTruthy();
+
+    await act(() => {
+      inputValue(input!, 'YYYY/MM');
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('datePathFormat', 'YYYY/MM');
+  });
+
   it('keeps the tag whitelist editable when scheduled sync is disabled', async () => {
     const { container, updateSetting } = renderSettings(makeSettings({
       scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: false },

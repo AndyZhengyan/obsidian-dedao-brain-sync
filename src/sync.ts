@@ -124,6 +124,16 @@ function hasImageAssetPaths(note: GetNoteNote): boolean {
   return (note.assetPaths ?? []).some(path => /\.(png|jpg|jpeg|gif|webp|bmp|svg)(\?|$)/i.test(path));
 }
 
+function dirname(path: string): string {
+  const index = path.lastIndexOf('/');
+  return index > 0 ? path.slice(0, index) : '';
+}
+
+function basename(path: string): string {
+  const index = path.lastIndexOf('/');
+  return index >= 0 ? path.slice(index + 1) : path;
+}
+
 export class SyncCancelledError extends Error {
   constructor() {
     super('Sync cancelled');
@@ -182,13 +192,41 @@ export class SyncEngine {
     this.onProgress = onProgress;
   }
 
+  private formatDatePath(note: GetNoteNote): string {
+    const format = this.settings.datePathFormat?.trim();
+    if (!format) return '';
+
+    const formatted = formatTimestampPrefix(format, note.created_at);
+    if (!formatted) return '';
+
+    return formatted
+      .split('/')
+      .map(segment => segment.replace(/[\\:*?"<>|]/g, '').trim())
+      .filter(Boolean)
+      .join('/');
+  }
+
+  private getStorageDir(defaultCategoryDir: string, note: GetNoteNote): string {
+    const datePath = this.formatDatePath(note);
+    if (!datePath) return defaultCategoryDir;
+    return defaultCategoryDir.includes('知识库/') ? `${defaultCategoryDir}/${datePath}` : datePath;
+  }
+
+  private async ensureVaultFolder(fullPath: string): Promise<void> {
+    const parts = fullPath.split('/').filter(Boolean);
+    let current = '';
+    for (const part of parts) {
+      current = current ? `${current}/${part}` : part;
+      if (!this.app.vault.getAbstractFileByPath(current)) {
+        await this.app.vault.createFolder(current);
+      }
+    }
+  }
+
   private async ensureCategoryDir(categoryDir: string): Promise<string> {
     const basePath = this.settings.folderName;
     const fullPath = `${basePath}/${categoryDir}`;
-    const targetDir = this.app.vault.getAbstractFileByPath(fullPath);
-    if (!targetDir) {
-      await this.app.vault.createFolder(fullPath);
-    }
+    await this.ensureVaultFolder(fullPath);
     return fullPath;
   }
 
@@ -265,11 +303,9 @@ export class SyncEngine {
         return null;
       }
 
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureCategoryDir(this.getStorageDir(categoryOverride ?? getCategoryDir(note.note_type), note));
       const assetDir = `${categoryDir}/asset`;
-      if (!this.app.vault.getAbstractFileByPath(assetDir)) {
-        await this.app.vault.createFolder(assetDir);
-      }
+      await this.ensureVaultFolder(assetDir);
 
       const rawFilename = `${this.getAudioAssetBaseName(note)}_audio.mp3`;
       const filename = rawFilename.split('/').pop()!.split('\\').pop()!;
@@ -304,11 +340,9 @@ export class SyncEngine {
         return null;
       }
 
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureCategoryDir(this.getStorageDir(categoryOverride ?? getCategoryDir(note.note_type), note));
       const assetDir = `${categoryDir}/asset`;
-      if (!this.app.vault.getAbstractFileByPath(assetDir)) {
-        await this.app.vault.createFolder(assetDir);
-      }
+      await this.ensureVaultFolder(assetDir);
 
       const ext = extractImageExtension(attachment.url);
       const filename = imageAssetFilename(this.getFileName(note), ext, index);
@@ -343,11 +377,9 @@ export class SyncEngine {
       }
 
       const kind = classifyAttachmentUrl(attachment.url);
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureCategoryDir(this.getStorageDir(categoryOverride ?? getCategoryDir(note.note_type), note));
       const assetDir = `${categoryDir}/asset`;
-      if (!this.app.vault.getAbstractFileByPath(assetDir)) {
-        await this.app.vault.createFolder(assetDir);
-      }
+      await this.ensureVaultFolder(assetDir);
 
       const filename = genericAssetFilename(this.getFileName(note), attachment.url, index, kind);
       const targetPath = `${assetDir}/${filename}`;
@@ -372,11 +404,9 @@ export class SyncEngine {
     if (!note.audio) return null;
 
     try {
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureCategoryDir(this.getStorageDir(categoryOverride ?? getCategoryDir(note.note_type), note));
       const assetDir = `${categoryDir}/asset`;
-      if (!this.app.vault.getAbstractFileByPath(assetDir)) {
-        await this.app.vault.createFolder(assetDir);
-      }
+      await this.ensureVaultFolder(assetDir);
 
       const targetPath = `${assetDir}/${this.getAudioAssetBaseName(note)}_transcript.md`;
       const content = `# ${generateDisplayTitle(note) || t('picker.noTitle')}\n\n${note.audio}`;
@@ -398,11 +428,9 @@ export class SyncEngine {
     if (!originalContent) return null;
 
     try {
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureCategoryDir(this.getStorageDir(categoryOverride ?? getCategoryDir(note.note_type), note));
       const assetDir = `${categoryDir}/asset`;
-      if (!this.app.vault.getAbstractFileByPath(assetDir)) {
-        await this.app.vault.createFolder(assetDir);
-      }
+      await this.ensureVaultFolder(assetDir);
 
       const targetPath = `${assetDir}/${this.getAudioAssetBaseName(note)}_original.md`;
       const title = note.linkOriginal?.title?.trim() || generateDisplayTitle(note) || t('picker.noTitle');
@@ -438,6 +466,12 @@ export class SyncEngine {
   ): { exists: boolean; file?: TFile } {
     const existingFile = uidIndex.get(note.note_id);
     if (!existingFile) return { exists: false };
+
+    const targetDir = this.getStorageDir(_categoryOverride ?? getCategoryDir(note.note_type), note);
+    const targetPath = `${this.settings.folderName}/${targetDir}/${this.getFileName(note)}.md`;
+    if (this.formatDatePath(note) && existingFile.path !== targetPath) {
+      return { exists: false, file: existingFile };
+    }
 
     return { exists: true, file: existingFile };
   }
@@ -500,6 +534,65 @@ export class SyncEngine {
     return renderNoteWithTemplate(note, template, note.assetFileName, parentFileName, childFileNames);
   }
 
+  private getVaultFiles(): Array<{ path: string }> {
+    const vault = this.app.vault as typeof this.app.vault & { getFiles?: () => Array<{ path: string }> };
+    return typeof vault.getFiles === 'function' ? vault.getFiles() : this.app.vault.getMarkdownFiles();
+  }
+
+  private isMatchingAssetFile(filename: string, note: GetNoteNote, parentBaseName?: string): boolean {
+    const baseName = this.getFileName(note, parentBaseName);
+    const audioBaseName = this.getAudioAssetBaseName(note);
+    return filename.startsWith(`${baseName}_`) || filename.startsWith(`${audioBaseName}_`);
+  }
+
+  private getMatchingAssetFiles(existingNotePath: string, note: GetNoteNote, parentBaseName?: string): Array<{ path: string }> {
+    const oldAssetPrefix = `${dirname(existingNotePath)}/asset/`;
+    return this.getVaultFiles().filter(file =>
+      file.path.startsWith(oldAssetPrefix) && this.isMatchingAssetFile(basename(file.path), note, parentBaseName)
+    );
+  }
+
+  private async moveExistingNoteToTarget(
+    note: GetNoteNote,
+    existingByUid: TFile,
+    targetPath: string,
+    targetDir: string,
+    uidIndex: Map<string, TFile>,
+    parentBaseName?: string
+  ): Promise<WriteNoteResult> {
+    const existingAtTarget = this.app.vault.getAbstractFileByPath(targetPath);
+    if (existingAtTarget && existingAtTarget !== existingByUid) {
+      const error = `目标路径已存在，跳过迁移：${targetPath}`;
+      console.warn(`[DedaoBrain] ${error}`);
+      return { status: 'skipped', file: existingByUid, error };
+    }
+
+    const assetFiles = this.getMatchingAssetFiles(existingByUid.path, note, parentBaseName);
+    const assetMoves = assetFiles.map(file => ({
+      file,
+      targetPath: `${targetDir}/asset/${basename(file.path)}`,
+    }));
+    for (const move of assetMoves) {
+      const existingAsset = this.app.vault.getAbstractFileByPath(move.targetPath);
+      if (existingAsset && existingAsset !== move.file) {
+        const error = `目标附件已存在，跳过迁移：${move.targetPath}`;
+        console.warn(`[DedaoBrain] ${error}`);
+        return { status: 'skipped', file: existingByUid, error };
+      }
+    }
+
+    await this.ensureVaultFolder(targetDir);
+    if (assetMoves.length > 0) {
+      await this.ensureVaultFolder(`${targetDir}/asset`);
+    }
+    await this.app.vault.rename(existingByUid, targetPath);
+    for (const move of assetMoves) {
+      await this.app.vault.rename(move.file as TFile, move.targetPath);
+    }
+    uidIndex.set(note.note_id, existingByUid);
+    return { status: 'updated', file: existingByUid };
+  }
+
   private async writeNote(
     note: GetNoteNote,
     uidIndex: Map<string, TFile>,
@@ -509,7 +602,7 @@ export class SyncEngine {
     categoryOverride?: string
   ): Promise<WriteNoteResult> {
     try {
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureCategoryDir(this.getStorageDir(categoryOverride ?? getCategoryDir(note.note_type), note));
       let targetPath = `${categoryDir}/${this.getFileName(note, parentBaseName)}.md`;
       const existingByUid = uidIndex.get(note.note_id);
       const existingAtTarget = this.app.vault.getAbstractFileByPath(targetPath);
@@ -526,6 +619,9 @@ export class SyncEngine {
       }
 
       if (existingByUid) {
+        if (existingByUid.path !== targetPath && this.formatDatePath(note)) {
+          return await this.moveExistingNoteToTarget(note, existingByUid, targetPath, categoryDir, uidIndex, parentBaseName);
+        }
         return { status: 'skipped', file: existingByUid };
       } else if (existingAtTarget instanceof TFile) {
         const content = renderNote(note, note.assetFileName, parentFileName, childFileNames);
