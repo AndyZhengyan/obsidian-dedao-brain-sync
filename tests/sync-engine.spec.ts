@@ -22,6 +22,9 @@ function makeMockApp() {
         [...files.values()]
           .filter((f) => f.path.endsWith('.md'))
           .map((f) => ({ path: f.path })),
+      getFiles: () =>
+        [...files.values()]
+          .map((f) => ({ path: f.path })),
       read: vi.fn().mockImplementation(async (file: { path: string }) => files.get(file.path)?.content ?? ''),
       createFolder: vi.fn().mockResolvedValue(undefined),
       create: vi.fn().mockImplementation((path: string, data: string) => {
@@ -43,7 +46,8 @@ function makeMockApp() {
         const existing = files.get(file.path);
         if (existing) {
           files.delete(file.path);
-          files.set(newPath, existing);
+          files.set(newPath, { ...existing, path: newPath });
+          file.path = newPath;
         }
         return Promise.resolve();
       }),
@@ -64,20 +68,11 @@ function makeMockApp() {
 
 function makeSettings(overrides: Partial<Settings> = {}): Settings {
   return {
-    authMode: 'openapi',
-    openApiToken: '',
-    openApiClientId: '',
-    webApiToken: '',
+    ...DEFAULT_SETTINGS,
     apiToken: 'test-token',
     clientId: 'test-client',
-    webCsrfToken: '',
-    folderName: '得到大脑',
-    templateFilePath: '',
-    maxDays: 30,
-    syncStartDate: '',
-    lastSyncEndTimestamp: '',
-    filenamePrefix: '',
-    scheduledSync: { enabled: false, intervalMinutes: 30, syncOnStart: false },
+    scheduledSync: { ...DEFAULT_SCHEDULED_SYNC, enabled: false, intervalMinutes: 30, syncOnStart: false },
+    attachmentImport: { ...DEFAULT_SETTINGS.attachmentImport },
     syncHistory: [],
     ...overrides,
   };
@@ -1539,6 +1534,99 @@ describe('SyncEngine — writeNote', () => {
 
     expect(result.status).toBe('skipped');
     expect(app.vault.modify).not.toHaveBeenCalled();
+  });
+
+  it('uses datePathFormat under the sync root for newly created notes', async () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({
+      datePathFormat: 'YYYY/MM/YYYY-MM-DD',
+    }));
+    const note = makeNote({ note_id: 'dated_new', title: '日期归档' });
+    const index = new Map<string, any>();
+
+    // @ts-ignore
+    const result = await engine['writeNote'](note, index);
+
+    expect(result.status).toBe('created');
+    expect(app.vault.create).toHaveBeenCalledWith(
+      '得到大脑/2026/04/2026-04-27/日期归档.md',
+      expect.any(String)
+    );
+  });
+
+  it('keeps the existing type directory when datePathFormat is empty', async () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app as any, makeSettings({ datePathFormat: '' }));
+    const note = makeNote({ note_id: 'flat_new', title: '原路径' });
+    const index = new Map<string, any>();
+
+    // @ts-ignore
+    await engine['writeNote'](note, index);
+
+    expect(app.vault.create).toHaveBeenCalledWith(
+      '得到大脑/纯文本/原路径.md',
+      expect.any(String)
+    );
+  });
+
+  it('moves an existing synced note and matching assets into the configured date path', async () => {
+    const app = makeMockApp();
+    app.vault._addFolder('得到大脑/纯文本');
+    app.vault._addFolder('得到大脑/纯文本/asset');
+    app.vault._addFile(
+      '得到大脑/纯文本/迁移笔记.md',
+      '---\nuid: "move_me"\nmodified: 2026-04-28 10:00:00\n---\n![](asset/迁移笔记_image.png)',
+      { uid: 'move_me', modified: '2026-04-28 10:00:00' }
+    );
+    app.vault._addFile('得到大脑/纯文本/asset/迁移笔记_image.png', '[binary]', {});
+    app.vault._addFile('得到大脑/纯文本/asset/其他笔记_image.png', '[binary]', {});
+    const engine = new SyncEngine(app as any, makeSettings({
+      datePathFormat: 'YYYY/MM/YYYY-MM-DD',
+    }));
+    const note = makeNote({ note_id: 'move_me', title: '迁移笔记' });
+    const existing = app.vault.getAbstractFileByPath('得到大脑/纯文本/迁移笔记.md');
+    const index = new Map<string, any>([['move_me', existing]]);
+
+    // @ts-ignore
+    const result = await engine['writeNote'](note, index);
+
+    expect(result.status).toBe('updated');
+    expect(app.vault.rename).toHaveBeenCalledWith(
+      expect.objectContaining({ path: '得到大脑/2026/04/2026-04-27/迁移笔记.md' }),
+      '得到大脑/2026/04/2026-04-27/迁移笔记.md'
+    );
+    expect(app.vault.getAbstractFileByPath('得到大脑/2026/04/2026-04-27/迁移笔记.md')).toBeTruthy();
+    expect(app.vault.getAbstractFileByPath('得到大脑/2026/04/2026-04-27/asset/迁移笔记_image.png')).toBeTruthy();
+    expect(app.vault.getAbstractFileByPath('得到大脑/纯文本/asset/其他笔记_image.png')).toBeTruthy();
+    expect(index.get('move_me')?.path).toBe('得到大脑/2026/04/2026-04-27/迁移笔记.md');
+  });
+
+  it('skips date-path migration when the target note path already exists', async () => {
+    const app = makeMockApp();
+    app.vault._addFile(
+      '得到大脑/纯文本/冲突笔记.md',
+      '---\nuid: "conflict_source"\nmodified: 2026-04-28 10:00:00\n---\n旧路径',
+      { uid: 'conflict_source', modified: '2026-04-28 10:00:00' }
+    );
+    app.vault._addFile(
+      '得到大脑/2026/04/2026-04-27/冲突笔记.md',
+      '---\nuid: "different"\n---\n目标已存在',
+      { uid: 'different' }
+    );
+    const engine = new SyncEngine(app as any, makeSettings({
+      datePathFormat: 'YYYY/MM/YYYY-MM-DD',
+    }));
+    const note = makeNote({ note_id: 'conflict_source', title: '冲突笔记' });
+    const existing = app.vault.getAbstractFileByPath('得到大脑/纯文本/冲突笔记.md');
+    const index = new Map<string, any>([['conflict_source', existing]]);
+
+    // @ts-ignore
+    const result = await engine['writeNote'](note, index);
+
+    expect(result.status).toBe('skipped');
+    expect(result.error).toContain('目标路径已存在');
+    expect(app.vault.rename).not.toHaveBeenCalled();
+    expect(app.vault.getAbstractFileByPath('得到大脑/纯文本/冲突笔记.md')).toBeTruthy();
   });
 });
 
