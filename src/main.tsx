@@ -420,8 +420,8 @@ export default class GetNoteSyncPlugin extends Plugin {
 
       if (type === 'auto') {
         this.autoSyncFailCount = 0;
-        if (result.created > 0 || result.updated > 0) {
-          showNotice(t('notice.autoSynced', { created: result.created, updated: result.updated }));
+        if (result.created > 0 || result.updated > 0 || result.skipped > 0) {
+          showNotice(t('notice.autoSynced', { created: result.created, updated: result.updated, skipped: result.skipped }));
         }
       } else {
         showSuccess(t('notice.syncComplete', { created: result.created, updated: result.updated, skipped: result.skipped, failed: result.failed > 0 ? ` · ${t('modal.failed', { failed: result.failed })}` : '' }), 8000);

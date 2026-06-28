@@ -1,4 +1,4 @@
-import type { GetNoteNote, Attachment, RecallSearchResult, SubscribedTopic, ApiQuotaState } from '../types';
+import type { GetNoteNote, Attachment, LinkOriginal, RecallSearchResult, SubscribedTopic, ApiQuotaState } from '../types';
 import { t } from '../i18n';
 
 export const GETNOTE_LIST_LIMIT = 20;
@@ -107,6 +107,15 @@ function normalizeAudio(value: unknown): string | undefined {
   return firstTextValue;
 }
 
+function normalizeLinkOriginal(value: unknown): LinkOriginal | undefined {
+  if (!isRecord(value)) return undefined;
+  const content = typeof value.content === 'string' ? value.content.trim() : '';
+  if (!content) return undefined;
+  const title = typeof value.title === 'string' && value.title.trim() ? value.title.trim() : undefined;
+  const url = typeof value.url === 'string' && value.url.trim() ? value.url.trim() : undefined;
+  return { ...(title ? { title } : {}), ...(url ? { url } : {}), content };
+}
+
 function normalizeNoteDetailData(value: unknown): Partial<GetNoteNote> | null {
   if (!isRecord(value)) return null;
   const nestedNote = isRecord(value.note) ? value.note : null;
@@ -114,10 +123,11 @@ function normalizeNoteDetailData(value: unknown): Partial<GetNoteNote> | null {
   const detail = { ...source } as Partial<GetNoteNote>;
   const attachments = (source.attachments ?? nestedNote?.attachments ?? value.attachments) as Attachment[] | undefined;
   const audio = normalizeAudio(value.audio ?? source.audio ?? nestedNote?.audio);
+  const linkOriginal = normalizeLinkOriginal(source.web_page ?? nestedNote?.web_page ?? value.web_page);
   const childrenIds = Array.isArray(source.children_ids)
     ? source.children_ids.map(id => String(id))
     : undefined;
-  return { ...detail, attachments, audio, children_ids: childrenIds };
+  return { ...detail, attachments, audio, linkOriginal, children_ids: childrenIds };
 }
 
 async function waitForRetry(signal?: AbortSignal): Promise<void> {

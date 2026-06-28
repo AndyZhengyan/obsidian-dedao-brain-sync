@@ -1330,12 +1330,19 @@
   border-radius: 8px;
   background: var(--background-primary);
   box-sizing: border-box;
+  cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .getnote-note-card:hover {
   border-color: var(--interactive-accent);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.getnote-note-card.is-selected {
+  border-color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+  box-shadow: 0 0 0 1px var(--interactive-accent);
 }
 
 .getnote-note-card-checkbox {

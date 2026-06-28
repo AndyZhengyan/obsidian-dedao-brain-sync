@@ -16,10 +16,18 @@ export interface GetNoteNote {
   updated_at: string;
   attachments?: Attachment[];  // 详情接口返回的附件列表
   audio?: string;             // 详情接口返回的原始转写文本
+  linkOriginal?: LinkOriginal; // 链接笔记详情返回的网页原文
   assetFileName?: string;     // 内部使用：音频文件的文件名（不含扩展名）
+  linkOriginalFileName?: string; // 内部使用：链接原文文件名（不含扩展名）
   assetPaths?: string[];      // 内部使用：所有附件文件的完整路径（图片、音频等）
   prime_id?: string;          // Web API detail identifier
   topic_id?: string;          // Knowledge-base topic identifier
+}
+
+export interface LinkOriginal {
+  title?: string;
+  url?: string;
+  content: string;
 }
 
 export interface Tag {
@@ -115,6 +123,7 @@ export interface Settings {
   webCsrfToken: string;
   folderName: string;
   filenamePrefix: string;
+  templateFilePath: string;
   maxDays: number;
   syncStartDate: string;  // ISO date string, empty means no limit
   lastSyncEndTimestamp: string;  // ISO datetime of last synced note's updated_at
@@ -180,6 +189,7 @@ export const DEFAULT_SETTINGS: Settings = {
   webCsrfToken: '',
   folderName: '得到大脑',
   filenamePrefix: '',
+  templateFilePath: '',
   maxDays: 30,
   syncStartDate: '',
   lastSyncEndTimestamp: '',

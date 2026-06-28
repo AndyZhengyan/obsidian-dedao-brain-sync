@@ -569,6 +569,61 @@ describe('NotePickerModal card layout (#138)', () => {
     const searchInput = container.querySelector('.getnote-picker-search input') as HTMLInputElement;
     expect(searchInput.value).toContain('工作');
   });
+
+  it('does not toggle card selection when a tag chip handles keyboard activation', async () => {
+    const notes: GetNoteNote[] = [
+      makeNote({ note_id: 'tagged', title: '笔记', tags: [{ name: '工作' }] }),
+    ];
+    const container = await renderPickerWithNotes(notes, {
+      token: 'web-token',
+      clientId: '',
+      authMode: 'web',
+    });
+
+    const tagButton = container.querySelector('.getnote-note-card-tag') as HTMLButtonElement;
+    const card = container.querySelector('.getnote-note-card') as HTMLElement;
+    const checkbox = card.querySelector('.getnote-note-card-checkbox') as HTMLInputElement;
+    const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+
+    await act(() => {
+      tagButton.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(checkbox.checked).toBe(false);
+    expect(card.classList.contains('is-selected')).toBe(false);
+  });
+
+  it('selects a note when clicking anywhere on its card', async () => {
+    const onConfirm = vi.fn();
+    const notes: GetNoteNote[] = [
+      makeNote({ note_id: 'card-click', title: '点击整卡选中' }),
+    ];
+    const container = await renderPickerWithNotes(notes, {
+      token: 'web-token',
+      clientId: '',
+      authMode: 'web',
+    }, onConfirm);
+
+    const card = container.querySelector('.getnote-note-card') as HTMLElement;
+    expect(card).not.toBeNull();
+    expect(card.classList.contains('is-selected')).toBe(false);
+
+    await act(() => {
+      card.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const checkbox = card.querySelector('.getnote-note-card-checkbox') as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+    expect(card.classList.contains('is-selected')).toBe(true);
+    expect(container.querySelector('.getnote-picker-count')?.textContent).toBe('已选 1 条');
+
+    await act(() => {
+      container.querySelector('.mod-cta')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith(['card-click'], undefined, []);
+  });
 });
 
 describe('NotePickerModal type label folding (#141 follow-up)', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createNote, fetchNoteChildren, fetchNotes, fetchNoteDetail, fetchRecallSearch, fetchSubscribedTopics, fetchTopicContentPreviewPage } from '../src/api';
+import { createNote, fetchNoteChildren, fetchNotes, fetchNoteDetail, fetchNoteOriginal, fetchRecallSearch, fetchSubscribedTopics, fetchTopicContentPreviewPage } from '../src/api';
 import type { ListResponse } from '../src/types';
 
 // Extract the internal safeJsonParse for direct testing
@@ -171,6 +171,43 @@ describe('fetchNoteDetail', () => {
       expect(result.title).toBe('嵌套录音');
       expect(result.attachments).toHaveLength(1);
       expect(result.audio).toBe('🟢 说话人1 [00:00:01]\n嵌套转写');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('解析官方详情接口里的链接原文内容', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        success: true,
+        data: {
+          note: {
+            id: '1912223334445556667',
+            note_id: '1912223334445556667',
+            title: '链接笔记',
+            content: 'AI 摘要',
+            note_type: 'link',
+            source: 'app',
+            tags: [],
+            web_page: {
+              title: '原网页标题',
+              url: 'https://example.com/source',
+              content: '这是远端链接原文全文',
+            },
+            created_at: '2026-05-09 10:00:00',
+            updated_at: '2026-05-09 10:05:00',
+          },
+        },
+      }) as Response
+    );
+
+    try {
+      const result = await fetchNoteDetail('1912223334445556667', 'test-token', 'test-client');
+      expect(result.linkOriginal).toEqual({
+        title: '原网页标题',
+        url: 'https://example.com/source',
+        content: '这是远端链接原文全文',
+      });
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
     }
@@ -458,6 +495,34 @@ describe('web auth mode', () => {
       expect(result.title).toBe('网页模式详情');
       expect(globalThis.fetch).toHaveBeenCalledWith(
         'https://get-notes.luojilab.com/voicenotes/web/notes/1909428570156704824',
+        expect.objectContaining({ method: 'GET' })
+      );
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('fetches link original content from the web original endpoint', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        h: {},
+        c: {
+          title: '网页原文标题',
+          url: 'https://example.com/web-source',
+          content: '网页模式链接原文全文',
+        },
+      }) as Response
+    );
+
+    try {
+      const result = await fetchNoteOriginal('prime-link-1', 'web-token', undefined, 'web');
+      expect(result).toEqual({
+        title: '网页原文标题',
+        url: 'https://example.com/web-source',
+        content: '网页模式链接原文全文',
+      });
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        'https://get-notes.luojilab.com/voicenotes/web/notes/prime-link-1/original',
         expect.objectContaining({ method: 'GET' })
       );
     } finally {
