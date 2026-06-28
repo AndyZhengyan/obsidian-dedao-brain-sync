@@ -172,6 +172,54 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     ]);
   });
 
+  it('manual sync fetches all history once when date path format needs migration', async () => {
+    const syncScopeOptions: unknown[] = [];
+    vi.spyOn(SyncEngine.prototype, 'sync').mockImplementation(function (this: SyncEngine) {
+      syncScopeOptions.push(this['scopeOptions']);
+      return Promise.resolve({ created: 0, updated: 1, skipped: 0, failed: 0, total: 1, items: [] });
+    });
+    const plugin = makePlugin();
+    plugin.settings.maxDays = 30;
+    plugin.settings.datePathFormat = 'YYYY/MM/YYYY-MM-DD';
+    plugin.settings.datePathMigrationFormat = '';
+
+    await plugin['runSync']('full', { maxDays: 30, syncStartDate: '' });
+
+    expect(syncScopeOptions).toEqual([
+      {
+        maxDays: 0,
+        syncStartDate: '',
+      },
+    ]);
+    expect(plugin.settings.datePathMigrationFormat).toBe('YYYY/MM/YYYY-MM-DD');
+    expect(plugin.syncHistory.at(-1)?.scope).toEqual({
+      maxDays: 0,
+      syncStartDate: '',
+      selectedCount: undefined,
+      selectedIds: undefined,
+    });
+  });
+
+  it('manual sync keeps configured days after date path format was migrated', async () => {
+    const syncScopeOptions: unknown[] = [];
+    vi.spyOn(SyncEngine.prototype, 'sync').mockImplementation(function (this: SyncEngine) {
+      syncScopeOptions.push(this['scopeOptions']);
+      return Promise.resolve({ created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] });
+    });
+    const plugin = makePlugin();
+    plugin.settings.datePathFormat = 'YYYY/MM/YYYY-MM-DD';
+    plugin.settings.datePathMigrationFormat = 'YYYY/MM/YYYY-MM-DD';
+
+    await plugin['runSync']('full', { maxDays: 7, syncStartDate: '' });
+
+    expect(syncScopeOptions).toEqual([
+      {
+        maxDays: 7,
+        syncStartDate: '',
+      },
+    ]);
+  });
+
   it('manual sync date scope disables maxDays in engine', async () => {
     const syncScopeOptions: unknown[] = [];
     vi.spyOn(SyncEngine.prototype, 'sync').mockImplementation(function (this: SyncEngine) {
