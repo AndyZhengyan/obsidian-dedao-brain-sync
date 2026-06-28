@@ -41,6 +41,12 @@ describe('settings layout CSS', () => {
     expect(syncLogLabels).toContain('text-align: right');
   });
 
+  it('keeps nested scheduled sync option labels at normal weight', () => {
+    const scheduledOptionLabels = ruleFor('.getnote-scheduled-rows .getnote-scheduled-row-label');
+
+    expect(scheduledOptionLabels).toContain('font-weight: 400');
+  });
+
   it('keeps long dropdown option labels aligned after wrapping', () => {
     const knowledgeInput = ruleFor('.getnote-knowledge-base-select-option input');
     const knowledgeLabel = ruleFor('.getnote-knowledge-base-select-option span');

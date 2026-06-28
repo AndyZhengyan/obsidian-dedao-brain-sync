@@ -502,12 +502,14 @@
 
 .getnote-scheduled-rows .getnote-scheduled-row-label {
   text-align: right;
+  font-weight: 400;
 }
 
 .getnote-scheduled-options .getnote-scheduled-row-label {
   text-align: right;
 }
 
+.getnote-scheduled-master-row .getnote-scheduled-row-label,
 .getnote-attachment-master-row .getnote-scheduled-row-label {
   text-align: left;
 }

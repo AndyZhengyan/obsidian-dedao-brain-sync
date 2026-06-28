@@ -1038,6 +1038,18 @@ describe('SettingsComponent scheduled sync toggles (#136)', () => {
     expect(innerCheckbox.checked).toBe(false);
   });
 
+  it('renders the scheduledEnabled label with the scheduled row label styling', () => {
+    const { container } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: false },
+    }));
+
+    const row = findScheduledEnabledRow(container);
+    const label = row.querySelector(':scope > span:first-child');
+
+    expect(row.classList.contains('getnote-scheduled-master-row')).toBe(true);
+    expect(label?.classList.contains('getnote-scheduled-row-label')).toBe(true);
+  });
+
   it('renders syncOnStart as an Obsidian toggle inside the scheduled sync options', () => {
     const { container } = renderSettings(makeSettings({
       scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true, syncOnStart: true },
