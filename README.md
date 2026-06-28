@@ -10,6 +10,7 @@
 
 把得到大脑（原Get笔记）里的灵感、摘录、链接、录音和 AI 总结与 Obsidian 双向同步，变成可长期整理、搜索和链接的本地 Markdown 知识库。
 
+想了解这个项目的由来和背景，可以阅读这篇文章：[为什么要做得到大脑 Obsidian 插件](https://mp.weixin.qq.com/s/0-d_jLOGr3OhanruPR52vg)。
 
 * * *
 
