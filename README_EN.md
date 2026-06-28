@@ -15,6 +15,7 @@ Bidirectionally sync your notes, highlights, links, recordings, and AI summaries
 
 ## 🎉 1.3.1 — Latest Update
 
+- **🔍 OpenAPI search sidebar**: A full-text search panel powered by the OpenAPI. Search Dedao Brain notes directly from an Obsidian sidebar and one-click "Open local note" or "Sync to local" from each hit.
 - **🗂️ Scheduled sync settings, centralized**: Sync range (start date / max days), note types, tag filter, and target knowledge bases are now grouped under the "Enable scheduled sync" disclosure panel.
 - **🛠️ Compact settings disclosure**: "Enable scheduled sync" and "Download attachments" expose an inline "More / Collapse" hyperlink next to the master toggle — no extra row.
 - **🏷️ Tag management improvements**: Settings tab now self-seeds the tag cache from the first 20 notes on first open. Tag dropdowns in filter modals are read-only; only "Scheduled sync" allows creating new tags.
@@ -43,6 +44,7 @@ The README keeps only the current release highlights. See [GitHub Releases](http
 | Feature | Description |
 | --- | --- |
 | Incremental sync | Notes missing locally are created; existing local notes are skipped by default and never overwritten. |
+| Search sidebar | OpenAPI-powered full-text search of Dedao Brain from an Obsidian sidebar; one-click "Open local note" or "Sync to local" from each hit. |
 | Sync by date | Pull notes from Dedao Brain by start date or "last N days". |
 | Sync by note | Pick specific notes from the remote list. |
 | Sync by knowledge base | Manually choose a subscribed knowledge base and sync its content locally. |
@@ -59,6 +61,10 @@ The README keeps only the current release highlights. See [GitHub Releases](http
 Settings overview: choose an auth mode, configure the target folder and scheduled sync, then run download, upload, and log actions from one place.
 
 <img src="docs/screenshots/settings-overview.png" alt="Settings overview" width="720">
+
+OpenAPI search sidebar: search Dedao Brain notes from the Obsidian sidebar and open or sync a hit to local in one click.
+
+<img src="docs/screenshots/search-sidebar.png" alt="Dedao Brain search sidebar" width="720">
 
 ## Installation
 
