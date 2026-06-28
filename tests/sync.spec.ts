@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { App } from 'obsidian';
+import { App, Modal } from 'obsidian';
 import GetNoteSyncPlugin from '../src/main';
 import { ReverseSyncEngine } from '../src/reverse-sync';
 import { SyncCancelledError, SyncEngine } from '../src/sync';
@@ -205,6 +205,21 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
 
     expect(registerInterval).toHaveBeenCalledTimes(1);
     expect(registerInterval).toHaveBeenCalledWith(expect.anything());
+  });
+
+  it('opens search in a modal instead of a workspace sidebar view', async () => {
+    const plugin = makePlugin();
+    const openModal = vi.spyOn(Modal.prototype, 'open').mockImplementation(() => {});
+    const getLeavesOfType = vi.spyOn(plugin.app.workspace, 'getLeavesOfType');
+    const getRightLeaf = vi.spyOn(plugin.app.workspace, 'getRightLeaf');
+    const revealLeaf = vi.spyOn(plugin.app.workspace, 'revealLeaf');
+
+    await plugin.openSearchView('选中文本');
+
+    expect(openModal).toHaveBeenCalledTimes(1);
+    expect(getLeavesOfType).not.toHaveBeenCalled();
+    expect(getRightLeaf).not.toHaveBeenCalled();
+    expect(revealLeaf).not.toHaveBeenCalled();
   });
 
   it('disables maxDays when scheduled sync resumes from last synced timestamp', async () => {

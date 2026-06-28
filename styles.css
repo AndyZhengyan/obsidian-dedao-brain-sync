@@ -226,6 +226,14 @@
   box-sizing: border-box;
 }
 
+.getnote-search-modal {
+  width: min(760px, 92vw);
+}
+
+.getnote-search-modal .modal-content {
+  min-height: min(620px, 78vh);
+}
+
 .getnote-search-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

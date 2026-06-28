@@ -1,4 +1,4 @@
-import { App, ItemView, Modal, Notice, Plugin, getLanguage, type DataAdapter, type Editor, type Menu, type TFile, type WorkspaceLeaf } from 'obsidian';
+import { App, Modal, Notice, Plugin, getLanguage, type DataAdapter, type Editor, type Menu, type TFile } from 'obsidian';
 import ReactDOM from 'react-dom';
 import { DEFAULT_SETTINGS, getAuthCredentials, migrateEnabledNoteTypes, type RecallSearchResult, type Settings, type SyncHistoryScope, type SyncProgressDetail, type SyncHistoryEntry, type SyncResult, type SyncScopeOptions } from './types';
 import { GetNoteSettingsTab } from './settings-tab';
@@ -18,7 +18,6 @@ import { SearchPanel, findSyncedNoteFile } from './ui/search-view';
 
 const MAX_SYNC_HISTORY = 20;
 const TAG_MIGRATION_VERSION = 2;
-const SEARCH_VIEW_TYPE = 'dedao-brain-search-view';
 const LEGACY_PLUGIN_IDS = ['obsidian-getnote-importer', 'getnote-importer'] as const;
 const PLUGIN_DATA_FILE = 'data.json';
 const LEGACY_PLUGIN_MIGRATION_NOTICE = '已经从旧的 GetNote Importer 迁移成功，请手动停止和卸载 GetNote Importer';
@@ -183,7 +182,6 @@ export default class GetNoteSyncPlugin extends Plugin {
 
     this.settingsTab = new GetNoteSettingsTab(this.app, this);
     this.addSettingTab(this.settingsTab);
-    this.registerView(SEARCH_VIEW_TYPE, (leaf) => new GetNoteSearchView(leaf, this));
 
     this.addCommand({
       id: 'sync-notes',
@@ -236,7 +234,6 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   onunload(): void {
     this.stopAutoSync();
-    this.app.workspace.detachLeavesOfType(SEARCH_VIEW_TYPE);
   }
 
   async saveSettings(): Promise<void> {
@@ -555,18 +552,8 @@ export default class GetNoteSyncPlugin extends Plugin {
     await this.runSync('selective', { maxDays: 0, syncStartDate: '' }, [noteId]);
   }
 
-  async openSearchView(query = ''): Promise<void> {
-    let leaf: WorkspaceLeaf | null = this.app.workspace.getLeavesOfType(SEARCH_VIEW_TYPE)[0] ?? null;
-    if (!leaf) {
-      leaf = this.app.workspace.getRightLeaf(false);
-      if (!leaf) return;
-      await leaf.setViewState({ type: SEARCH_VIEW_TYPE, active: true });
-    }
-    this.app.workspace.revealLeaf(leaf);
-    const view = leaf.view;
-    if (view instanceof GetNoteSearchView) {
-      view.setQuery(query, Boolean(query));
-    }
+  openSearchView(query = ''): void {
+    new GetNoteSearchModal(this.app, this, query).open();
   }
 
   async searchRecall(query: string, signal: AbortSignal): Promise<RecallSearchResult[]> {
@@ -778,41 +765,17 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 }
 
-class GetNoteSearchView extends ItemView {
-  private query = '';
-  private autoSearchKey = 0;
+class GetNoteSearchModal extends Modal {
+  private readonly autoSearchKey: number;
 
-  constructor(leaf: WorkspaceLeaf, private plugin: GetNoteSyncPlugin) {
-    super(leaf);
+  constructor(app: App, private plugin: GetNoteSyncPlugin, private query = '') {
+    super(app);
+    this.autoSearchKey = query.trim() ? 1 : 0;
+    this.titleEl.textContent = t('search.title');
+    this.modalEl.classList.add('getnote-search-modal');
   }
 
-  getViewType(): string {
-    return SEARCH_VIEW_TYPE;
-  }
-
-  getDisplayText(): string {
-    return t('search.title');
-  }
-
-  getIcon(): string {
-    return 'brain-circuit';
-  }
-
-  async onOpen(): Promise<void> {
-    this.render();
-  }
-
-  async onClose(): Promise<void> {
-    ReactDOM.unmountComponentAtNode(this.contentEl);
-  }
-
-  setQuery(query: string, autoSearch: boolean): void {
-    this.query = query;
-    if (autoSearch) this.autoSearchKey += 1;
-    this.render();
-  }
-
-  private render(): void {
+  onOpen(): void {
     ReactDOM.render(
       <SearchPanel
         initialQuery={this.query}
@@ -824,6 +787,10 @@ class GetNoteSearchView extends ItemView {
       />,
       this.contentEl
     );
+  }
+
+  onClose(): void {
+    ReactDOM.unmountComponentAtNode(this.contentEl);
   }
 }
 
