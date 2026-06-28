@@ -69,7 +69,7 @@ function normalizeRecallResults(value: unknown): RecallSearchResult[] {
   if (!isRecord(value)) return [];
   const data = normalizeData(value);
   const rawResults = readArray(data, ['results', 'list', 'notes']);
-  return rawResults
+  const normalized = rawResults
     .map((raw): RecallSearchResult | null => {
       if (!isRecord(raw)) return null;
       const source = isRecord(raw.note) ? raw.note : raw;
@@ -96,6 +96,12 @@ function normalizeRecallResults(value: unknown): RecallSearchResult[] {
       };
     })
     .filter((result): result is RecallSearchResult => Boolean(result));
+  const seenNoteIds = new Set<string>();
+  return normalized.filter(result => {
+    if (seenNoteIds.has(result.note_id)) return false;
+    seenNoteIds.add(result.note_id);
+    return true;
+  });
 }
 
 function normalizeAudio(value: unknown): string | undefined {

@@ -225,7 +225,7 @@ describe('SyncEngine — template file rendering', () => {
       ].join('\n')
     );
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      mockFetchResponse({ data: { notes: [note], has_more: false, next_cursor: '' } }) as Response
+      mockFetchResponse({ data: { note } }) as Response
     );
 
     try {
@@ -257,7 +257,7 @@ describe('SyncEngine — template file rendering', () => {
     const app = makeMockApp();
     app.vault._addFile('Templates/no-content.md', '固定模板块');
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      mockFetchResponse({ data: { notes: [note], has_more: false, next_cursor: '' } }) as Response
+      mockFetchResponse({ data: { note } }) as Response
     );
 
     try {
@@ -2785,7 +2785,10 @@ describe('SyncEngine auth credential chains', () => {
 
   it('syncNoteIds() uses OpenAPI credentials for selected-note sync', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      mockFetchResponse({ data: { notes: [], has_more: false, next_cursor: '' } }) as Response
+      mockFetchResponse({
+        success: true,
+        data: { note_id: 'note-1', title: 't', content: '', note_type: 'plain_text', source: 'app', tags: [], created_at: '', updated_at: '' },
+      }) as Response
     );
 
     const engine = new SyncEngine(makeMockApp() as any, makeSettings({
@@ -2800,7 +2803,7 @@ describe('SyncEngine auth credential chains', () => {
     await engine.syncNoteIds(['note-1']);
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      'https://openapi.biji.com/open/api/v1/resource/note/list?since_id=0',
+      'https://openapi.biji.com/open/api/v1/resource/note/detail?id=note-1',
       expect.any(Object)
     );
     expectLastFetchHeaders({
@@ -2811,7 +2814,10 @@ describe('SyncEngine auth credential chains', () => {
 
   it('syncNoteIds() uses Web credentials for selected-note sync', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      mockFetchResponse({ h: {}, c: { list: [], has_more: false } }) as Response
+      mockFetchResponse({
+        h: {},
+        c: { note_id: 'note-1', title: 't', content: '', note_type: 'plain_text', source: 'app', tags: [], created_at: '', updated_at: '' },
+      }) as Response
     );
 
     const engine = new SyncEngine(makeMockApp() as any, makeSettings({
@@ -2826,7 +2832,7 @@ describe('SyncEngine auth credential chains', () => {
     await engine.syncNoteIds(['note-1']);
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      'https://get-notes.luojilab.com/voicenotes/web/notes?limit=20&since_id=&sort=create_desc',
+      'https://get-notes.luojilab.com/voicenotes/web/notes/note-1',
       expect.any(Object)
     );
     expectLastFetchHeaders({
@@ -2999,7 +3005,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     expect(result.items).toEqual([]);
     expect(app.vault.create).not.toHaveBeenCalled();
     expect(getFixtureRequests().map(request => request.url)).toEqual([
-      'https://openapi.biji.com/open/api/v1/resource/note/list?since_id=0',
+      'https://openapi.biji.com/open/api/v1/resource/note/detail?id=1909193892067130512',
     ]);
   });
 
@@ -3024,7 +3030,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     expect(result.items).toEqual([]);
     expect(app.vault.create).not.toHaveBeenCalled();
     expect(getFixtureRequests().map(request => request.url)).toEqual([
-      'https://get-notes.luojilab.com/voicenotes/web/notes?limit=20&since_id=&sort=create_desc',
+      'https://get-notes.luojilab.com/voicenotes/web/notes/web_selected',
     ]);
   });
 

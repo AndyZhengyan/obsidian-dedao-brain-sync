@@ -1165,14 +1165,13 @@ export class SyncEngine {
     modal?: SyncModal
   ): Promise<SyncResult> {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
-    const idSet = new Set(noteIds);
     const uidIndex = this.buildUidIndex();
     const seenNoteIds = new Set<string>();
     const observedTagNames = new Set<string>();
     const controller = new AbortController();
     this.abortController = controller;
     this.cancelled = false;
-    let fetchedCount = 0;
+    let processedCount = 0;
 
     const cleanup = () => {
       this.cancelled = true;
@@ -1182,73 +1181,127 @@ export class SyncEngine {
 
     try {
       const credentials = getAuthCredentials(this.settings);
-      for await (const batch of fetchAllNotes(credentials.token, credentials.clientId, controller.signal, null, credentials.authMode)) {
+      const orderedIds = noteIds.filter((id, index) => noteIds.indexOf(id) === index);
+
+      for (const noteId of orderedIds) {
         if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
+        if (seenNoteIds.has(noteId)) continue;
+        seenNoteIds.add(noteId);
 
-        const matched = batch.filter(n => idSet.has(n.note_id));
-        const typeFiltered = this.filterNotesByType(matched);
-
-        for (const note of typeFiltered) {
-          if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
-          if (seenNoteIds.has(note.note_id)) continue;
-          const parentMatchesTags = this.filterNotesByTags([note]).length > 0;
-          if (parentMatchesTags) {
-            seenNoteIds.add(note.note_id);
-            fetchedCount++;
-            result.total++;
-            for (const tag of note.tags ?? []) {
-              if (tag?.name) observedTagNames.add(tag.name);
-            }
-            const percent = Math.round((fetchedCount / noteIds.length) * 100);
-            this.onProgress?.({ processed: fetchedCount, total: noteIds.length, percent });
-          }
-          // Pre-check: skip if the same note already exists locally.
-          // Uses UID-based lookup so renamed/moved files are still found.
-          const preCheck = this.preCheckNote(note, uidIndex);
-          if (preCheck.exists) {
-            if (parentMatchesTags) {
-              result.skipped++;
-              this.recordItem(result, note, { status: 'skipped' });
-            }
-            const mayHaveAppendNotes = (note.children_count ?? 0) > 0 || Boolean(note.children_ids?.length);
-            if (!mayHaveAppendNotes) {
-              continue;
-            }
-          }
-          const noteToWrite = await this.enrichAudioNote(note, controller.signal);
-
-          const appendNotes = this.filterNotesByTags(await this.fetchAppendNotes(noteToWrite, controller.signal, result));
-          if (!parentMatchesTags && appendNotes.length === 0) continue;
-          const parentBaseName = this.buildBaseName(noteToWrite);
-          const parentFileName = this.getFileName(noteToWrite);
-          const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
-
-          if (parentMatchesTags && !preCheck.exists) {
-            const writeResult = await this.writeNote(noteToWrite, uidIndex, undefined, parentFileName, childFileNames);
-            this.applyWriteResult(result, writeResult);
-            this.recordItem(result, noteToWrite, writeResult);
-          }
-
-          // 写入子文档（链接回父文档）
-          for (const appendNote of appendNotes) {
-            if (seenNoteIds.has(appendNote.note_id)) continue;
-            seenNoteIds.add(appendNote.note_id);
-            result.total++;
-            for (const tag of appendNote.tags ?? []) {
-              if (tag?.name) observedTagNames.add(tag.name);
-            }
-            const appendWriteResult = await this.writeNote(
-              appendNote,
-              uidIndex,
-              parentMatchesTags ? parentBaseName : undefined,
-              parentMatchesTags ? parentFileName : undefined
-            );
-            this.applyWriteResult(result, appendWriteResult);
-            this.recordItem(result, appendNote, appendWriteResult);
-          }
+        let detail: Partial<GetNoteNote>;
+        try {
+          detail = await fetchNoteDetail(
+            noteId,
+            credentials.token,
+            credentials.clientId,
+            controller.signal,
+            credentials.authMode
+          );
+        } catch (err) {
+          result.failed++;
+          const failedNote: GetNoteNote = {
+            id: noteId,
+            note_id: noteId,
+            title: '',
+            content: '',
+            note_type: 'plain_text',
+            tags: [],
+            created_at: '',
+            updated_at: '',
+            source: '',
+          };
+          this.recordItem(result, failedNote, {
+            status: 'failed',
+            error: err instanceof Error ? err.message : String(err),
+          });
+          console.warn(`[DedaoBrain] Failed to fetch note detail for ${noteId}:`, err);
+          processedCount++;
+          this.onProgress?.({ processed: processedCount, total: orderedIds.length, percent: Math.round((processedCount / orderedIds.length) * 100) });
+          continue;
         }
 
-        if (fetchedCount >= noteIds.length) break;
+        const note: GetNoteNote = {
+          id: detail.id ?? noteId,
+          note_id: detail.note_id ?? noteId,
+          title: detail.title ?? '',
+          content: detail.content ?? '',
+          note_type: detail.note_type ?? 'plain_text',
+          tags: detail.tags ?? [],
+          created_at: detail.created_at ?? '',
+          updated_at: detail.updated_at ?? '',
+          source: detail.source ?? '',
+          attachments: detail.attachments,
+          audio: detail.audio,
+          children_count: detail.children_count,
+          children_ids: detail.children_ids,
+          prime_id: (detail as { prime_id?: string }).prime_id,
+          parent_id: detail.parent_id,
+          topic_id: detail.topic_id,
+          linkOriginal: detail.linkOriginal,
+          is_child_note: detail.is_child_note,
+        };
+
+        const typeFiltered = this.filterNotesByType([note]);
+        if (typeFiltered.length === 0) {
+          processedCount++;
+          this.onProgress?.({ processed: processedCount, total: orderedIds.length, percent: Math.round((processedCount / orderedIds.length) * 100) });
+          continue;
+        }
+
+        const parentMatchesTags = this.filterNotesByTags(typeFiltered).length > 0;
+        if (parentMatchesTags) {
+          result.total++;
+          for (const tag of typeFiltered[0].tags ?? []) {
+            if (tag?.name) observedTagNames.add(tag.name);
+          }
+          processedCount++;
+          const percent = Math.round((processedCount / orderedIds.length) * 100);
+          this.onProgress?.({ processed: processedCount, total: orderedIds.length, percent });
+        }
+        // Pre-check: skip if the same note already exists locally.
+        // Uses UID-based lookup so renamed/moved files are still found.
+        const preCheck = this.preCheckNote(typeFiltered[0], uidIndex);
+        if (preCheck.exists) {
+          if (parentMatchesTags) {
+            result.skipped++;
+            this.recordItem(result, typeFiltered[0], { status: 'skipped' });
+          }
+          const mayHaveAppendNotes = (typeFiltered[0].children_count ?? 0) > 0 || Boolean(typeFiltered[0].children_ids?.length);
+          if (!mayHaveAppendNotes) {
+            continue;
+          }
+        }
+        const noteToWrite = await this.enrichAudioNote(typeFiltered[0], controller.signal);
+
+        const appendNotes = this.filterNotesByTags(await this.fetchAppendNotes(noteToWrite, controller.signal, result));
+        if (!parentMatchesTags && appendNotes.length === 0) continue;
+        const parentBaseName = this.buildBaseName(noteToWrite);
+        const parentFileName = this.getFileName(noteToWrite);
+        const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
+
+        if (parentMatchesTags && !preCheck.exists) {
+          const writeResult = await this.writeNote(noteToWrite, uidIndex, undefined, parentFileName, childFileNames);
+          this.applyWriteResult(result, writeResult);
+          this.recordItem(result, noteToWrite, writeResult);
+        }
+
+        // 写入子文档（链接回父文档）
+        for (const appendNote of appendNotes) {
+          if (seenNoteIds.has(appendNote.note_id)) continue;
+          seenNoteIds.add(appendNote.note_id);
+          result.total++;
+          for (const tag of appendNote.tags ?? []) {
+            if (tag?.name) observedTagNames.add(tag.name);
+          }
+          const appendWriteResult = await this.writeNote(
+            appendNote,
+            uidIndex,
+            parentMatchesTags ? parentBaseName : undefined,
+            parentMatchesTags ? parentFileName : undefined
+          );
+          this.applyWriteResult(result, appendWriteResult);
+          this.recordItem(result, appendNote, appendWriteResult);
+        }
       }
 
       this.onProgress?.({ percent: 100 });

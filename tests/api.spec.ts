@@ -318,6 +318,50 @@ describe('fetchRecallSearch', () => {
       vi.mocked(globalThis.fetch).mockRestore();
     }
   });
+
+  it('deduplicates recall chunks from the same note id', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockTextFetchResponse(JSON.stringify({
+        success: true,
+        data: {
+          results: [
+            {
+              note_id: 'same-note',
+              title: '同一篇文章',
+              content: '第一段命中',
+              note_type: 'plain_text',
+              updated_at: '2026-05-20 10:00:00',
+              score: 0.9,
+            },
+            {
+              note_id: 'same-note',
+              title: '同一篇文章',
+              content: '第二段命中',
+              note_type: 'plain_text',
+              updated_at: '2026-05-20 10:00:00',
+              score: 0.8,
+            },
+          ],
+        },
+      })) as Response
+    );
+
+    try {
+      const results = await fetchRecallSearch({
+        query: 'Palantir',
+        token: 'test-token',
+        clientId: 'test-client',
+      });
+
+      expect(results).toHaveLength(1);
+      expect(results[0]).toEqual(expect.objectContaining({
+        note_id: 'same-note',
+        content: '第一段命中',
+      }));
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
 });
 
 describe('fetchNotes limit', () => {

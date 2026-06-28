@@ -73,10 +73,17 @@ function normalizeNoteDetailData(value: unknown): Partial<GetNoteNote> | null {
   const detail = { ...source } as Partial<GetNoteNote>;
   const attachments = (value.attachments ?? source.attachments) as Attachment[] | undefined;
   const audio = typeof (value.audio ?? source.audio) === 'string' ? (value.audio ?? source.audio) as string : undefined;
+  const childCountRaw = source.children_count;
+  const subNoteCountRaw = source.sub_note_count;
+  const childrenCount = typeof childCountRaw === 'number'
+    ? childCountRaw
+    : typeof subNoteCountRaw === 'number'
+      ? subNoteCountRaw
+      : undefined;
   const childrenIds = Array.isArray(source.children_ids)
     ? source.children_ids.map(id => String(id))
     : undefined;
-  return { ...detail, attachments, audio, children_ids: childrenIds };
+  return { ...detail, attachments, audio, children_count: childrenCount, children_ids: childrenIds };
 }
 
 function normalizeLinkOriginal(value: unknown): LinkOriginal | null {

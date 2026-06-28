@@ -143,32 +143,34 @@ export function SearchPanel({
             const state = syncState[result.note_id] ?? 'idle';
             const preview = compactText(result.content);
             return (
-              <div className="getnote-search-result" key={result.note_id}>
-                <div className="getnote-search-result-header">
-                  <div className="getnote-search-result-title">{result.title || t('picker.noTitle')}</div>
-                  <span className="getnote-search-result-type">{formatNoteTypeLabel(result.note_type)}</span>
-                </div>
-                {preview && <div className="getnote-search-result-preview">{preview}</div>}
-                <div className="getnote-search-result-meta">
-                  <span>{formatSearchTime(result)}</span>
-                  {typeof result.score === 'number' && <span>{Math.round(result.score * 100)}%</span>}
-                </div>
-                <div className="getnote-search-result-actions">
-                  {localFile ? (
-                    <button type="button" onClick={() => void onOpenLocal(localFile)}>
-                      {t('search.openLocal')}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={state === 'syncing'}
-                      onClick={() => void handleSync(result.note_id)}
-                    >
-                      {state === 'syncing' ? t('search.syncing') : t('search.syncLocal')}
-                    </button>
-                  )}
-                  {state === 'done' && <span className="getnote-search-result-status">{t('search.synced')}</span>}
-                  {state === 'failed' && <span className="getnote-search-result-status getnote-search-result-status-error">{t('search.syncFailed')}</span>}
+              <div className="getnote-note-card getnote-search-note-card" key={result.note_id}>
+                <div className="getnote-note-card-body">
+                  <div className="getnote-note-card-header">
+                    <div className="getnote-note-card-title">{result.title || t('picker.noTitle')}</div>
+                    <span className="getnote-note-card-type">{formatNoteTypeLabel(result.note_type)}</span>
+                  </div>
+                  {preview && <div className="getnote-note-card-preview">{preview}</div>}
+                  <div className="getnote-note-card-footer">
+                    <span className="getnote-note-card-time">{formatSearchTime(result)}</span>
+                    {typeof result.score === 'number' && <span className="getnote-search-score">{Math.round(result.score * 100)}%</span>}
+                  </div>
+                  <div className="getnote-search-result-actions">
+                    {localFile ? (
+                      <button type="button" onClick={() => void onOpenLocal(localFile)}>
+                        {t('search.openLocal')}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={state === 'syncing'}
+                        onClick={() => void handleSync(result.note_id)}
+                      >
+                        {state === 'syncing' ? t('search.syncing') : t('search.syncLocal')}
+                      </button>
+                    )}
+                    {state === 'done' && <span className="getnote-search-result-status">{t('search.synced')}</span>}
+                    {state === 'failed' && <span className="getnote-search-result-status getnote-search-result-status-error">{t('search.syncFailed')}</span>}
+                  </div>
                 </div>
               </div>
             );
