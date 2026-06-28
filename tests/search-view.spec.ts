@@ -54,6 +54,9 @@ describe('SearchPanel', () => {
     await act(async () => {
       await flushPromises();
     });
+    await act(async () => {
+      await flushPromises();
+    });
 
     expect(onSearch).toHaveBeenCalledWith('关键词', expect.any(AbortSignal));
     expect(container.textContent).toContain('已同步结果');
@@ -75,6 +78,56 @@ describe('SearchPanel', () => {
       await Promise.resolve();
     });
     expect(onSyncNote).toHaveBeenCalledWith('remote');
+  });
+
+  it('keeps the syncing state isolated to the clicked search result', async () => {
+    let resolveSync: (() => void) | undefined;
+    const onSearch = vi.fn().mockResolvedValue([
+      makeResult({ note_id: 'note-a', title: '第一条' }),
+      makeResult({ note_id: 'note-b', title: '第二条' }),
+    ]);
+    const onSyncNote = vi.fn().mockImplementation(() => new Promise<void>(resolve => {
+      resolveSync = resolve;
+    }));
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    await act(async () => {
+      render(h(SearchPanel, {
+        initialQuery: '关键词',
+        autoSearchKey: 1,
+        onSearch,
+        resolveLocalFile: () => null,
+        onOpenLocal: vi.fn(),
+        onSyncNote,
+      }), container);
+      await flushPromises();
+    });
+    await act(async () => {
+      await flushPromises();
+    });
+
+    const cards = Array.from(container.querySelectorAll('.getnote-search-note-card'));
+    expect(cards).toHaveLength(2);
+    const firstButton = cards[0].querySelector('button') as HTMLButtonElement;
+    const secondButton = cards[1].querySelector('button') as HTMLButtonElement;
+
+    await act(async () => {
+      firstButton.click();
+      await Promise.resolve();
+    });
+
+    expect(onSyncNote).toHaveBeenCalledTimes(1);
+    expect(onSyncNote).toHaveBeenCalledWith('note-a');
+    expect(firstButton.textContent).toBe('同步中...');
+    expect(firstButton.disabled).toBe(true);
+    expect(secondButton.textContent).toBe('同步到本地');
+    expect(secondButton.disabled).toBe(false);
+
+    await act(async () => {
+      resolveSync?.();
+      await flushPromises();
+    });
   });
 
   it('runs the initial selected-text query automatically', async () => {

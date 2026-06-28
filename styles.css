@@ -262,44 +262,6 @@
   overflow-y: auto;
 }
 
-.getnote-search-result {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  background: var(--background-primary);
-}
-
-.getnote-search-result-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: start;
-}
-
-.getnote-search-result-title {
-  min-width: 0;
-  font-weight: 600;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-}
-
-.getnote-search-result-type {
-  color: var(--text-muted);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.getnote-search-result-preview {
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
-
-.getnote-search-result-meta,
 .getnote-search-result-actions {
   display: flex;
   flex-wrap: wrap;
@@ -307,6 +269,23 @@
   align-items: center;
   color: var(--text-faint);
   font-size: 12px;
+}
+
+.getnote-search-note-card {
+  margin-bottom: 0;
+  cursor: default;
+}
+
+.getnote-search-note-card:hover {
+  border-color: var(--background-modifier-border);
+  box-shadow: none;
+}
+
+.getnote-search-score {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
 }
 
 .getnote-search-result-actions button {

@@ -203,15 +203,14 @@ export default class GetNoteSyncPlugin extends Plugin {
       callback: () => void this.openSearchView(),
     });
 
-    this.addRibbonIcon('book-lock', t('ribbon.tooltip'), () => this.openManualSyncModal());
-    this.addRibbonIcon('search', t('ribbon.searchTooltip'), () => void this.openSearchView());
+    this.addRibbonIcon('brain-circuit', t('ribbon.searchTooltip'), () => void this.openSearchView());
     this.registerEvent(this.app.workspace.on('editor-menu', (menu: Menu, editor: Editor) => {
       const selectedText = editor.getSelection().trim();
       if (!selectedText) return;
       menu.addItem(item => {
         item
           .setTitle(t('search.contextMenu'))
-          .setIcon('search')
+          .setIcon('brain-circuit')
           .onClick(() => void this.openSearchView(selectedText));
       });
     }));
@@ -796,7 +795,7 @@ class GetNoteSearchView extends ItemView {
   }
 
   getIcon(): string {
-    return 'search';
+    return 'brain-circuit';
   }
 
   async onOpen(): Promise<void> {
