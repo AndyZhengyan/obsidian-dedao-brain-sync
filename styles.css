@@ -262,6 +262,28 @@
   color: var(--text-error);
 }
 
+.getnote-search-empty {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  padding: 28px 18px;
+  color: var(--text-normal);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.getnote-search-empty::before {
+  content: "";
+  width: 44px;
+  height: 2px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  background: var(--interactive-accent);
+  opacity: 0.75;
+}
+
 .getnote-search-results {
   display: flex;
   flex-direction: column;

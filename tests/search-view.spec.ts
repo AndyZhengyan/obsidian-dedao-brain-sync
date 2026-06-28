@@ -172,7 +172,7 @@ describe('SearchPanel', () => {
       await flushPromises();
     });
     expect(onSearch).not.toHaveBeenCalled();
-    expect(container.textContent).toContain('输入关键词后搜索');
+    expect(container.textContent).toContain('一键搜索您的得到大脑，一键同步到本地');
 
     const input = container.querySelector('input') as HTMLInputElement;
     await act(() => {
