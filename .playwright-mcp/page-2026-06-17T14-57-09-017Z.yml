@@ -1,0 +1,67 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e5]:
+    - link [ref=e7] [cursor=pointer]:
+      - /url: https://www.minimaxi.com/
+      - img [ref=e8]
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - paragraph [ref=e22]: 扫码登录
+          - iframe [ref=e24]:
+            - generic [ref=f4e4]:
+              - generic [ref=f4e5]: 关耳山石
+              - button "微信快捷登录" [ref=f4e6]
+              - button "使用其他头像、昵称或账号" [ref=f4e8]
+        - generic [ref=e25]:
+          - img [ref=e26]
+          - generic [ref=e28]: 微信扫码登录
+      - generic [ref=e31]:
+        - generic [ref=e32]:
+          - generic [ref=e33]:
+            - button "手机登录" [ref=e34] [cursor=pointer]
+            - button "密码登录" [ref=e35] [cursor=pointer]
+          - generic [ref=e36]:
+            - generic [ref=e37]:
+              - textbox "请输入您的手机号" [ref=e40]
+              - generic [ref=e42]:
+                - textbox "请输入验证码" [ref=e43]
+                - button "获取验证码" [ref=e44] [cursor=pointer]
+              - generic [ref=e46]:
+                - button [ref=e47] [cursor=pointer]
+                - paragraph [ref=e49]:
+                  - text: 登录或创建账户即表示您同意
+                  - link "服务条款" [ref=e50] [cursor=pointer]:
+                    - /url: https://minimaxi.com/terms-of-service-v2-cn.html?show=platform,agent,video
+                  - text: 和
+                  - link "隐私政策" [ref=e51] [cursor=pointer]:
+                    - /url: https://minimaxi.com/privacy-policy-v2-cn.html?show=platform,agent,video
+            - button "立即登录" [ref=e53] [cursor=pointer]
+        - paragraph [ref=e54]: 根据您的地区，已为您跳转至国内网站
+    - generic [ref=e55]:
+      - link "Agent文档 开始使用MiniMax Agent" [ref=e56] [cursor=pointer]:
+        - /url: https://agent.minimaxi.com/docs/changelog
+        - img [ref=e58]
+        - generic [ref=e60]:
+          - generic [ref=e61]: Agent文档
+          - generic [ref=e62]: 开始使用MiniMax Agent
+      - link "API参考 使用 MiniMax API 进行构建" [ref=e63] [cursor=pointer]:
+        - /url: https://platform.minimaxi.com/docs/guides/models-intro
+        - img [ref=e65]
+        - generic [ref=e69]:
+          - generic [ref=e70]: API参考
+          - generic [ref=e71]: 使用 MiniMax API 进行构建
+  - iframe [ref=e73]:
+    - generic [ref=f5e2]:
+      - generic [ref=f5e4]:
+        - generic [ref=f5e5]: 安全验证
+        - generic:
+          - img [ref=f5e8]
+          - generic [ref=f5e13]: 返回
+      - generic:
+        - option
+      - generic [ref=f5e14]:
+        - generic [ref=f5e17]: 拖动下方滑块完成拼图
+        - generic [ref=f5e22]:
+          - img "feedback" [ref=f5e25] [cursor=pointer]
+          - img "refresh" [ref=f5e28] [cursor=pointer]

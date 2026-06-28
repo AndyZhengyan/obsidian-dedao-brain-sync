@@ -1,0 +1,812 @@
+- generic [ref=e4]:
+  - generic [ref=e12]:
+    - link [ref=e14] [cursor=pointer]:
+      - /url: //www.volcengine.com
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e18]:
+          - generic [ref=e19] [cursor=pointer]: 最新活动
+          - generic [ref=e20] [cursor=pointer]: 大模型
+          - generic [ref=e21] [cursor=pointer]: 产品
+          - generic [ref=e22] [cursor=pointer]: 解决方案
+          - generic [ref=e23] [cursor=pointer]: 定价
+          - generic [ref=e24] [cursor=pointer]: 生态与合作
+          - generic [ref=e25] [cursor=pointer]: 支持与服务
+          - generic [ref=e26] [cursor=pointer]: 开发者
+          - generic [ref=e27] [cursor=pointer]: 了解我们
+        - img [ref=e29] [cursor=pointer]
+      - generic [ref=e33]:
+        - img [ref=e34] [cursor=pointer]
+        - generic [ref=e37]:
+          - generic [ref=e38]: 2026 Force 原动力大会 · 春
+          - generic [ref=e39]: 方舟 Agent Plan
+          - generic [ref=e40]: 方舟 Coding Plan
+          - generic [ref=e41]: 一键部署OpenClaw
+          - generic [ref=e42]: 火山方舟
+          - generic [ref=e43]: 2026 Force 原动力大会 · 春
+          - generic [ref=e44]: 方舟 Agent Plan
+          - generic [ref=e45]: 方舟 Coding Plan
+          - generic [ref=e46]: 一键部署OpenClaw
+          - generic [ref=e47]: 火山方舟
+    - generic [ref=e48]:
+      - link "文档" [ref=e49] [cursor=pointer]:
+        - /url: https://www.volcengine.com/docs
+      - link "备案" [ref=e50] [cursor=pointer]:
+        - /url: https://www.volcengine.com/beian
+      - link "控制台" [ref=e51] [cursor=pointer]:
+        - /url: https://console.volcengine.com
+      - generic [ref=e53]:
+        - link "登录" [ref=e54] [cursor=pointer]:
+          - /url: //console.volcengine.com/auth/login?redirectURI=%2F%2Fwww.volcengine.com%2Fproduct%2Fark
+        - link "立即注册" [ref=e55] [cursor=pointer]:
+          - /url: //console.volcengine.com/auth/signup?redirectURI=%2F%2Fwww.volcengine.com%2Fproduct%2Fark
+  - generic [ref=e61]:
+    - generic [ref=e64]:
+      - list [ref=e66]:
+        - listitem [ref=e67]:
+          - link "NEW Doubao-Seed-2.0 全新上线" [ref=e68] [cursor=pointer]:
+            - /url: https://console.volcengine.com/ark/region:ark+cn-beijing/model/detail?Id=doubao-seed-2-0-pro
+            - generic [ref=e69]: NEW
+            - generic [ref=e70]: Doubao-Seed-2.0 全新上线
+            - img [ref=e71]
+        - listitem [ref=e73]:
+          - link "NEW Doubao-Seedance-2.0 全新上线" [ref=e74] [cursor=pointer]:
+            - /url: https://www.volcengine.com/experience/ark?mode=vision&modelId=doubao-seedance-2-0-260128&tab=GenVideo
+            - generic [ref=e75]: NEW
+            - generic [ref=e76]: Doubao-Seedance-2.0 全新上线
+            - img [ref=e77]
+        - listitem [ref=e79]:
+          - link "NEW Doubao-Seedream-5.0 全新上线" [ref=e80] [cursor=pointer]:
+            - /url: https://console.volcengine.com/ark/region:ark+cn-beijing/model/detail?Id=doubao-seedream-5-0&Tab=model-info
+            - generic [ref=e81]: NEW
+            - generic [ref=e82]: Doubao-Seedream-5.0 全新上线
+            - img [ref=e83]
+        - listitem [ref=e85]:
+          - link "NEW 方舟Coding Plan上线" [ref=e86] [cursor=pointer]:
+            - /url: https://www.volcengine.com/activity/codingplan
+            - generic [ref=e87]: NEW
+            - generic [ref=e88]: 方舟Coding Plan上线
+            - img [ref=e89]
+        - listitem [ref=e91]:
+          - link "NEW 领每日单模型最高500万免费Tokens" [ref=e92] [cursor=pointer]:
+            - /url: https://console.volcengine.com/ark/region:ark+cn-beijing/openManagement?LLM=%7B%7D&OpenAuthorizeModal=true&OpenTokenDrawer=false
+            - generic [ref=e93]: NEW
+            - generic [ref=e94]: 领每日单模型最高500万免费Tokens
+            - img [ref=e95]
+      - heading "火山方舟" [level=1] [ref=e98]
+      - heading "一站式大模型服务平台" [level=2] [ref=e99]
+      - generic [ref=e100]: 模型能力拓展 ｜ 专业算法服务 ｜ 安全可信会话无痕 ｜ 高并发算力保障
+      - generic [ref=e101]:
+        - link "立即体验" [ref=e102] [cursor=pointer]:
+          - /url: https://www.volcengine.com/experience/ark
+          - generic [ref=e103]: 立即体验
+        - link "控制台" [ref=e104] [cursor=pointer]:
+          - /url: https://console.volcengine.com/ark/region:ark+cn-beijing/overview
+          - generic [ref=e105]: 控制台
+    - generic [ref=e109]:
+      - link "最新活动 活动 方舟 Coding Plan 上线，模型自由，工具不限" [ref=e110] [cursor=pointer]:
+        - /url: https://www.volcengine.com/activity/codingplan
+        - generic [ref=e112]:
+          - generic [ref=e113]: 最新活动
+          - generic [ref=e114]: 活动
+        - generic [ref=e115]: 方舟 Coding Plan 上线，模型自由，工具不限
+      - link "模型定价 查看模型定价与计费方式" [ref=e116] [cursor=pointer]:
+        - /url: https://www.volcengine.com/docs/82379/1544106
+        - generic [ref=e119]: 模型定价
+        - generic [ref=e120]: 查看模型定价与计费方式
+      - link "体验中心 热门 立即体验 Seedance 2.0" [ref=e121] [cursor=pointer]:
+        - /url: https://www.volcengine.com/experience/ark?mode=vision&modelId=doubao-seedance-2-0-260128&tab=GenVideo
+        - generic [ref=e123]:
+          - generic [ref=e124]: 体验中心
+          - generic [ref=e125]: 热门
+        - generic [ref=e126]: 立即体验 Seedance 2.0
+      - link "接入 API 查看官方文档，接入模型" [ref=e127] [cursor=pointer]:
+        - /url: https://www.volcengine.com/docs/82379/1399008?lang=zh
+        - generic [ref=e130]: 接入 API
+        - generic [ref=e131]: 查看官方文档，接入模型
+    - generic [ref=e132]:
+      - heading "最新动态" [level=2] [ref=e135]:
+        - generic [ref=e136]: 最新动态
+      - generic [ref=e140]:
+        - generic [ref=e143]:
+          - generic [ref=e145]: 多模态混合参考，让创意一步到位
+          - generic [ref=e148]: Doubao-Seedance-2.0 重磅上线
+          - link "立即体验" [ref=e150] [cursor=pointer]:
+            - /url: https://www.volcengine.com/experience/ark?mode=vision&modelId=doubao-seedance-2-0-260128&tab=GenVideo
+        - generic [ref=e155]:
+          - generic [ref=e157]: 模型动态
+          - generic [ref=e160]: Doubao-Seed-2.0 上线
+          - link "查看详情" [ref=e162] [cursor=pointer]:
+            - /url: https://console.volcengine.com/ark/region:ark+cn-beijing/model/detail?Id=doubao-seed-2-0-pro
+            - text: 查看详情
+            - img [ref=e163]
+        - generic [ref=e167]:
+          - generic [ref=e169]: 工具箱
+          - generic [ref=e172]: 点击查看豆包大模型手把手应用教程与解决方案白皮书
+          - link "立即查看" [ref=e174] [cursor=pointer]:
+            - /url: https://bytedance.larkoffice.com/docx/Ixxrd2qE1owC8XxWzW5c3m6hn2b
+            - text: 立即查看
+            - img [ref=e175]
+        - generic [ref=e179]:
+          - generic [ref=e181]: 最新活动
+          - generic [ref=e184]: 方舟 Coding Plan 上线，模型自由，工具不限，解锁ArkClaw，7*24 小时在线的专属智能伙伴
+          - link "立即订阅" [ref=e186] [cursor=pointer]:
+            - /url: https://www.volcengine.com/activity/codingplan
+            - text: 立即订阅
+            - img [ref=e187]
+          - generic [ref=e189]: 开发者专享
+        - generic [ref=e192]:
+          - generic [ref=e194]: 最新福利
+          - generic [ref=e197]: 协作奖励计划二期全面升级，免费每日领取单模型最高500万Tokens
+          - link "立即参与" [ref=e199] [cursor=pointer]:
+            - /url: https://console.volcengine.com/ark/region:ark+cn-beijing/openManagement?LLM=%7B%7D&OpenAuthorizeModal=true&OpenTokenDrawer=false
+            - text: 立即参与
+            - img [ref=e200]
+    - generic [ref=e202]:
+      - heading "极速体验火山方舟" [level=2] [ref=e205]:
+        - generic [ref=e206]: 极速体验火山方舟
+      - generic [ref=e210]:
+        - generic [ref=e213]:
+          - generic [ref=e215]: 极速体验模型
+          - generic [ref=e218]: 体验超全模型，领取超大免费权益，每款豆包大语言提供50万Tokens免费额度，企业用户参与协作计划可获得500万Tokens免费额度
+          - link "立即体验" [ref=e220] [cursor=pointer]:
+            - /url: https://www.volcengine.com/experience/ark
+        - generic [ref=e223]:
+          - generic [ref=e225]:
+            - generic [ref=e227]: API构建应用
+            - generic [ref=e230]: 平台提供模型精调、推理、评测等全方位功能与服务，提供联网内容等丰富插件功能、知识库与智能体集成能力，保障企业级AI应用落地
+            - link "立即使用" [ref=e232] [cursor=pointer]:
+              - /url: https://console.volcengine.com/ark/region:ark+cn-beijing/endpoint
+          - generic [ref=e237]:
+            - generic [ref=e240] [cursor=pointer]:
+              - generic [ref=e243]: 智能广场
+              - generic [ref=e246]: 多种模态模型体验，开箱即用
+            - generic [ref=e249] [cursor=pointer]:
+              - generic [ref=e252]: 模型推理
+              - generic [ref=e255]: 支持在线和批量推理，灵活适配
+            - generic [ref=e258] [cursor=pointer]:
+              - generic [ref=e261]: 模型定制
+              - generic [ref=e264]: 支持模型精调、模型评测
+            - generic [ref=e267] [cursor=pointer]:
+              - generic [ref=e270]: PromptPilot
+              - generic [ref=e273]: 轻松打造精准prompt，高效优化
+            - generic [ref=e276] [cursor=pointer]:
+              - generic [ref=e279]: 应用实验室
+              - generic [ref=e282]: 多种开发方式，搭建企业级应用
+            - generic [ref=e285] [cursor=pointer]:
+              - generic [ref=e288]: 知识库
+              - generic [ref=e291]: 企业级全模态知识问答 RAG 服务
+    - generic [ref=e292]:
+      - generic [ref=e294]:
+        - heading "灵活多样的定价方案" [level=2] [ref=e295]:
+          - generic [ref=e296]: 灵活多样的定价方案
+        - link "价格计算器" [ref=e297] [cursor=pointer]:
+          - /url: https://www.volcengine.com/pricing?product=ark_bd&tab=2
+          - generic [ref=e298]: 价格计算器
+          - img [ref=e299]
+      - generic [ref=e303]:
+        - generic [ref=e304]:
+          - generic [ref=e308] [cursor=pointer]:
+            - generic [ref=e309]: 按量付费
+            - generic [ref=e310]: 按需结算，成本可控
+          - generic [ref=e315] [cursor=pointer]:
+            - generic [ref=e316]: 生产级保障
+            - generic [ref=e317]: 弹性并发延迟保障
+          - generic [ref=e322] [cursor=pointer]:
+            - generic [ref=e323]: 免费额度
+            - generic [ref=e324]: 充分体验，试用无忧
+          - generic [ref=e329] [cursor=pointer]:
+            - generic [ref=e330]: 应用实验室
+            - generic [ref=e331]: 应用拓展，能力进阶
+        - generic [ref=e336]:
+          - generic [ref=e337]:
+            - table [ref=e338]:
+              - rowgroup [ref=e344]:
+                - row [ref=e345]:
+                  - cell [ref=e346]
+                  - cell [ref=e347]
+                  - cell [ref=e348]
+                  - cell [ref=e349]
+                - row "Doubao-Seed-2.0-pro 3.2元起/百万输入tokens 16元起/百万输出tokens 0.64元起/百万命中tokens 0.017元/百万tokens缓存/小时" [ref=e350]:
+                  - cell [ref=e351]:
+                    - paragraph [ref=e352]
+                  - cell "Doubao-Seed-2.0-pro" [ref=e353]:
+                    - paragraph [ref=e354]:
+                      - generic [ref=e355]: Doubao-Seed-2.0-pro
+                  - cell "3.2元起/百万输入tokens 16元起/百万输出tokens" [ref=e356]:
+                    - paragraph [ref=e357]:
+                      - generic [ref=e358]: 3.2元起/百万输入tokens
+                      - generic [ref=e359]: 16元起/百万输出tokens
+                  - cell "0.64元起/百万命中tokens 0.017元/百万tokens缓存/小时" [ref=e360]:
+                    - paragraph [ref=e361]:
+                      - generic [ref=e362]: 0.64元起/百万命中tokens
+                      - generic [ref=e363]: 0.017元/百万tokens缓存/小时
+                - row "Doubao-Seed-2.0-lite 0.6元起/百万输入tokens 3.6元起/百万输出tokens 0.12元起/百万命中tokens 0.017元/百万tokens缓存/小时" [ref=e364]:
+                  - cell "Doubao-Seed-2.0-lite" [ref=e365]:
+                    - paragraph [ref=e366]:
+                      - generic [ref=e367]: Doubao-Seed-2.0-lite
+                  - cell "0.6元起/百万输入tokens 3.6元起/百万输出tokens" [ref=e368]:
+                    - paragraph [ref=e369]:
+                      - generic [ref=e370]: 0.6元起/百万输入tokens
+                      - generic [ref=e371]: 3.6元起/百万输出tokens
+                  - cell "0.12元起/百万命中tokens 0.017元/百万tokens缓存/小时" [ref=e372]:
+                    - paragraph [ref=e373]:
+                      - generic [ref=e374]: 0.12元起/百万命中tokens
+                      - generic [ref=e375]: 0.017元/百万tokens缓存/小时
+                - row "Doubao-Seed-2.0-mini 0.2元起/百万输入tokens 2元起/百万输出tokens 0.04元起/百万命中tokens 0.017元/百万tokens缓存/小时" [ref=e376]:
+                  - cell "Doubao-Seed-2.0-mini" [ref=e377]:
+                    - paragraph [ref=e378]:
+                      - generic [ref=e379]: Doubao-Seed-2.0-mini
+                  - cell "0.2元起/百万输入tokens 2元起/百万输出tokens" [ref=e380]:
+                    - paragraph [ref=e381]:
+                      - generic [ref=e382]: 0.2元起/百万输入tokens
+                      - generic [ref=e383]: 2元起/百万输出tokens
+                  - cell "0.04元起/百万命中tokens 0.017元/百万tokens缓存/小时" [ref=e384]:
+                    - paragraph [ref=e385]:
+                      - generic [ref=e386]: 0.04元起/百万命中tokens
+                      - generic [ref=e387]: 0.017元/百万tokens缓存/小时
+                - row "Doubao-Seed-2.0-Code 3.2元起/百万输入tokens 16元起/百万输出tokens 0.64元起/百万命中tokens 0.017元/百万tokens缓存/小时" [ref=e388]:
+                  - cell "Doubao-Seed-2.0-Code" [ref=e389]:
+                    - paragraph [ref=e390]:
+                      - generic [ref=e391]: Doubao-Seed-2.0-Code
+                  - cell "3.2元起/百万输入tokens 16元起/百万输出tokens" [ref=e392]:
+                    - paragraph [ref=e393]:
+                      - generic [ref=e394]: 3.2元起/百万输入tokens
+                      - generic [ref=e395]: 16元起/百万输出tokens
+                  - cell "0.64元起/百万命中tokens 0.017元/百万tokens缓存/小时" [ref=e396]:
+                    - paragraph [ref=e397]:
+                      - generic [ref=e398]: 0.64元起/百万命中tokens
+                      - generic [ref=e399]: 0.017元/百万tokens缓存/小时
+            - table [ref=e400]:
+              - rowgroup [ref=e406]:
+                - row "文本生成 在线推理 在线推理-上下文缓存" [ref=e407]:
+                  - cell [ref=e408]:
+                    - paragraph [ref=e409]
+                  - cell "文本生成" [ref=e410]:
+                    - paragraph [ref=e411]: 文本生成
+                  - cell "在线推理" [ref=e412]:
+                    - paragraph [ref=e413]: 在线推理
+                  - cell "在线推理-上下文缓存" [ref=e414]:
+                    - paragraph [ref=e415]: 在线推理-上下文缓存
+                - row "Doubao-1.5-pro-32k 0.8元/百万输入tokens 2元/百万输出tokens 0.16元/百万命中tokens 0.017元/百万tokens缓存/小时" [ref=e416]:
+                  - cell [ref=e417]:
+                    - paragraph [ref=e418]
+                  - cell "Doubao-1.5-pro-32k" [ref=e419]:
+                    - paragraph [ref=e420]:
+                      - generic [ref=e421]: Doubao-1.5-pro-32k
+                  - cell "0.8元/百万输入tokens 2元/百万输出tokens" [ref=e422]:
+                    - paragraph [ref=e423]:
+                      - generic [ref=e424]: 0.8元/百万输入tokens
+                      - generic [ref=e425]: 2元/百万输出tokens
+                  - cell "0.16元/百万命中tokens 0.017元/百万tokens缓存/小时" [ref=e426]:
+                    - paragraph [ref=e427]:
+                      - generic [ref=e428]: 0.16元/百万命中tokens
+                      - generic [ref=e429]: 0.017元/百万tokens缓存/小时
+            - table [ref=e430]:
+              - rowgroup [ref=e436]:
+                - row "视频生成 推理" [ref=e437]:
+                  - cell [ref=e438]:
+                    - paragraph [ref=e439]
+                  - cell "视频生成" [ref=e440]:
+                    - paragraph [ref=e441]: 视频生成
+                  - cell "推理" [ref=e442]:
+                    - paragraph [ref=e443]: 推理
+                  - cell [ref=e444]:
+                    - paragraph [ref=e445]
+                - row "Doubao-Seedance-2.0(仅体验) Doubao-Seedance-1.5-pro Doubao-Seedance-1.0-pro Doubao-Seedance-1.0-pro-fast 28元/百万tokens（含视频输入） 8元/百万tokens（无声视频） 15元/百万tokens 4.2元/百万tokens 46元/百万tokens（无视频输入） 16元/百万tokens（有声视频）" [ref=e446]:
+                  - cell [ref=e447]:
+                    - paragraph [ref=e448]
+                  - cell "Doubao-Seedance-2.0(仅体验) Doubao-Seedance-1.5-pro Doubao-Seedance-1.0-pro Doubao-Seedance-1.0-pro-fast" [ref=e449]:
+                    - paragraph [ref=e450]:
+                      - generic [ref=e451]:
+                        - text: Doubao-Seedance-2.0(仅体验)
+                        - img [ref=e452]
+                      - generic [ref=e453]: Doubao-Seedance-1.5-pro
+                      - generic [ref=e454]: Doubao-Seedance-1.0-pro
+                      - generic [ref=e455]: Doubao-Seedance-1.0-pro-fast
+                  - cell "28元/百万tokens（含视频输入） 8元/百万tokens（无声视频） 15元/百万tokens 4.2元/百万tokens" [ref=e456]:
+                    - paragraph [ref=e457]:
+                      - generic [ref=e458]: 28元/百万tokens（含视频输入）
+                      - generic [ref=e459]: 8元/百万tokens（无声视频）
+                      - generic [ref=e460]: 15元/百万tokens
+                      - generic [ref=e461]: 4.2元/百万tokens
+                  - cell "46元/百万tokens（无视频输入） 16元/百万tokens（有声视频）" [ref=e462]:
+                    - paragraph [ref=e463]:
+                      - generic [ref=e464]: 46元/百万tokens（无视频输入）
+                      - generic [ref=e465]: 16元/百万tokens（有声视频）
+            - table [ref=e466]:
+              - rowgroup [ref=e472]:
+                - row "图像生成 推理" [ref=e473]:
+                  - cell [ref=e474]:
+                    - paragraph [ref=e475]
+                  - cell "图像生成" [ref=e476]:
+                    - paragraph [ref=e477]: 图像生成
+                  - cell "推理" [ref=e478]:
+                    - paragraph [ref=e479]: 推理
+                  - cell [ref=e480]:
+                    - paragraph [ref=e481]
+                - row "Doubao-Seedream-5.0-lite Doubao-Seedream-4.5 Doubao-Seedream-4.0 0.22元/张 0.25元/张 0.2元/张" [ref=e482]:
+                  - cell [ref=e483]:
+                    - paragraph [ref=e484]
+                  - cell "Doubao-Seedream-5.0-lite Doubao-Seedream-4.5 Doubao-Seedream-4.0" [ref=e485]:
+                    - paragraph [ref=e486]:
+                      - generic [ref=e487]:
+                        - text: Doubao-Seedream-5.0-lite
+                        - img [ref=e488]
+                      - generic [ref=e489]: Doubao-Seedream-4.5
+                      - generic [ref=e490]: Doubao-Seedream-4.0
+                  - cell "0.22元/张 0.25元/张 0.2元/张" [ref=e491]:
+                    - paragraph [ref=e492]:
+                      - generic [ref=e493]: 0.22元/张
+                      - generic [ref=e494]: 0.25元/张
+                      - generic [ref=e495]: 0.2元/张
+                  - cell [ref=e496]:
+                    - paragraph [ref=e497]
+            - table [ref=e498]:
+              - rowgroup [ref=e504]:
+                - row "语音模型 推理" [ref=e505]:
+                  - cell [ref=e506]:
+                    - paragraph [ref=e507]
+                  - cell "语音模型" [ref=e508]:
+                    - paragraph [ref=e509]: 语音模型
+                  - cell "推理" [ref=e510]:
+                    - paragraph [ref=e511]: 推理
+                  - cell [ref=e512]:
+                    - paragraph [ref=e513]
+                - row "Doubao-声音复刻 Doubao-语音合成 Doubao-流式语音识别 Doubao-录音文件识别2.0 8元/万字符 5元/万字符 4.5元/小时 0.8元/小时" [ref=e514]:
+                  - cell [ref=e515]:
+                    - paragraph [ref=e516]
+                  - cell "Doubao-声音复刻 Doubao-语音合成 Doubao-流式语音识别 Doubao-录音文件识别2.0" [ref=e517]:
+                    - paragraph [ref=e518]:
+                      - generic [ref=e519]: Doubao-声音复刻
+                      - generic [ref=e520]: Doubao-语音合成
+                      - generic [ref=e521]: Doubao-流式语音识别
+                      - generic [ref=e522]: Doubao-录音文件识别2.0
+                  - cell "8元/万字符 5元/万字符 4.5元/小时 0.8元/小时" [ref=e523]:
+                    - paragraph [ref=e524]:
+                      - generic [ref=e525]: 8元/万字符
+                      - generic [ref=e526]: 5元/万字符
+                      - generic [ref=e527]: 4.5元/小时
+                      - generic [ref=e528]: 0.8元/小时
+                  - cell [ref=e529]:
+                    - paragraph [ref=e530]
+            - table [ref=e531]:
+              - rowgroup [ref=e537]:
+                - row "向量模型 推理" [ref=e538]:
+                  - cell [ref=e539]:
+                    - paragraph [ref=e540]
+                  - cell "向量模型" [ref=e541]:
+                    - paragraph [ref=e542]: 向量模型
+                  - cell "推理" [ref=e543]:
+                    - paragraph [ref=e544]: 推理
+                  - cell [ref=e545]:
+                    - paragraph [ref=e546]
+                - row "Doubao-embedding-vision 0.7元/百万tokens(文本) 1.8元/百万tokens(图像)" [ref=e547]:
+                  - cell [ref=e548]:
+                    - paragraph [ref=e549]
+                  - cell "Doubao-embedding-vision" [ref=e550]:
+                    - paragraph [ref=e551]:
+                      - generic [ref=e552]: Doubao-embedding-vision
+                  - cell "0.7元/百万tokens(文本) 1.8元/百万tokens(图像)" [ref=e553]:
+                    - paragraph [ref=e554]:
+                      - generic [ref=e555]: 0.7元/百万tokens(文本)
+                      - generic [ref=e556]: 1.8元/百万tokens(图像)
+                  - cell [ref=e557]:
+                    - paragraph [ref=e558]
+          - generic [ref=e559]:
+            - generic [ref=e561]: 深度思考
+            - generic [ref=e562]: 在线推理
+            - generic [ref=e563]: 在线推理-上下文缓存
+    - generic [ref=e564]:
+      - generic [ref=e566]:
+        - heading "豆包大模型应用场景" [level=2] [ref=e567]:
+          - generic [ref=e568]: 豆包大模型应用场景
+        - generic [ref=e570]: 丰富的应用场景和解决方案，满足多种业务需求
+      - generic [ref=e573]:
+        - generic [ref=e576]:
+          - generic "社交娱乐" [ref=e577] [cursor=pointer]: 社交娱乐 社交娱乐
+          - generic "硬件助手" [ref=e578] [cursor=pointer]
+          - generic "学习教育" [ref=e579] [cursor=pointer]
+          - generic "客服与销售" [ref=e580] [cursor=pointer]
+          - generic "AI搜索" [ref=e581] [cursor=pointer]
+          - generic "营销提效" [ref=e582] [cursor=pointer]
+        - generic [ref=e590]:
+          - generic [ref=e592]: 社交娱乐
+          - generic [ref=e594]:
+            - generic [ref=e595]: 角色扮演：
+            - generic [ref=e596]: 灵活扮演各类角色及分身，遵循人设逻辑，长期记忆记住用户喜好与过往交流，支持文本、语音、图像多种输入，多模态协同，丰富交流情境，构建沉浸式互动体验
+          - generic [ref=e598]:
+            - generic [ref=e599]: 剧情互动：
+            - generic [ref=e600]: 基于设定好的故事背景和人设，自动推演剧情，在互动或游戏中，让用户获得创作乐趣
+          - generic [ref=e602]:
+            - generic [ref=e603]: 辅助聊天：
+            - generic [ref=e604]: 精准理解上下文与情绪，智能生成自然回复，提升对话连贯性与情感温度
+          - generic [ref=e605]: 相关模型及产品
+          - generic [ref=e606]:
+            - generic [ref=e607]: 豆包角色扮演模型
+            - generic [ref=e608]: 豆包实时语音模型 2.0
+            - generic [ref=e609]: 豆包视觉理解模型
+            - generic [ref=e610]: 知识库
+          - generic [ref=e611]:
+            - link "立即咨询" [ref=e612] [cursor=pointer]:
+              - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - link "模型详情" [ref=e613] [cursor=pointer]:
+              - /url: https://console.volcengine.com/ark/region:ark+cn-beijing/model?projectName=default&vendor=Bytedance&view=VENDOR_VIEW
+    - generic [ref=e616]:
+      - generic [ref=e618]:
+        - heading "全行业云上增长新动力" [level=2] [ref=e619]:
+          - generic [ref=e620]: 全行业云上增长新动力
+        - generic [ref=e622]: 解锁全行业云上增长密码，驱动企业创新发展
+      - generic [ref=e626]:
+        - generic [ref=e629]:
+          - generic [ref=e632]: 浙江大学携火山引擎 7天构建“浙大先生”大模型应用体系
+          - link "查看详情" [ref=e634] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e635]
+        - generic [ref=e639]:
+          - generic [ref=e642]: 火山引擎携手招商银行共探智能体应用，加速数字金融创新
+          - link "查看详情" [ref=e644] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e645]
+        - generic [ref=e649]:
+          - generic [ref=e652]: 火山引擎与南开大学深化合作签约，联合树立“AI+教育”新典范
+          - link "查看详情" [ref=e654] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e655]
+        - generic [ref=e659]:
+          - generic [ref=e662]: 当消费遇上AI：大模型如何成为行业“网红”？
+          - link "查看详情" [ref=e664] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e665]
+        - generic [ref=e669]:
+          - generic [ref=e672]: 卡泰驰智能交互商城”正式上线，火山引擎以AI助力优化用户购车体验
+          - link "查看详情" [ref=e674] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e675]
+        - generic [ref=e679]:
+          - generic [ref=e682]: 豆包大模型助力大消费行业竞争力重塑
+          - link "查看详情" [ref=e684] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e685]
+        - generic [ref=e689]:
+          - generic [ref=e692]: 华泰证券与火山引擎签署战略合作协议，共筑金融科技智能化新生态
+          - link "查看详情" [ref=e694] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e695]
+        - generic [ref=e699]:
+          - generic [ref=e702]: 豆包助力联道DMP，打破传统广告投放壁垒，提升投放效率 60%
+          - link "查看详情" [ref=e704] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e705]
+        - generic [ref=e709]:
+          - generic [ref=e712]: 浙江大学携火山引擎 7天构建“浙大先生”大模型应用体系
+          - link "查看详情" [ref=e714] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e715]
+        - generic [ref=e719]:
+          - generic [ref=e722]: 火山引擎携手招商银行共探智能体应用，加速数字金融创新
+          - link "查看详情" [ref=e724] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e725]
+        - generic [ref=e729]:
+          - generic [ref=e732]: 火山引擎与南开大学深化合作签约，联合树立“AI+教育”新典范
+          - link "查看详情" [ref=e734] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e735]
+        - generic [ref=e739]:
+          - generic [ref=e742]: 当消费遇上AI：大模型如何成为行业“网红”？
+          - link "查看详情" [ref=e744] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e745]
+        - generic [ref=e749]:
+          - generic [ref=e752]: 卡泰驰智能交互商城”正式上线，火山引擎以AI助力优化用户购车体验
+          - link "查看详情" [ref=e754] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e755]
+        - generic [ref=e759]:
+          - generic [ref=e762]: 豆包大模型助力大消费行业竞争力重塑
+          - link "查看详情" [ref=e764] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e765]
+        - generic [ref=e769]:
+          - generic [ref=e772]: 华泰证券与火山引擎签署战略合作协议，共筑金融科技智能化新生态
+          - link "查看详情" [ref=e774] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e775]
+        - generic [ref=e779]:
+          - generic [ref=e782]: 豆包助力联道DMP，打破传统广告投放壁垒，提升投放效率 60%
+          - link "查看详情" [ref=e784] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - text: 查看详情
+            - img [ref=e785]
+    - generic [ref=e787]:
+      - generic [ref=e789]:
+        - heading "全周期安全可信，会话无痕" [level=2] [ref=e790]:
+          - generic [ref=e791]: 全周期安全可信，会话无痕
+        - generic [ref=e793]: 数据唯你可见，唯你所用，唯你所有
+      - generic [ref=e796]:
+        - generic [ref=e798]:
+          - generic [ref=e799] [cursor=pointer]: 安全能力总览
+          - generic [ref=e800] [cursor=pointer]: 链路全加密
+          - generic [ref=e801] [cursor=pointer]: 数据高保密
+          - generic [ref=e802] [cursor=pointer]: 环境强隔离
+          - generic [ref=e803] [cursor=pointer]: 操作可审计
+        - generic [ref=e807]:
+          - generic [ref=e810]:
+            - generic [ref=e812]: 链路全加密
+            - generic [ref=e815]: 在用户到方舟安全计算环境之间建立端到端加密通信通道，防止用户数据在传输链路中被截获
+          - generic [ref=e820]:
+            - generic [ref=e822]: 数据高保密
+            - generic [ref=e825]: 实现对用户数据的机密性保护，保证用户数据非本人不可见
+          - generic [ref=e830]:
+            - generic [ref=e832]: 环境强隔离
+            - generic [ref=e835]: 通过领先的可信容器沙箱、网络隔离等多维度强制隔离技术，杜绝外部风险入侵和内部数据泄露
+          - generic [ref=e840]:
+            - generic [ref=e842]: 操作可审计
+            - generic [ref=e845]: 影响用户数据资产的所有操作均有日志记录，验证安全策略生效，识别潜在风险
+      - generic [ref=e849]:
+        - link "方舟安全白皮书" [ref=e850] [cursor=pointer]:
+          - /url: https://developer.volcengine.com/resource/7584381573106303012
+        - link "互信计算架构白皮书" [ref=e851] [cursor=pointer]:
+          - /url: https://www.volcengine.com/docs/83458/1108217
+    - generic [ref=e852]:
+      - generic [ref=e854]:
+        - heading "强大系统承载力，保障大模型落地" [level=2] [ref=e855]:
+          - generic [ref=e856]: 强大系统承载力，保障大模型落地
+        - generic [ref=e858] [cursor=pointer]:
+          - img [ref=e860]
+          - text: 完整视频介绍
+          - img [ref=e864]
+      - generic [ref=e870]:
+        - img [ref=e872]
+        - generic [ref=e876]:
+          - generic [ref=e877]:
+            - generic [ref=e878]: 充沛GPU算力
+            - generic [ref=e881]: 具有海量资源储备，保障复杂计算高效运行
+          - generic [ref=e883] [cursor=pointer]: 超高吞吐能力
+          - generic [ref=e885] [cursor=pointer]: 极致调度能力
+    - generic [ref=e888]:
+      - heading "火山方舟平台能力支撑" [level=2] [ref=e891]:
+        - generic [ref=e892]: 火山方舟平台能力支撑
+      - generic [ref=e896]:
+        - generic [ref=e899]:
+          - generic [ref=e901]: 专业算法服务
+          - generic [ref=e904]: 专业算法团队提供业务诊断、训练优化、问题解答等服务，让企业AI应用轻松落地
+          - generic [ref=e907]: 释放客户的独有数据价值
+          - generic [ref=e910]: 场景落地的最后一公里
+          - generic [ref=e913]: 助力客户成功
+        - generic [ref=e918]:
+          - generic [ref=e920]: 模型能力扩展
+          - generic [ref=e923]: 提供联网插件、内容插件、知识库和扣子专业版AI应用开发平台，帮助企业构建应用
+          - generic [ref=e926]: 联网插件大幅提升模型搜索能力
+          - generic [ref=e929]: 提供海量优质图文视频内容
+          - generic [ref=e932]: RAG知识库高性能知识库检索
+        - generic [ref=e937]:
+          - generic [ref=e939]: 高并发算力保障
+          - generic [ref=e942]: 充沛的公有云GPU资源池，创建模型瞬时可用，分钟级完成千卡扩缩容，保障业务稳定
+          - generic [ref=e945]: 充沛的公有云GPU资源池
+          - generic [ref=e948]: 创建精调模型接入点后瞬时可用
+          - generic [ref=e951]: 分钟级完成千卡扩缩容
+        - generic [ref=e956]:
+          - generic [ref=e958]: 安全可信会话无痕
+          - generic [ref=e961]: 通过传输加密、数据加密和安全沙箱等技术，在模型训练、部署和推理中，有效保障数据安全
+          - generic [ref=e964]: 访问可控制、可审计
+          - generic [ref=e967]: 多重数据加密及环境隔离
+          - generic [ref=e970]: 安全护栏提供内容风险识别
+    - generic [ref=e973]:
+      - heading "大模型产品关系图" [level=2] [ref=e975]
+      - generic [ref=e982]:
+        - generic [ref=e987]:
+          - img "大模型产品关系图"
+        - generic [ref=e988]:
+          - generic [ref=e989]: 火山方舟
+          - generic [ref=e990]: 平台提供模型精调、推理、评测等全方位功能与服务，提供丰富的插件生态和AI原生应用开发服务，并通过安全可信的基础设施，专业的算法技术服务，全方位保障企业级AI应用落地
+          - generic [ref=e991]:
+            - heading "架构优势" [level=4] [ref=e992]
+            - generic [ref=e993]:
+              - img [ref=e994]
+              - generic [ref=e998]: 专业算法服务
+            - generic [ref=e999]:
+              - img [ref=e1000]
+              - generic [ref=e1004]: 模型能力拓展
+            - generic [ref=e1005]:
+              - img [ref=e1006]
+              - generic [ref=e1010]: 高并发算力保障
+            - generic [ref=e1011]:
+              - img [ref=e1012]
+              - generic [ref=e1016]: 安全可信会话无痕
+          - link "立即咨询" [ref=e1017] [cursor=pointer]:
+            - /url: https://www.volcengine.com/contact/doubao?t=%E8%B1%86%E5%8C%85%E5%A4%A7%E6%A8%A1%E5%9E%8B
+            - button "立即咨询" [ref=e1018]
+          - heading "相关能力" [level=4] [ref=e1020]
+          - generic [ref=e1021]:
+            - link "豆包大模型 豆包大模型" [ref=e1022] [cursor=pointer]:
+              - /url: https://console.volcengine.com/ark/region:ark+cn-beijing/model?projectName=default&vendor=Bytedance&view=VENDOR_VIEW
+              - img "豆包大模型" [ref=e1023]
+              - generic [ref=e1024]: 豆包大模型
+            - link "火山方舟 火山方舟" [ref=e1025] [cursor=pointer]:
+              - /url: https://console.volcengine.com/ark
+              - img "火山方舟" [ref=e1026]
+              - generic [ref=e1027]: 火山方舟
+            - link "扣子 扣子" [ref=e1028] [cursor=pointer]:
+              - /url: https://www.coze.cn
+              - img "扣子" [ref=e1029]
+              - generic [ref=e1030]: 扣子
+    - generic [ref=e1031]:
+      - generic [ref=e1033]:
+        - heading "资质与认证" [level=2] [ref=e1034]:
+          - generic [ref=e1035]: 资质与认证
+        - generic [ref=e1037]: 通过多项资质认证，满足可信与合规需求
+      - generic [ref=e1041]:
+        - generic [ref=e1044]:
+          - generic [ref=e1046]: 网络安全等级保护三级
+          - generic [ref=e1049]: 火山引擎大模型平台率先完成等保三级备案和测评。标志着火山大模型平台符合《网络安全等级保护基本要求》、《大模型系统安全保护要求》，在安全性、合规性上均达到国家标准要求
+        - generic [ref=e1052]:
+          - generic [ref=e1054]: ISO 42001
+          - generic [ref=e1057]: 火山引擎通过ISO42001认证，标志火山引擎在人工智能相关产品的设计、开发、测试、运维方面均达到行业领先水平，树立AI管理国际标杆，保障技术安全可控。
+        - generic [ref=e1060]:
+          - generic [ref=e1062]: SOC
+          - generic [ref=e1065]: 火山引擎SOC审计报告已涵盖火山方舟平台、豆包大模型，保障产品在安全性、可用性 、进程完整性、保密性、隐私性五大控方面均达到国际公认最高标准。
+        - generic [ref=e1068]:
+          - generic [ref=e1070]: 大模型测试
+          - generic [ref=e1073]: 火山引擎豆包大模型通过中国电子技术标准化研究院依据国标《GB/T 45288.2》开展的大模型测试，并取得相应证书。
+        - generic [ref=e1076]:
+          - generic [ref=e1078]: 信通院-可信AI
+          - generic [ref=e1081]: 火山引擎大模型产品通过多项信通院可信AI认证，并获得最高评分。
+        - generic [ref=e1084]:
+          - generic [ref=e1086]: 信通院-可信云
+          - generic [ref=e1089]: 火山方舟首个通过信通院可信云-企业级大模型服务平台安全分级能力评估，并获得最高评级。
+  - generic [ref=e1092]:
+    - generic [ref=e1097] [cursor=pointer]:
+      - generic [ref=e1101]: 您浏览的产品有热门活动，点我了解
+      - img [ref=e1108]
+      - generic: 在线咨询
+    - img [ref=e1113]
+  - generic [ref=e1118]:
+    - generic [ref=e1119]:
+      - img "bg" [ref=e1120]
+      - generic [ref=e1121]:
+        - generic [ref=e1122]:
+          - generic [ref=e1123]: 火山引擎 你的
+          - generic [ref=e1124]: AI
+          - generic [ref=e1125]: 云
+        - heading "豆包大模型 + AI 云原生 = 智能时代新引擎" [level=2] [ref=e1126]
+        - generic [ref=e1127]:
+          - textbox "请输入您的手机号" [ref=e1128]
+          - generic [ref=e1129] [cursor=pointer]: 立即注册
+    - generic [ref=e1130]:
+      - generic [ref=e1131]:
+        - generic [ref=e1133]:
+          - generic [ref=e1134]: 全天候售后服务
+          - generic [ref=e1135]: 7x24小时专业工程师品质服务
+        - generic [ref=e1137]:
+          - generic [ref=e1138]: 极速服务应答
+          - generic [ref=e1139]: 秒级应答为业务保驾护航
+        - generic [ref=e1141]:
+          - generic [ref=e1142]: 客户价值为先
+          - generic [ref=e1143]: 从服务价值到创造客户价值
+        - generic [ref=e1145]:
+          - generic [ref=e1146]: 全方位安全保障
+          - generic [ref=e1147]: 打造一朵“透明可信”的云
+      - generic [ref=e1149]:
+        - link "logo" [ref=e1151] [cursor=pointer]:
+          - /url: https://www.volcengine.com
+          - img "logo" [ref=e1152]
+        - generic [ref=e1154]:
+          - generic [ref=e1155]: 关于我们
+          - generic [ref=e1156]:
+            - link "为什么选火山" [ref=e1158] [cursor=pointer]:
+              - /url: https://www.volcengine.com/about
+            - link "文档中心" [ref=e1160] [cursor=pointer]:
+              - /url: https://www.volcengine.com/docs
+            - link "联系我们" [ref=e1162] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/contact
+            - link "人才招聘" [ref=e1164] [cursor=pointer]:
+              - /url: https://www.volcengine.com/jobs
+            - link "云信任中心" [ref=e1166] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/trust
+            - link "友情链接" [ref=e1168] [cursor=pointer]:
+              - /url: https://www.volcengine.com/friend_links
+        - generic [ref=e1170]:
+          - generic [ref=e1171]: 产品
+          - generic [ref=e1172]:
+            - link "云服务器" [ref=e1174] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/ecs
+            - link "GPU云服务器" [ref=e1176] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/gpu
+            - link "机器学习平台" [ref=e1178] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/ml-platform
+            - link "客户数据平台 VeCDP" [ref=e1180] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/veCDP
+            - link "飞连" [ref=e1182] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/feilian
+            - link "视频直播" [ref=e1184] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/live
+            - link "全部产品" [ref=e1186] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/list
+        - generic [ref=e1188]:
+          - generic [ref=e1189]: 解决方案
+          - generic [ref=e1190]:
+            - link "汽车行业" [ref=e1192] [cursor=pointer]:
+              - /url: https://www.volcengine.com/solutions/automotive
+            - link "金融行业" [ref=e1194] [cursor=pointer]:
+              - /url: https://www.volcengine.com/solutions/finance
+            - link "文娱行业" [ref=e1196] [cursor=pointer]:
+              - /url: https://www.volcengine.com/solutions/social
+            - link "医疗健康行业" [ref=e1198] [cursor=pointer]:
+              - /url: https://www.volcengine.com/solutions/Bio-OS-genomics
+            - link "传媒行业" [ref=e1200] [cursor=pointer]:
+              - /url: https://www.volcengine.com/solutions/smart-media
+            - link "智慧文旅" [ref=e1202] [cursor=pointer]:
+              - /url: https://www.volcengine.com/solutions/cultural-tourism-group
+            - link "大消费" [ref=e1204] [cursor=pointer]:
+              - /url: https://www.volcengine.com/solutions/GeneralConsumption
+        - generic [ref=e1206]:
+          - generic [ref=e1207]: 服务与支持
+          - generic [ref=e1208]:
+            - link "备案服务" [ref=e1210] [cursor=pointer]:
+              - /url: https://www.volcengine.com/beian
+            - link "服务咨询" [ref=e1212] [cursor=pointer]:
+              - /url: https://www.volcengine.com/contact/product
+            - link "建议与反馈" [ref=e1214] [cursor=pointer]:
+              - /url: https://console.volcengine.com/workorder/create?step=3&SubProductID=P90000696&FlowKey=RvTCxYTCdeIhAKMzebqS
+            - link "廉洁舞弊举报" [ref=e1216] [cursor=pointer]:
+              - /url: https://compliance.bytedance.com/report/pcReport
+            - link "举报平台" [ref=e1218] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/report-platform
+        - generic [ref=e1219]:
+          - generic [ref=e1220]:
+            - generic [ref=e1221]: 联系我们
+            - generic [ref=e1222]:
+              - generic [ref=e1223]:
+                - text: 业务咨询：
+                - link "service@volcengine.com" [ref=e1224] [cursor=pointer]:
+                  - /url: mailto:service@volcengine.com
+              - generic [ref=e1225]:
+                - text: 市场合作：
+                - link "marketing@volcengine.com" [ref=e1226] [cursor=pointer]:
+                  - /url: mailto:marketing@volcengine.com
+              - generic [ref=e1227]:
+                - text: 电话：
+                - link "400-034-7888" [ref=e1228] [cursor=pointer]:
+                  - /url: tel://400-034-7888
+              - generic [ref=e1229]: 地址：北京市海淀区北三环西路甲18号院大钟寺广场1号楼
+          - generic [ref=e1230]:
+            - generic [ref=e1233]: 微信公众号
+            - generic [ref=e1236]: 抖音号
+            - generic [ref=e1239]: 视频号
+      - generic [ref=e1241]:
+        - generic [ref=e1242]:
+          - generic [ref=e1243]: © 北京火山引擎科技有限公司 2026 版权所有
+          - generic [ref=e1244]: 代理域名注册服务机构：新网数码 商中在线
+          - link "服务条款" [ref=e1245] [cursor=pointer]:
+            - /url: https://www.volcengine.com/docs/6256/64903
+          - link "隐私政策" [ref=e1246] [cursor=pointer]:
+            - /url: https://www.volcengine.com/docs/6256/64902
+          - link "更多协议" [ref=e1247] [cursor=pointer]:
+            - /url: https://www.volcengine.com/docs/6256/68938
+        - generic [ref=e1248]:
+          - link "京公网安备11010802032137号" [ref=e1250] [cursor=pointer]:
+            - /url: https://beian.mps.gov.cn/#/query/webSearch?code=11010802032137
+          - link "京ICP备20018813号-3" [ref=e1252] [cursor=pointer]:
+            - /url: https://beian.miit.gov.cn
+          - link "营业执照" [ref=e1254] [cursor=pointer]:
+            - /url: https://www.volcengine.com/business_license
+          - link "增值电信业务经营许可证京B2-20202418，A2.B1.B2-20202637" [ref=e1256] [cursor=pointer]:
+            - /url: https://dxzhgl.miit.gov.cn/#/home
+          - generic [ref=e1258]: 网络文化经营许可证：京网文（2023）4872-140号

@@ -22,6 +22,9 @@ export const translations: Record<string, Record<string, string>> = {
     'settings.prefix.desc': '自定义前缀，自动加在文件名开头',
     'settings.prefix.placeholder': '例如 DedaoBrain 或 YYYYMMDDHHmmss',
     'settings.prefix.hint': '时间格式：YYYY / MM / DD / HH / mm / ss',
+    'settings.templateFile.label': '模板文件路径',
+    'settings.templateFile.desc': '填写 vault 内 Markdown 模板路径；留空则按默认格式同步。',
+    'settings.templateFile.placeholder': '例如 Templates/得到大脑模板.md',
     'settings.interval.hint': '最小 5 分钟',
     'settings.interval.minWarning': '间隔不能小于 5 分钟，已自动调整为 5 分钟',
     'settings.scheduled.label': '定时自动同步',
@@ -209,6 +212,22 @@ export const translations: Record<string, Record<string, string>> = {
     'picker.type.audio_note': '录音笔记',
     'picker.type.unknown': '其他',
 
+    // === Search View ===
+    'search.title': '得到大脑搜索',
+    'search.placeholder': '搜索得到大脑笔记...',
+    'search.submit': '搜索',
+    'search.searching': '搜索中...',
+    'search.emptyHint': '输入关键词后搜索',
+    'search.noResults': '没有搜索结果',
+    'search.openLocal': '打开本地笔记',
+    'search.syncLocal': '同步到本地',
+    'search.syncing': '同步中...',
+    'search.synced': '已同步',
+    'search.syncFailed': '同步失败',
+    'search.openapiOnly': '得到大脑搜索第一版仅支持 OpenAPI 鉴权',
+    'search.noSelection': '请先选中要搜索的文字',
+    'search.contextMenu': '用选中文字搜索得到大脑',
+
     // === Topic Picker ===
     'topicPicker.title': '选择要同步的知识库',
     'topicPicker.error': '加载失败',
@@ -263,7 +282,7 @@ export const translations: Record<string, Record<string, string>> = {
     'sync.started': '同步开始...',
     'sync.autoComplete': '自动同步完成：新增 {created} 更新 {updated}',
     'sync.autoFailRepeated': '自动同步连续失败 {count} 次，请检查设置',
-    'notice.autoSynced': '自动同步：新增 {created}，更新 {updated}',
+    'notice.autoSynced': '自动同步：新增 {created} · 更新 {updated} · 跳过 {skipped}',
     'notice.autoSyncFailed': '自动同步失败',
     'notice.autoSyncAuthFailed': '鉴权失效：{msg}',
     'notice.autoSyncFailedWithMsg': '自动同步失败：{msg}',
@@ -317,7 +336,9 @@ export const translations: Record<string, Record<string, string>> = {
     'command.sync': '同步笔记',
     'command.reverseSync': '写回得到大脑',
     'command.uploadLocal': '上传本地笔记到得到大脑',
+    'command.search': '打开得到大脑搜索',
     'ribbon.tooltip': '同步得到大脑',
+    'ribbon.searchTooltip': '搜索得到大脑',
   },
 
   en: {
@@ -343,6 +364,9 @@ export const translations: Record<string, Record<string, string>> = {
     'settings.prefix.desc': 'Custom prefix added to the start of filenames',
     'settings.prefix.placeholder': 'e.g. DedaoBrain or YYYYMMDDHHmmss',
     'settings.prefix.hint': 'Time format: YYYY / MM / DD / HH / mm / ss',
+    'settings.templateFile.label': 'Template File Path',
+    'settings.templateFile.desc': 'Vault Markdown template path. Leave empty to use the default note format.',
+    'settings.templateFile.placeholder': 'e.g. Templates/dedao-template.md',
     'settings.scheduled.label': 'Scheduled Auto Sync',
     'settings.scheduled.desc': 'Automatically sync from Dedao Brain to Obsidian at regular intervals. Local notes are never uploaded automatically.',
     'settings.scheduled.enabled': 'Enable scheduled sync',
@@ -530,6 +554,22 @@ export const translations: Record<string, Record<string, string>> = {
     'picker.type.audio_note': 'Audio Note',
     'picker.type.unknown': 'Other',
 
+    // === Search View ===
+    'search.title': 'Dedao Brain Search',
+    'search.placeholder': 'Search Dedao Brain notes...',
+    'search.submit': 'Search',
+    'search.searching': 'Searching...',
+    'search.emptyHint': 'Enter keywords to search',
+    'search.noResults': 'No results',
+    'search.openLocal': 'Open local note',
+    'search.syncLocal': 'Sync locally',
+    'search.syncing': 'Syncing...',
+    'search.synced': 'Synced',
+    'search.syncFailed': 'Sync failed',
+    'search.openapiOnly': 'Dedao Brain search currently supports OpenAPI auth only',
+    'search.noSelection': 'Select text before searching',
+    'search.contextMenu': 'Search selected text in Dedao Brain',
+
     // === Topic Picker ===
     'topicPicker.title': 'Select Knowledge Bases to Sync',
     'topicPicker.error': 'Failed to load',
@@ -584,7 +624,7 @@ export const translations: Record<string, Record<string, string>> = {
     'sync.started': 'Sync started...',
     'sync.autoComplete': 'Auto sync complete: {created} created {updated} updated',
     'sync.autoFailRepeated': 'Auto sync failed {count} times, please check settings',
-    'notice.autoSynced': 'Auto sync: {created} created, {updated} updated',
+    'notice.autoSynced': 'Auto sync: {created} created · {updated} updated · {skipped} skipped',
     'notice.autoSyncFailed': 'Auto sync failed',
     'notice.autoSyncAuthFailed': 'Auth failed: {msg}',
     'notice.autoSyncFailedWithMsg': 'Auto sync failed: {msg}',
@@ -638,7 +678,9 @@ export const translations: Record<string, Record<string, string>> = {
     'command.sync': 'Sync Notes',
     'command.reverseSync': 'Write Back to Dedao Brain',
     'command.uploadLocal': 'Upload Local Notes to Dedao Brain',
+    'command.search': 'Open Dedao Brain Search',
     'ribbon.tooltip': 'Sync Dedao Brain',
+    'ribbon.searchTooltip': 'Search Dedao Brain',
   },
 };
 

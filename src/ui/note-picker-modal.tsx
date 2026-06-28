@@ -57,12 +57,26 @@ function NoteRow({ note, checked, onChange, onTagClick }: { note: GetNoteNote; c
   const title = generateDisplayTitle(note);
   const displayTitle = title || t('picker.noTitle');
   const previewText = compactCardText(note.content).slice(0, 150);
+  const toggleSelection = () => onChange(note.note_id, !checked);
   return (
-    <div className="getnote-note-card">
+    <div
+      className={`getnote-note-card${checked ? ' is-selected' : ''}`}
+      role="checkbox"
+      aria-checked={checked}
+      tabIndex={0}
+      onClick={toggleSelection}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key !== ' ' && e.key !== 'Enter') return;
+        e.preventDefault();
+        toggleSelection();
+      }}
+    >
       <input
         type="checkbox"
         className="getnote-note-card-checkbox"
         checked={checked}
+        onClick={(e) => e.stopPropagation()}
         onChange={(e) => onChange(note.note_id, (e.target as HTMLInputElement).checked)}
       />
       <div className="getnote-note-card-body">

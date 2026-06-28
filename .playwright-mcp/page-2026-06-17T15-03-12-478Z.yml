@@ -1,0 +1,177 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "LLMRates.ai" [ref=e5] [cursor=pointer]:
+          - /url: /zh-Hans
+          - img "LLMRates.ai" [ref=e6]
+        - navigation [ref=e7]:
+          - link "首页" [ref=e8] [cursor=pointer]:
+            - /url: /zh-Hans
+          - link "价格" [ref=e9] [cursor=pointer]:
+            - /url: /zh-Hans/models
+          - link "供应商" [ref=e10] [cursor=pointer]:
+            - /url: /zh-Hans/providers
+          - link "对比" [ref=e11] [cursor=pointer]:
+            - /url: /zh-Hans/compare
+          - link "API" [ref=e12] [cursor=pointer]:
+            - /url: /zh-Hans/developers
+          - link "数据集" [ref=e13] [cursor=pointer]:
+            - /url: /zh-Hans/open-llm-pricing-dataset
+        - generic [ref=e14]:
+          - button "¥ CNY 人民币" [ref=e16] [cursor=pointer]:
+            - generic [ref=e17]: ¥
+            - generic [ref=e18]: CNY
+            - generic [ref=e19]: 人民币
+          - button "简体中文" [ref=e21] [cursor=pointer]:
+            - img [ref=e22]
+            - text: 简体中文
+    - main [ref=e25]:
+      - generic [ref=e27]:
+        - navigation [ref=e28]:
+          - link "AI 模型价格" [ref=e29] [cursor=pointer]:
+            - /url: /zh-Hans/models
+          - text: /MiniMax-M3
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - generic [ref=e32]:
+              - img "MiniMax logo"
+            - heading "MiniMax-M3" [level=1] [ref=e33]
+            - generic [ref=e34]: MiniMax
+          - generic [ref=e35]:
+            - generic [ref=e36]: MiniMax
+            - generic [ref=e37]: text
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - generic [ref=e41]: 价格
+            - generic [ref=e42]:
+              - table [ref=e44]:
+                - rowgroup [ref=e45]:
+                  - row "输入价格 输出价格 缓存输入" [ref=e46]:
+                    - columnheader [ref=e47]
+                    - columnheader "输入价格" [ref=e48]
+                    - columnheader "输出价格" [ref=e49]
+                    - columnheader "缓存输入" [ref=e50]
+                - rowgroup [ref=e51]:
+                  - row "≤512K ¥4.2 ¥16.8 ¥0.84" [ref=e52]:
+                    - cell "≤512K" [ref=e53]
+                    - cell "¥4.2" [ref=e54]
+                    - cell "¥16.8" [ref=e55]
+                    - cell "¥0.84" [ref=e56]
+                  - row ">512K ¥8.4 ¥33.6 ¥1.68" [ref=e57]:
+                    - cell ">512K" [ref=e58]
+                    - cell "¥8.4" [ref=e59]
+                    - cell "¥33.6" [ref=e60]
+                    - cell "¥1.68" [ref=e61]
+              - paragraph [ref=e62]: 每百万词元 · CNY
+              - link "查看官方价格 →" [ref=e63] [cursor=pointer]:
+                - /url: https://platform.minimaxi.com/docs/guides/pricing-paygo
+          - generic [ref=e64]:
+            - generic [ref=e66]: 能力
+            - generic [ref=e67]:
+              - generic [ref=e68]:
+                - generic [ref=e69]: 上下文
+                - generic [ref=e70]: —
+              - generic [ref=e71]:
+                - generic [ref=e72]: 最大输出
+                - generic [ref=e73]: —
+              - separator [ref=e74]
+              - generic [ref=e75]:
+                - generic [ref=e76]: 工具调用
+                - generic [ref=e77]: ✓
+              - generic [ref=e78]:
+                - generic [ref=e79]: 批量
+                - generic [ref=e80]: —
+              - generic [ref=e81]:
+                - generic [ref=e82]: 缓存
+                - generic [ref=e83]: ✓
+              - separator [ref=e84]
+              - link "MiniMax →" [ref=e86] [cursor=pointer]:
+                - /url: /zh-Hans/providers/minimax
+          - generic [ref=e87]:
+            - heading "相关模型" [level=2] [ref=e88]
+            - generic [ref=e89]:
+              - 'link "Minimax M2 AWS Bedrock In: ¥2.03 Out: ¥8.11" [ref=e90] [cursor=pointer]':
+                - /url: /zh-Hans/models/minimax-m2
+                - generic [ref=e91]: Minimax M2
+                - generic [ref=e92]: AWS Bedrock
+                - generic [ref=e93]:
+                  - generic [ref=e94]: "In: ¥2.03"
+                  - generic [ref=e95]: "Out: ¥8.11"
+              - 'link "Minimax M2.1 AWS Bedrock In: ¥2.03 Out: ¥8.11" [ref=e96] [cursor=pointer]':
+                - /url: /zh-Hans/models/minimax-m2-1
+                - generic [ref=e97]: Minimax M2.1
+                - generic [ref=e98]: AWS Bedrock
+                - generic [ref=e99]:
+                  - generic [ref=e100]: "In: ¥2.03"
+                  - generic [ref=e101]: "Out: ¥8.11"
+              - 'link "MiniMax M2.5 AWS Bedrock In: ¥2.03 Out: ¥8.11" [ref=e102] [cursor=pointer]':
+                - /url: /zh-Hans/models/minimax-m2-5
+                - generic [ref=e103]: MiniMax M2.5
+                - generic [ref=e104]: AWS Bedrock
+                - generic [ref=e105]:
+                  - generic [ref=e106]: "In: ¥2.03"
+                  - generic [ref=e107]: "Out: ¥8.11"
+              - 'link "MiniMaxAI/MiniMax-M2.5 硅基流动 In: ¥2.1 Out: ¥8.4" [ref=e108] [cursor=pointer]':
+                - /url: /zh-Hans/models/minimax-m2-5
+                - generic [ref=e109]: MiniMaxAI/MiniMax-M2.5
+                - generic [ref=e110]: 硅基流动
+                - generic [ref=e111]:
+                  - generic [ref=e112]: "In: ¥2.1"
+                  - generic [ref=e113]: "Out: ¥8.4"
+              - 'link "M2-her MiniMax In: ¥2.1 Out: ¥8.4" [ref=e114] [cursor=pointer]':
+                - /url: /zh-Hans/models/m2-her
+                - generic [ref=e115]: M2-her
+                - generic [ref=e116]: MiniMax
+                - generic [ref=e117]:
+                  - generic [ref=e118]: "In: ¥2.1"
+                  - generic [ref=e119]: "Out: ¥8.4"
+              - 'link "MiniMax-M2 MiniMax In: ¥2.1 Out: ¥8.4" [ref=e120] [cursor=pointer]':
+                - /url: /zh-Hans/models/minimax-m2
+                - generic [ref=e121]: MiniMax-M2
+                - generic [ref=e122]: MiniMax
+                - generic [ref=e123]:
+                  - generic [ref=e124]: "In: ¥2.1"
+                  - generic [ref=e125]: "Out: ¥8.4"
+    - contentinfo [ref=e126]:
+      - generic [ref=e127]:
+        - generic [ref=e128]:
+          - generic [ref=e129]:
+            - link "LLMRates.ai" [ref=e130] [cursor=pointer]:
+              - /url: /zh-Hans
+              - img "LLMRates.ai" [ref=e131]
+            - paragraph [ref=e132]: 大模型与生成式 AI API 价格情报平台
+          - generic [ref=e133]:
+            - heading "Product" [level=3] [ref=e134]
+            - list [ref=e135]:
+              - listitem [ref=e136]:
+                - link "模型价格" [ref=e137] [cursor=pointer]:
+                  - /url: /zh-Hans/models
+              - listitem [ref=e138]:
+                - link "供应商" [ref=e139] [cursor=pointer]:
+                  - /url: /zh-Hans/providers
+              - listitem [ref=e140]:
+                - link "模型对比" [ref=e141] [cursor=pointer]:
+                  - /url: /zh-Hans/compare
+              - listitem [ref=e142]:
+                - link "API" [ref=e143] [cursor=pointer]:
+                  - /url: /zh-Hans/developers
+              - listitem [ref=e144]:
+                - link "开放数据集" [ref=e145] [cursor=pointer]:
+                  - /url: /zh-Hans/open-llm-pricing-dataset
+              - listitem [ref=e146]:
+                - link "GitHub" [ref=e147] [cursor=pointer]:
+                  - /url: https://github.com/llmrates/llm-pricing-dataset
+          - generic [ref=e148]:
+            - heading "Company" [level=3] [ref=e149]
+            - list [ref=e150]:
+              - listitem [ref=e151]: 关于
+              - listitem [ref=e152]:
+                - button "联系我们" [ref=e153] [cursor=pointer]
+          - generic [ref=e154]:
+            - heading "Legal" [level=3] [ref=e155]
+            - list [ref=e156]:
+              - listitem [ref=e157]: 服务条款
+        - separator [ref=e158]
+        - generic [ref=e159]: © 2026 龙讯科技 · LLMRates.ai 版权所有。
+  - alert [ref=e160]

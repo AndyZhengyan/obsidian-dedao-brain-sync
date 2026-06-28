@@ -1,0 +1,500 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - link [ref=e14] [cursor=pointer]:
+          - /url: //www.volcengine.com
+        - generic [ref=e16] [cursor=pointer]: 文档中心
+      - generic [ref=e20]:
+        - img [ref=e21] [cursor=pointer]
+        - generic [ref=e24]:
+          - generic [ref=e25]: 2026 Force 原动力大会 · 春
+          - generic [ref=e26]: 方舟 Agent Plan
+          - generic [ref=e27]: 方舟 Coding Plan
+          - generic [ref=e28]: 一键部署OpenClaw
+          - generic [ref=e29]: 火山方舟
+          - generic [ref=e30]: 2026 Force 原动力大会 · 春
+          - generic [ref=e31]: 方舟 Agent Plan
+          - generic [ref=e32]: 方舟 Coding Plan
+          - generic [ref=e33]: 一键部署OpenClaw
+          - generic [ref=e34]: 火山方舟
+      - generic [ref=e35]:
+        - combobox [ref=e37] [cursor=pointer]:
+          - generic "简体" [ref=e38]:
+            - img [ref=e40]
+        - link "文档" [ref=e43] [cursor=pointer]:
+          - /url: https://www.volcengine.com/docs
+        - link "备案" [ref=e44] [cursor=pointer]:
+          - /url: https://www.volcengine.com/beian
+        - link "控制台" [ref=e45] [cursor=pointer]:
+          - /url: https://console.volcengine.com
+        - generic [ref=e47]:
+          - link "登录" [ref=e48] [cursor=pointer]:
+            - /url: //console.volcengine.com/auth/login?redirectURI=%2F%2Fwww.volcengine.com%2Fdocs%2F82379%2F1330311%3Flang%3Dzh
+          - link "立即注册" [ref=e49] [cursor=pointer]:
+            - /url: //console.volcengine.com/auth/signup?redirectURI=%2F%2Fwww.volcengine.com%2Fdocs%2F82379%2F1330311%3Flang%3Dzh
+    - generic [ref=e52]:
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - button "open" [ref=e58] [cursor=pointer]:
+              - img "open" [ref=e59]
+            - generic [ref=e60] [cursor=pointer]: 火山方舟
+          - generic [ref=e62]:
+            - generic [ref=e63] [cursor=pointer]: 文档指南
+            - generic [ref=e64] [cursor=pointer]: 订阅 [Agent/Coding Plan]
+            - generic [ref=e65] [cursor=pointer]: API参考
+            - generic [ref=e66] [cursor=pointer]: 资源
+        - generic:
+          - generic:
+            - tooltip "二级导航功能 导航栏会按照模块拆分文档内容，方便你快速切换到所需信息哦 我知道了 不再提醒":
+              - generic:
+                - generic:
+                  - generic:
+                    - generic: 二级导航功能
+                    - generic: 导航栏会按照模块拆分文档内容，方便你快速切换到所需信息哦
+                    - img
+                    - generic:
+                      - generic: 我知道了
+                      - generic: 不再提醒
+      - generic [ref=e67]:
+        - generic [ref=e70]:
+          - generic [ref=e72] [cursor=pointer]:
+            - img [ref=e73]
+            - generic [ref=e75]: 请输入
+          - menu [ref=e78]:
+            - generic [ref=e79]:
+              - generic [ref=e80]:
+                - generic [ref=e81]: 入门
+                - menuitem "产品简介" [ref=e82] [cursor=pointer]:
+                  - link "产品简介" [ref=e83]:
+                    - /url: /docs/82379/1099455?lang=zh
+                    - generic [ref=e85]: 产品简介
+                - menuitem "快速入门" [ref=e86] [cursor=pointer]:
+                  - link "快速入门" [ref=e87]:
+                    - /url: /docs/82379/1399008?lang=zh
+                    - generic [ref=e89]: 快速入门
+                - menuitem "模型列表" [ref=e90] [cursor=pointer]:
+                  - link "模型列表" [ref=e91]:
+                    - /url: /docs/82379/1330310?lang=zh
+                    - generic [ref=e93]: 模型列表
+                - menuitem "模型价格" [ref=e94] [cursor=pointer]:
+                  - link "模型价格" [ref=e95]:
+                    - /url: /docs/82379/1544106?lang=zh
+                    - generic [ref=e97]: 模型价格
+              - generic [ref=e98]:
+                - generic [ref=e99]: 调用
+                - menuitem "文本生成" [ref=e100] [cursor=pointer]:
+                  - link "文本生成" [ref=e101]:
+                    - /url: /docs/82379/1399009?lang=zh
+                    - generic [ref=e103]: 文本生成
+                - generic [ref=e105] [cursor=pointer]:
+                  - generic [ref=e108]: 多模态理解
+                  - img [ref=e110]
+                - generic [ref=e113] [cursor=pointer]:
+                  - generic [ref=e116]: 视频生成
+                  - img [ref=e118]
+                - generic [ref=e121] [cursor=pointer]:
+                  - generic [ref=e124]: 图片生成
+                  - img [ref=e126]
+                - generic [ref=e129] [cursor=pointer]:
+                  - generic [ref=e132]: 领域模型
+                  - img [ref=e134]
+                - generic [ref=e137] [cursor=pointer]:
+                  - generic [ref=e140]: 工具调用
+                  - img [ref=e142]
+                - generic [ref=e145] [cursor=pointer]:
+                  - generic [ref=e148]: 进阶使用
+                  - img [ref=e150]
+                - menuitem "接入三方工具" [ref=e152] [cursor=pointer]:
+                  - link "接入三方工具" [ref=e153]:
+                    - /url: /docs/82379/2160841?lang=zh
+                    - generic [ref=e155]: 接入三方工具
+                - generic [ref=e157] [cursor=pointer]:
+                  - generic [ref=e160]: 使用 Responses API
+                  - img [ref=e162]
+              - generic [ref=e164]:
+                - generic [ref=e165]: 推理
+                - menuitem "部署方式概述" [ref=e166] [cursor=pointer]:
+                  - link "部署方式概述" [ref=e167]:
+                    - /url: /docs/82379/2123245?lang=zh
+                    - generic [ref=e169]: 部署方式概述
+                - menuitem "在线推理（常规）" [ref=e170] [cursor=pointer]:
+                  - link "在线推理（常规）" [ref=e171]:
+                    - /url: /docs/82379/2121998?lang=zh
+                    - generic [ref=e173]: 在线推理（常规）
+                - menuitem "在线推理（低延迟）" [ref=e174] [cursor=pointer]:
+                  - link "在线推理（低延迟）" [ref=e175]:
+                    - /url: /docs/82379/2335857?lang=zh
+                    - generic [ref=e177]: 在线推理（低延迟）
+                - menuitem "在线推理（TPM 保障包）" [ref=e178] [cursor=pointer]:
+                  - link "在线推理（TPM 保障包）" [ref=e179]:
+                    - /url: /docs/82379/1510762?lang=zh
+                    - generic [ref=e181]: 在线推理（TPM 保障包）
+                - generic [ref=e183] [cursor=pointer]:
+                  - generic [ref=e186]: 模型单元
+                  - img [ref=e188]
+                - menuitem "批量推理" [ref=e190] [cursor=pointer]:
+                  - link "批量推理" [ref=e191]:
+                    - /url: /docs/82379/1399517?lang=zh
+                    - generic [ref=e193]: 批量推理
+                - generic [ref=e195] [cursor=pointer]:
+                  - generic [ref=e198]: 高级能力
+                  - img [ref=e200]
+              - generic [ref=e202]:
+                - generic [ref=e203]: 训练
+                - generic [ref=e205] [cursor=pointer]:
+                  - generic [ref=e208]: 模型精调
+                  - img [ref=e210]
+                - generic [ref=e213] [cursor=pointer]:
+                  - generic [ref=e216]: 模型评测
+                  - img [ref=e218]
+                - generic [ref=e221] [cursor=pointer]:
+                  - generic [ref=e224]: 数据集
+                  - img [ref=e226]
+              - generic [ref=e228]:
+                - generic [ref=e229]: 应用
+                - generic [ref=e231] [cursor=pointer]:
+                  - generic [ref=e234]: 应用实验室
+                  - img [ref=e236]
+                - generic [ref=e239] [cursor=pointer]:
+                  - generic [ref=e242]: 知识库
+                  - img [ref=e244]
+                - generic [ref=e247] [cursor=pointer]:
+                  - generic [ref=e250]: PromptPilot
+                  - img [ref=e252]
+        - generic [ref=e257]:
+          - generic [ref=e258]:
+            - list [ref=e259]:
+              - listitem [ref=e260] [cursor=pointer]: 文档首页
+              - generic [ref=e262] [cursor=pointer]: 火山方舟
+            - generic [ref=e265]:
+              - generic [ref=e266]:
+                - generic [ref=e268] [cursor=pointer]:
+                  - generic [ref=e270]: 复制全文
+                  - img [ref=e272]
+                - generic [ref=e275] [cursor=pointer]:
+                  - generic [ref=e277]: 下载 pdf
+                  - img [ref=e279]
+              - generic [ref=e281]:
+                - img [ref=e283] [cursor=pointer]
+                - img [ref=e287] [cursor=pointer]
+              - link "我的收藏" [ref=e291] [cursor=pointer]:
+                - /url: /docs/favorite?lang=zh
+          - generic [ref=e292]: 数据结构转化样例
+          - generic [ref=e297]:
+            - paragraph [ref=e298]: 本文档介绍PaaS数据流中数据结构变换规则，并展示相关数据样例。
+            - heading "概述" [level=2] [ref=e299]:
+              - text: 概述
+              - link [ref=e300] [cursor=pointer]:
+                - /url: "#概述"
+                - text: "#"
+            - generic [ref=e301]:
+              - paragraph [ref=e302]: 注意
+              - paragraph [ref=e303]: 数据结构变换核心规则如下：
+              - list [ref=e304]:
+                - listitem [ref=e305]:
+                  - paragraph [ref=e306]:
+                    - text: Source默认将读到的数据加载至
+                    - strong [ref=e307]: doc字段
+                - listitem [ref=e308]:
+                  - paragraph [ref=e309]:
+                    - text: Sink默认将
+                    - strong [ref=e310]: doc字段
+                    - text: 内的数据作为消息队列/数据库的内容
+            - paragraph [ref=e311]: 以下将展示数据流中数据结构变换样例，本过程中使用的operator转换规则示例如下
+            - blockquote [ref=e312]:
+              - paragraph [ref=e313]:
+                - code [ref=e314]: drop doc.consume_time
+                - code [ref=e315]: assign key => $doc.post_id
+                - code [ref=e316]: assign doc.source => $source_name
+            - heading "洞察数据" [level=2] [ref=e317]:
+              - text: 洞察数据
+              - link [ref=e318] [cursor=pointer]:
+                - /url: "#洞察数据"
+                - text: "#"
+            - heading "BMQ原始消息样例" [level=3] [ref=e319]:
+              - text: BMQ原始消息样例
+              - link [ref=e320] [cursor=pointer]:
+                - /url: "#bmq原始消息样例"
+                - text: "#"
+            - generic [ref=e321]:
+              - code [ref=e322]:
+                - text: "{ \"msg_id\":\"02171499680104800000000000000000000ffff0a914468a947441273insight_source\", \"item_doc\":{ \"post_id\":\"12731485214269347960\", \"publish_time\":\"2024-05-06 19:59:17\", \"create_time\":\"2024-05-06 19:59:52\", \"main_domain\":\"douyin.com\", \"url\":\"https://www.douyin.com/share/video/7365854945846791450\", \"consume_time\":\"2024-05-06 20:00:01\", \"push_ready_time\":\"2024-05-06 19:59:59\", \"domain\":\"www.douyin.com\", \"video_info\":{ \"cover_info\":{ \"online_url\":\"https://p6-dy-ipv6.byteimg.com/obj/tos-cn-p-0015/oQI4IBAqexyHAvzzvfITNRtJTLPAyhigNDGhB5\", \"cover_ocr\":\"忘记 平 讨好自己 管地几岁 开心万岁 用奔欢的方式生活\", \"cover_ocr_details\":[ { \"text\":\"忘记\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"平\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"讨好自己\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"管地几岁\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"开心万岁\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"用奔欢的方式生活\", \"is_scene\":0, \"is_high\":1 } ] }, \"duration\":71.332 }, \"status\":1, \"is_ad\":0, \"update_time\":\"2024-05-06 19:59:51\", \"feature\":{ \"sentiment\":1, \"asr\":\"\", \"match_count\":1, \"ocr\":\"幸珍 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|记 忘 年龄 讨好自己燃一根烟 管她几岁 开心万岁 用喜欢的方式生活|幸记福 忘 讨好自己燃一根烟 管她几岁 开心万岁 用喜欢的方式生活|幸记药 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 计好我的心像吐出的烟圈 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 计好我的心像吐出的烟圈 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 讨好自己倒满一杯酒 管她几岁 开心万岁 用喜欢的方式生活|幸记药 忘 讨好自倒满一杯酒 管她几岁 开心万岁 用喜欢的方式生活|记记药 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|艳场 忘 计好你的脸像苹果般娇艳 管她几岁 开心万岁 用喜欢的方式生活|幸记人 忘 计好你的脸像苹果般娇艳 管她几岁 开心万岁 用喜欢的方式生活|记 忘 年龄 计好我多么希望你不曾离去 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 计好我多么希望你不曾离去 管她几岁 开心万岁 用喜欢的方式生活|辛记药 忘 讨好我多么希望你不曾离去 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 计好我多么希望爱情再继续 管她几岁 开心万岁 用喜欢的方式生活|幸记山 忘 计好我多么希望爱情再继续 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 讨 我多么希望我们能再相聚 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 计 我多么希望我们能再相聚 管她几岁 开心方岁 用喜欢的方式生活|记 忘 年龄 我多么希望我多么希望能再遇见你 管她几岁 开心万岁 用喜欢的方式生活|忘记 年龄 我多么希望我多么希望能再遇见你 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|和韵 忘 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|忘记 年龄 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|忘 年记 药 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|忘记 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘记心 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘记山 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活\", \"is_sensitive\":"
+                - generic [ref=e323]: "false"
+                - text: ", \"match_id\":\"\", \"tags\":[ \"owls_snapshot\" ], \"label_tags\":"
+                - generic [ref=e324]: "null"
+                - text: ", \"event_id\":\"\", \"risk_scene\":{ }, \"kg_entity_link\":[ ], \"event_name\":\"\", \"ocr_details\":[ ], \"ocr_high\":\"\" }, \"post_type\":10, \"first_public_time\":\"2024-05-06 19:59:52\", \"create_status\":"
+                - generic [ref=e325]: "true"
+                - text: ", \"poi\":{ \"poi_location\":{ \"region\":\"\", \"province\":\"\", \"city\":\"\", \"district\":\"\", \"town\":\"\", \"region_code\":\"\", \"province_code\":\"\", \"city_code\":\"\", \"district_code\":\"\", \"town_code\":\"\", \"region_geo_id\":0, \"province_geo_id\":0, \"city_geo_id\":0, \"district_geo_id\":0, \"town_geo_id\":0, \"location\":\"\" } }, \"origin_id\":\"7365854945846791450\", \"matched_task_ids\":[ 0 ], \"based_location\":{ \"public_location\":{ \"region\":\"中华人民共和国\", \"province\":\"黑龙江省\", \"city\":\"\", \"district\":\"\", \"town\":\"\", \"region_code\":\"CN\", \"province_code\":\"23\", \"city_code\":\"\", \"district_code\":\"\", \"town_code\":\"\", \"region_geo_id\":1814991, \"province_geo_id\":2036965, \"city_geo_id\":0, \"district_geo_id\":0, \"town_geo_id\":0, \"location\":\"中华人民共和国黑龙江省\" } }, \"anchor\":{ \"filter_status\":"
+                - generic [ref=e326]: "false"
+                - text: "}, \"update_category\":\"status_update\" } }"
+              - generic [ref=e327]: json
+              - generic [ref=e328]:
+                - img [ref=e330] [cursor=pointer]
+                - img [ref=e332] [cursor=pointer]
+                - img [ref=e335] [cursor=pointer]
+            - heading "Operator Input（即Source Output）" [level=3] [ref=e337]:
+              - text: Operator Input（即Source Output）
+              - link [ref=e338] [cursor=pointer]:
+                - /url: "#operator-input（即source-output）"
+                - text: "#"
+            - generic [ref=e339]:
+              - paragraph [ref=e340]: 注意
+              - list [ref=e341]:
+                - listitem [ref=e342]:
+                  - paragraph [ref=e343]: Source节点加载洞察数据时，会对数据结构做固定结构调整。转换规则如下
+                  - paragraph [ref=e344]:
+                    - code [ref=e345]: assign msg_id => $doc.msg_id
+                    - code [ref=e346]: assign doc => $doc.item_doc
+                - listitem [ref=e347]:
+                  - paragraph [ref=e348]:
+                    - text: 洞察数据的row_key默认取
+                    - code [ref=e349]: doc.msg_id
+            - generic [ref=e350]:
+              - code [ref=e351]:
+                - text: "{ \"row_key\":\"02171499680104800000000000000000000ffff0a914468a947441273insight_source\", \"log_id\":\"20240507154215172017128097206DA25\", \"retry_times\":0, \"source_name\":\"insight_source\", \"msg_id\":\"02171499680104800000000000000000000ffff0a914468a947441273insight_source\", \"doc\":{ \"post_id\":\"12731485214269347960\", \"publish_time\":\"2024-05-06 19:59:17\", \"create_time\":\"2024-05-06 19:59:52\", \"main_domain\":\"douyin.com\", \"url\":\"https://www.douyin.com/share/video/7365854945846791450\", \"consume_time\":\"2024-05-06 20:00:01\", \"push_ready_time\":\"2024-05-06 19:59:59\", \"domain\":\"www.douyin.com\", \"video_info\":{ \"cover_info\":{ \"online_url\":\"https://p6-dy-ipv6.byteimg.com/obj/tos-cn-p-0015/oQI4IBAqexyHAvzzvfITNRtJTLPAyhigNDGhB5\", \"cover_ocr\":\"忘记 平 讨好自己 管地几岁 开心万岁 用奔欢的方式生活\", \"cover_ocr_details\":[ { \"text\":\"忘记\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"平\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"讨好自己\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"管地几岁\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"开心万岁\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"用奔欢的方式生活\", \"is_scene\":0, \"is_high\":1 } ] }, \"duration\":71.332 }, \"status\":1, \"is_ad\":0, \"update_time\":\"2024-05-06 19:59:51\", \"feature\":{ \"sentiment\":1, \"asr\":\"\", \"match_count\":1, \"ocr\":\"幸珍 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|记 忘 年龄 讨好自己燃一根烟 管她几岁 开心万岁 用喜欢的方式生活|幸记福 忘 讨好自己燃一根烟 管她几岁 开心万岁 用喜欢的方式生活|幸记药 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 计好我的心像吐出的烟圈 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 计好我的心像吐出的烟圈 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 讨好自己倒满一杯酒 管她几岁 开心万岁 用喜欢的方式生活|幸记药 忘 讨好自倒满一杯酒 管她几岁 开心万岁 用喜欢的方式生活|记记药 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|艳场 忘 计好你的脸像苹果般娇艳 管她几岁 开心万岁 用喜欢的方式生活|幸记人 忘 计好你的脸像苹果般娇艳 管她几岁 开心万岁 用喜欢的方式生活|记 忘 年龄 计好我多么希望你不曾离去 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 计好我多么希望你不曾离去 管她几岁 开心万岁 用喜欢的方式生活|辛记药 忘 讨好我多么希望你不曾离去 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 计好我多么希望爱情再继续 管她几岁 开心万岁 用喜欢的方式生活|幸记山 忘 计好我多么希望爱情再继续 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 讨 我多么希望我们能再相聚 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 计 我多么希望我们能再相聚 管她几岁 开心方岁 用喜欢的方式生活|记 忘 年龄 我多么希望我多么希望能再遇见你 管她几岁 开心万岁 用喜欢的方式生活|忘记 年龄 我多么希望我多么希望能再遇见你 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|和韵 忘 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|忘记 年龄 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|忘 年记 药 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|忘记 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘记心 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘记山 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活\", \"is_sensitive\":"
+                - generic [ref=e352]: "false"
+                - text: ", \"match_id\":\"\", \"tags\":[ \"owls_snapshot\" ], \"label_tags\":"
+                - generic [ref=e353]: "null"
+                - text: ", \"event_id\":\"\", \"risk_scene\":{ }, \"kg_entity_link\":[ ], \"event_name\":\"\", \"ocr_details\":[ ], \"ocr_high\":\"\" }, \"post_type\":10, \"first_public_time\":\"2024-05-06 19:59:52\", \"create_status\":"
+                - generic [ref=e354]: "true"
+                - text: ", \"poi\":{ \"poi_location\":{ \"region\":\"\", \"province\":\"\", \"city\":\"\", \"district\":\"\", \"town\":\"\", \"region_code\":\"\", \"province_code\":\"\", \"city_code\":\"\", \"district_code\":\"\", \"town_code\":\"\", \"region_geo_id\":0, \"province_geo_id\":0, \"city_geo_id\":0, \"district_geo_id\":0, \"town_geo_id\":0, \"location\":\"\" } }, \"origin_id\":\"7365854945846791450\", \"matched_task_ids\":[ 0 ], \"based_location\":{ \"public_location\":{ \"region\":\"中华人民共和国\", \"province\":\"黑龙江省\", \"city\":\"\", \"district\":\"\", \"town\":\"\", \"region_code\":\"CN\", \"province_code\":\"23\", \"city_code\":\"\", \"district_code\":\"\", \"town_code\":\"\", \"region_geo_id\":1814991, \"province_geo_id\":2036965, \"city_geo_id\":0, \"district_geo_id\":0, \"town_geo_id\":0, \"location\":\"中华人民共和国黑龙江省\" } }, \"anchor\":{ \"filter_status\":"
+                - generic [ref=e355]: "false"
+                - text: "}, \"update_category\":\"status_update\" } }"
+              - generic [ref=e356]: json
+              - generic [ref=e357]:
+                - img [ref=e359] [cursor=pointer]
+                - img [ref=e361] [cursor=pointer]
+                - img [ref=e364] [cursor=pointer]
+            - heading "Operator Output (即 Sink Input)" [level=3] [ref=e366]:
+              - text: Operator Output (即 Sink Input)
+              - link [ref=e367] [cursor=pointer]:
+                - /url: "#operator-output-即-sink-input"
+                - text: "#"
+            - generic [ref=e368]:
+              - code [ref=e369]:
+                - text: "{ \"row_key\":\"02171499680104800000000000000000000ffff0a914468a947441273insight_source\", \"log_id\":\"20240507154215172017128097206DA25\", \"retry_times\":0, \"source_name\":\"insight_source\", \"msg_id\":\"02171499680104800000000000000000000ffff0a914468a947441273insight_source\", \"key\":\"12731485214269347960\", \"doc\":{ \"source\":\"insight_source\", \"post_id\":\"12731485214269347960\", \"publish_time\":\"2024-05-06 19:59:17\", \"create_time\":\"2024-05-06 19:59:52\", \"main_domain\":\"douyin.com\", \"url\":\"https://www.douyin.com/share/video/7365854945846791450\", \"consume_time\":\"2024-05-06 20:00:01\", \"push_ready_time\":\"2024-05-06 19:59:59\", \"domain\":\"www.douyin.com\", \"video_info\":{ \"cover_info\":{ \"online_url\":\"https://p6-dy-ipv6.byteimg.com/obj/tos-cn-p-0015/oQI4IBAqexyHAvzzvfITNRtJTLPAyhigNDGhB5\", \"cover_ocr\":\"忘记 平 讨好自己 管地几岁 开心万岁 用奔欢的方式生活\", \"cover_ocr_details\":[ { \"text\":\"忘记\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"平\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"讨好自己\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"管地几岁\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"开心万岁\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"用奔欢的方式生活\", \"is_scene\":0, \"is_high\":1 } ] }, \"duration\":71.332 }, \"status\":1, \"is_ad\":0, \"update_time\":\"2024-05-06 19:59:51\", \"feature\":{ \"sentiment\":1, \"asr\":\"\", \"match_count\":1, \"ocr\":\"幸珍 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|记 忘 年龄 讨好自己燃一根烟 管她几岁 开心万岁 用喜欢的方式生活|幸记福 忘 讨好自己燃一根烟 管她几岁 开心万岁 用喜欢的方式生活|幸记药 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 计好我的心像吐出的烟圈 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 计好我的心像吐出的烟圈 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 讨好自己倒满一杯酒 管她几岁 开心万岁 用喜欢的方式生活|幸记药 忘 讨好自倒满一杯酒 管她几岁 开心万岁 用喜欢的方式生活|记记药 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|艳场 忘 计好你的脸像苹果般娇艳 管她几岁 开心万岁 用喜欢的方式生活|幸记人 忘 计好你的脸像苹果般娇艳 管她几岁 开心万岁 用喜欢的方式生活|记 忘 年龄 计好我多么希望你不曾离去 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 计好我多么希望你不曾离去 管她几岁 开心万岁 用喜欢的方式生活|辛记药 忘 讨好我多么希望你不曾离去 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 计好我多么希望爱情再继续 管她几岁 开心万岁 用喜欢的方式生活|幸记山 忘 计好我多么希望爱情再继续 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 讨 我多么希望我们能再相聚 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 计 我多么希望我们能再相聚 管她几岁 开心方岁 用喜欢的方式生活|记 忘 年龄 我多么希望我多么希望能再遇见你 管她几岁 开心万岁 用喜欢的方式生活|忘记 年龄 我多么希望我多么希望能再遇见你 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|和韵 忘 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|忘记 年龄 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|忘 年记 药 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|忘记 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘记心 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘记山 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活\", \"is_sensitive\":"
+                - generic [ref=e370]: "false"
+                - text: ", \"match_id\":\"\", \"tags\":[ \"owls_snapshot\" ], \"label_tags\":"
+                - generic [ref=e371]: "null"
+                - text: ", \"event_id\":\"\", \"risk_scene\":{ }, \"kg_entity_link\":[ ], \"event_name\":\"\", \"ocr_details\":[ ], \"ocr_high\":\"\" }, \"post_type\":10, \"first_public_time\":\"2024-05-06 19:59:52\", \"create_status\":"
+                - generic [ref=e372]: "true"
+                - text: ", \"poi\":{ \"poi_location\":{ \"region\":\"\", \"province\":\"\", \"city\":\"\", \"district\":\"\", \"town\":\"\", \"region_code\":\"\", \"province_code\":\"\", \"city_code\":\"\", \"district_code\":\"\", \"town_code\":\"\", \"region_geo_id\":0, \"province_geo_id\":0, \"city_geo_id\":0, \"district_geo_id\":0, \"town_geo_id\":0, \"location\":\"\" } }, \"origin_id\":\"7365854945846791450\", \"matched_task_ids\":[ 0 ], \"based_location\":{ \"public_location\":{ \"region\":\"中华人民共和国\", \"province\":\"黑龙江省\", \"city\":\"\", \"district\":\"\", \"town\":\"\", \"region_code\":\"CN\", \"province_code\":\"23\", \"city_code\":\"\", \"district_code\":\"\", \"town_code\":\"\", \"region_geo_id\":1814991, \"province_geo_id\":2036965, \"city_geo_id\":0, \"district_geo_id\":0, \"town_geo_id\":0, \"location\":\"中华人民共和国黑龙江省\" } }, \"anchor\":{ \"filter_status\":"
+                - generic [ref=e373]: "false"
+                - text: "}, \"update_category\":\"status_update\" } }"
+              - generic [ref=e374]: json
+              - generic [ref=e375]:
+                - img [ref=e377] [cursor=pointer]
+                - img [ref=e379] [cursor=pointer]
+                - img [ref=e382] [cursor=pointer]
+            - heading "Sink Output" [level=3] [ref=e384]:
+              - text: Sink Output
+              - link [ref=e385] [cursor=pointer]:
+                - /url: "#sink-output"
+                - text: "#"
+            - paragraph [ref=e386]: 写入消息队列或存入数据库的数据结构，即doc字段
+            - generic [ref=e387]:
+              - code [ref=e388]:
+                - text: "{ \"source\":\"insight_source\", \"post_id\":\"12731485214269347960\", \"publish_time\":\"2024-05-06 19:59:17\", \"create_time\":\"2024-05-06 19:59:52\", \"main_domain\":\"douyin.com\", \"url\":\"https://www.douyin.com/share/video/7365854945846791450\", \"push_ready_time\":\"2024-05-06 19:59:59\", \"domain\":\"www.douyin.com\", \"video_info\":{ \"cover_info\":{ \"online_url\":\"https://p6-dy-ipv6.byteimg.com/obj/tos-cn-p-0015/oQI4IBAqexyHAvzzvfITNRtJTLPAyhigNDGhB5\", \"cover_ocr\":\"忘记 平 讨好自己 管地几岁 开心万岁 用奔欢的方式生活\", \"cover_ocr_details\":[ { \"text\":\"忘记\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"平\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"讨好自己\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"管地几岁\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"开心万岁\", \"is_scene\":0, \"is_high\":1 }, { \"text\":\"用奔欢的方式生活\", \"is_scene\":0, \"is_high\":1 } ] }, \"duration\":71.332 }, \"status\":1, \"is_ad\":0, \"update_time\":\"2024-05-06 19:59:51\", \"feature\":{ \"sentiment\":1, \"asr\":\"\", \"match_count\":1, \"ocr\":\"幸珍 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|记 忘 年龄 讨好自己燃一根烟 管她几岁 开心万岁 用喜欢的方式生活|幸记福 忘 讨好自己燃一根烟 管她几岁 开心万岁 用喜欢的方式生活|幸记药 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 计好我的心像吐出的烟圈 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 计好我的心像吐出的烟圈 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 讨好自己倒满一杯酒 管她几岁 开心万岁 用喜欢的方式生活|幸记药 忘 讨好自倒满一杯酒 管她几岁 开心万岁 用喜欢的方式生活|记记药 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|艳场 忘 计好你的脸像苹果般娇艳 管她几岁 开心万岁 用喜欢的方式生活|幸记人 忘 计好你的脸像苹果般娇艳 管她几岁 开心万岁 用喜欢的方式生活|记 忘 年龄 计好我多么希望你不曾离去 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 计好我多么希望你不曾离去 管她几岁 开心万岁 用喜欢的方式生活|辛记药 忘 讨好我多么希望你不曾离去 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 计好我多么希望爱情再继续 管她几岁 开心万岁 用喜欢的方式生活|幸记山 忘 计好我多么希望爱情再继续 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 讨 我多么希望我们能再相聚 管她几岁 开心万岁 用喜欢的方式生活|忘 记 年龄 计 我多么希望我们能再相聚 管她几岁 开心方岁 用喜欢的方式生活|记 忘 年龄 我多么希望我多么希望能再遇见你 管她几岁 开心万岁 用喜欢的方式生活|忘记 年龄 我多么希望我多么希望能再遇见你 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|和韵 忘 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|忘记 年龄 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|忘 年记 药 每当走过这一条街道我在找寻你 管她几岁 开心万岁 用喜欢的方式生活|忘记 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘记心 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|幸记 忘 讨好自己 管她几岁 开心万岁 用喜欢的方式生活|忘记山 年龄 讨好自己 管她几岁 开心万岁 用喜欢的方式生活\", \"is_sensitive\":"
+                - generic [ref=e389]: "false"
+                - text: ", \"match_id\":\"\", \"tags\":[ \"owls_snapshot\" ], \"label_tags\":"
+                - generic [ref=e390]: "null"
+                - text: ", \"event_id\":\"\", \"risk_scene\":{}, \"kg_entity_link\":[], \"event_name\":\"\", \"ocr_details\":[], \"ocr_high\":\"\" }, \"post_type\":10, \"first_public_time\":\"2024-05-06 19:59:52\", \"create_status\":"
+                - generic [ref=e391]: "true"
+                - text: ", \"poi\":{ \"poi_location\":{ \"region\":\"\", \"province\":\"\", \"city\":\"\", \"district\":\"\", \"town\":\"\", \"region_code\":\"\", \"province_code\":\"\", \"city_code\":\"\", \"district_code\":\"\", \"town_code\":\"\", \"region_geo_id\":0, \"province_geo_id\":0, \"city_geo_id\":0, \"district_geo_id\":0, \"town_geo_id\":0, \"location\":\"\" } }, \"origin_id\":\"7365854945846791450\", \"matched_task_ids\":[ 0 ], \"based_location\":{ \"public_location\":{ \"region\":\"中华人民共和国\", \"province\":\"黑龙江省\", \"city\":\"\", \"district\":\"\", \"town\":\"\", \"region_code\":\"CN\", \"province_code\":\"23\", \"city_code\":\"\", \"district_code\":\"\", \"town_code\":\"\", \"region_geo_id\":1814991, \"province_geo_id\":2036965, \"city_geo_id\":0, \"district_geo_id\":0, \"town_geo_id\":0, \"location\":\"中华人民共和国黑龙江省\" } }, \"anchor\":{ \"filter_status\":"
+                - generic [ref=e392]: "false"
+                - text: "}, \"update_category\":\"status_update\" }"
+              - generic [ref=e393]: json
+              - generic [ref=e394]:
+                - img [ref=e396] [cursor=pointer]
+                - img [ref=e398] [cursor=pointer]
+                - img [ref=e401] [cursor=pointer]
+            - heading "其他数据" [level=2] [ref=e403]:
+              - text: 其他数据
+              - link [ref=e404] [cursor=pointer]:
+                - /url: "#其他数据"
+                - text: "#"
+            - heading "消息队列(BMQ/Kafka)自定义消息样例" [level=3] [ref=e405]:
+              - text: 消息队列(BMQ/Kafka)自定义消息样例
+              - link [ref=e406] [cursor=pointer]:
+                - /url: "#消息队列-bmq-kafka-自定义消息样例"
+                - text: "#"
+            - paragraph [ref=e407]: 数据结构支持自定义，以下样例仅做参考
+            - generic [ref=e408]:
+              - code [ref=e409]: "{ \"post_id\":\"12731485214269347960\", \"consume_time\":\"2024-05-06 20:00:01\", \"randomKey1\": \"ssddvisdvb\", \"randomKey2\": 2, \"randomKey3\": 4.8, \"randomeKey4\": { \"key1\": \"sdvdfs\", \"key2\": \"fdvfbgb\" } }"
+              - generic [ref=e410]: json
+              - generic [ref=e411]:
+                - img [ref=e413] [cursor=pointer]
+                - img [ref=e415] [cursor=pointer]
+                - img [ref=e418] [cursor=pointer]
+            - heading "Operator Input（即Source Output）" [level=3] [ref=e420]:
+              - text: Operator Input（即Source Output）
+              - link [ref=e421] [cursor=pointer]:
+                - /url: "#operator-input（即source-output）-2"
+                - text: "#"
+            - generic [ref=e422]:
+              - code [ref=e423]: "{ \"row_key\":\"\", \"log_id\":\"20240507154215172017128097206DA25\", \"retry_times\":0, \"source_name\":\"my_kafka_source\", \"doc\":{ \"post_id\":\"12731485214269347960\", \"consume_time\":\"2024-05-06 20:00:01\", \"randomKey1\": \"ssddvisdvb\", \"randomKey2\": 2, \"randomKey3\": 4.8, \"randomeKey4\": { \"key1\": \"sdvdfs\", \"key2\": \"fdvfbgb\" } }"
+              - generic [ref=e424]: json
+              - generic [ref=e425]:
+                - img [ref=e427] [cursor=pointer]
+                - img [ref=e429] [cursor=pointer]
+                - img [ref=e432] [cursor=pointer]
+            - heading "Operator Output (即 Sink Input)" [level=3] [ref=e434]:
+              - text: Operator Output (即 Sink Input)
+              - link [ref=e435] [cursor=pointer]:
+                - /url: "#operator-output-即-sink-input-2"
+                - text: "#"
+            - generic [ref=e436]:
+              - code [ref=e437]: "{ \"row_key\":\"\", \"log_id\":\"20240507154215172017128097206DA25\", \"retry_times\":0, \"source_name\":\"my_kafka_source\", \"key\":\"12731485214269347960\", \"doc\":{ \"source\":\"my_kafka_source\", \"post_id\":\"12731485214269347960\", \"consume_time\":\"2024-05-06 20:00:01\", \"randomKey1\": \"ssddvisdvb\", \"randomKey2\": 2, \"randomKey3\": 4.8, \"randomeKey4\": { \"key1\": \"sdvdfs\", \"key2\": \"fdvfbgb\" } } }"
+              - generic [ref=e438]: json
+              - generic [ref=e439]:
+                - img [ref=e441] [cursor=pointer]
+                - img [ref=e443] [cursor=pointer]
+                - img [ref=e446] [cursor=pointer]
+            - heading "Sink Output" [level=3] [ref=e448]:
+              - text: Sink Output
+              - link [ref=e449] [cursor=pointer]:
+                - /url: "#sink-output-2"
+                - text: "#"
+            - paragraph [ref=e450]: 写入消息队列或存入数据库的数据结构，即doc字段
+            - generic [ref=e451]:
+              - code [ref=e452]: "{ \"source\":\"my_kafka_source\", \"post_id\":\"12731485214269347960\", \"randomKey1\": \"ssddvisdvb\", \"randomKey2\": 2, \"randomKey3\": 4.8, \"randomeKey4\": { \"key1\": \"sdvdfs\", \"key2\": \"fdvfbgb\" } }"
+              - generic [ref=e453]: json
+              - generic [ref=e454]:
+                - img [ref=e456] [cursor=pointer]
+                - img [ref=e458] [cursor=pointer]
+                - img [ref=e461] [cursor=pointer]
+          - generic [ref=e464]:
+            - generic [ref=e466]: 最近更新时间：2024.08.12 14:57:50
+            - generic [ref=e468]:
+              - generic [ref=e469]: 这个页面对您有帮助吗？
+              - generic [ref=e472] [cursor=pointer]:
+                - img [ref=e473]
+                - generic [ref=e475]: 有用
+              - generic [ref=e478] [cursor=pointer]:
+                - img [ref=e479]
+                - generic [ref=e481]: 无用
+    - generic [ref=e483]:
+      - generic [ref=e484]:
+        - generic [ref=e486]:
+          - generic [ref=e487]: 全天候售后服务
+          - generic [ref=e488]: 7x24小时专业工程师品质服务
+        - generic [ref=e490]:
+          - generic [ref=e491]: 极速服务应答
+          - generic [ref=e492]: 秒级应答为业务保驾护航
+        - generic [ref=e494]:
+          - generic [ref=e495]: 客户价值为先
+          - generic [ref=e496]: 从服务价值到创造客户价值
+        - generic [ref=e498]:
+          - generic [ref=e499]: 全方位安全保障
+          - generic [ref=e500]: 打造一朵“透明可信”的云
+      - generic [ref=e502]:
+        - link "logo" [ref=e504] [cursor=pointer]:
+          - /url: https://www.volcengine.com
+          - img "logo" [ref=e505]
+        - generic [ref=e507]:
+          - generic [ref=e508]: 关于我们
+          - generic [ref=e509]:
+            - link "为什么选火山" [ref=e511] [cursor=pointer]:
+              - /url: https://www.volcengine.com/about
+            - link "文档中心" [ref=e513] [cursor=pointer]:
+              - /url: https://www.volcengine.com/docs
+            - link "联系我们" [ref=e515] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/contact
+            - link "人才招聘" [ref=e517] [cursor=pointer]:
+              - /url: https://www.volcengine.com/jobs
+            - link "云信任中心" [ref=e519] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/trust
+            - link "友情链接" [ref=e521] [cursor=pointer]:
+              - /url: https://www.volcengine.com/friend_links
+        - generic [ref=e523]:
+          - generic [ref=e524]: 产品
+          - generic [ref=e525]:
+            - link "云服务器" [ref=e527] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/ecs
+            - link "GPU云服务器" [ref=e529] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/gpu
+            - link "机器学习平台" [ref=e531] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/ml-platform
+            - link "客户数据平台 VeCDP" [ref=e533] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/veCDP
+            - link "飞连" [ref=e535] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/feilian
+            - link "视频直播" [ref=e537] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/live
+            - link "全部产品" [ref=e539] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/list
+        - generic [ref=e541]:
+          - generic [ref=e542]: 解决方案
+          - generic [ref=e543]:
+            - link "汽车行业" [ref=e545] [cursor=pointer]:
+              - /url: https://www.volcengine.com/solutions/automotive
+            - link "金融行业" [ref=e547] [cursor=pointer]:
+              - /url: https://www.volcengine.com/solutions/finance
+            - link "文娱行业" [ref=e549] [cursor=pointer]:
+              - /url: https://www.volcengine.com/solutions/social
+            - link "医疗健康行业" [ref=e551] [cursor=pointer]:
+              - /url: https://www.volcengine.com/solutions/Bio-OS-genomics
+            - link "传媒行业" [ref=e553] [cursor=pointer]:
+              - /url: https://www.volcengine.com/solutions/smart-media
+            - link "智慧文旅" [ref=e555] [cursor=pointer]:
+              - /url: https://www.volcengine.com/solutions/cultural-tourism-group
+            - link "大消费" [ref=e557] [cursor=pointer]:
+              - /url: https://www.volcengine.com/solutions/GeneralConsumption
+        - generic [ref=e559]:
+          - generic [ref=e560]: 服务与支持
+          - generic [ref=e561]:
+            - link "备案服务" [ref=e563] [cursor=pointer]:
+              - /url: https://www.volcengine.com/beian
+            - link "服务咨询" [ref=e565] [cursor=pointer]:
+              - /url: https://www.volcengine.com/contact/product
+            - link "建议与反馈" [ref=e567] [cursor=pointer]:
+              - /url: https://console.volcengine.com/workorder/create?step=3&SubProductID=P90000696&FlowKey=RvTCxYTCdeIhAKMzebqS
+            - link "廉洁舞弊举报" [ref=e569] [cursor=pointer]:
+              - /url: https://compliance.bytedance.com/report/pcReport
+            - link "举报平台" [ref=e571] [cursor=pointer]:
+              - /url: https://www.volcengine.com/product/report-platform
+        - generic [ref=e572]:
+          - generic [ref=e573]:
+            - generic [ref=e574]: 联系我们
+            - generic [ref=e575]:
+              - generic [ref=e576]:
+                - text: 业务咨询：
+                - link "service@volcengine.com" [ref=e577] [cursor=pointer]:
+                  - /url: mailto:service@volcengine.com
+              - generic [ref=e578]:
+                - text: 市场合作：
+                - link "marketing@volcengine.com" [ref=e579] [cursor=pointer]:
+                  - /url: mailto:marketing@volcengine.com
+              - generic [ref=e580]:
+                - text: 电话：
+                - link "400-034-7888" [ref=e581] [cursor=pointer]:
+                  - /url: tel://400-034-7888
+              - generic [ref=e582]: 地址：北京市海淀区北三环西路甲18号院大钟寺广场1号楼
+          - generic [ref=e583]:
+            - generic [ref=e586]: 微信公众号
+            - generic [ref=e589]: 抖音号
+            - generic [ref=e592]: 视频号
+      - generic [ref=e594]:
+        - generic [ref=e595]:
+          - generic [ref=e596]: © 北京火山引擎科技有限公司 2026 版权所有
+          - generic [ref=e597]: 代理域名注册服务机构：新网数码 商中在线
+          - link "服务条款" [ref=e598] [cursor=pointer]:
+            - /url: https://www.volcengine.com/docs/6256/64903
+          - link "隐私政策" [ref=e599] [cursor=pointer]:
+            - /url: https://www.volcengine.com/docs/6256/64902
+          - link "更多协议" [ref=e600] [cursor=pointer]:
+            - /url: https://www.volcengine.com/docs/6256/68938
+        - generic [ref=e601]:
+          - link "京公网安备11010802032137号" [ref=e603] [cursor=pointer]:
+            - /url: https://beian.mps.gov.cn/#/query/webSearch?code=11010802032137
+          - link "京ICP备20018813号-3" [ref=e605] [cursor=pointer]:
+            - /url: https://beian.miit.gov.cn
+          - link "营业执照" [ref=e607] [cursor=pointer]:
+            - /url: https://www.volcengine.com/business_license
+          - link "增值电信业务经营许可证京B2-20202418，A2.B1.B2-20202637" [ref=e609] [cursor=pointer]:
+            - /url: https://dxzhgl.miit.gov.cn/#/home
+          - generic [ref=e611]: 网络文化经营许可证：京网文（2023）4872-140号
+  - iframe [ref=e613]:
+    

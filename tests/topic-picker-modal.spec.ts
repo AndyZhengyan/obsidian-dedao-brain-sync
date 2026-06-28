@@ -658,7 +658,63 @@ describe('TopicPickerModal', () => {
     expect(container.textContent).toContain('同步该知识库的全部内容');
     expect(container.textContent).toContain('将同步全部内容');
     expect(container.querySelector('[data-topic-select-all]')).toBeNull();
+    expect(container.querySelector('.getnote-topic-filter-bar')).toBeNull();
+    expect(container.querySelector('[data-topic-search]')).toBeNull();
+    expect(container.querySelector('[data-topic-blogger-filter]')).toBeNull();
+    expect(container.querySelector('.getnote-note-card')).toBeNull();
+    expect(container.querySelector('.getnote-picker-body .getnote-topic-scope-hint')?.textContent)
+      .toContain('同步该知识库的全部内容');
     expect((container.querySelector('.mod-cta') as HTMLButtonElement).disabled).toBe(false);
+    await act(async () => {
+      (container.querySelector('.mod-cta') as HTMLButtonElement).click();
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith({
+      syncAll: true,
+      topicIds: ['luo'],
+      knowledgeBaseName: '罗振宇学习笔记',
+    });
+  });
+
+  it('does not forward hidden tag filters for all-content sync', async () => {
+    const onConfirm = vi.fn();
+    vi.mocked(fetchSubscribedTopics).mockResolvedValue([
+      { topic_id: 'luo', name: '罗振宇学习笔记' },
+    ]);
+    vi.mocked(fetchTopicContentPreviewPage).mockResolvedValue({
+      items: [
+        {
+          note_id: 'blogger_note-1',
+          title: '第一篇内容',
+          updated_at: '2026-06-01T10:00:00+08:00',
+          topic_id: 'luo',
+          tags: [{ name: 'AI' }],
+        },
+      ],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(async () => {
+      render(h(TopicPickerModal, {
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        initialSyncTags: ['AI'],
+        tagOptions: ['AI'],
+        onConfirm,
+        onCancel: vi.fn(),
+      }), container);
+    });
+    await flush();
+    await act(async () => {
+      (container.querySelector('[data-topic-id="luo"]') as HTMLButtonElement).click();
+    });
+    await flush();
+
+    await act(async () => {
+      (container.querySelector('[data-topic-scope-all]') as HTMLInputElement).click();
+    });
     await act(async () => {
       (container.querySelector('.mod-cta') as HTMLButtonElement).click();
     });

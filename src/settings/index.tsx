@@ -40,6 +40,39 @@ class FolderSuggest extends AbstractInputSuggest<string> {
   }
 }
 
+class TemplateFileSuggest extends AbstractInputSuggest<string> {
+  private el: HTMLInputElement;
+
+  constructor(app: App, inputEl: HTMLInputElement, onSelect: (value: string) => void) {
+    super(app, inputEl);
+    this.el = inputEl;
+    this.onSelect((value) => onSelect(value));
+  }
+
+  getSuggestions(query: string): string[] {
+    const normalizedQuery = (query ?? '').trim().toLowerCase();
+    return Array.from(new Set(
+      this.app.vault
+        .getMarkdownFiles()
+        .map(file => file.path)
+        .filter(Boolean),
+    ))
+      .filter(path => !normalizedQuery || path.toLowerCase().includes(normalizedQuery))
+      .sort((a, b) => a.localeCompare(b))
+      .slice(0, 50);
+  }
+
+  renderSuggestion(value: string, el: HTMLElement): void {
+    el.setText(value);
+  }
+
+  selectSuggestion(value: string): void {
+    this.el.value = value;
+    this.el.dispatchEvent(new Event('input'));
+    this.close();
+  }
+}
+
 interface SettingsComponentProps {
   settings: Settings;
   updateSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
@@ -56,6 +89,13 @@ interface SettingsComponentProps {
   lastSyncTime?: number;
   syncHistory?: SyncHistoryEntry[];
   initialKnowledgeBaseCache?: { entries: Array<{ topicId: string; name: string; source?: 'subscribed' | 'created' }>; cacheUpdatedAt?: number };
+}
+
+function getLocalDateInputValue(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function SettingsComponent({
@@ -87,6 +127,7 @@ export function SettingsComponent({
   const [showApiToken, setShowApiToken] = useState(false);
   const [folderName, setFolderName] = useState(settings.folderName);
   const [filenamePrefix, setFilenamePrefix] = useState(settings.filenamePrefix);
+  const [templateFilePath, setTemplateFilePath] = useState(settings.templateFilePath);
   // Only show actual lastSyncEndTimestamp — do NOT fallback to syncStartDate
   const lastSyncedTo = settings.lastSyncEndTimestamp || '';
   const [scheduledEnabled, setScheduledEnabled] = useState(settings.scheduledSync.enabled);
@@ -105,6 +146,7 @@ export function SettingsComponent({
   const [pendingStartDate, setPendingStartDate] = useState(settings.syncStartDate);
 
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const templateFileInputRef = useRef<HTMLInputElement>(null);
 
   // Attachment toggles are now driven by declarative Preact state (no more
   // imperative useRef + ToggleComponent.useEffect plumbing). The previous
@@ -135,11 +177,7 @@ export function SettingsComponent({
 
   useEffect(() => {
     if (!settings.syncStartDate && !settings.lastSyncEndTimestamp) {
-      const d = new Date();
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      updateSetting('syncStartDate', `${y}-${m}-${day}`);
+      updateSetting('syncStartDate', getLocalDateInputValue());
     }
   }, []);
 
@@ -184,6 +222,18 @@ export function SettingsComponent({
     const suggest = new FolderSuggest(app, inputEl, (value) => {
       setFolderName(value);
       updateSetting('folderName', value);
+    });
+
+    return () => suggest.close();
+  }, [app]);
+
+  useEffect(() => {
+    const inputEl = templateFileInputRef.current;
+    if (!inputEl) return;
+
+    const suggest = new TemplateFileSuggest(app, inputEl, (value) => {
+      setTemplateFilePath(value);
+      updateSetting('templateFilePath', value);
     });
 
     return () => suggest.close();
@@ -245,13 +295,21 @@ export function SettingsComponent({
     [updateSetting]
   );
 
+  const handleTemplateFilePathChange = useCallback(
+    (value: string) => {
+      setTemplateFilePath(value);
+      updateSetting('templateFilePath', value.trim());
+    },
+    [updateSetting]
+  );
+
   const handleSyncStartDateChange = (value: string) => {
     updateSetting('syncStartDate', value);
   };
 
   const handleResetCheckpointClick = () => {
     if (isSyncing) return;
-    setPendingStartDate(settings.syncStartDate);
+    setPendingStartDate(getLocalDateInputValue());
     setResetDialogOpen(true);
   };
 
@@ -590,6 +648,20 @@ export function SettingsComponent({
           placeholder={t('settings.prefix.placeholder')}
           value={filenamePrefix}
           onInput={(e) => handleFilenamePrefixChange((e.target as HTMLInputElement).value)}
+        />
+      </SettingItem>
+
+      <SettingItem
+        name={t('settings.templateFile.label')}
+        description={t('settings.templateFile.desc')}
+      >
+        <input
+          ref={templateFileInputRef}
+          type="text"
+          className="getnote-input"
+          placeholder={t('settings.templateFile.placeholder')}
+          value={templateFilePath}
+          onInput={(e) => handleTemplateFilePathChange((e.target as HTMLInputElement).value)}
         />
       </SettingItem>
 

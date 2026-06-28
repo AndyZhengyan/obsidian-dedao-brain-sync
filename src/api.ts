@@ -1,7 +1,7 @@
 // Central API entry point - delegates to client implementations based on authMode
-import { createNote as openapiCreateNote, fetchNotes as openapiFetchNotes, fetchNoteDetail as openapiFetchNoteDetail, fetchSubscribedKnowledgeNotes as openapiFetchSubscribedKnowledgeNotes, fetchTopicBloggers as openapiFetchTopicBloggers, fetchTopicContentPreviewPage as openapiFetchTopicContentPreviewPage, fetchTopicContentPreviews as openapiFetchTopicContentPreviews, fetchSubscribedTopics as openapiFetchSubscribedTopics } from './api-clients/openapi-client';
-import { createNote as webapiCreateNote, fetchNotes as webapiFetchNotes, fetchNoteChildren as webapiFetchNoteChildren, fetchNoteDetail as webapiFetchNoteDetail, fetchSubscribedKnowledgeNotes as webapiFetchSubscribedKnowledgeNotes, fetchTopicContentPreviewPage as webapiFetchTopicContentPreviewPage, fetchTopicContentPreviews as webapiFetchTopicContentPreviews, fetchSubscribedTopics as webapiFetchSubscribedTopics } from './api-clients/webapi-client';
-import type { GetNoteNote, AuthMode, SubscribedTopic } from './types';
+import { createNote as openapiCreateNote, fetchNotes as openapiFetchNotes, fetchNoteDetail as openapiFetchNoteDetail, fetchRecallSearch as openapiFetchRecallSearch, fetchSubscribedKnowledgeNotes as openapiFetchSubscribedKnowledgeNotes, fetchTopicBloggers as openapiFetchTopicBloggers, fetchTopicContentPreviewPage as openapiFetchTopicContentPreviewPage, fetchTopicContentPreviews as openapiFetchTopicContentPreviews, fetchSubscribedTopics as openapiFetchSubscribedTopics } from './api-clients/openapi-client';
+import { createNote as webapiCreateNote, fetchNotes as webapiFetchNotes, fetchNoteChildren as webapiFetchNoteChildren, fetchNoteDetail as webapiFetchNoteDetail, fetchNoteOriginal as webapiFetchNoteOriginal, fetchSubscribedKnowledgeNotes as webapiFetchSubscribedKnowledgeNotes, fetchTopicContentPreviewPage as webapiFetchTopicContentPreviewPage, fetchTopicContentPreviews as webapiFetchTopicContentPreviews, fetchSubscribedTopics as webapiFetchSubscribedTopics } from './api-clients/webapi-client';
+import type { GetNoteNote, AuthMode, LinkOriginal, RecallSearchResult, SubscribedTopic } from './types';
 import type { Blogger } from './api-clients/openapi-client';
 import { t } from './i18n';
 
@@ -32,6 +32,26 @@ export async function fetchNotes(options: FetchNotesOptions): Promise<{
   return openapiFetchNotes({ token, clientId, sinceId: options.sinceId, limit: options.limit, signal: options.signal });
 }
 
+export async function fetchRecallSearch(options: {
+  query: string;
+  token: string;
+  clientId: string;
+  authMode?: AuthMode;
+  topK?: number;
+  signal?: AbortSignal;
+}): Promise<RecallSearchResult[]> {
+  if (options.authMode === 'web') {
+    throw new Error(t('search.openapiOnly'));
+  }
+  return openapiFetchRecallSearch({
+    query: options.query,
+    token: options.token,
+    clientId: options.clientId,
+    topK: options.topK,
+    signal: options.signal,
+  });
+}
+
 export async function fetchNoteDetail(
   id: string,
   token: string,
@@ -44,6 +64,16 @@ export async function fetchNoteDetail(
     return webapiFetchNoteDetail(id, token, signal);
   }
   return openapiFetchNoteDetail(id, token, clientId, signal);
+}
+
+export async function fetchNoteOriginal(
+  id: string,
+  token: string,
+  signal?: AbortSignal,
+  authMode?: AuthMode
+): Promise<LinkOriginal | null> {
+  if (authMode !== 'web') return null;
+  return webapiFetchNoteOriginal(id, token, signal);
 }
 
 export async function fetchNoteChildren(

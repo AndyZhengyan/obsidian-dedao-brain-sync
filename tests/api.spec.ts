@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createNote, fetchNoteChildren, fetchNotes, fetchNoteDetail, fetchSubscribedTopics, fetchTopicContentPreviewPage } from '../src/api';
+import { createNote, fetchNoteChildren, fetchNotes, fetchNoteDetail, fetchNoteOriginal, fetchRecallSearch, fetchSubscribedTopics, fetchTopicContentPreviewPage } from '../src/api';
 import type { ListResponse } from '../src/types';
 
 // Extract the internal safeJsonParse for direct testing
@@ -176,6 +176,43 @@ describe('fetchNoteDetail', () => {
     }
   });
 
+  it('解析官方详情接口里的链接原文内容', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        success: true,
+        data: {
+          note: {
+            id: '1912223334445556667',
+            note_id: '1912223334445556667',
+            title: '链接笔记',
+            content: 'AI 摘要',
+            note_type: 'link',
+            source: 'app',
+            tags: [],
+            web_page: {
+              title: '原网页标题',
+              url: 'https://example.com/source',
+              content: '这是远端链接原文全文',
+            },
+            created_at: '2026-05-09 10:00:00',
+            updated_at: '2026-05-09 10:05:00',
+          },
+        },
+      }) as Response
+    );
+
+    try {
+      const result = await fetchNoteDetail('1912223334445556667', 'test-token', 'test-client');
+      expect(result.linkOriginal).toEqual({
+        title: '原网页标题',
+        url: 'https://example.com/source',
+        content: '这是远端链接原文全文',
+      });
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
   it('解析官方详情接口里的主子笔记关系字段', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       mockTextFetchResponse(JSON.stringify({
@@ -220,6 +257,63 @@ describe('fetchNoteDetail', () => {
 
     try {
       await expect(fetchNoteDetail('not-exist', 'test-token', 'test-client')).rejects.toThrow('笔记不存在');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+});
+
+describe('fetchRecallSearch', () => {
+  it('calls the official OpenAPI recall endpoint and normalizes results', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockTextFetchResponse(JSON.stringify({
+        success: true,
+        data: {
+          results: [
+            {
+              note_id: 0,
+              title: '搜索结果',
+              content: '命中的正文片段',
+              note_type: 'link',
+              updated_at: '2026-05-20 10:00:00',
+              created_at: '2026-05-19 10:00:00',
+              score: 0.82,
+            },
+          ],
+        },
+      }).replace('"note_id":0', '"note_id":1909193892067130512')) as Response
+    );
+
+    try {
+      const results = await fetchRecallSearch({
+        query: 'Obsidian',
+        token: 'test-token',
+        clientId: 'test-client',
+        topK: 5,
+      });
+
+      expect(results).toEqual([
+        expect.objectContaining({
+          note_id: '1909193892067130512',
+          title: '搜索结果',
+          content: '命中的正文片段',
+          note_type: 'link',
+          updated_at: '2026-05-20 10:00:00',
+          score: 0.82,
+        }),
+      ]);
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        'https://openapi.biji.com/open/api/v1/resource/recall',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer test-token',
+            'X-Client-ID': 'test-client',
+            'Content-Type': 'application/json',
+          }),
+          body: JSON.stringify({ query: 'Obsidian', top_k: 5 }),
+        })
+      );
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
     }
@@ -401,6 +495,34 @@ describe('web auth mode', () => {
       expect(result.title).toBe('网页模式详情');
       expect(globalThis.fetch).toHaveBeenCalledWith(
         'https://get-notes.luojilab.com/voicenotes/web/notes/1909428570156704824',
+        expect.objectContaining({ method: 'GET' })
+      );
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('fetches link original content from the web original endpoint', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({
+        h: {},
+        c: {
+          title: '网页原文标题',
+          url: 'https://example.com/web-source',
+          content: '网页模式链接原文全文',
+        },
+      }) as Response
+    );
+
+    try {
+      const result = await fetchNoteOriginal('prime-link-1', 'web-token', undefined, 'web');
+      expect(result).toEqual({
+        title: '网页原文标题',
+        url: 'https://example.com/web-source',
+        content: '网页模式链接原文全文',
+      });
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        'https://get-notes.luojilab.com/voicenotes/web/notes/prime-link-1/original',
         expect.objectContaining({ method: 'GET' })
       );
     } finally {

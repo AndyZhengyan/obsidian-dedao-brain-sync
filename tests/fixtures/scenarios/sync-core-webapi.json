@@ -59,6 +59,22 @@
     },
     {
       "request": {
+        "url": "https://get-notes.luojilab.com/voicenotes/web/notes/prime_web_link_2/original"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "h": {},
+          "c": {
+            "title": "WebAPI 链接",
+            "url": "https://example.com/web",
+            "content": ""
+          }
+        }
+      }
+    },
+    {
+      "request": {
         "url": "https://get-notes.luojilab.com/voicenotes/web/notes",
         "params": {
           "limit": "20",

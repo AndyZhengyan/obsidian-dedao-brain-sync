@@ -1,0 +1,35 @@
+[     267ms] [LOG] - init tea async @ https://res.volccdn.com/obj/volc-console-fe/volc/web-data-sdk/1.0.0.45/cnSdk/initTeaSdk.js:12
+[     376ms] [INFO] [MonitorTracer] init successfully! version: 0.20.0 @ https://res.volccdn.com/obj/volc-console-fe/volc/web-data-sdk/1.0.0.45/cnSdk/initTeaSdk.js:6
+[     509ms] [WARNING] loadable: `loadableReady()` requires state, please use `getScriptTags` or `getScriptElements` server-side @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/608.b7fce3ea.js:1
+[     509ms] [TIMEEND] SSR 初始化: 0.02099609375 ms @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/855.261f1b60.js:1
+[     514ms] [LOG] https://www.volcengine.com/api/ssr/prefetch url @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/608.b7fce3ea.js:1
+[     516ms] [LOG] - init tea async hook @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/491.683bb698.js:0
+[     575ms] [ERROR] can no read vconsoleAppInfo from window object @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/362.8f1cbe30.js:1
+[     575ms] [ERROR] can no read vconsoleAppInfo from window object @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/362.8f1cbe30.js:1
+[     634ms] [LOG] libraGroup=====> undefined @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/608.b7fce3ea.js:1
+[     657ms] [WARNING] [VOLCENGINE-PLATFORM-FRAMEWORK] monitor reportToTea is a fake one platform_storage_usage {source: meaningless, target: localStorage, action: set, key: __tea_sdk_ab_version_3569, size: 654} @ https://res.gcloudcache.com/volc-fe/volcengine-platform-runtime-os/main.d0d74512.js:1
+[     659ms] [LOG] libraGroup=====> ctrst_grp @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/608.b7fce3ea.js:1
+[     663ms] [LOG] libraGroup=====> ctrst_grp @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/608.b7fce3ea.js:1
+[     674ms] [LOG] libraGroup=====> ctrst_grp @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/608.b7fce3ea.js:1
+[     679ms] [LOG] libraGroup=====> ctrst_grp @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/608.b7fce3ea.js:1
+[     683ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://console.volcengine.com/api/passport/account/getUser:0
+[     690ms] [LOG] libraGroup=====> ctrst_grp @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/608.b7fce3ea.js:1
+[     873ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://console.volcengine.com/api/passport/account/getUser:0
+[     876ms] [LOG] libraGroup=====> ctrst_grp @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/608.b7fce3ea.js:1
+[     904ms] [LOG] libraGroup=====> ctrst_grp @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/608.b7fce3ea.js:1
+[     904ms] [LOG] libraGroup=====> ctrst_grp @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/608.b7fce3ea.js:1
+[     998ms] [TIMEEND] 加载子应用资源: 348.653076171875 ms @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/855.261f1b60.js:1
+[    1069ms] [TIMEEND] 解析子应用资源: 70.65185546875 ms @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/855.261f1b60.js:1
+[    1181ms] [LOG] libraGroup=====> ctrst_grp @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/608.b7fce3ea.js:1
+[    1294ms] [LOG] ========= undefined @ https://portal.volccdn.com/obj/volcfe-scm/web-product/static/js/608.b7fce3ea.js:1
+[    6880ms] [WARNING] Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://signin.volcengine.com') does not match the recipient window's origin ('https://www.volcengine.com'). @ https://res.volccdn.com/obj/volc-console-fe/vcopilot-entry/web/static/js/async/7585.fb588188.js:109
+[    6912ms] [INFO] [ErrorRecommend][WebRuntimeGate] Resolved page error recommend gate {gate: Object, errorRecommendWhiteList: Array(0)} @ https://res.volccdn.com/obj/volc-console-fe/vcopilot-entry/web/static/js/async/1433.29c58a4f.js:47
+[    6912ms] [INFO] [ErrorRecommend][Coordinator] Updating coordinator enabled state {href: https://www.volcengine.com/product/ark, isTopWindow: true, payload: Object} @ https://res.volccdn.com/obj/volc-console-fe/vcopilot-entry/web/static/js/async/1433.29c58a4f.js:47
+[    6913ms] [WARNING] [VOLCENGINE-PLATFORM-FRAMEWORK] vcopilot sdk already registered. @ https://res.gcloudcache.com/volc-fe/volcengine-platform-runtime-os/main.d0d74512.js:1
+[    6914ms] [INFO] [ErrorRecommend][Coordinator] Initializing page error recommend coordinator {href: https://www.volcengine.com/product/ark, isTopWindow: true} @ https://res.volccdn.com/obj/volc-console-fe/vcopilot-entry/web/static/js/async/1433.29c58a4f.js:47
+[    6976ms] [WARNING] Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://signin.volcengine.com') does not match the recipient window's origin ('https://www.volcengine.com'). @ https://res.volccdn.com/obj/volc-console-fe/vcopilot-entry/web/static/js/async/7585.fb588188.js:109
+[    7100ms] [INFO] [ErrorRecommend][WebRuntimeGate] Resolved page error recommend gate {gate: Object, errorRecommendWhiteList: Array(2)} @ https://res.volccdn.com/obj/volc-console-fe/vcopilot-entry/web/static/js/async/1433.29c58a4f.js:47
+[    7100ms] [INFO] [ErrorRecommend][Coordinator] Updating coordinator enabled state {href: https://www.volcengine.com/product/ark, isTopWindow: true, payload: Object} @ https://res.volccdn.com/obj/volc-console-fe/vcopilot-entry/web/static/js/async/1433.29c58a4f.js:47
+[    7102ms] [TIMEEND] vcopilot-FastSigninInit: 231.5888671875 ms @ https://res.volccdn.com/obj/volc-console-fe/vcopilot-entry/web/static/js/async/1433.29c58a4f.js:36
+[   12153ms] [WARNING] The resource https://portal.volccdn.com/obj/volcfe/bee_prod/biz_950/tos_649617849d3611c344878b016e3fe934.webp was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.volcengine.com/product/ark:0
+[   19277ms] [WARNING] The resource https://portal.volccdn.com/obj/volcfe/bee_prod/biz_950/tos_649617849d3611c344878b016e3fe934.webp was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.volcengine.com/product/ark:0

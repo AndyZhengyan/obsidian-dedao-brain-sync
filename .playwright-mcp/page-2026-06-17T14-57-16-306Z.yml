@@ -1,0 +1,69 @@
+- generic [active] [ref=e1]:
+  - blockquote [ref=e2]:
+    - heading [level=2] [ref=e3]: Documentation Index
+    - paragraph [ref=e4]:
+      - text: "Fetch the complete documentation index at:"
+      - link [ref=e5] [cursor=pointer]:
+        - /url: /docs/llms.txt
+        - text: /docs/llms.txt
+    - paragraph [ref=e6]: Use this file to discover all available pages before exploring further.
+  - generic [ref=e7]:
+    - link "跳转到主要内容" [ref=e8] [cursor=pointer]:
+      - /url: "#content-area"
+    - generic [ref=e10]:
+      - banner [ref=e11]:
+        - generic [ref=e13]:
+          - paragraph [ref=e15]:
+            - text: 🎉 MiniMax-M3 全新发布！你触手可得的 Frontier Model，编程及Agent。
+            - link "查看文档" [ref=e16] [cursor=pointer]:
+              - /url: https://platform.minimaxi.com/docs/guides/models-intro
+            - text: ➔
+          - button "关闭横幅" [ref=e17] [cursor=pointer]:
+            - img [ref=e18]
+        - generic [ref=e23]:
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - link "MiniMax 开放平台文档中心 home page light logo" [ref=e28] [cursor=pointer]:
+                - /url: https://minimaxi.com
+                - generic [ref=e29]: MiniMax 开放平台文档中心 home page
+                - img "light logo" [ref=e30]
+              - button "简体中文" [ref=e32] [cursor=pointer]:
+                - generic [ref=e33]: 简体中文
+                - img [ref=e34]
+            - button "打开搜索" [ref=e37] [cursor=pointer]:
+              - generic [ref=e38]:
+                - img [ref=e39]
+                - generic [ref=e42]: 搜索...
+              - generic [ref=e43]: ⌘K
+            - navigation "Main" [ref=e45]:
+              - list [ref=e46]:
+                - listitem [ref=e47]:
+                  - link "文档" [ref=e48] [cursor=pointer]:
+                    - /url: https://platform.minimaxi.com/docs
+                - listitem [ref=e49]:
+                  - link "定价" [ref=e50] [cursor=pointer]:
+                    - /url: https://platform.minimaxi.com/docs/pricing/overview
+                - listitem [ref=e51]:
+                  - link "控制台" [ref=e52] [cursor=pointer]:
+                    - /url: https://platform.minimaxi.com/user-center/basic-information
+          - generic [ref=e54]:
+            - link "开发指南" [ref=e55] [cursor=pointer]:
+              - /url: /docs/guides/models-intro
+              - text: 开发指南
+            - link "API" [ref=e57] [cursor=pointer]:
+              - /url: /docs/api-reference/api-overview
+              - text: API
+            - link "Token Plan" [ref=e59] [cursor=pointer]:
+              - /url: /docs/token-plan/intro
+              - text: Token Plan
+            - link "定价" [ref=e61] [cursor=pointer]:
+              - /url: /docs/pricing/overview
+              - text: 定价
+            - link "更新日志" [ref=e63] [cursor=pointer]:
+              - /url: /docs/release-notes/models
+              - text: 更新日志
+      - main [ref=e66]:
+        - generic [ref=e71]:
+          - generic [ref=e72]: "404"
+          - heading "Page Not Found" [level=1] [ref=e73]
+  - alert [ref=e79]
