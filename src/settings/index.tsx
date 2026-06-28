@@ -672,8 +672,8 @@ export function SettingsComponent({
         description={t('settings.scheduled.desc')}
       >
         <div className="getnote-scheduled-control">
-          <div className="getnote-scheduled-row">
-            <span>{t('settings.scheduled.enabled')}</span>
+          <div className="getnote-scheduled-row getnote-scheduled-master-row">
+            <span className="getnote-scheduled-row-label">{t('settings.scheduled.enabled')}</span>
             <span className="getnote-scheduled-row-control">
               <Toggle
                 value={scheduledEnabled}
