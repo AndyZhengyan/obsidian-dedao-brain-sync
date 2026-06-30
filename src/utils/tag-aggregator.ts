@@ -43,6 +43,17 @@ export function mergeTagNames(...groups: Array<readonly string[] | undefined>): 
   );
 }
 
+function normalizeTagWhitelist(whitelist: string[] | undefined): Set<string> | null {
+  if (!whitelist || whitelist.length === 0) return null;
+  const normalized = new Set<string>();
+  for (const name of whitelist) {
+    const trimmed = name?.trim();
+    if (!trimmed) continue;
+    normalized.add(trimmed.toLowerCase());
+  }
+  return normalized.size > 0 ? normalized : null;
+}
+
 /**
  * Merge an existing tag cache with newly observed tag names.
  * Existing tags are preserved; new tags are appended (case-insensitive dedup).
@@ -73,11 +84,8 @@ export function mergeTagCache(existing: TagCache | undefined, incoming: string[]
  *   tag name with the whitelist (case-insensitive comparison).
  */
 export function applyTagFilter(notes: GetNoteNote[], whitelist: string[] | undefined): GetNoteNote[] {
-  if (!whitelist || whitelist.length === 0) return notes;
-  const normalizedWhitelist = new Set(
-    whitelist.filter(Boolean).map(name => name.toLowerCase())
-  );
-  if (normalizedWhitelist.size === 0) return notes;
+  const normalizedWhitelist = normalizeTagWhitelist(whitelist);
+  if (!normalizedWhitelist) return notes;
   return notes.filter(note => {
     if (!Array.isArray(note.tags) || note.tags.length === 0) return false;
     return note.tags.some(tag => {
@@ -115,9 +123,9 @@ export function updateCacheFromNotes(cache: TagCache | undefined, notes: GetNote
  * Quick check whether a note has at least one tag in the whitelist.
  */
 export function noteMatchesTagWhitelist(note: GetNoteNote, whitelist: string[] | undefined): boolean {
-  if (!whitelist || whitelist.length === 0) return true;
+  const normalizedWhitelist = normalizeTagWhitelist(whitelist);
+  if (!normalizedWhitelist) return true;
   if (!Array.isArray(note.tags) || note.tags.length === 0) return false;
-  const normalizedWhitelist = new Set(whitelist.map(name => name.toLowerCase()));
   return note.tags.some(tag => {
     const name = tag?.name?.trim();
     return name ? normalizedWhitelist.has(name.toLowerCase()) : false;
