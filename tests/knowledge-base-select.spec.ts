@@ -44,6 +44,7 @@ async function openDropdown(container: HTMLElement) {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.clearAllMocks();
   vi.restoreAllMocks();
   render(null, document.body);
   document.body.innerHTML = '';
@@ -81,5 +82,48 @@ describe('KnowledgeBaseSelect', () => {
       clientId: '',
       authMode: 'web',
     }));
+  });
+
+  it('does not reuse the fresh cache after switching authMode', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-05T11:00:00+08:00'));
+    vi.mocked(fetchSubscribedTopics)
+      .mockResolvedValueOnce([{ topic_id: 'openapi-kb', name: 'OpenAPI 知识库', source: 'created' }])
+      .mockResolvedValueOnce([{ topic_id: 'web-kb', name: 'Web 知识库', source: 'subscribed' }]);
+
+    const { container, rerender } = renderSelect();
+
+    await openDropdown(container);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain('OpenAPI 知识库');
+    expect(fetchSubscribedTopics).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(new Date('2026-07-05T11:01:00+08:00'));
+    await act(async () => {
+      rerender({
+        authMode: 'web',
+        token: 'web-token',
+        clientId: '',
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(fetchSubscribedTopics).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      token: 'web-token',
+      clientId: '',
+      authMode: 'web',
+    }));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(container.textContent).toContain('Web 知识库');
   });
 });

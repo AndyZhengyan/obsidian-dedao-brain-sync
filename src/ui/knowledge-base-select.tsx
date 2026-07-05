@@ -31,6 +31,25 @@ interface AggregateState {
 
 const EMPTY_STATE: AggregateState = { loading: false, error: null, entries: [] };
 
+function createAggregator(
+  authModeRef: { current: AuthMode },
+  initialCache?: { entries: KnowledgeBaseEntry[]; cacheUpdatedAt?: number }
+): KnowledgeBaseAggregator {
+  return new KnowledgeBaseAggregator(
+    subscribedTopicsFetcher((fetchToken, fetchClientId, signal) =>
+      fetchSubscribedTopics({ token: fetchToken, clientId: fetchClientId, authMode: authModeRef.current, signal })
+    ),
+    initialCache ? {
+      cache: initialCache.entries,
+      cacheUpdatedAt: initialCache.cacheUpdatedAt,
+    } : undefined
+  );
+}
+
+function cacheIdentity(authMode: AuthMode, token: string, clientId: string): string {
+  return `${authMode}\n${token}\n${clientId}`;
+}
+
 function summarize(value: string[], entries: KnowledgeBaseEntry[]): string {
   if (value.length === 0) return t('settings.scheduled.syncKnowledgeBases.empty');
   if (entries.length > 0 && value.length === entries.length) return t('knowledgeBases.all');
@@ -64,6 +83,7 @@ export function KnowledgeBaseSelect({
   const aggregatorRef = useRef<KnowledgeBaseAggregator | null>(null);
   const initialCacheRef = useRef(initialCache);
   const authModeRef = useRef(authMode);
+  const cacheIdentityRef = useRef<string | null>(null);
 
   useEffect(() => {
     authModeRef.current = authMode;
@@ -71,15 +91,7 @@ export function KnowledgeBaseSelect({
 
   useEffect(() => {
     if (!aggregatorRef.current) {
-      aggregatorRef.current = new KnowledgeBaseAggregator(
-        subscribedTopicsFetcher((fetchToken, fetchClientId, signal) =>
-          fetchSubscribedTopics({ token: fetchToken, clientId: fetchClientId, authMode: authModeRef.current, signal })
-        ),
-        initialCacheRef.current ? {
-          cache: initialCacheRef.current.entries,
-          cacheUpdatedAt: initialCacheRef.current.cacheUpdatedAt,
-        } : undefined
-      );
+      aggregatorRef.current = createAggregator(authModeRef, initialCacheRef.current);
     }
   }, []);
 
@@ -110,12 +122,20 @@ export function KnowledgeBaseSelect({
       });
       return;
     }
+    const currentCacheIdentity = cacheIdentity(authMode, trimmedToken, trimmedClientId);
+    if (cacheIdentityRef.current !== null && cacheIdentityRef.current !== currentCacheIdentity) {
+      aggregatorRef.current = createAggregator(authModeRef);
+    }
     const aggregator = aggregatorRef.current;
     if (!aggregator) return;
 
     let cancelled = false;
     const cached = aggregator.exportCache();
-    if (cached.entries.length > 0 && (Date.now() - (cached.cacheUpdatedAt ?? 0)) < 5 * 60 * 1000) {
+    if (
+      cacheIdentityRef.current === currentCacheIdentity &&
+      cached.entries.length > 0 &&
+      (Date.now() - (cached.cacheUpdatedAt ?? 0)) < 5 * 60 * 1000
+    ) {
       setState({ loading: false, error: null, entries: cached.entries });
       return;
     }
@@ -125,6 +145,7 @@ export function KnowledgeBaseSelect({
       .refresh({ token: trimmedToken, clientId: trimmedClientId })
       .then(snapshot => {
         if (cancelled) return;
+        cacheIdentityRef.current = currentCacheIdentity;
         setState({ loading: false, error: null, entries: snapshot.entries });
         onCacheUpdate?.({ entries: snapshot.entries, cacheUpdatedAt: snapshot.cacheUpdatedAt ?? Date.now() });
       })
