@@ -63,12 +63,17 @@ export function KnowledgeBaseSelect({
   const [menuStyle, setMenuStyle] = useState<Record<string, string>>({});
   const aggregatorRef = useRef<KnowledgeBaseAggregator | null>(null);
   const initialCacheRef = useRef(initialCache);
+  const authModeRef = useRef(authMode);
+
+  useEffect(() => {
+    authModeRef.current = authMode;
+  }, [authMode]);
 
   useEffect(() => {
     if (!aggregatorRef.current) {
       aggregatorRef.current = new KnowledgeBaseAggregator(
         subscribedTopicsFetcher((fetchToken, fetchClientId, signal) =>
-          fetchSubscribedTopics({ token: fetchToken, clientId: fetchClientId, authMode, signal })
+          fetchSubscribedTopics({ token: fetchToken, clientId: fetchClientId, authMode: authModeRef.current, signal })
         ),
         initialCacheRef.current ? {
           cache: initialCacheRef.current.entries,
