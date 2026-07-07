@@ -10,6 +10,7 @@
 
 Bidirectionally sync your notes, highlights, links, recordings, and AI summaries from Dedao Brain (得到大脑, formerly GetNote / Get笔记) into Obsidian as local Markdown files you can organize, search, and link over the long term.
 
+For the project background and origin story, see this Chinese article: [Project background](https://mp.weixin.qq.com/s/0-d_jLOGr3OhanruPR52vg).
 
 * * *
 
