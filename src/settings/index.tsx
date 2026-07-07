@@ -13,20 +13,26 @@ import { fetchNotes } from '../api';
 import { t } from '../i18n';
 import { ExternalLink } from './external-link';
 
-class FolderSuggest extends AbstractInputSuggest<string> {
-  private el: HTMLInputElement;
+type SuggestionProvider = (query: string) => string[];
 
-  constructor(app: App, inputEl: HTMLInputElement, onSelect: (value: string) => void) {
+class PathSuggest extends AbstractInputSuggest<string> {
+  private readonly el: HTMLInputElement;
+  private readonly getPaths: SuggestionProvider;
+
+  constructor(
+    app: App,
+    inputEl: HTMLInputElement,
+    getPaths: SuggestionProvider,
+    onSelect: (value: string) => void,
+  ) {
     super(app, inputEl);
     this.el = inputEl;
+    this.getPaths = getPaths;
     this.onSelect((value) => onSelect(value));
   }
 
   getSuggestions(query: string): string[] {
-    return this.app.vault
-      .getAllFolders()
-      .map(f => f.path)
-      .filter(path => !query || path.toLowerCase().includes(query.toLowerCase()));
+    return this.getPaths(query);
   }
 
   renderSuggestion(value: string, el: HTMLElement): void {
@@ -40,37 +46,25 @@ class FolderSuggest extends AbstractInputSuggest<string> {
   }
 }
 
-class TemplateFileSuggest extends AbstractInputSuggest<string> {
-  private el: HTMLInputElement;
+function getFolderSuggestions(app: App, query: string): string[] {
+  const normalizedQuery = (query ?? '').toLowerCase();
+  return app.vault
+    .getAllFolders()
+    .map(folder => folder.path)
+    .filter(path => !normalizedQuery || path.toLowerCase().includes(normalizedQuery));
+}
 
-  constructor(app: App, inputEl: HTMLInputElement, onSelect: (value: string) => void) {
-    super(app, inputEl);
-    this.el = inputEl;
-    this.onSelect((value) => onSelect(value));
-  }
-
-  getSuggestions(query: string): string[] {
-    const normalizedQuery = (query ?? '').trim().toLowerCase();
-    return Array.from(new Set(
-      this.app.vault
-        .getMarkdownFiles()
-        .map(file => file.path)
-        .filter(Boolean),
-    ))
-      .filter(path => !normalizedQuery || path.toLowerCase().includes(normalizedQuery))
-      .sort((a, b) => a.localeCompare(b))
-      .slice(0, 50);
-  }
-
-  renderSuggestion(value: string, el: HTMLElement): void {
-    el.setText(value);
-  }
-
-  selectSuggestion(value: string): void {
-    this.el.value = value;
-    this.el.dispatchEvent(new Event('input'));
-    this.close();
-  }
+function getTemplateFileSuggestions(app: App, query: string): string[] {
+  const normalizedQuery = (query ?? '').trim().toLowerCase();
+  return Array.from(new Set(
+    app.vault
+      .getMarkdownFiles()
+      .map(file => file.path)
+      .filter(Boolean),
+  ))
+    .filter(path => !normalizedQuery || path.toLowerCase().includes(normalizedQuery))
+    .sort((a, b) => a.localeCompare(b))
+    .slice(0, 50);
 }
 
 interface SettingsComponentProps {
@@ -219,7 +213,7 @@ export function SettingsComponent({
     const inputEl = folderInputRef.current;
     if (!inputEl) return;
 
-    const suggest = new FolderSuggest(app, inputEl, (value) => {
+    const suggest = new PathSuggest(app, inputEl, (query) => getFolderSuggestions(app, query), (value) => {
       setFolderName(value);
       updateSetting('folderName', value);
     });
@@ -231,7 +225,7 @@ export function SettingsComponent({
     const inputEl = templateFileInputRef.current;
     if (!inputEl) return;
 
-    const suggest = new TemplateFileSuggest(app, inputEl, (value) => {
+    const suggest = new PathSuggest(app, inputEl, (query) => getTemplateFileSuggestions(app, query), (value) => {
       setTemplateFilePath(value);
       updateSetting('templateFilePath', value);
     });

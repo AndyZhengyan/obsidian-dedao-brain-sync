@@ -210,6 +210,47 @@ describe('SettingsComponent auth credentials', () => {
     expect(updateSetting).toHaveBeenCalledWith('templateFilePath', 'Templates/reading-note.md');
   });
 
+  it('suggests vault folders for the target folder path', async () => {
+    const app = new App();
+    vi.spyOn(app.vault, 'getAllFolders').mockReturnValue([
+      { path: 'Templates' } as any,
+      { path: '得到大脑' } as any,
+      { path: 'Projects/Archive' } as any,
+    ]);
+
+    let rendered!: ReturnType<typeof renderSettings>;
+    await act(async () => {
+      rendered = renderSettings(makeSettings(), vi.fn(), vi.fn(), { app });
+      await Promise.resolve();
+    });
+
+    const { container } = rendered;
+    const input = Array.from(container.querySelectorAll('input'))
+      .find((item): item is HTMLInputElement => item.placeholder === '得到大脑');
+    expect(input).toBeTruthy();
+
+    const folderSuggest = abstractInputSuggestInstances.find(instance => instance.inputEl === input);
+    expect(folderSuggest).toBeTruthy();
+    expect(folderSuggest!.getSuggestions('')).toEqual([
+      'Templates',
+      '得到大脑',
+      'Projects/Archive',
+    ]);
+    expect(folderSuggest!.getSuggestions('arch')).toEqual([
+      'Projects/Archive',
+    ]);
+
+    const inputListener = vi.fn();
+    input!.addEventListener('input', inputListener);
+    await act(() => {
+      folderSuggest!.selectSuggestion('Projects/Archive', new KeyboardEvent('keydown'));
+    });
+
+    expect(input!.value).toBe('Projects/Archive');
+    expect(inputListener).toHaveBeenCalledTimes(1);
+    expect(rendered.updateSetting).toHaveBeenCalledWith('folderName', 'Projects/Archive');
+  });
+
   it('suggests vault Markdown files for the template file path', async () => {
     const app = new App();
     vi.spyOn(app.vault, 'getMarkdownFiles').mockReturnValue([
