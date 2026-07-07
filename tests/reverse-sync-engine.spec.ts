@@ -13,7 +13,7 @@ function makeMockApp() {
       const [key, ...rest] = line.split(':');
       if (!key || rest.length === 0) continue;
       const raw = rest.join(':').trim().replace(/^"|"$/g, '');
-      result[key.trim()] = /^\d+$/.test(raw) ? Number(raw) : raw;
+      result[key.trim()] = raw;
     }
     return result;
   };
@@ -304,7 +304,7 @@ describe('ReverseSyncEngine', () => {
     expect(app.vault.modify).not.toHaveBeenCalled();
   });
 
-  it('reads numeric uid values before deciding whether to create a remote note', async () => {
+  it('preserves numeric uid values before deciding whether to create a remote note', async () => {
     const app = makeMockApp();
     app.vault._addFile('得到大脑/numeric.md', [
       '---',
@@ -323,7 +323,7 @@ describe('ReverseSyncEngine', () => {
     expect(result).toEqual(expect.objectContaining({ created: 0, skipped: 1, failed: 0, total: 1 }));
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('resource/note/detail'),
+      expect.stringContaining('id=1909999999999999999'),
       expect.anything()
     );
     expect(app.vault.modify).not.toHaveBeenCalled();
