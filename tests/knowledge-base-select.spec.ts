@@ -9,6 +9,14 @@ vi.mock('../src/api', () => ({
 
 import { fetchSubscribedTopics } from '../src/api';
 
+function deferredTopics() {
+  let resolve!: (value: Array<{ topic_id: string; name: string; source: 'created' | 'subscribed' }>) => void;
+  const promise = new Promise<Array<{ topic_id: string; name: string; source: 'created' | 'subscribed' }>>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 function renderSelect(props: Partial<Parameters<typeof KnowledgeBaseSelect>[0]> = {}) {
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -125,5 +133,79 @@ describe('KnowledgeBaseSelect', () => {
       await Promise.resolve();
     });
     expect(container.textContent).toContain('Web 知识库');
+  });
+
+  it('ignores a stale authMode refresh that resolves after switching back', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-05T11:00:00+08:00'));
+    const webRefresh = deferredTopics();
+    const openapiRefresh = deferredTopics();
+    vi.mocked(fetchSubscribedTopics)
+      .mockResolvedValueOnce([{ topic_id: 'openapi-original', name: 'OpenAPI 初始知识库', source: 'created' }])
+      .mockReturnValueOnce(webRefresh.promise)
+      .mockReturnValueOnce(openapiRefresh.promise);
+
+    const { container, rerender } = renderSelect();
+
+    await openDropdown(container);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(container.textContent).toContain('OpenAPI 初始知识库');
+
+    await act(async () => {
+      rerender({
+        authMode: 'web',
+        token: 'web-token',
+        clientId: '',
+      });
+      await Promise.resolve();
+    });
+    expect(fetchSubscribedTopics).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      token: 'web-token',
+      clientId: '',
+      authMode: 'web',
+    }));
+
+    await act(async () => {
+      rerender({
+        authMode: 'openapi',
+        token: 'openapi-token',
+        clientId: 'openapi-client',
+      });
+      await Promise.resolve();
+    });
+    expect(fetchSubscribedTopics).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      token: 'openapi-token',
+      clientId: 'openapi-client',
+      authMode: 'openapi',
+    }));
+
+    await act(async () => {
+      openapiRefresh.resolve([{ topic_id: 'openapi-latest', name: 'OpenAPI 最新知识库', source: 'created' }]);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(container.textContent).toContain('OpenAPI 最新知识库');
+
+    await act(async () => {
+      webRefresh.resolve([{ topic_id: 'web-late', name: 'Web 迟到知识库', source: 'subscribed' }]);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain('OpenAPI 最新知识库');
+    expect(container.textContent).not.toContain('Web 迟到知识库');
+
+    await openDropdown(container);
+    await openDropdown(container);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain('OpenAPI 最新知识库');
+    expect(container.textContent).not.toContain('Web 迟到知识库');
   });
 });

@@ -83,6 +83,7 @@ export function KnowledgeBaseSelect({
   const aggregatorRef = useRef<KnowledgeBaseAggregator | null>(null);
   const initialCacheRef = useRef(initialCache);
   const authModeRef = useRef(authMode);
+  const aggregatorIdentityRef = useRef<string | null>(null);
   const cacheIdentityRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -123,8 +124,10 @@ export function KnowledgeBaseSelect({
       return;
     }
     const currentCacheIdentity = cacheIdentity(authMode, trimmedToken, trimmedClientId);
-    if (cacheIdentityRef.current !== null && cacheIdentityRef.current !== currentCacheIdentity) {
-      aggregatorRef.current = createAggregator(authModeRef);
+    if (aggregatorIdentityRef.current !== currentCacheIdentity) {
+      const seedCache = aggregatorIdentityRef.current === null ? initialCacheRef.current : undefined;
+      aggregatorRef.current = createAggregator(authModeRef, seedCache);
+      aggregatorIdentityRef.current = currentCacheIdentity;
     }
     const aggregator = aggregatorRef.current;
     if (!aggregator) return;
@@ -145,12 +148,14 @@ export function KnowledgeBaseSelect({
       .refresh({ token: trimmedToken, clientId: trimmedClientId })
       .then(snapshot => {
         if (cancelled) return;
+        if (aggregatorRef.current !== aggregator || aggregatorIdentityRef.current !== currentCacheIdentity) return;
         cacheIdentityRef.current = currentCacheIdentity;
         setState({ loading: false, error: null, entries: snapshot.entries });
         onCacheUpdate?.({ entries: snapshot.entries, cacheUpdatedAt: snapshot.cacheUpdatedAt ?? Date.now() });
       })
       .catch(err => {
         if (cancelled) return;
+        if (aggregatorRef.current !== aggregator || aggregatorIdentityRef.current !== currentCacheIdentity) return;
         setState({ loading: false, error: err instanceof Error ? err.message : String(err), entries: aggregator.list() });
       });
 
