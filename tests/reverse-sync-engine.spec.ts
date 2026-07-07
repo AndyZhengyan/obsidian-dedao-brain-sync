@@ -5,6 +5,14 @@ import type { Settings } from '../src/types';
 function makeMockApp() {
   const files = new Map<string, { path: string; content: string; frontmatter: Record<string, unknown> }>();
 
+  const parseYamlScalar = (value: string): unknown => {
+    const trimmed = value.trim();
+    const quoted = trimmed.match(/^(['"])(.*)\1$/s);
+    if (quoted) return quoted[2];
+    if (/^[+-]?\d+(?:\.\d+)?$/.test(trimmed)) return Number(trimmed);
+    return trimmed;
+  };
+
   const parseFrontmatter = (content: string): Record<string, unknown> => {
     const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
     if (!match) return {};
@@ -12,8 +20,7 @@ function makeMockApp() {
     for (const line of match[1].split(/\r?\n/)) {
       const [key, ...rest] = line.split(':');
       if (!key || rest.length === 0) continue;
-      const raw = rest.join(':').trim().replace(/^"|"$/g, '');
-      result[key.trim()] = /^\d+$/.test(raw) ? Number(raw) : raw;
+      result[key.trim()] = parseYamlScalar(rest.join(':'));
     }
     return result;
   };
@@ -304,7 +311,7 @@ describe('ReverseSyncEngine', () => {
     expect(app.vault.modify).not.toHaveBeenCalled();
   });
 
-  it('reads numeric uid values before deciding whether to create a remote note', async () => {
+  it('preserves numeric uid values before deciding whether to create a remote note', async () => {
     const app = makeMockApp();
     app.vault._addFile('得到大脑/numeric.md', [
       '---',
@@ -314,6 +321,9 @@ describe('ReverseSyncEngine', () => {
       '---',
       'Body',
     ].join('\n'));
+    const metadataUid = app.vault._getFile('得到大脑/numeric.md')?.frontmatter.uid;
+    expect(typeof metadataUid).toBe('number');
+    expect(String(metadataUid)).not.toBe('1909999999999999999');
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       mockFetchResponse({ success: true, data: { note: { note_id: '1909999999999999999' } } })
     );
@@ -323,7 +333,7 @@ describe('ReverseSyncEngine', () => {
     expect(result).toEqual(expect.objectContaining({ created: 0, skipped: 1, failed: 0, total: 1 }));
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('resource/note/detail'),
+      expect.stringContaining('id=1909999999999999999'),
       expect.anything()
     );
     expect(app.vault.modify).not.toHaveBeenCalled();
