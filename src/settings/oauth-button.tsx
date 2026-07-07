@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'preact/hooks';
 import { fetchOAuthDeviceCode, pollOAuthToken } from '../api';
 import { t } from '../i18n';
+import { openExternalUrl } from './external-link';
 
 interface OAuthButtonProps {
   onAuthorize: (apiToken: string, clientId: string) => void;
@@ -8,27 +9,6 @@ interface OAuthButtonProps {
 }
 
 type OAuthStep = 'idle' | 'opening' | 'code' | 'polling' | 'success' | 'error';
-
-type ElectronWindow = Window & {
-  require?: (moduleName: 'electron') => {
-    shell?: {
-      openExternal: (uri: string) => void;
-    };
-  };
-};
-
-function openVerificationPage(uri: string) {
-  try {
-    const electron = (window as ElectronWindow).require?.('electron');
-    if (electron?.shell) {
-      electron.shell.openExternal(uri);
-      return;
-    }
-  } catch {
-    // Fall back to window.open below.
-  }
-  window.open(uri, '_blank');
-}
 
 export function OAuthButton({ onAuthorize, onTestConnection }: OAuthButtonProps) {
   const [step, setStep] = useState<OAuthStep>('idle');
@@ -83,7 +63,7 @@ export function OAuthButton({ onAuthorize, onTestConnection }: OAuthButtonProps)
 
       // Let Obsidian render the user code first, then open the verification page.
       await new Promise(resolve => window.setTimeout(resolve, 0));
-      openVerificationPage(dc.verification_uri);
+      openExternalUrl(dc.verification_uri);
 
       // Step 2: poll for token
       setIsPolling(true);
@@ -139,7 +119,7 @@ export function OAuthButton({ onAuthorize, onTestConnection }: OAuthButtonProps)
 
   if (step === 'code') {
     const openBrowser = () => {
-      openVerificationPage(verificationUri);
+      openExternalUrl(verificationUri);
     };
     return (
       <div className="getnote-oauth-code-section">
