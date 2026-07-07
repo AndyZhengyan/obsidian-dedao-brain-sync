@@ -4,6 +4,7 @@ import {
   mergeTagCache,
   applyTagFilter,
   filterNotesByTags,
+  noteMatchesTagWhitelist,
   type TagCache,
 } from '../src/utils/tag-aggregator';
 import type { GetNoteNote } from '../src/types';
@@ -115,6 +116,11 @@ describe('tag-aggregator — applyTagFilter', () => {
     expect(result.map(n => n.note_id)).toEqual(['a']);
   });
 
+  it('trims whitelist values before matching tags', () => {
+    const result = applyTagFilter(notes, ['  work  ', '   ']);
+    expect(result.map(n => n.note_id)).toEqual(['a']);
+  });
+
   it('returns empty when whitelist tags do not exist on any note', () => {
     expect(applyTagFilter(notes, ['nonexistent'])).toEqual([]);
   });
@@ -128,5 +134,12 @@ describe('tag-aggregator — filterNotesByTags (re-exported alias)', () => {
     ];
     expect(filterNotesByTags(notes, ['x']).map(n => n.note_id)).toEqual(['a']);
     expect(filterNotesByTags(notes, [])).toHaveLength(2);
+  });
+});
+
+describe('tag-aggregator — noteMatchesTagWhitelist', () => {
+  it('uses the same trimming and case-insensitive rules as applyTagFilter', () => {
+    const note = makeNote({ note_id: 'a', tags: [{ name: 'Work' }] });
+    expect(noteMatchesTagWhitelist(note, ['  work  ', '   '])).toBe(true);
   });
 });
