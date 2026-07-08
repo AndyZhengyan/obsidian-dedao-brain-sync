@@ -134,6 +134,8 @@ export function SettingsComponent({
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [connectionErrorMsg, setConnectionErrorMsg] = useState('');
   const [connectionExpiryMin, setConnectionExpiryMin] = useState<number | null>(null);
+  const intervalWarningTimeoutRef = useRef<number | null>(null);
+  const connectionStatusTimeoutRef = useRef<number | null>(null);
   const [intervalWarning, setIntervalWarning] = useState(false);
   const credentials = getAuthCredentials({ ...settings, authMode, openApiToken: apiTokenOpenapi, openApiClientId: clientIdOpenapi, webApiToken: apiTokenWeb });
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -347,13 +349,19 @@ export function SettingsComponent({
     const n = parseInt(value, 10);
     if (isNaN(n) || n < 5) {
       setIntervalWarning(true);
+      if (intervalWarningTimeoutRef.current !== null) {
+        window.clearTimeout(intervalWarningTimeoutRef.current);
+      }
       updateSetting('scheduledSync', {
         ...settings.scheduledSync,
         enabledNoteTypes: scheduledNoteTypes,
         syncKnowledgeBases: scheduledKnowledgeBases,
         intervalMinutes: 5,
       });
-      window.setTimeout(() => setIntervalWarning(false), 3000);
+      intervalWarningTimeoutRef.current = window.setTimeout(() => {
+        setIntervalWarning(false);
+        intervalWarningTimeoutRef.current = null;
+      }, 3000);
     } else {
       updateSetting('scheduledSync', {
         ...settings.scheduledSync,
@@ -392,6 +400,10 @@ export function SettingsComponent({
     setConnectionStatus('idle');
     setConnectionErrorMsg('');
     setConnectionExpiryMin(null);
+    if (connectionStatusTimeoutRef.current !== null) {
+      window.clearTimeout(connectionStatusTimeoutRef.current);
+      connectionStatusTimeoutRef.current = null;
+    }
     const token = authMode === 'web' ? apiTokenWeb.trim() : apiTokenOpenapi.trim();
     const cid = authMode === 'web' ? '' : clientIdOpenapi.trim();
     try {
@@ -416,15 +428,34 @@ export function SettingsComponent({
         } catch { /* ignore */ }
       }
       setConnectionStatus('success');
-      window.setTimeout(() => { setConnectionStatus('idle'); setConnectionExpiryMin(null); }, 4000);
+      connectionStatusTimeoutRef.current = window.setTimeout(() => {
+        setConnectionStatus('idle');
+        setConnectionExpiryMin(null);
+        connectionStatusTimeoutRef.current = null;
+      }, 4000);
     } catch (err) {
       setConnectionStatus('error');
       setConnectionErrorMsg(err instanceof Error ? err.message : String(err));
-      window.setTimeout(() => { setConnectionStatus('idle'); setConnectionErrorMsg(''); }, 4000);
+      connectionStatusTimeoutRef.current = window.setTimeout(() => {
+        setConnectionStatus('idle');
+        setConnectionErrorMsg('');
+        connectionStatusTimeoutRef.current = null;
+      }, 4000);
     } finally {
       setTestingConnection(false);
     }
   };
+
+  useEffect(() => () => {
+    if (intervalWarningTimeoutRef.current !== null) {
+      window.clearTimeout(intervalWarningTimeoutRef.current);
+      intervalWarningTimeoutRef.current = null;
+    }
+    if (connectionStatusTimeoutRef.current !== null) {
+      window.clearTimeout(connectionStatusTimeoutRef.current);
+      connectionStatusTimeoutRef.current = null;
+    }
+  }, []);
 
   const currentApiToken = authMode === 'web' ? apiTokenWeb : apiTokenOpenapi;
   const currentClientId = clientIdOpenapi;
