@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'preact/hooks';
+import { useState, useCallback, useEffect, useRef } from 'preact/hooks';
 import { fetchOAuthDeviceCode, pollOAuthToken } from '../api';
 import { t } from '../i18n';
 import { openExternalUrl } from './external-link';
@@ -19,10 +19,13 @@ export function OAuthButton({ onAuthorize, onTestConnection }: OAuthButtonProps)
   const [isPolling, setIsPolling] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const feedbackTimeoutsRef = useRef<number[]>([]);
+  const successTimeoutRef = useRef<number | null>(null);
 
   const showCopiedFeedback = (setter: (v: boolean) => void) => {
     setter(true);
-    window.setTimeout(() => setter(false), 3000);
+    const timeoutId = window.setTimeout(() => setter(false), 3000);
+    feedbackTimeoutsRef.current.push(timeoutId);
   };
 
   const copyWithFeedback = (value: string, setter: (v: boolean) => void) => {
@@ -82,7 +85,7 @@ export function OAuthButton({ onAuthorize, onTestConnection }: OAuthButtonProps)
         setErrorMsg(testResult.message);
       } else {
         setStep('success');
-        window.setTimeout(() => setStep('idle'), 3000);
+        successTimeoutRef.current = window.setTimeout(() => setStep('idle'), 3000);
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
@@ -94,6 +97,15 @@ export function OAuthButton({ onAuthorize, onTestConnection }: OAuthButtonProps)
       setErrorMsg(err instanceof Error ? err.message : t('oauth.error'));
     }
   };
+
+  useEffect(() => () => {
+    feedbackTimeoutsRef.current.forEach(timeoutId => window.clearTimeout(timeoutId));
+    feedbackTimeoutsRef.current = [];
+    if (successTimeoutRef.current !== null) {
+      window.clearTimeout(successTimeoutRef.current);
+      successTimeoutRef.current = null;
+    }
+  }, []);
 
   if (step === 'idle') {
     return (

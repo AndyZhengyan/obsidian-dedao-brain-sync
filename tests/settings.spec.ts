@@ -487,6 +487,25 @@ describe('SettingsComponent auth credentials', () => {
     }));
   });
 
+  it('clears pending connection-status timeout when settings unmounts', async () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(window, 'clearTimeout');
+    const { container } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'gk-openapi-token',
+      openApiClientId: 'cli-openapi',
+    }));
+
+    await act(async () => {
+      getTestConnectionButton(container).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    render(null, container);
+
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+  });
+
   it('runs the Web Token test-connection chain with Web credentials', async () => {
     const { container, updateSetting } = renderSettings(makeSettings({
       authMode: 'web',
