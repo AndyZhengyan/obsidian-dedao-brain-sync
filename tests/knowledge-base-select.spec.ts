@@ -208,4 +208,27 @@ describe('KnowledgeBaseSelect', () => {
     expect(container.textContent).toContain('OpenAPI 最新知识库');
     expect(container.textContent).not.toContain('Web 迟到知识库');
   });
+
+  it('uses a fresh seeded cache before refreshing unchanged credentials', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-05T11:00:00+08:00'));
+    vi.mocked(fetchSubscribedTopics).mockRejectedValue(new Error('offline'));
+
+    const { container } = renderSelect({
+      initialCache: {
+        entries: [{ topicId: 'cached-kb', name: '已缓存知识库', source: 'created' }],
+        cacheUpdatedAt: Date.now(),
+      },
+    });
+
+    await openDropdown(container);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(fetchSubscribedTopics).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('已缓存知识库');
+    expect(container.textContent).not.toContain('Failed to load');
+  });
 });
