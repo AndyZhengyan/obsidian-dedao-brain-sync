@@ -30,6 +30,26 @@ interface AggregateState {
 }
 
 const EMPTY_STATE: AggregateState = { loading: false, error: null, entries: [] };
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+function createAggregator(
+  authModeRef: { current: AuthMode },
+  initialCache?: { entries: KnowledgeBaseEntry[]; cacheUpdatedAt?: number }
+): KnowledgeBaseAggregator {
+  return new KnowledgeBaseAggregator(
+    subscribedTopicsFetcher((fetchToken, fetchClientId, signal) =>
+      fetchSubscribedTopics({ token: fetchToken, clientId: fetchClientId, authMode: authModeRef.current, signal })
+    ),
+    initialCache ? {
+      cache: initialCache.entries,
+      cacheUpdatedAt: initialCache.cacheUpdatedAt,
+    } : undefined
+  );
+}
+
+function cacheIdentity(authMode: AuthMode, token: string, clientId: string): string {
+  return `${authMode}\n${token}\n${clientId}`;
+}
 
 function summarize(value: string[], entries: KnowledgeBaseEntry[]): string {
   if (value.length === 0) return t('settings.scheduled.syncKnowledgeBases.empty');
@@ -63,18 +83,17 @@ export function KnowledgeBaseSelect({
   const [menuStyle, setMenuStyle] = useState<Record<string, string>>({});
   const aggregatorRef = useRef<KnowledgeBaseAggregator | null>(null);
   const initialCacheRef = useRef(initialCache);
+  const authModeRef = useRef(authMode);
+  const aggregatorIdentityRef = useRef<string | null>(null);
+  const cacheIdentityRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    authModeRef.current = authMode;
+  }, [authMode]);
 
   useEffect(() => {
     if (!aggregatorRef.current) {
-      aggregatorRef.current = new KnowledgeBaseAggregator(
-        subscribedTopicsFetcher((fetchToken, fetchClientId, signal) =>
-          fetchSubscribedTopics({ token: fetchToken, clientId: fetchClientId, authMode, signal })
-        ),
-        initialCacheRef.current ? {
-          cache: initialCacheRef.current.entries,
-          cacheUpdatedAt: initialCacheRef.current.cacheUpdatedAt,
-        } : undefined
-      );
+      aggregatorRef.current = createAggregator(authModeRef, initialCacheRef.current);
     }
   }, []);
 
@@ -105,12 +124,29 @@ export function KnowledgeBaseSelect({
       });
       return;
     }
+    const currentCacheIdentity = cacheIdentity(authMode, trimmedToken, trimmedClientId);
+    if (aggregatorIdentityRef.current !== currentCacheIdentity) {
+      const seedCache = aggregatorIdentityRef.current === null ? initialCacheRef.current : undefined;
+      aggregatorRef.current = createAggregator(authModeRef, seedCache);
+      aggregatorIdentityRef.current = currentCacheIdentity;
+      cacheIdentityRef.current = (
+        seedCache?.entries.length &&
+        seedCache.cacheUpdatedAt &&
+        (Date.now() - seedCache.cacheUpdatedAt) < CACHE_TTL_MS
+      )
+        ? currentCacheIdentity
+        : null;
+    }
     const aggregator = aggregatorRef.current;
     if (!aggregator) return;
 
     let cancelled = false;
     const cached = aggregator.exportCache();
-    if (cached.entries.length > 0 && (Date.now() - (cached.cacheUpdatedAt ?? 0)) < 5 * 60 * 1000) {
+    if (
+      cacheIdentityRef.current === currentCacheIdentity &&
+      cached.entries.length > 0 &&
+      (Date.now() - (cached.cacheUpdatedAt ?? 0)) < CACHE_TTL_MS
+    ) {
       setState({ loading: false, error: null, entries: cached.entries });
       return;
     }
@@ -120,11 +156,14 @@ export function KnowledgeBaseSelect({
       .refresh({ token: trimmedToken, clientId: trimmedClientId })
       .then(snapshot => {
         if (cancelled) return;
+        if (aggregatorRef.current !== aggregator || aggregatorIdentityRef.current !== currentCacheIdentity) return;
+        cacheIdentityRef.current = currentCacheIdentity;
         setState({ loading: false, error: null, entries: snapshot.entries });
         onCacheUpdate?.({ entries: snapshot.entries, cacheUpdatedAt: snapshot.cacheUpdatedAt ?? Date.now() });
       })
       .catch(err => {
         if (cancelled) return;
+        if (aggregatorRef.current !== aggregator || aggregatorIdentityRef.current !== currentCacheIdentity) return;
         setState({ loading: false, error: err instanceof Error ? err.message : String(err), entries: aggregator.list() });
       });
 
