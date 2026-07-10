@@ -14,14 +14,14 @@ For the project background and origin story, see this Chinese article: [Project 
 
 * * *
 
-## 🎉 1.4.0 — Latest Update
+## 🎉 1.4.1 — Latest Update
 
-- **🔍 OpenAPI search sidebar**: Search Dedao Brain notes from the Obsidian sidebar and one-click "Open local note" or "Sync to local" from each hit. Per-item syncing state is isolated, so entries never block each other.
-- **📝 Template files for new notes**: Use a custom template to generate frontmatter and body for newly synced notes.
-- **🔗 Save link original content**: Link-type notes also save the original web page body for offline reading.
-- **🛡️ Conservative download policy**: Locally existing notes are skipped by default and never overwritten. Delete the local file and re-sync to re-pull a remote note.
-- **♻️ Recreate locally missing notes**: When a remote note still exists but its local file is gone, the plugin recreates it automatically.
-- **✨ Sync modal and settings polish**: Knowledge-base sync modal rework, attachment master toggle fix, tag management improvements, and scheduled sync settings aggregation from 1.3.1 ship together.
+- **🧹 Cleaner note card previews**: All card previews in search, knowledge-base, and topic pickers now strip Markdown syntax so you read prose, not raw `**bold**`, `# headings`, or `[links](...)`.
+- **🗂 Knowledge-base selector follows auth mode**: Switching the auth mode or re-logging refreshes the knowledge-base list immediately instead of stale entries.
+- **🏷️ Tag whitelist normalization**: The tag aggregator normalizes casing, whitespace, and separators so the same tag is no longer split into multiple groups.
+- **🧼 Settings timers cleaned up**: Feedback timers in the settings page and OAuth flow are cleared on unmount, so nothing pops up after you leave the page.
+
+1.4.0 features remain live (OpenAPI search sidebar, template files, link original content, conservative download policy, recreate missing notes, etc.).
 
 The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 
