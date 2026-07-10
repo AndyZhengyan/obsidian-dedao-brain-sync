@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import type { RecallSearchResult } from '../types';
 import { t } from '../i18n';
 import { formatNoteTypeLabel } from '../utils/note-type';
+import { compactCardPreviewText } from './card-preview';
 
 export interface SearchPanelProps {
   initialQuery?: string;
@@ -14,10 +15,6 @@ export interface SearchPanelProps {
 }
 
 type SyncState = 'idle' | 'syncing' | 'done' | 'failed';
-
-function compactText(value: string | undefined): string {
-  return (value ?? '').replace(/\s+/g, ' ').trim();
-}
 
 function formatSearchTime(result: RecallSearchResult): string {
   return result.updated_at || result.created_at || '';
@@ -141,7 +138,7 @@ export function SearchPanel({
           {results.map(result => {
             const localFile = resolveLocalFile(result.note_id);
             const state = syncState[result.note_id] ?? 'idle';
-            const preview = compactText(result.content);
+            const preview = compactCardPreviewText(result.content);
             return (
               <div className="getnote-note-card getnote-search-note-card" key={result.note_id}>
                 <div className="getnote-note-card-body">

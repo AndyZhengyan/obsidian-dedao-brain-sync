@@ -7,6 +7,7 @@ import { formatNoteTypeLabel } from '../utils/note-type';
 import { NoteTypeSelect } from './note-type-select';
 import { TagSelect } from './tag-select';
 import { applyTagFilter, mergeTagNames } from '../utils/tag-aggregator';
+import { compactCardPreviewText } from './card-preview';
 
 interface NotePickerModalProps {
   onConfirm: (selectedNoteIds: string[], enabledNoteTypes?: string[], syncTags?: string[]) => void;
@@ -49,14 +50,10 @@ function matchesSearchQuery(note: GetNoteNote, searchQuery: string): boolean {
   return queryTokens.every(token => haystacks.some(value => value.toLowerCase().includes(token)));
 }
 
-function compactCardText(value: string | undefined): string {
-  return (value ?? '').replace(/\n+/g, ' ').trim();
-}
-
 function NoteRow({ note, checked, onChange, onTagClick }: { note: GetNoteNote; checked: boolean; onChange: (id: string, v: boolean) => void; onTagClick?: (tagName: string) => void }) {
   const title = generateDisplayTitle(note);
   const displayTitle = title || t('picker.noTitle');
-  const previewText = compactCardText(note.content).slice(0, 150);
+  const previewText = compactCardPreviewText(note.content);
   const toggleSelection = () => onChange(note.note_id, !checked);
   return (
     <div
