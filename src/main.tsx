@@ -135,6 +135,8 @@ export default class GetNoteSyncPlugin extends Plugin {
   private autoSyncIntervalId: number | undefined;
   private quotaTickIntervalId: number | undefined;
   private settingsTab?: GetNoteSettingsTab;
+  private syncRibbonEl?: HTMLElement;
+  private searchRibbonEl?: HTMLElement;
   private lastProgressUpdate = 0;
   private autoSyncFailCount = 0;
 
@@ -171,6 +173,7 @@ export default class GetNoteSyncPlugin extends Plugin {
           : [],
       },
       reverseSync: { ...DEFAULT_SETTINGS.reverseSync, ...loaded?.reverseSync },
+      ribbonActions: { ...DEFAULT_SETTINGS.ribbonActions, ...loaded?.ribbonActions },
       syncHistory: normalizeSyncHistory(loaded?.syncHistory),
     };
     this.syncHistory = this.settings.syncHistory;
@@ -201,7 +204,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       callback: () => void this.openSearchView(),
     });
 
-    this.addRibbonIcon('brain-circuit', t('ribbon.searchTooltip'), () => void this.openSearchView());
+    this.registerRibbonActions();
     this.registerEvent(this.app.workspace.on('editor-menu', (menu: Menu, editor: Editor) => {
       const selectedText = editor.getSelection().trim();
       if (!selectedText) return;
@@ -234,6 +237,17 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   onunload(): void {
     this.stopAutoSync();
+  }
+
+  private registerRibbonActions(): void {
+    this.syncRibbonEl = this.addRibbonIcon('book-lock', t('ribbon.tooltip'), () => this.openManualSyncModal());
+    this.searchRibbonEl = this.addRibbonIcon('brain-circuit', t('ribbon.searchTooltip'), () => void this.openSearchView());
+    this.refreshRibbonActions();
+  }
+
+  refreshRibbonActions(): void {
+    this.syncRibbonEl?.classList.toggle('getnote-ribbon-action-hidden', !this.settings.ribbonActions.sync);
+    this.searchRibbonEl?.classList.toggle('getnote-ribbon-action-hidden', !this.settings.ribbonActions.search);
   }
 
   async saveSettings(): Promise<void> {

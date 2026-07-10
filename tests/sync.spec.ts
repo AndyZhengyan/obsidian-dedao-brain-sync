@@ -459,3 +459,122 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     expect(plugin.isSyncing).toBe(false);
   });
 });
+
+describe('GetNoteSyncPlugin ribbon actions', () => {
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('registers separate sync and search ribbon actions', async () => {
+    vi.useFakeTimers();
+    const plugin = new GetNoteSyncPlugin(new App());
+    Object.assign(plugin.app.vault.adapter, {
+      exists: vi.fn().mockResolvedValue(false),
+      mkdir: vi.fn(),
+      copy: vi.fn(),
+    });
+    const addRibbonIcon = vi.fn();
+    const openManualSyncModal = vi.spyOn(plugin, 'openManualSyncModal').mockImplementation(() => {});
+    const openSearchView = vi.spyOn(plugin, 'openSearchView').mockImplementation(() => {});
+    Object.assign(plugin, { addRibbonIcon });
+
+    await plugin.onload();
+
+    const syncRibbon = addRibbonIcon.mock.calls.find(([icon]) => icon === 'book-lock');
+    const searchRibbon = addRibbonIcon.mock.calls.find(([icon]) => icon === 'brain-circuit');
+
+    expect(syncRibbon).toBeDefined();
+    expect(searchRibbon).toBeDefined();
+
+    syncRibbon![2]();
+    searchRibbon![2]();
+
+    expect(openManualSyncModal).toHaveBeenCalledOnce();
+    expect(openSearchView).toHaveBeenCalledOnce();
+  });
+
+  it('registers both ribbons once and hides a disabled sync ribbon', async () => {
+    vi.useFakeTimers();
+    const plugin = new GetNoteSyncPlugin(new App());
+    Object.assign(plugin.app.vault.adapter, {
+      exists: vi.fn().mockResolvedValue(false),
+      mkdir: vi.fn(),
+      copy: vi.fn(),
+    });
+    vi.spyOn(plugin, 'loadData').mockResolvedValue({
+      ribbonActions: { sync: false, search: true },
+    });
+    const addRibbonIcon = vi.fn((_icon: string, title: string) => {
+      const el = document.createElement('div');
+      el.setAttribute('aria-label', title);
+      plugin.app.workspace.containerEl.appendChild(el);
+      return el;
+    });
+    Object.assign(plugin, { addRibbonIcon });
+
+    await plugin.onload();
+
+    expect(addRibbonIcon.mock.calls.some(([icon]) => icon === 'book-lock')).toBe(true);
+    expect(addRibbonIcon.mock.calls.some(([icon]) => icon === 'brain-circuit')).toBe(true);
+    expect(plugin.app.workspace.containerEl.querySelector('[aria-label="同步得到大脑"]')?.classList.contains('getnote-ribbon-action-hidden')).toBe(true);
+  });
+
+  it('hides an existing sync ribbon when its setting changes', async () => {
+    vi.useFakeTimers();
+    const plugin = new GetNoteSyncPlugin(new App());
+    Object.assign(plugin.app.vault.adapter, {
+      exists: vi.fn().mockResolvedValue(false),
+      mkdir: vi.fn(),
+      copy: vi.fn(),
+    });
+    const addRibbonIcon = vi.fn((_icon: string, title: string) => {
+      const el = document.createElement('div');
+      el.setAttribute('aria-label', title);
+      plugin.app.workspace.containerEl.appendChild(el);
+      return el;
+    });
+    Object.assign(plugin, { addRibbonIcon });
+
+    await plugin.onload();
+    const syncRibbon = plugin.app.workspace.containerEl.querySelector<HTMLElement>('[aria-label="同步得到大脑"]')!;
+    addRibbonIcon.mockClear();
+
+    plugin['settingsTab']!.updateSetting('ribbonActions', { sync: false, search: true });
+
+    expect(syncRibbon.classList.contains('getnote-ribbon-action-hidden')).toBe(true);
+    expect(addRibbonIcon).not.toHaveBeenCalled();
+  });
+
+  it('hides the existing search ribbon instead of rebuilding ribbon actions', async () => {
+    vi.useFakeTimers();
+    const plugin = new GetNoteSyncPlugin(new App());
+    Object.assign(plugin.app.vault.adapter, {
+      exists: vi.fn().mockResolvedValue(false),
+      mkdir: vi.fn(),
+      copy: vi.fn(),
+    });
+    const addRibbonIcon = vi.fn((_icon: string, title: string) => {
+      const el = document.createElement('div');
+      el.setAttribute('aria-label', title);
+      plugin.app.workspace.containerEl.appendChild(el);
+      return el;
+    });
+    Object.assign(plugin, { addRibbonIcon });
+
+    await plugin.onload();
+    const searchRibbon = plugin.app.workspace.containerEl.querySelector<HTMLElement>('[aria-label="搜索得到大脑"]')!;
+    addRibbonIcon.mockClear();
+
+    plugin['settingsTab']!.updateSetting('ribbonActions', { sync: true, search: false });
+
+    expect(searchRibbon.classList.contains('getnote-ribbon-action-hidden')).toBe(true);
+    expect(addRibbonIcon).not.toHaveBeenCalled();
+
+    plugin['settingsTab']!.updateSetting('ribbonActions', { sync: true, search: true });
+
+    expect(searchRibbon.classList.contains('getnote-ribbon-action-hidden')).toBe(false);
+    expect(addRibbonIcon).not.toHaveBeenCalled();
+  });
+});

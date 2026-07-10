@@ -130,6 +130,7 @@ export interface Settings {
   scheduledSync: ScheduledSyncSettings;
   reverseSync: ReverseSyncSettings;
   attachmentImport: AttachmentImportSettings;
+  ribbonActions: RibbonActionSettings;
   lastQuotaState?: ApiQuotaState;
   syncHistory: SyncHistoryEntry[];
   tagMigrationVersion: number;
@@ -144,6 +145,11 @@ export interface Settings {
    */
   tagCache?: TagCache;
   knowledgeBaseCache?: KnowledgeBaseCacheState;
+}
+
+export interface RibbonActionSettings {
+  sync: boolean;
+  search: boolean;
 }
 
 export interface TagCache {
@@ -202,6 +208,10 @@ export const DEFAULT_SETTINGS: Settings = {
     enabled: false,
   },
   attachmentImport: { ...DEFAULT_ATTACHMENT_IMPORT },
+  ribbonActions: {
+    sync: true,
+    search: true,
+  },
   tagMigrationVersion: 0,
   syncHistory: [],
 };

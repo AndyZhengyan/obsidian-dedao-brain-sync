@@ -47,6 +47,7 @@ export class GetNoteSettingsTab extends PluginSettingTab {
 
   updateSetting = <K extends keyof Settings>(key: K, value: Settings[K]): void => {
     this.plugin.settings[key] = value;
+    if (key === 'ribbonActions') this.plugin.refreshRibbonActions();
     this.debouncedSave();
   };
 }
