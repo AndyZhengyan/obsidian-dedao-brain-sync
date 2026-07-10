@@ -527,6 +527,38 @@ describe('NotePickerModal card layout (#138)', () => {
     expect(time!.textContent).toBeTruthy();
   });
 
+  it('shows a readable plain-text preview instead of raw markdown syntax', async () => {
+    const notes: GetNoteNote[] = [
+      makeNote({
+        note_id: 'markdown-preview',
+        title: 'Markdown 预览',
+        content: [
+          '### 📑 智能总结',
+          '#### 录音信息',
+          '- **录音时间**：2026-07-10 10:57:38 ~ 2026-07-10 11:53:09',
+          '| 字段 | 内容 |',
+          '| --- | --- |',
+          '| 主题 | 数据湖会议 |',
+          '> 重点：不要把 Markdown 标记露在卡片里',
+        ].join('\n'),
+      }),
+    ];
+
+    const container = await renderPickerWithNotes(notes, {
+      token: 'web-token',
+      clientId: '',
+      authMode: 'web',
+    });
+
+    const preview = container.querySelector('.getnote-note-card-preview');
+    expect(preview?.textContent).toContain('智能总结 录音信息');
+    expect(preview?.textContent).toContain('录音时间：2026-07-10');
+    expect(preview?.textContent).toContain('主题 数据湖会议');
+    expect(preview?.textContent).not.toContain('###');
+    expect(preview?.textContent).not.toContain('**');
+    expect(preview?.textContent).not.toContain('| --- |');
+  });
+
   it('renders the card list as a single-column vertical layout (one card per row)', async () => {
     const notes: GetNoteNote[] = [
       makeNote({ note_id: 'row-1', title: '卡片 1' }),

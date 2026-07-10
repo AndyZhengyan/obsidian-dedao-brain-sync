@@ -5,6 +5,7 @@ import { fetchSubscribedTopics, fetchTopicContentPreviewPage } from '../api';
 import { t } from '../i18n';
 import { TagSelect } from './tag-select';
 import { mergeTagNames } from '../utils/tag-aggregator';
+import { compactCardPreviewText } from './card-preview';
 
 interface TopicData {
   topic: SubscribedTopic;
@@ -52,17 +53,13 @@ function formatRelativeTime(iso: string): string {
   }
 }
 
-function compactCardText(value: string | undefined): string {
-  return (value ?? '').replace(/\n+/g, ' ').trim();
-}
-
 function cardPreviewText(summary: string | undefined, content: string | undefined): { summaryText: string; previewText: string } {
-  const normalizedSummary = compactCardText(summary);
-  const normalizedContent = compactCardText(content);
+  const normalizedSummary = compactCardPreviewText(summary, 80);
+  const normalizedContent = compactCardPreviewText(content);
   const previewSource = normalizedContent || normalizedSummary;
   return {
-    summaryText: normalizedSummary && normalizedSummary !== previewSource ? normalizedSummary.slice(0, 80) : '',
-    previewText: previewSource.slice(0, 150),
+    summaryText: normalizedSummary && normalizedSummary !== previewSource ? normalizedSummary : '',
+    previewText: previewSource,
   };
 }
 
