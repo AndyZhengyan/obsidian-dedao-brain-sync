@@ -1,70 +1,49 @@
-import { describe, it, expect } from 'vitest';
-// Pure function tests — the Notice() call is tested via integration,
-// these unit tests cover the transformation logic.
+import { issuedNotices, resetIssuedNotices } from 'obsidian';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { showError, showInfo, showNotice, showSuccess } from '../src/ui/notice';
 
-// Inline the notice functions to test without mocking obsidian:
-function transformNotice(message: string, timeout: number) {
-  return { message, timeout };
-}
-function transformError(message: string) {
-  return { message: `❌ ${message}`, timeout: 7000 };
-}
-function transformSuccess(message: string) {
-  return { message: `✅ ${message}`, timeout: 5000 };
-}
-function transformInfo(message: string) {
-  return { message, timeout: 4000 };
-}
-
-describe('showNotice', () => {
-  it('uses default timeout 5000', () => {
-    const result = transformNotice('同步完成', 5000);
-    expect(result.timeout).toBe(5000);
+describe('notice helpers', () => {
+  beforeEach(() => {
+    resetIssuedNotices();
   });
 
-  it('passes custom timeout', () => {
-    const result = transformNotice('同步完成', 10000);
-    expect(result.timeout).toBe(10000);
+  it('shows plain notices with the app prefix and default timeout', () => {
+    showNotice('同步完成');
+
+    expect(issuedNotices).toEqual([
+      { message: '[得到大脑] 同步完成', timeout: 5000 },
+    ]);
   });
 
-  it('passes message unchanged', () => {
-    const result = transformNotice('同步完成', 5000);
-    expect(result.message).toBe('同步完成');
-  });
-});
+  it('passes a custom plain-notice timeout through to Obsidian Notice', () => {
+    showNotice('同步完成', 10000);
 
-describe('showError', () => {
-  it('prepends error emoji', () => {
-    const result = transformError('Token 无效');
-    expect(result.message).toBe('❌ Token 无效');
+    expect(issuedNotices).toEqual([
+      { message: '[得到大脑] 同步完成', timeout: 10000 },
+    ]);
   });
 
-  it('uses default timeout 7000', () => {
-    const result = transformError('同步失败');
-    expect(result.timeout).toBe(7000);
-  });
-});
+  it('shows errors with the error marker, app prefix, and longer default timeout', () => {
+    showError('Token 无效');
 
-describe('showSuccess', () => {
-  it('prepends success emoji', () => {
-    const result = transformSuccess('新增 3 条笔记');
-    expect(result.message).toBe('✅ 新增 3 条笔记');
+    expect(issuedNotices).toEqual([
+      { message: '❌ [得到大脑] Token 无效', timeout: 7000 },
+    ]);
   });
 
-  it('uses default timeout 5000', () => {
-    const result = transformSuccess('新增 3 条笔记');
-    expect(result.timeout).toBe(5000);
-  });
-});
+  it('shows successes with the success marker, app prefix, and default timeout', () => {
+    showSuccess('新增 3 条笔记');
 
-describe('showInfo', () => {
-  it('shows message without emoji', () => {
-    const result = transformInfo('提示信息');
-    expect(result.message).toBe('提示信息');
+    expect(issuedNotices).toEqual([
+      { message: '✅ [得到大脑] 新增 3 条笔记', timeout: 5000 },
+    ]);
   });
 
-  it('uses default timeout 4000', () => {
-    const result = transformInfo('提示信息');
-    expect(result.timeout).toBe(4000);
+  it('shows info notices with the app prefix and shorter default timeout', () => {
+    showInfo('提示信息');
+
+    expect(issuedNotices).toEqual([
+      { message: '[得到大脑] 提示信息', timeout: 4000 },
+    ]);
   });
 });
