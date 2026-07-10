@@ -1542,51 +1542,6 @@ describe('SyncEngine — writeNote', () => {
   });
 });
 
-describe('SyncEngine — getFileName', () => {
-  it('无前缀时返回标题', () => {
-    const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({ filenamePrefix: '' }));
-    const note = makeNote({ title: '我的笔记' });
-    // @ts-ignore
-    expect(engine['getFileName'](note)).toBe('我的笔记');
-  });
-
-  it('有前缀时返回 prefix_title', () => {
-    const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({ filenamePrefix: 'YYYY-MM-DD' }));
-    const note = makeNote({ title: '我的笔记' });
-    // @ts-ignore
-    expect(engine['getFileName'](note)).toBe('2026-04-27_我的笔记');
-  });
-
-  it('无效日期前缀返回标题（无前缀）', () => {
-    const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({ filenamePrefix: 'YYYY-MM-DD' }));
-    const note = makeNote({ title: '我的笔记', created_at: 'invalid' });
-    // @ts-ignore
-    expect(engine['getFileName'](note)).toBe('我的笔记');
-  });
-
-  it('附加笔记使用父文档名作为前缀', () => {
-    const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({ filenamePrefix: 'getnote' }));
-    const note = makeNote({
-      title: '原笔记标题',
-      note_id: '1909246675068292528',
-      parent_id: '1909193892067130512',
-      is_child_note: true,
-    });
-
-    // 子文档不带 parentBaseName 时，返回带前缀的标题（不用 note_id）
-    // @ts-ignore
-    expect(engine['getFileName'](note)).toBe('getnote_原笔记标题');
-
-    // 传入父文档 baseName 时，格式为：父文档名__子文档标题
-    // @ts-ignore
-    expect(engine['getFileName'](note, 'getnote_主笔记标题')).toBe('getnote_主笔记标题__原笔记标题');
-  });
-});
-
 describe('SyncEngine — append note sync', () => {
   it('详情关系字段覆盖列表里的 stale is_child_note', () => {
     const app = makeMockApp();

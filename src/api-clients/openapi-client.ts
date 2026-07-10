@@ -1,5 +1,6 @@
 import type { GetNoteNote, Attachment, LinkOriginal, RecallSearchResult, SubscribedTopic, ApiQuotaState } from '../types';
 import { t } from '../i18n';
+import { isRecord, normalizeBearerToken, parseJsonObjectOrEmpty, parseJsonPreservingIds, waitForRetryDelay } from './api-client-utils';
 
 export const GETNOTE_LIST_LIMIT = 20;
 
@@ -11,33 +12,6 @@ export function getLastQuotaState(): ApiQuotaState {
 }
 export function resetQuotaState(): void {
   lastQuota = { exhausted: false };
-}
-
-function safeJsonParse(text: string): unknown {
-  let safe = text.replace(
-    /"(id|note_id|parent_id|follow_id|live_id|topic_id|post_id|post_id_alias)"\s*:\s*(\d+)/g,
-    '"$1":"$2"'
-  );
-  safe = safe.replace(/"children_ids"\s*:\s*\[([^\]]*)\]/g, (_match, body: string) => {
-    const normalized = body
-      .split(',')
-      .map(item => {
-        const trimmed = item.trim();
-        return /^\d{15,}$/.test(trimmed) ? `"${trimmed}"` : item;
-      })
-      .join(',');
-    return `"children_ids":[${normalized}]`;
-  });
-  return JSON.parse(safe);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function normalizeBearerToken(token: string): string {
-  const trimmed = token.trim();
-  return /^Bearer\s+/i.test(trimmed) ? trimmed : `Bearer ${trimmed}`;
 }
 
 function buildHeaders(token: string, clientId: string): Record<string, string> {
@@ -136,23 +110,8 @@ function normalizeNoteDetailData(value: unknown): Partial<GetNoteNote> | null {
   return { ...detail, attachments, audio, linkOriginal, children_ids: childrenIds };
 }
 
-async function waitForRetry(signal?: AbortSignal): Promise<void> {
-  await new Promise<void>(resolve => {
-    const timer = window.setTimeout(() => resolve(), 3000);
-    signal?.addEventListener('abort', () => {
-      window.clearTimeout(timer);
-      resolve();
-    }, { once: true });
-  });
-}
-
 function parseErrorBody(text: string): Record<string, unknown> {
-  try {
-    const value = safeJsonParse(text);
-    return isRecord(value) ? value : {};
-  } catch {
-    return {};
-  }
+  return parseJsonObjectOrEmpty(text);
 }
 
 async function handleRateLimit<T>(
@@ -171,7 +130,7 @@ async function handleRateLimit<T>(
     throw new Error(t('error.quotaExceeded'));
   }
   if (retries > 0) {
-    await waitForRetry(signal);
+    await waitForRetryDelay(signal);
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     return apiRequest(url, options, retries - 1, signal);
   }
@@ -186,7 +145,7 @@ async function apiRequest<T>(url: string, options: RequestInit, retries = 1, sig
   if (res.status === 429) return handleRateLimit<T>(url, options, res, retries, signal);
   if (res.status < 200 || res.status >= 300) {
     const text = await res.text();
-    const json = safeJsonParse(text) as Record<string, unknown>;
+    const json = parseJsonPreservingIds(text) as Record<string, unknown>;
     if (res.status === 403 && json.success === false) {
       const errObj = (json.error ?? json) as Record<string, unknown>;
       const code = errObj?.code as number | undefined;
@@ -195,14 +154,14 @@ async function apiRequest<T>(url: string, options: RequestInit, retries = 1, sig
     throw new Error(t('error.apiServerError', { status: res.status }));
   }
   const text = await res.text();
-  const json = safeJsonParse(text) as Record<string, unknown>;
+  const json = parseJsonPreservingIds(text) as Record<string, unknown>;
   // Handle HTTP 200 with business-level errors
   if (json.success === false) {
     const errObj = (json.error ?? json) as Record<string, unknown>;
     const code = errObj?.code as number | undefined;
     if (code === 10201) throw new Error(t('error.openApiNotMember'));
     if (code === 10202 && retries > 0) {
-      await waitForRetry(signal);
+      await waitForRetryDelay(signal);
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
       return apiRequest(url, options, retries - 1, signal);
     }

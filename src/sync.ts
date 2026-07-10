@@ -1,6 +1,6 @@
 import { App, TFile } from 'obsidian';
 import { fetchAllNotes, fetchNoteChildren, fetchNoteDetail, fetchNoteOriginal, fetchSubscribedKnowledgeNotes } from './api';
-import { formatDateTime, formatTimestampPrefix, renderNote, renderNoteWithTemplate, generateDisplayTitle } from './note-parser';
+import { formatDateTime, renderNote, renderNoteWithTemplate, generateDisplayTitle } from './note-parser';
 import { getCategoryDir } from './types';
 import { getAuthCredentials, type GetNoteNote, type Settings, type SyncResult, type SyncResultItem, type SyncScopeOptions } from './types';
 import { applyTagFilter } from './utils/tag-aggregator';
@@ -8,6 +8,13 @@ import type { SyncModal } from './ui/sync-modal';
 import { t } from './i18n';
 import { tryWriteBinary } from './utils/vault-fs';
 import { classifyAttachmentUrl, isAttachmentTypeEnabled } from './utils/attachments';
+import {
+  buildNoteBaseName,
+  getAudioAssetBaseName,
+  getFileName,
+  getFilePath,
+  getKnowledgeBaseDir,
+} from './sync-paths';
 
 const AUDIO_NOTE_TYPES = new Set([
   'recorder_audio',
@@ -193,46 +200,23 @@ export class SyncEngine {
   }
 
   private getKnowledgeBaseDir(name: string): string {
-    const safeName = name.replace(/[\\/:*?"<>|]/g, '_').trim() || t('picker.noTitle');
-    return `知识库/${safeName}`;
+    return getKnowledgeBaseDir(name);
   }
 
   private buildBaseName(note: GetNoteNote): string {
-    const rawTitle = generateDisplayTitle(note);
-    const displayTitle = rawTitle || t('picker.noTitle');
-    const prefix = this.settings.filenamePrefix?.trim();
-    if (!prefix) return displayTitle;
-
-    const hasTimestampTokens = /YYYY|MM|DD|HH|mm|ss/.test(prefix);
-    if (hasTimestampTokens) {
-      const formattedPrefix = formatTimestampPrefix(prefix, note.created_at);
-      if (!formattedPrefix) {
-        return displayTitle;
-      }
-      const separator = formattedPrefix.endsWith('_') ? '' : '_';
-      return `${formattedPrefix}${separator}${displayTitle}`;
-    }
-
-    const separator = prefix.endsWith('_') ? '' : '_';
-    return `${prefix}${separator}${displayTitle}`;
+    return buildNoteBaseName(note, this.settings);
   }
 
   private getFileName(note: GetNoteNote, parentBaseName?: string): string {
-    // 子文档用父文档 baseName + 子文档标题，不用 note_id
-    if (parentBaseName) {
-      const childTitle = generateDisplayTitle(note) || t('picker.noTitle');
-      return `${parentBaseName}__${childTitle}`;
-    }
-    return this.buildBaseName(note);
+    return getFileName(note, this.settings, parentBaseName);
   }
 
   private getAudioAssetBaseName(note: GetNoteNote): string {
-    const safeNoteId = note.note_id.replace(/[\\/:*?"<>|]/g, '_');
-    return `${this.getFileName(note)}_${safeNoteId}`;
+    return getAudioAssetBaseName(note, this.settings);
   }
 
   private getFilePath(categoryDir: string, note: GetNoteNote): string {
-    return `${categoryDir}/${this.getFileName(note)}.md`;
+    return getFilePath(categoryDir, note, this.settings);
   }
 
   private resolveConflict(categoryDir: string, baseName: string): string {

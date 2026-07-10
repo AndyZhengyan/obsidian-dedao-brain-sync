@@ -1,14 +1,6 @@
 import type { GetNoteNote, Attachment, LinkOriginal, SubscribedTopic } from '../types';
 import { t } from '../i18n';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function normalizeBearerToken(token: string): string {
-  const trimmed = token.trim();
-  return /^Bearer\s+/i.test(trimmed) ? trimmed : `Bearer ${trimmed}`;
-}
+import { isRecord, normalizeBearerToken, parseJsonObjectOrEmpty, parseJsonPreservingIds, waitForRetryDelay } from './api-client-utils';
 
 function buildHeaders(token: string): Record<string, string> {
   return {
@@ -97,30 +89,7 @@ function normalizeLinkOriginal(value: unknown): LinkOriginal | null {
 }
 
 function tryParseJsonObject(text: string): Record<string, unknown> {
-  try {
-    const value = safeJsonParse(text || '{}');
-    return isRecord(value) ? value : {};
-  } catch {
-    return {};
-  }
-}
-
-function safeJsonParse(text: string): unknown {
-  const safe = text.replace(
-    /"(id|note_id|prime_id|parent_id|follow_id|live_id)"\s*:\s*(\d+)/g,
-    '"$1":"$2"'
-  );
-  return JSON.parse(safe);
-}
-
-async function waitForRetry(signal?: AbortSignal): Promise<void> {
-  await new Promise<void>(resolve => {
-    const timer = window.setTimeout(() => resolve(), 3000);
-    signal?.addEventListener('abort', () => {
-      window.clearTimeout(timer);
-      resolve();
-    }, { once: true });
-  });
+  return parseJsonObjectOrEmpty(text);
 }
 
 async function handleRateLimit<T>(
@@ -138,7 +107,7 @@ async function handleRateLimit<T>(
     throw new Error(t('error.quotaExceeded'));
   }
   if (retries > 0) {
-    await waitForRetry(signal);
+    await waitForRetryDelay(signal);
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     return apiRequest(url, options, retries - 1, signal);
   }
@@ -159,14 +128,14 @@ async function apiRequest<T>(url: string, options: RequestInit, retries = 1, sig
   if (res.status === 429) return handleRateLimit<T>(url, options, res, retries, signal);
   if (res.status < 200 || res.status >= 300) {
     if (res.status >= 500 && retries > 0) {
-      await waitForRetry(signal);
+      await waitForRetryDelay(signal);
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
       return apiRequest(url, options, retries - 1, signal);
     }
     throw new Error(t('error.apiServerError', { status: res.status }));
   }
   const text = await res.text();
-  const json = safeJsonParse(text) as Record<string, unknown>;
+  const json = parseJsonPreservingIds(text) as Record<string, unknown>;
   if (json.success === false) {
     const err = (json.error ?? json) as Record<string, unknown>;
     const errMsg = (err?.message as string) ?? (json.message as string) ?? '';
