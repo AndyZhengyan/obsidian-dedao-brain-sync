@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { t } from '../i18n';
 import { INTERNAL_AUDIO_NOTE_TYPES } from '../types';
+import { useFloatingSelectMenu } from './use-floating-select-menu';
 
 // 顶层 UI 仅 5 个 group。订阅博主（blogger_post）从 UI 选项移除但仍默认同步。
 // 9 种内部 audio 类型合并到"录音笔记"组；sync.ts 的 AUDIO_NOTE_TYPES 保持 9 种不变以解耦。
@@ -38,11 +39,8 @@ interface NoteTypeSelectProps {
 }
 
 export function NoteTypeSelect({ value, onChange }: NoteTypeSelectProps) {
-  const [open, setOpen] = useState(false);
   const [visibleValue, setVisibleValue] = useState<string[] | undefined>(value);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const [menuStyle, setMenuStyle] = useState<Record<string, string>>({});
+  const { open, rootRef, triggerRef, menuStyle, toggleOpen } = useFloatingSelectMenu<HTMLButtonElement>();
   const allNoteTypes = NOTE_TYPE_OPTIONS.flatMap(option => option.noteTypes);
   const selectedTypes = visibleValue ?? allNoteTypes;
   const allSelected = visibleValue === undefined || selectedTypes.length === allNoteTypes.length;
@@ -51,38 +49,6 @@ export function NoteTypeSelect({ value, onChange }: NoteTypeSelectProps) {
   useEffect(() => {
     setVisibleValue(value);
   }, [value]);
-
-  useEffect(() => {
-    const close = () => setOpen(false);
-    window.addEventListener('getnote-close-floating-selects', close);
-    return () => window.removeEventListener('getnote-close-floating-selects', close);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    const positionMenu = () => {
-      const rect = triggerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      setMenuStyle({
-        top: `${rect.bottom + 4}px`,
-        left: `${rect.left}px`,
-        width: `${rect.width}px`,
-      });
-    };
-    const handlePointerDown = (event: MouseEvent) => {
-      if (rootRef.current?.contains(event.target as Node)) return;
-      setOpen(false);
-    };
-    positionMenu();
-    document.addEventListener('mousedown', handlePointerDown);
-    window.addEventListener('resize', positionMenu);
-    window.addEventListener('scroll', positionMenu, true);
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      window.removeEventListener('resize', positionMenu);
-      window.removeEventListener('scroll', positionMenu, true);
-    };
-  }, [open]);
 
   const applyChange = (next: string[] | undefined) => {
     setVisibleValue(next);
@@ -104,10 +70,7 @@ export function NoteTypeSelect({ value, onChange }: NoteTypeSelectProps) {
         ref={triggerRef}
         type="button"
         className="getnote-note-type-select-trigger"
-        onClick={() => {
-          if (!open) window.dispatchEvent(new Event('getnote-close-floating-selects'));
-          setOpen(!open);
-        }}
+        onClick={toggleOpen}
       >
         <span>{visibleValue === undefined ? t('noteTypes.all') : summarizeTypes(visibleValue)}</span>
         <span

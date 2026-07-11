@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import { t } from '../i18n';
+import { useFloatingSelectMenu } from './use-floating-select-menu';
 
 interface TagSelectProps {
   /**
@@ -38,11 +39,8 @@ function matchesFilter(tag: string, query: string): boolean {
 }
 
 export function TagSelect({ value, onChange, options, placeholder, allowCreate = true, onCreateTag }: TagSelectProps) {
-  const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const rootRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const [menuStyle, setMenuStyle] = useState<Record<string, string>>({});
+  const { open, rootRef, triggerRef, menuStyle, toggleOpen } = useFloatingSelectMenu<HTMLButtonElement>();
 
   const selectedSet = new Set(value);
   const allSelected = value.length === 0;
@@ -85,48 +83,13 @@ export function TagSelect({ value, onChange, options, placeholder, allowCreate =
     }
   };
 
-  useEffect(() => {
-    const close = () => setOpen(false);
-    window.addEventListener('getnote-close-floating-selects', close);
-    return () => window.removeEventListener('getnote-close-floating-selects', close);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    const positionMenu = () => {
-      const rect = triggerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      setMenuStyle({
-        top: `${rect.bottom + 4}px`,
-        left: `${rect.left}px`,
-        width: `${rect.width}px`,
-      });
-    };
-    const handlePointerDown = (event: MouseEvent) => {
-      if (rootRef.current?.contains(event.target as Node)) return;
-      setOpen(false);
-    };
-    positionMenu();
-    document.addEventListener('mousedown', handlePointerDown);
-    window.addEventListener('resize', positionMenu);
-    window.addEventListener('scroll', positionMenu, true);
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      window.removeEventListener('resize', positionMenu);
-      window.removeEventListener('scroll', positionMenu, true);
-    };
-  }, [open]);
-
   return (
     <div className="getnote-tag-select" ref={rootRef}>
       <button
         ref={triggerRef}
         type="button"
         className="getnote-tag-select-trigger"
-        onClick={() => {
-          if (!open) window.dispatchEvent(new Event('getnote-close-floating-selects'));
-          setOpen(!open);
-        }}
+        onClick={toggleOpen}
       >
         <span>{summarize(value)}</span>
         <span

@@ -7,6 +7,7 @@ import {
 } from '../utils/knowledge-base-aggregator';
 import { fetchSubscribedTopics } from '../api';
 import type { AuthMode } from '../types';
+import { useFloatingSelectMenu } from './use-floating-select-menu';
 
 interface KnowledgeBaseSelectProps {
   /** Selected knowledge-base topic ids (empty = cross-KB sync disabled). */
@@ -72,15 +73,12 @@ export function KnowledgeBaseSelect({
   initialCache,
   onCacheUpdate,
 }: KnowledgeBaseSelectProps) {
-  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [state, setState] = useState<AggregateState>(() => ({
     ...EMPTY_STATE,
     entries: initialCache?.entries ?? [],
   }));
-  const rootRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const [menuStyle, setMenuStyle] = useState<Record<string, string>>({});
+  const { open, rootRef, triggerRef, menuStyle, toggleOpen } = useFloatingSelectMenu<HTMLButtonElement>();
   const aggregatorRef = useRef<KnowledgeBaseAggregator | null>(null);
   const initialCacheRef = useRef(initialCache);
   const authModeRef = useRef(authMode);
@@ -95,12 +93,6 @@ export function KnowledgeBaseSelect({
     if (!aggregatorRef.current) {
       aggregatorRef.current = createAggregator(authModeRef, initialCacheRef.current);
     }
-  }, []);
-
-  useEffect(() => {
-    const close = () => setOpen(false);
-    window.addEventListener('getnote-close-floating-selects', close);
-    return () => window.removeEventListener('getnote-close-floating-selects', close);
   }, []);
 
   useEffect(() => {
@@ -172,32 +164,6 @@ export function KnowledgeBaseSelect({
     };
   }, [open, hasCredentials, token, clientId, authMode, onCacheUpdate]);
 
-  useEffect(() => {
-    if (!open) return;
-    const positionMenu = () => {
-      const rect = triggerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      setMenuStyle({
-        top: `${rect.bottom + 4}px`,
-        left: `${rect.left}px`,
-        width: `${rect.width}px`,
-      });
-    };
-    const handlePointerDown = (event: MouseEvent) => {
-      if (rootRef.current?.contains(event.target as Node)) return;
-      setOpen(false);
-    };
-    positionMenu();
-    document.addEventListener('mousedown', handlePointerDown);
-    window.addEventListener('resize', positionMenu);
-    window.addEventListener('scroll', positionMenu, true);
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      window.removeEventListener('resize', positionMenu);
-      window.removeEventListener('scroll', positionMenu, true);
-    };
-  }, [open]);
-
   const filtered = useMemo(() => {
     const lower = query.trim().toLowerCase();
     if (!lower) return state.entries;
@@ -230,10 +196,7 @@ export function KnowledgeBaseSelect({
         ref={triggerRef}
         type="button"
         className="getnote-knowledge-base-select-trigger"
-        onClick={() => {
-          if (!open) window.dispatchEvent(new Event('getnote-close-floating-selects'));
-          setOpen(!open);
-        }}
+        onClick={toggleOpen}
       >
         <span>{triggerLabel}</span>
         <span aria-hidden="true" className={`getnote-knowledge-base-select-caret${open ? ' is-open' : ''}`} />
