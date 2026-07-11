@@ -6,6 +6,7 @@ import { t } from '../i18n';
 import { TagSelect } from './tag-select';
 import { mergeTagNames } from '../utils/tag-aggregator';
 import { compactCardPreviewText } from './card-preview';
+import { formatPickerRelativeTime } from './picker-time';
 
 interface TopicData {
   topic: SubscribedTopic;
@@ -36,21 +37,6 @@ interface TopicPickerModalProps {
   abortSignal?: AbortSignal;
   initialSyncTags?: string[];
   tagOptions?: string[];
-}
-
-function formatRelativeTime(iso: string): string {
-  if (!iso) return '';
-  const date = new Date(iso);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) {
-    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-  } else if (diffDays === 1) {
-    return t('picker.yesterday');
-  } else {
-    return `${diffDays}${t('picker.daysAgo')}`;
-  }
 }
 
 function cardPreviewText(summary: string | undefined, content: string | undefined): { summaryText: string; previewText: string } {
@@ -107,7 +93,7 @@ function ContentRow({ item, checked, onChange, onTagClick }: { item: ContentPrev
               ))}
             </div>
           )}
-          <span className="getnote-note-card-time">{formatRelativeTime(item.updated_at)}</span>
+          <span className="getnote-note-card-time">{formatPickerRelativeTime(item.updated_at)}</span>
         </div>
       </div>
     </div>
