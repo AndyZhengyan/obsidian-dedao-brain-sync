@@ -20,6 +20,10 @@ export class Events {
   }
 }
 
+export function debounce<T extends (...args: never[]) => unknown>(callback: T, _wait: number, _immediate?: boolean): T {
+  return callback;
+}
+
 // ---- Vault ----
 export class Vault extends Events {
   adapter = { getName: () => 'mock' };
@@ -39,6 +43,7 @@ export class WorkspaceLeaf {
 }
 
 export class Workspace extends Events {
+  containerEl: HTMLElement = document.createElement('div');
   getLeavesOfType(_type: string): WorkspaceLeaf[] { return []; }
   getRightLeaf(_split: boolean): WorkspaceLeaf | null { return new WorkspaceLeaf(); }
   getLeaf(_newLeaf?: boolean): WorkspaceLeaf { return new WorkspaceLeaf(); }

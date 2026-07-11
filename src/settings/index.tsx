@@ -299,6 +299,13 @@ export function SettingsComponent({
     [updateSetting]
   );
 
+  const handleRibbonActionChange = (action: 'sync' | 'search', enabled: boolean) => {
+    updateSetting('ribbonActions', {
+      ...settings.ribbonActions,
+      [action]: enabled,
+    });
+  };
+
   const handleSyncStartDateChange = (value: string) => {
     updateSetting('syncStartDate', value);
   };
@@ -688,6 +695,32 @@ export function SettingsComponent({
           value={templateFilePath}
           onInput={(e) => handleTemplateFilePathChange((e.target as HTMLInputElement).value)}
         />
+      </SettingItem>
+
+      <SettingItem
+        name={t('settings.ribbon.section')}
+        description={t('settings.ribbon.desc')}
+      >
+        <div className="getnote-scheduled-options">
+          <div className="getnote-scheduled-row">
+            <span className="getnote-scheduled-row-label">{t('settings.ribbon.sync')}</span>
+            <span className="getnote-scheduled-row-control">
+              <Toggle
+                value={settings.ribbonActions.sync}
+                onChange={(value) => handleRibbonActionChange('sync', value)}
+              />
+            </span>
+          </div>
+          <div className="getnote-scheduled-row">
+            <span className="getnote-scheduled-row-label">{t('settings.ribbon.search')}</span>
+            <span className="getnote-scheduled-row-control">
+              <Toggle
+                value={settings.ribbonActions.search}
+                onChange={(value) => handleRibbonActionChange('search', value)}
+              />
+            </span>
+          </div>
+        </div>
       </SettingItem>
 
       <div className="getnote-settings-divider" />

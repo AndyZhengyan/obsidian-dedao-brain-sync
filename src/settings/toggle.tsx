@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 
 interface ToggleProps {
   value: boolean;
@@ -21,17 +21,20 @@ interface ToggleProps {
  */
 export function Toggle({ value, onChange, disabled }: ToggleProps) {
   const [currentValue, setCurrentValue] = useState(value);
+  const currentValueRef = useRef(value);
   const onChangeRef = useRef(onChange);
 
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    currentValueRef.current = value;
     setCurrentValue(value);
   }, [value]);
 
   const applyValue = (next: boolean) => {
+    currentValueRef.current = next;
     setCurrentValue(next);
     onChangeRef.current(next);
   };
@@ -50,7 +53,7 @@ export function Toggle({ value, onChange, disabled }: ToggleProps) {
       return;
     }
     if (event.target instanceof HTMLInputElement) return;
-    applyValue(!currentValue);
+    applyValue(!currentValueRef.current);
   };
 
   return (

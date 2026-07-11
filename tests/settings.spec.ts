@@ -1187,6 +1187,47 @@ describe('SettingsComponent scheduled sync toggles (#136)', () => {
   });
 });
 
+describe('SettingsComponent ribbon actions', () => {
+  it('renders separately enabled sync and search ribbon toggles by default', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings());
+
+    const section = Array.from(container.querySelectorAll('.setting-item'))
+      .find(item => item.textContent?.includes('侧栏入口'));
+
+    expect(section).toBeTruthy();
+    expect(section!.textContent).toContain('同步侧栏入口');
+    expect(section!.textContent).toContain('搜索侧栏入口');
+    const toggles = section!.querySelectorAll('.checkbox-container');
+    expect(toggles).toHaveLength(2);
+    expect(Array.from(toggles).every(toggle => toggle.classList.contains('is-enabled'))).toBe(true);
+
+    await act(() => {
+      toggles[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('ribbonActions', { sync: false, search: true });
+  });
+
+  it('applies two rapid clicks as two opposite ribbon setting changes', async () => {
+    const { container, updateSetting } = renderStatefulSettings(makeSettings());
+    const section = Array.from(container.querySelectorAll('.setting-item'))
+      .find(item => item.textContent?.includes('侧栏入口'))!;
+    const syncToggle = section.querySelector('.checkbox-container')!;
+
+    await act(() => {
+      syncToggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      syncToggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const ribbonUpdates = updateSetting.mock.calls.filter(([key]) => key === 'ribbonActions');
+    expect(ribbonUpdates).toEqual([
+      ['ribbonActions', { sync: false, search: true }],
+      ['ribbonActions', { sync: true, search: true }],
+    ]);
+    expect(syncToggle.classList.contains('is-enabled')).toBe(true);
+  });
+});
+
 describe('SettingsComponent — syncTags (tag whitelist) dropdown', () => {
   it('renders the sync range setting with the tag whitelist dropdown', () => {
     const { container } = renderSettings(makeSettings({
