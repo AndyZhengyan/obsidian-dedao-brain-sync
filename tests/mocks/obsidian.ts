@@ -20,6 +20,10 @@ export class Events {
   }
 }
 
+export function debounce<T extends (...args: never[]) => unknown>(callback: T, _wait: number, _immediate?: boolean): T {
+  return callback;
+}
+
 // ---- Vault ----
 export class Vault extends Events {
   adapter = { getName: () => 'mock' };

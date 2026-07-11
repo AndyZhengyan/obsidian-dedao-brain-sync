@@ -459,3 +459,57 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     expect(plugin.isSyncing).toBe(false);
   });
 });
+
+describe('GetNoteSyncPlugin ribbon actions (issue #186)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('registers the sync and search ribbon icons after onload', async () => {
+    vi.useFakeTimers();
+    const plugin = new GetNoteSyncPlugin(new App());
+    Object.assign(plugin.app.vault.adapter, {
+      exists: vi.fn().mockResolvedValue(false),
+      mkdir: vi.fn(),
+      copy: vi.fn(),
+    });
+    const addRibbonIcon = vi.fn();
+    Object.assign(plugin, { addRibbonIcon });
+
+    await plugin.onload();
+
+    const syncRibbon = addRibbonIcon.mock.calls.find(([icon]) => icon === 'book-lock');
+    const searchRibbon = addRibbonIcon.mock.calls.find(([icon]) => icon === 'brain-circuit');
+
+    expect(syncRibbon).toBeDefined();
+    expect(searchRibbon).toBeDefined();
+    expect(syncRibbon![1]).toBe('同步得到大脑');
+    expect(searchRibbon![1]).toBe('搜索得到大脑');
+  });
+
+  it('sync ribbon callback opens the manual sync modal', async () => {
+    vi.useFakeTimers();
+    const plugin = new GetNoteSyncPlugin(new App());
+    Object.assign(plugin.app.vault.adapter, {
+      exists: vi.fn().mockResolvedValue(false),
+      mkdir: vi.fn(),
+      copy: vi.fn(),
+    });
+    const addRibbonIcon = vi.fn();
+    Object.assign(plugin, { addRibbonIcon });
+    const openManualSyncModal = vi.spyOn(plugin, 'openManualSyncModal').mockImplementation(() => {});
+    const openSearchView = vi.spyOn(plugin, 'openSearchView').mockImplementation(() => {});
+
+    await plugin.onload();
+
+    const syncRibbon = addRibbonIcon.mock.calls.find(([icon]) => icon === 'book-lock')!;
+    const searchRibbon = addRibbonIcon.mock.calls.find(([icon]) => icon === 'brain-circuit')!;
+
+    syncRibbon[2]();
+    searchRibbon[2]();
+
+    expect(openManualSyncModal).toHaveBeenCalledOnce();
+    expect(openSearchView).toHaveBeenCalledOnce();
+  });
+});

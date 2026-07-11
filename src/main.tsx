@@ -201,6 +201,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       callback: () => void this.openSearchView(),
     });
 
+    this.addRibbonIcon('book-lock', t('ribbon.tooltip'), () => this.openManualSyncModal());
     this.addRibbonIcon('brain-circuit', t('ribbon.searchTooltip'), () => void this.openSearchView());
     this.registerEvent(this.app.workspace.on('editor-menu', (menu: Menu, editor: Editor) => {
       const selectedText = editor.getSelection().trim();
