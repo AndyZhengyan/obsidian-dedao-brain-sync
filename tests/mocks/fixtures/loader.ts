@@ -91,17 +91,19 @@ function makeResponse(status: number, body: unknown): Response {
   } as unknown as Response;
 }
 
+function installMockFetch(): void {
+  globalThis.fetch = mockFetch;
+}
+
 export function registerFixture(fixture: Fixture): void {
   fixtures.push(fixture);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (globalThis as any).fetch = mockFetch;
+  installMockFetch();
 }
 
 export function resetFixtures(): void {
   fixtures = [];
   requests = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (globalThis as any).fetch = mockFetch;
+  installMockFetch();
 }
 
 export function getFixtureRequests(): Array<{ method: string; url: string }> {
