@@ -827,7 +827,6 @@ describe('SettingsComponent auth credentials', () => {
     });
     await new Promise(r => setTimeout(r, 50));
 
-    const sectionName = container.querySelector('.setting-item-name');
     expect(container.textContent).toContain('附件下载配置');
 
     const toggleEls = container.querySelectorAll('.setting-item .checkbox-container');
