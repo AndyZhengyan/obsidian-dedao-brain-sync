@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { App, Modal } from 'obsidian';
+import { App, Modal, TFile } from 'obsidian';
 import GetNoteSyncPlugin from '../src/main';
 import { ReverseSyncEngine } from '../src/reverse-sync';
 import { SyncCancelledError, SyncEngine } from '../src/sync';
@@ -389,9 +389,9 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     });
     const plugin = makePlugin();
     plugin.settings.reverseSync = { enabled: false };
-    const selectedFiles = [{ path: 'Inbox/upload-me.md' }];
+    const selectedFiles = [new TFile('Inbox/upload-me.md')];
 
-    plugin.uploadSelectedLocalNotes(selectedFiles as any);
+    plugin.uploadSelectedLocalNotes(selectedFiles);
 
     await vi.waitFor(() => {
       expect(syncFiles).toHaveBeenCalledWith(selectedFiles);
@@ -437,7 +437,7 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     });
     const plugin = makePlugin();
 
-    plugin.uploadSelectedLocalNotes([{ path: 'Inbox/fail.md' }] as any);
+    plugin.uploadSelectedLocalNotes([new TFile('Inbox/fail.md')]);
 
     await vi.waitFor(() => {
       expect(plugin.syncHistory.at(-1)).toEqual(expect.objectContaining({
