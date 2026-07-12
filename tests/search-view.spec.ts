@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { h, render } from 'preact';
 import { act } from 'preact/test-utils';
-import { TFile } from 'obsidian';
+import { TFile, type App } from 'obsidian';
 import { SearchPanel, findSyncedNoteFile } from '../src/ui/search-view';
 import type { RecallSearchResult } from '../src/types';
 
@@ -192,7 +192,7 @@ describe('findSyncedNoteFile', () => {
   it('returns the local Markdown file whose frontmatter uid matches the note id', () => {
     const matching = new TFile('得到大脑/链接笔记/命中.md');
     const other = new TFile('得到大脑/纯文本/其他.md');
-    const app = {
+    const app: Pick<App, 'vault' | 'metadataCache'> = {
       vault: {
         getMarkdownFiles: () => [other, matching, new TFile('其他/命中.md')],
       },
@@ -203,6 +203,6 @@ describe('findSyncedNoteFile', () => {
       },
     };
 
-    expect(findSyncedNoteFile(app as any, '得到大脑', '1909193892067130512')).toBe(matching);
+    expect(findSyncedNoteFile(app, '得到大脑', '1909193892067130512')).toBe(matching);
   });
 });
