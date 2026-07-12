@@ -5,16 +5,6 @@ import { loadScenario, registerFixture, resetFixtures } from './loader';
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
-function mockResponse(status: number, body: unknown) {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    headers: new Headers({ 'content-type': 'application/json' }),
-    json: () => Promise.resolve(body),
-    text: () => Promise.resolve(JSON.stringify(body)),
-  } as unknown as Response;
-}
-
 describe('fixture loader', () => {
   beforeEach(() => {
     resetFixtures();

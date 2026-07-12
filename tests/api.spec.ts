@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createNote, fetchNoteChildren, fetchNotes, fetchNoteDetail, fetchNoteOriginal, fetchRecallSearch, fetchSubscribedTopics, fetchTopicContentPreviewPage } from '../src/api';
-import type { ListResponse } from '../src/types';
 
 // Extract the internal safeJsonParse for direct testing
 function safeJsonParse(text: string): unknown {
