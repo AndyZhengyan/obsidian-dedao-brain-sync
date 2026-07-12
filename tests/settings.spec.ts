@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { h, render } from 'preact';
 import { act } from 'preact/test-utils';
 import { App } from 'obsidian';
-import { abstractInputSuggestInstances, TFile } from './mocks/obsidian';
+import { abstractInputSuggestInstances, TFile, TFolder } from './mocks/obsidian';
 import { fetchNotes } from '../src/api';
 import { initI18n } from '../src/i18n';
 import { SettingsComponent } from '../src/settings';
@@ -21,6 +21,13 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
     syncHistory: [],
     ...overrides,
   };
+}
+
+function makeFolder(path: string): TFolder {
+  const folder = new TFolder();
+  folder.path = path;
+  folder.name = path.split('/').pop() ?? path;
+  return folder;
 }
 
 function renderSettings(
@@ -213,9 +220,9 @@ describe('SettingsComponent auth credentials', () => {
   it('suggests vault folders for the target folder path', async () => {
     const app = new App();
     vi.spyOn(app.vault, 'getAllFolders').mockReturnValue([
-      { path: 'Templates' } as any,
-      { path: '得到大脑' } as any,
-      { path: 'Projects/Archive' } as any,
+      makeFolder('Templates'),
+      makeFolder('得到大脑'),
+      makeFolder('Projects/Archive'),
     ]);
 
     let rendered!: ReturnType<typeof renderSettings>;
@@ -260,8 +267,8 @@ describe('SettingsComponent auth credentials', () => {
       new TFile('得到大脑/纯文本/已有同步笔记.md'),
     ]);
     vi.spyOn(app.vault, 'getAllFolders').mockReturnValue([
-      { path: 'Templates' } as any,
-      { path: '得到大脑' } as any,
+      makeFolder('Templates'),
+      makeFolder('得到大脑'),
     ]);
 
     let rendered!: ReturnType<typeof renderSettings>;
