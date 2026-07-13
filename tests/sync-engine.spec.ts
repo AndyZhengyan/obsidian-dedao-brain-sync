@@ -161,7 +161,7 @@ describe('SyncEngine — filterRecentNotes', () => {
     const app = makeMockApp();
     const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
     const notes = [makeNote({ note_id: '1' }), makeNote({ note_id: '2' })];
-    // @ts-ignore accessing private via any
+    // @ts-expect-error accessing private via any
     expect(engine['filterRecentNotes'](notes)).toHaveLength(2);
   });
 
@@ -177,7 +177,7 @@ describe('SyncEngine — filterRecentNotes', () => {
       note_id: 'recent',
       updated_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
     });
-    // @ts-ignore
+    // @ts-expect-error private helper is tested directly
     const result = engine['filterRecentNotes']([oldNote, recentNote]);
     expect(result).toHaveLength(1);
     expect(result[0].note_id).toBe('recent');
@@ -189,7 +189,7 @@ describe('SyncEngine — filterRecentNotes', () => {
     const now = new Date();
     const at5days = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000 + 1000).toISOString();
     const note = makeNote({ note_id: 'boundary', updated_at: at5days });
-    // @ts-ignore
+    // @ts-expect-error private helper is tested directly
     expect(engine['filterRecentNotes']([note])).toHaveLength(1);
   });
 });
@@ -325,7 +325,7 @@ describe('SyncEngine — page cutoff', () => {
       updated_at: localMidnight.toISOString(),
     });
 
-    // @ts-ignore accessing private method for boundary regression coverage
+    // @ts-expect-error accessing private method for boundary regression coverage
     expect(engine['filterNotesByDateRange']([justAfterLocalMidnight])).toHaveLength(1);
   });
 
@@ -569,7 +569,7 @@ describe('SyncEngine — filterNotesByDateRange', () => {
       updated_at: '2026-05-08T10:00:00+08:00', // < startDate → excluded
     });
 
-    // @ts-ignore
+    // @ts-expect-error private helper is tested directly
     const result = engine['filterNotesByDateRange']([boundaryNote, afterBoundary, beforeBoundary]);
 
     expect(result).toHaveLength(1);
@@ -584,7 +584,7 @@ describe('SyncEngine — filterNotesByDateRange', () => {
       makeNote({ note_id: 'n1', updated_at: '2026-04-01T10:00:00+08:00' }),
       makeNote({ note_id: 'n2', updated_at: '2026-04-02T10:00:00+08:00' }),
     ];
-    // @ts-ignore
+    // @ts-expect-error private helper is tested directly
     expect(engine['filterNotesByDateRange'](notes)).toHaveLength(2);
   });
 
@@ -598,7 +598,7 @@ describe('SyncEngine — filterNotesByDateRange', () => {
     );
 
     const notes = [makeNote({ note_id: 'n1' })];
-    // @ts-ignore
+    // @ts-expect-error private helper is tested directly
     expect(engine['filterNotesByDateRange'](notes)).toHaveLength(1);
   });
 });
@@ -1445,7 +1445,7 @@ describe('SyncEngine — buildUidIndex', () => {
   it('返回空 Map 当 vault 没有 md 文件', () => {
     const app = makeMockApp();
     const engine = new SyncEngine(app as any, makeSettings());
-    // @ts-ignore
+    // @ts-expect-error private helper is tested directly
     const index = engine['buildUidIndex']();
     expect(index.size).toBe(0);
   });
@@ -1455,7 +1455,7 @@ describe('SyncEngine — buildUidIndex', () => {
     app.vault._addFile('得到大脑/纯文本/test.md', 'content', { uid: 'note_abc' });
     app.vault._addFolder('得到大脑/纯文本');
     const engine = new SyncEngine(app as any, makeSettings());
-    // @ts-ignore
+    // @ts-expect-error private helper is tested directly
     const index = engine['buildUidIndex']();
     expect(index.size).toBe(1);
     expect(index.get('note_abc')?.path).toBe('得到大脑/纯文本/test.md');
@@ -1466,7 +1466,7 @@ describe('SyncEngine — buildUidIndex', () => {
     app.vault._addFile('得到大脑/纯文本/test.md', 'content', {});
     app.vault._addFolder('得到大脑/纯文本');
     const engine = new SyncEngine(app as any, makeSettings());
-    // @ts-ignore
+    // @ts-expect-error private helper is tested directly
     const index = engine['buildUidIndex']();
     expect(index.size).toBe(0);
   });
@@ -1478,7 +1478,7 @@ describe('SyncEngine — buildUidIndex', () => {
     app.vault._addFolder('得到大脑/纯文本');
     app.vault._addFolder('其他/纯文本');
     const engine = new SyncEngine(app as any, makeSettings());
-    // @ts-ignore
+    // @ts-expect-error private helper is tested directly
     const index = engine['buildUidIndex']();
     expect(index.size).toBe(1);
     expect(index.has('note_001')).toBe(true);
@@ -1496,7 +1496,7 @@ describe('SyncEngine — writeNote', () => {
     const engine = new SyncEngine(app as any, makeSettings());
     const note = makeNote({ note_id: 'new_001', title: '新笔记' });
     const index = new Map<string, any>();
-    // @ts-ignore
+    // @ts-expect-error private helper is tested directly
     const result = await engine['writeNote'](note, index);
     expect(result.status).toBe('created');
   });
@@ -1512,7 +1512,7 @@ describe('SyncEngine — writeNote', () => {
     const engine = new SyncEngine(app as any, makeSettings());
     const note = makeNote({ note_id: 'new_001', title: '新笔记' });
     const index = new Map<string, any>([['new_001', { path: '得到大脑/纯文本/新笔记.md' }]]);
-    // @ts-ignore
+    // @ts-expect-error private helper is tested directly
     const result = await engine['writeNote'](note, index);
     expect(result.status).toBe('skipped');
   });
@@ -1534,7 +1534,7 @@ describe('SyncEngine — writeNote', () => {
     });
     const index = new Map<string, any>([['local_edit', { path: '得到大脑/纯文本/本地编辑.md' }]]);
 
-    // @ts-ignore
+    // @ts-expect-error private helper is tested directly
     const result = await engine['writeNote'](note, index);
 
     expect(result.status).toBe('skipped');
@@ -1557,7 +1557,7 @@ describe('SyncEngine — append note sync', () => {
       is_child_note: true,
     };
 
-    // @ts-ignore private helper is tested directly to lock relation merge behavior.
+    // @ts-expect-error private helper is tested directly to lock relation merge behavior.
     expect(engine['mergeNoteDetail'](listNote, detailNote).is_child_note).toBe(true);
   });
 
@@ -1914,7 +1914,7 @@ describe('SyncEngine — audio note sync', () => {
     const mockApp = makeMockApp();
     const engine = new SyncEngine(mockApp as any, makeSettings());
 
-    // @ts-ignore accessing private method for security regression coverage
+    // @ts-expect-error accessing private method for security regression coverage
     const result = await engine['downloadAudioAsset'](audioNote, {
       type: 'audio',
       url: 'http://127.0.0.1/private.mp3',
@@ -1948,7 +1948,7 @@ describe('SyncEngine — audio note sync', () => {
     const engine = new SyncEngine(mockApp as any, makeSettings());
 
     try {
-      // @ts-ignore accessing private method for security regression coverage
+      // @ts-expect-error accessing private method for security regression coverage
       const result = await engine['downloadAudioAsset'](audioNote, {
         type: 'audio',
         url: signedUrl,
@@ -2179,7 +2179,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       const app = makeMockApp();
       const engine = new SyncEngine(app as any, makeSettings());
       const note = makeNote({ note_id: 'note_missing' });
-      // @ts-ignore
+      // @ts-expect-error private helper is tested directly
       const result = engine['preCheckNote'](note, new Map());
       expect(result.exists).toBe(false);
     });
@@ -2198,7 +2198,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         updated_at: '2026-04-28T10:00:00+08:00',
       });
       const index = new Map([['note_changed', { path: '得到大脑/纯文本/test.md' }]]);
-      // @ts-ignore
+      // @ts-expect-error private helper is tested directly
       const result = engine['preCheckNote'](note, index);
       expect(result.exists).toBe(true);
       expect(result.file).toBeDefined();
@@ -2219,7 +2219,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         updated_at: '2026-04-28T10:00:00+08:00',
       });
       const index = new Map([['note_unchanged', { path: '得到大脑/纯文本/test.md' }]]);
-      // @ts-ignore
+      // @ts-expect-error private helper is tested directly
       const result = engine['preCheckNote'](note, index);
       expect(result.exists).toBe(true);
     });
@@ -2243,7 +2243,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         updated_at: '2026-04-28T10:00:00+08:00',
       });
       const index = new Map([['audio_ready', { path: '得到大脑/录音笔记/test.md' }]]);
-      // @ts-ignore
+      // @ts-expect-error private helper is tested directly
       const result = engine['preCheckNote'](note, index);
       expect(result.exists).toBe(true);
     });
@@ -2266,7 +2266,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         updated_at: '2026-04-28T10:00:00+08:00',
       });
       const index = new Map([['audio_missing_mp3', { path: '得到大脑/录音笔记/test.md' }]]);
-      // @ts-ignore
+      // @ts-expect-error private helper is tested directly
       const result = engine['preCheckNote'](note, index);
       expect(result.exists).toBe(true);
     });
@@ -2289,7 +2289,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         updated_at: '2026-04-28T10:00:00+08:00',
       });
       const index = new Map([['audio_missing_transcript', { path: '得到大脑/录音笔记/test.md' }]]);
-      // @ts-ignore
+      // @ts-expect-error private helper is tested directly
       const result = engine['preCheckNote'](note, index);
       expect(result.exists).toBe(true);
     });
@@ -2309,7 +2309,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         updated_at: '2026-04-28T10:00:00+08:00',
       });
       const index = new Map([['note_link', { path: '得到大脑/纯文本/test.md' }]]);
-      // @ts-ignore
+      // @ts-expect-error private helper is tested directly
       const result = engine['preCheckNote'](note, index);
       expect(result.exists).toBe(true);
     });
@@ -2335,7 +2335,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         ],
       });
       const index = new Map([['image_ready', { path: '得到大脑/图片笔记/test.md' }]]);
-      // @ts-ignore
+      // @ts-expect-error private helper is tested directly
       const result = engine['preCheckNote'](note, index);
       expect(result.exists).toBe(true);
     });
@@ -2355,7 +2355,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({}) as Response);
 
       try {
-        // @ts-ignore
+        // @ts-expect-error private helper is tested directly
         const enriched = await engine['enrichAudioNote'](note, new AbortController().signal);
 
         expect(enriched.assetPaths).toEqual([
@@ -2383,7 +2383,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({}) as Response);
 
       try {
-        // @ts-ignore
+        // @ts-expect-error private helper is tested directly
         const enriched = await engine['enrichAudioNote'](note, new AbortController().signal);
 
         expect(enriched.assetPaths).toEqual([
@@ -2413,7 +2413,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       } as Response);
 
       try {
-        // @ts-ignore
+        // @ts-expect-error private helper is tested directly
         await engine['enrichAudioNote'](note, new AbortController().signal);
 
         expect(app.vault.createBinary).not.toHaveBeenCalled();
@@ -2438,7 +2438,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({}) as Response);
 
       try {
-        // @ts-ignore
+        // @ts-expect-error private helper is tested directly
         const enriched = await engine['enrichAudioNote'](note, new AbortController().signal);
 
         expect(enriched.assetPaths).toEqual([
@@ -2465,7 +2465,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({}) as Response);
 
       try {
-        // @ts-ignore
+        // @ts-expect-error private helper is tested directly
         const enriched = await engine['enrichAudioNote'](note, new AbortController().signal);
 
         expect(enriched.assetPaths).toEqual([
@@ -2497,7 +2497,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       }) as Response);
 
       try {
-        // @ts-ignore
+        // @ts-expect-error private helper is tested directly
         const enriched = await engine['enrichAudioNote'](note, new AbortController().signal);
 
         expect(enriched.audio).toBeUndefined();
@@ -3349,7 +3349,7 @@ describe('SyncEngine — tag whitelist filter', () => {
       makeNote({ note_id: 'a', tags: [{ name: 'work' }] }),
       makeNote({ note_id: 'b', tags: [] }),
     ];
-    // @ts-ignore accessing private method
+    // @ts-expect-error accessing private method
     expect(engine['filterNotesByTags'](notes)).toHaveLength(2);
   });
 
@@ -3361,7 +3361,7 @@ describe('SyncEngine — tag whitelist filter', () => {
       makeNote({ note_id: 'b', tags: [{ name: 'daily' }] }),
       makeNote({ note_id: 'c', tags: [{ name: 'project' }] }),
     ];
-    // @ts-ignore accessing private method
+    // @ts-expect-error accessing private method
     const result = engine['filterNotesByTags'](notes, ['work', 'project']);
     expect(result.map(n => n.note_id).sort()).toEqual(['a', 'c']);
   });
