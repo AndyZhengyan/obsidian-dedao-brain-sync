@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import type { App, TFile } from 'obsidian';
 import { ReverseSyncEngine } from '../src/reverse-sync';
 import type { Settings } from '../src/types';
 
@@ -78,6 +79,14 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
   };
 }
 
+function toObsidianApp(app: ReturnType<typeof makeMockApp>): App {
+  return app as unknown as App;
+}
+
+function toTFile(file: { path: string }): TFile {
+  return file as unknown as TFile;
+}
+
 function mockFetchResponse(body: unknown, status = 200) {
   return {
     ok: status >= 200 && status < 300,
@@ -105,7 +114,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ success: true, data: { note_id: 'should-not-create' } })
     );
 
-    const result = await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(result).toEqual({ created: 0, skipped: 0, failed: 0, total: 0, items: [] });
     expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -123,7 +132,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ success: true, data: { note_id: 'should-not-create' } })
     );
 
-    const result = await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(result).toEqual({ created: 0, skipped: 0, failed: 0, total: 0, items: [] });
     expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -142,7 +151,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ success: true, data: { note: { note_id: '1909999999999999999' } } })
     );
 
-    const result = await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(result).toEqual(expect.objectContaining({ created: 1, skipped: 0, failed: 0, total: 1 }));
     expect(result.items).toEqual([
@@ -190,7 +199,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ success: true, data: { note: { note_id: 'many-tags-created' } } })
     );
 
-    await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
       'https://openapi.biji.com/open/api/v1/resource/note/save',
@@ -222,7 +231,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ success: true, data: { note: { note_id: 'with-image-created' } } })
     );
 
-    await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
       'https://openapi.biji.com/open/api/v1/resource/note/save',
@@ -259,7 +268,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ h: {}, c: { note_id: 'web-safe-created', prime_id: 'web-safe-prime' } })
     );
 
-    await new ReverseSyncEngine(app as any, makeSettings({
+    await new ReverseSyncEngine(toObsidianApp(app), makeSettings({
       authMode: 'web',
       webApiToken: 'web-token',
     })).syncBack();
@@ -295,7 +304,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ success: true, data: { note: { note_id: 'remote-1', title: 'Imported' } } })
     );
 
-    const result = await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(result).toEqual(expect.objectContaining({ created: 0, skipped: 1, failed: 0, total: 1 }));
     expect(result.items).toEqual([
@@ -328,7 +337,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ success: true, data: { note: { note_id: '1909999999999999999' } } })
     );
 
-    const result = await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(result).toEqual(expect.objectContaining({ created: 0, skipped: 1, failed: 0, total: 1 }));
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
@@ -353,7 +362,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ success: true, data: { note: { note_id: 'remote-single' } } })
     );
 
-    const result = await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(result).toEqual(expect.objectContaining({ created: 0, skipped: 1, failed: 0, total: 1 }));
     expect(globalThis.fetch).toHaveBeenCalledWith(
@@ -377,7 +386,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ success: true, data: { note: { note_id: 'remote-from-content' } } })
     );
 
-    const result = await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(result).toEqual(expect.objectContaining({ created: 0, skipped: 1, failed: 0, total: 1 }));
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
@@ -398,7 +407,7 @@ describe('ReverseSyncEngine', () => {
       .mockResolvedValueOnce(mockFetchResponse({ success: false, error: { message: '笔记不存在' } }))
       .mockResolvedValueOnce(mockFetchResponse({ success: true, data: { note_id: 'replacement-remote' } }));
 
-    const result = await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(result).toEqual(expect.objectContaining({ created: 1, skipped: 0, failed: 0, total: 1 }));
     expect(app.vault._getFile('得到大脑/missing.md')?.content).toContain('uid: "replacement-remote"');
@@ -417,7 +426,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ h: {}, c: { note_id: '1911000000000000000', prime_id: 'prime-created' } })
     );
 
-    const result = await new ReverseSyncEngine(app as any, makeSettings({
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings({
       authMode: 'web',
       webApiToken: 'web-token',
     })).syncBack();
@@ -447,7 +456,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ h: {}, c: { note_id: '1911000000000000000', prime_id: 'prime-existing' } })
     );
 
-    const result = await new ReverseSyncEngine(app as any, makeSettings({
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings({
       authMode: 'web',
       webApiToken: 'web-token',
     })).syncBack();
@@ -473,7 +482,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ h: {}, c: { note_id: 'should-not-be-called' } })
     );
 
-    const result = await new ReverseSyncEngine(app as any, makeSettings({
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings({
       authMode: 'web',
       webApiToken: 'web-token',
     })).syncBack();
@@ -493,7 +502,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ success: true, data: { note: { note_id: 'crlf-created' } } })
     );
 
-    await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
       'https://openapi.biji.com/open/api/v1/resource/note/save',
@@ -525,7 +534,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ success: true, data: { note: { note_id: 'partial-created' } } })
     );
 
-    await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
       'https://openapi.biji.com/open/api/v1/resource/note/save',
@@ -557,7 +566,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ success: true, data: { note: { note_id: 'object-tags-created' } } })
     );
 
-    await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
       'https://openapi.biji.com/open/api/v1/resource/note/save',
@@ -586,7 +595,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ success: true, data: { note: { note_id: 'divider-created' } } })
     );
 
-    await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
       'https://openapi.biji.com/open/api/v1/resource/note/save',
@@ -622,7 +631,7 @@ describe('ReverseSyncEngine', () => {
       return mockFetchResponse({ success: true, data: { note: { note_id: 'editing-created' } } });
     });
 
-    await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(app.vault._getFile('得到大脑/editing.md')?.content).toContain('uid: "editing-created"');
     expect(app.vault._getFile('得到大脑/editing.md')?.content).toContain('User edit while uploading');
@@ -648,7 +657,7 @@ describe('ReverseSyncEngine', () => {
     );
 
     const selectedFile = app.vault.getMarkdownFiles().find(file => file.path === '得到大脑/b.md');
-    const result = await new ReverseSyncEngine(app as any, makeSettings()).syncFiles(selectedFile ? [selectedFile as any] : []);
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncFiles(selectedFile ? [toTFile(selectedFile)] : []);
 
     expect(result).toEqual(expect.objectContaining({ created: 1, skipped: 0, failed: 0, total: 1 }));
     expect(result.items).toEqual([
@@ -690,7 +699,7 @@ describe('ReverseSyncEngine', () => {
     const progress = vi.fn();
     const selectedFiles = app.vault.getMarkdownFiles();
 
-    await new ReverseSyncEngine(app as any, makeSettings(), progress).syncFiles(selectedFiles as any);
+    await new ReverseSyncEngine(toObsidianApp(app), makeSettings(), progress).syncFiles(selectedFiles.map(toTFile));
 
     expect(progress).toHaveBeenCalledTimes(2);
     expect(progress).toHaveBeenNthCalledWith(1, expect.objectContaining({
@@ -721,7 +730,7 @@ describe('ReverseSyncEngine', () => {
     );
 
     const selectedFile = app.vault.getMarkdownFiles().find(file => file.path === '得到大脑/empty.md');
-    const result = await new ReverseSyncEngine(app as any, makeSettings()).syncFiles(selectedFile ? [selectedFile as any] : []);
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncFiles(selectedFile ? [toTFile(selectedFile)] : []);
 
     expect(result).toEqual(expect.objectContaining({ created: 0, skipped: 1, failed: 0, total: 1 }));
     expect(result.items).toEqual([
@@ -751,7 +760,7 @@ describe('ReverseSyncEngine', () => {
     );
 
     const selectedFile = app.vault.getMarkdownFiles().find(file => file.path === '得到大脑/fail.md');
-    const result = await new ReverseSyncEngine(app as any, makeSettings()).syncFiles(selectedFile ? [selectedFile as any] : []);
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncFiles(selectedFile ? [toTFile(selectedFile)] : []);
 
     expect(result).toEqual(expect.objectContaining({ created: 0, skipped: 0, failed: 1, total: 1 }));
     expect(result.items).toEqual([
@@ -787,7 +796,7 @@ describe('ReverseSyncEngine', () => {
       mockFetchResponse({ success: true, data: { note: { note_id: 'ok-created' } } })
     );
 
-    const result = await new ReverseSyncEngine(app as any, makeSettings()).syncBack();
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
 
     expect(result).toEqual(expect.objectContaining({ created: 1, skipped: 0, failed: 1, total: 2 }));
     expect(result.items).toEqual(expect.arrayContaining([
