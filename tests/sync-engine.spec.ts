@@ -706,7 +706,7 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
     });
 
     try {
-      const engine = new SyncEngine(app as any, makeSettings({
+      const engine = new SyncEngine(app, makeSettings({
         authMode: 'openapi',
         openApiToken: 'openapi-token',
         openApiClientId: 'openapi-client',
@@ -728,7 +728,7 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
   it('does not sync the whole knowledge base when the explicit selection is empty', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'openapi',
       openApiToken: 'openapi-token',
       openApiClientId: 'openapi-client',
@@ -791,7 +791,7 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 1 }));
+      const engine = new SyncEngine(app, makeSettings({ maxDays: 1 }));
       const result = await engine.syncSubscribedKnowledge(undefined, {
         syncAll: true,
         topicIds: ['topic_1'],
@@ -878,7 +878,7 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({
+      const engine = new SyncEngine(app, makeSettings({
         authMode: 'openapi',
         openApiToken: 'openapi-token',
         openApiClientId: 'openapi-client',
@@ -956,7 +956,7 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({
+      const engine = new SyncEngine(app, makeSettings({
         authMode: 'openapi',
         openApiToken: 'openapi-token',
         openApiClientId: 'openapi-client',
@@ -1040,7 +1040,7 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({
+      const engine = new SyncEngine(app, makeSettings({
         authMode: 'web',
         webApiToken: 'web-token',
         apiToken: 'web-token',
@@ -1089,7 +1089,7 @@ describe('SyncEngine — sync lastNoteTimestamp tracking', () => {
     );
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
+    const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }));
 
     const result = await engine.sync();
     expect(result.lastNoteTimestamp).toBe('2026-05-11T12:00:00+08:00');
@@ -1104,7 +1104,7 @@ describe('SyncEngine — sync lastNoteTimestamp tracking', () => {
     );
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
+    const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }));
 
     const result = await engine.sync();
     expect(result.lastNoteTimestamp).toBeUndefined();
@@ -1135,7 +1135,7 @@ describe('SyncEngine — sync lastNoteTimestamp tracking', () => {
     });
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
+    const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }));
 
     const result = await engine.sync();
     expect(result.lastNoteTimestamp).toBe('2026-05-12T10:00:00+08:00');
@@ -1174,7 +1174,7 @@ describe('SyncEngine — seenNoteIds cross-page dedup', () => {
     });
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
+    const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }));
 
     const result = await engine.sync();
 
@@ -1210,7 +1210,7 @@ describe('SyncEngine — seenNoteIds cross-page dedup', () => {
     });
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
+    const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }));
 
     const result = await engine.sync();
 
