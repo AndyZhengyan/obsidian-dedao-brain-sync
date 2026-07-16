@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { App } from 'obsidian';
 import { SyncEngine } from '../src/sync';
 import type { Settings, GetNoteNote } from '../src/types';
 import { DEFAULT_SETTINGS } from '../src/types';
@@ -8,8 +9,16 @@ import { join } from 'path';
 
 const DEFAULT_SCHEDULED_SYNC = { ...DEFAULT_SETTINGS.scheduledSync };
 
+type MockApp = App & {
+  vault: App['vault'] & {
+    _addFile: (path: string, content: string, frontmatter?: Record<string, string>) => void;
+    _addFolder: (path: string) => void;
+    createFolderSync: (path: string) => void;
+  };
+};
+
 // Minimal mock app for SyncEngine tests
-function makeMockApp() {
+function makeMockApp(): MockApp {
   const files: Map<string, { path: string; content: string; frontmatter: Record<string, string> }> = new Map();
   const folders = new Set<string>();
 
@@ -59,7 +68,7 @@ function makeMockApp() {
         return f ? { frontmatter: f.frontmatter } : null;
       },
     },
-  };
+  } as unknown as MockApp;
 }
 
 function makeSettings(overrides: Partial<Settings> = {}): Settings {
@@ -113,7 +122,7 @@ function mockFetchResponse(body: unknown) {
 describe('SyncEngine — filterRecentNotes', () => {
   it('disables maxDays when syncStartDate is set', () => {
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({ maxDays: 30, syncStartDate: '2026-05-09' }));
+    const engine = new SyncEngine(app, makeSettings({ maxDays: 30, syncStartDate: '2026-05-09' }));
 
     expect(engine['scopeOptions']).toEqual({
       maxDays: 0,
@@ -137,7 +146,7 @@ describe('SyncEngine — filterRecentNotes', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }), undefined, { enabledNoteTypes: ['link'] });
+      const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }), undefined, { enabledNoteTypes: ['link'] });
 
       const result = await engine.sync();
 
@@ -159,7 +168,7 @@ describe('SyncEngine — filterRecentNotes', () => {
 
   it('返回所有笔记当 maxDays <= 0', () => {
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
+    const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }));
     const notes = [makeNote({ note_id: '1' }), makeNote({ note_id: '2' })];
     // @ts-expect-error accessing private via any
     expect(engine['filterRecentNotes'](notes)).toHaveLength(2);
@@ -167,7 +176,7 @@ describe('SyncEngine — filterRecentNotes', () => {
 
   it('过滤掉超过 maxDays 的笔记', () => {
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({ maxDays: 7 }));
+    const engine = new SyncEngine(app, makeSettings({ maxDays: 7 }));
     const now = new Date();
     const oldNote = makeNote({
       note_id: 'old',
@@ -185,7 +194,7 @@ describe('SyncEngine — filterRecentNotes', () => {
 
   it('边界：刚好 maxDays 当天的笔记保留', () => {
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({ maxDays: 5 }));
+    const engine = new SyncEngine(app, makeSettings({ maxDays: 5 }));
     const now = new Date();
     const at5days = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000 + 1000).toISOString();
     const note = makeNote({ note_id: 'boundary', updated_at: at5days });
@@ -229,7 +238,7 @@ describe('SyncEngine — template file rendering', () => {
     );
 
     try {
-      const engine = new SyncEngine(app as any, makeSettings({
+      const engine = new SyncEngine(app, makeSettings({
         maxDays: 0,
         templateFilePath: 'Templates/dedao.md',
       }));
@@ -261,7 +270,7 @@ describe('SyncEngine — template file rendering', () => {
     );
 
     try {
-      const engine = new SyncEngine(app as any, makeSettings({
+      const engine = new SyncEngine(app, makeSettings({
         maxDays: 0,
         templateFilePath: 'Templates/no-content.md',
       }));
@@ -294,7 +303,7 @@ describe('SyncEngine — template file rendering', () => {
     );
 
     try {
-      const engine = new SyncEngine(app as any, makeSettings({
+      const engine = new SyncEngine(app, makeSettings({
         maxDays: 0,
         templateFilePath: 'Templates/dedao.md',
       }));
@@ -314,7 +323,7 @@ describe('SyncEngine — page cutoff', () => {
   it('treats date-only syncStartDate as the local start of day', () => {
     const app = makeMockApp();
     const engine = new SyncEngine(
-      app as any,
+      app,
       makeSettings({ maxDays: 0 }),
       undefined,
       { syncStartDate: '2026-05-09', maxDays: 0 }
@@ -351,7 +360,7 @@ describe('SyncEngine — page cutoff', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
+      const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }));
 
       const result = await engine.sync();
 
@@ -387,7 +396,7 @@ describe('SyncEngine — page cutoff', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 1 }));
+      const engine = new SyncEngine(app, makeSettings({ maxDays: 1 }));
 
       const result = await engine.sync();
 
@@ -456,7 +465,7 @@ describe('SyncEngine — page cutoff', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({
+      const engine = new SyncEngine(app, makeSettings({
         authMode: 'openapi',
         openApiToken: 'openapi-token',
         openApiClientId: 'openapi-client',
@@ -528,7 +537,7 @@ describe('SyncEngine — page cutoff', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({
+      const engine = new SyncEngine(app, makeSettings({
         authMode: 'web',
         webApiToken: 'web-token',
         maxDays: 1,
@@ -550,7 +559,7 @@ describe('SyncEngine — filterNotesByDateRange', () => {
   it('keeps notes with updated_at > syncStartDate (boundary is exclusive)', () => {
     const app = makeMockApp();
     const engine = new SyncEngine(
-      app as any,
+      app,
       makeSettings({ maxDays: 0 }),
       undefined,
       { syncStartDate: '2026-05-09T10:00:00+08:00', maxDays: 0 }
@@ -578,7 +587,7 @@ describe('SyncEngine — filterNotesByDateRange', () => {
 
   it('keeps all notes when syncStartDate is empty', () => {
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
+    const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }));
 
     const notes = [
       makeNote({ note_id: 'n1', updated_at: '2026-04-01T10:00:00+08:00' }),
@@ -591,7 +600,7 @@ describe('SyncEngine — filterNotesByDateRange', () => {
   it('returns all notes when syncStartDate is an unparsable value', () => {
     const app = makeMockApp();
     const engine = new SyncEngine(
-      app as any,
+      app,
       makeSettings({ maxDays: 0 }),
       undefined,
       { syncStartDate: 'not-a-date', maxDays: 0 }
