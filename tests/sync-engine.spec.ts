@@ -1247,7 +1247,7 @@ describe('SyncEngine — lastSyncEndTimestamp boundary re-check', () => {
     app.vault._addFolder('得到大脑/纯文本');
 
     const engine = new SyncEngine(
-      app as any,
+      app,
       makeSettings({ maxDays: 0 }),
       undefined,
       { syncStartDate: '2026-05-10T12:00:00+08:00', maxDays: 0 }
@@ -1281,7 +1281,7 @@ describe('SyncEngine — lastSyncEndTimestamp boundary re-check', () => {
     const app = makeMockApp();
     app.vault._addFolder('得到大脑/纯文本');
     const engine = new SyncEngine(
-      app as any,
+      app,
       makeSettings({
         maxDays: 0,
         syncHistory: [
@@ -1356,7 +1356,7 @@ describe('SyncEngine — lastSyncEndTimestamp boundary re-check', () => {
     const app = makeMockApp();
     app.vault._addFolder('得到大脑/纯文本');
     const engine = new SyncEngine(
-      app as any,
+      app,
       makeSettings({
         maxDays: 0,
         syncHistory: [
@@ -1434,7 +1434,7 @@ describe('SyncEngine — lastSyncEndTimestamp boundary re-check', () => {
     app.vault._addFolder('得到大脑/纯文本');
 
     const engine = new SyncEngine(
-      app as any,
+      app,
       makeSettings({ maxDays: 0 }),
       undefined,
       { syncStartDate: '2026-05-10T12:00:00+08:00', maxDays: 0 }
