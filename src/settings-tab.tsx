@@ -19,6 +19,10 @@ export class GetNoteSettingsTab extends PluginSettingTab {
   }
 
   display(): void {
+    this.refresh();
+  }
+
+  refresh(): void {
     ReactDOM.render(
       <SettingsComponent
         settings={this.plugin.settings}

@@ -364,7 +364,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 
   private refreshSettingsTab(): void {
-    if (this.settingsTab) this.settingsTab.display();
+    this.settingsTab?.refresh();
   }
 
   startAutoSync(): void {
