@@ -54,4 +54,23 @@ describe('floating select menu behavior', () => {
 
     expect(container.querySelector('.getnote-note-type-select-menu')).toBeNull();
   });
+
+  it('closes an open floating select on outside mouse down in its owning document', async () => {
+    const popoutDocument = document.implementation.createHTMLDocument('popout');
+    const container = popoutDocument.createElement('div');
+    popoutDocument.body.appendChild(container);
+    render(h(NoteTypeSelect, { onChange: vi.fn() }), container);
+
+    await act(() => {
+      container.querySelector('button')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(container.querySelector('.getnote-note-type-select-menu')).toBeTruthy();
+
+    await act(() => {
+      popoutDocument.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    });
+
+    expect(container.querySelector('.getnote-note-type-select-menu')).toBeNull();
+    render(null, container);
+  });
 });
