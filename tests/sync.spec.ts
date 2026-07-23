@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { App, Modal, TFile } from 'obsidian';
 import GetNoteSyncPlugin from '../src/main';
 import { ReverseSyncEngine } from '../src/reverse-sync';
+import { GetNoteSettingsTab } from '../src/settings-tab';
 import { SyncCancelledError, SyncEngine } from '../src/sync';
 import { DEFAULT_SETTINGS } from '../src/types';
 
@@ -44,6 +45,71 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     plugin.syncHistory = [];
     return plugin;
   }
+
+  function watchSettingsRefresh(plugin: GetNoteSyncPlugin) {
+    const settingsTab = new GetNoteSettingsTab(plugin.app, plugin);
+    const refresh = vi.spyOn(settingsTab, 'refresh').mockImplementation(() => {});
+    plugin['settingsTab'] = settingsTab;
+    return refresh;
+  }
+
+  it('refreshes settings after clearing stale quota state', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-23T01:00:00+08:00'));
+    const plugin = makePlugin();
+    plugin.settings.lastQuotaState = {
+      exhausted: true,
+      reason: 'quota_day',
+      checkedAt: new Date('2026-07-21T23:00:00+08:00').getTime(),
+    };
+    const refresh = watchSettingsRefresh(plugin);
+
+    await plugin['clearStaleQuotaState']();
+
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes settings when manual sync starts', async () => {
+    let resolveSync!: (result: Awaited<ReturnType<SyncEngine['sync']>>) => void;
+    vi.spyOn(SyncEngine.prototype, 'sync').mockImplementation(() => new Promise(resolve => {
+      resolveSync = resolve;
+    }));
+    const plugin = makePlugin();
+    const refresh = watchSettingsRefresh(plugin);
+
+    const syncPromise = plugin['runSync']('full', { maxDays: 0, syncStartDate: '' });
+    expect(refresh).toHaveBeenCalledTimes(1);
+
+    resolveSync({ created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] });
+    await syncPromise;
+  });
+
+  it('refreshes settings when manual sync is cancelled', async () => {
+    vi.spyOn(SyncEngine.prototype, 'sync').mockRejectedValue(new SyncCancelledError());
+    const plugin = makePlugin();
+    const refresh = watchSettingsRefresh(plugin);
+
+    await plugin['runSync']('full', { maxDays: 0, syncStartDate: '' });
+
+    expect(refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it('refreshes settings when manual sync completes', async () => {
+    vi.spyOn(SyncEngine.prototype, 'sync').mockResolvedValue({
+      created: 1,
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+      total: 1,
+      items: [],
+    });
+    const plugin = makePlugin();
+    const refresh = watchSettingsRefresh(plugin);
+
+    await plugin['runSync']('full', { maxDays: 0, syncStartDate: '' });
+
+    expect(refresh).toHaveBeenCalledTimes(2);
+  });
 
   it('manual sync failure clears syncing state', async () => {
     vi.spyOn(SyncEngine.prototype, 'sync').mockRejectedValue(new Error('boom'));
