@@ -29,12 +29,13 @@ export function useFloatingSelectMenu<TTrigger extends HTMLElement>() {
       if (rootRef.current?.contains(event.target as Node)) return;
       setOpen(false);
     };
+    const hostDocument = rootRef.current?.ownerDocument ?? document;
     positionMenu();
-    document.addEventListener('mousedown', handlePointerDown);
+    hostDocument.addEventListener('mousedown', handlePointerDown);
     window.addEventListener('resize', positionMenu);
     window.addEventListener('scroll', positionMenu, true);
     return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
+      hostDocument.removeEventListener('mousedown', handlePointerDown);
       window.removeEventListener('resize', positionMenu);
       window.removeEventListener('scroll', positionMenu, true);
     };
