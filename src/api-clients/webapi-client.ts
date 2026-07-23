@@ -27,7 +27,7 @@ function parseWebApiListResponse(value: unknown): { notes: GetNoteNote[]; hasMor
   // Map Web API fields to GetNoteNote
   const notes: GetNoteNote[] = list.map((raw): GetNoteNote => {
     const n: Record<string, unknown> = isRecord(raw) ? raw : {};
-    const stringField = (key: string): string => (typeof n[key] === 'string' ? (n[key] as string) : '');
+    const stringField = (key: string): string => (typeof n[key] === 'string' ? n[key] : '');
     const childCountRaw = n.children_count;
     const subNoteCountRaw = n.sub_note_count;
     return {

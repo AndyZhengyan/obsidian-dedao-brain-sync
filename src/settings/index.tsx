@@ -147,7 +147,7 @@ export function SettingsComponent({
   const attachmentImport = settings.attachmentImport ?? {};
   const attachmentKinds = ['image', 'audio', 'video', 'document'] as const;
   const allAttachmentsOn = attachmentKinds.every(
-    k => attachmentImport[k as 'image' | 'audio' | 'video' | 'document'] !== false,
+    k => attachmentImport[k] !== false,
   );
   const handleMasterAttachmentChange = (value: boolean) => {
     updateSetting('attachmentImport', {
@@ -420,7 +420,7 @@ export function SettingsComponent({
           const tokenStr = token.replace(/^Bearer\s+/i, '');
           const payload: unknown = JSON.parse(atob(tokenStr.split('.')[1]));
           if (payload && typeof payload === 'object' && 'exp' in payload) {
-            const exp = (payload as { exp: unknown }).exp;
+            const exp = payload.exp;
             if (typeof exp === 'number') {
               const remaining = Math.round((exp - Date.now() / 1000) / 60);
               if (remaining > 0) setConnectionExpiryMin(remaining);

@@ -182,7 +182,7 @@ function buildAssetBlock(assetPaths: string[]): string {
     const safePaths = groups.images
       .map(p => {
         if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(p)) return null;
-        if (/[<>{}|\`\x00-\x1f]/.test(p)) return null;
+        if (/[<>{}|`]/.test(p) || Array.from(p).some(char => char.charCodeAt(0) <= 0x1f)) return null;
         return relativeAssetPath(p);
       })
       .filter((p): p is string => Boolean(p))
