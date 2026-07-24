@@ -24,7 +24,7 @@ export function findSyncedNoteFile(app: Pick<App, 'vault' | 'metadataCache'>, fo
   const prefix = `${folderName}/`;
   for (const file of app.vault.getMarkdownFiles()) {
     if (!file.path.startsWith(prefix)) continue;
-    const uid = app.metadataCache.getFileCache(file)?.frontmatter?.['uid'];
+    const uid: unknown = app.metadataCache.getFileCache(file)?.frontmatter?.['uid'];
     if (String(uid ?? '') === noteId) return file;
   }
   return null;

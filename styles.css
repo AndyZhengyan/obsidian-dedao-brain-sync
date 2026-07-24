@@ -908,14 +908,14 @@
   flex: 0 0 auto;
 }
 
-.getnote-knowledge-base-select-option input[type="checkbox"],
-.getnote-tag-select-option input[type="checkbox"] {
-  flex: 0 0 16px !important;
-  width: 16px !important;
-  min-width: 16px !important;
-  max-width: 16px !important;
-  height: 16px !important;
-  margin: 0 !important;
+body .getnote-knowledge-base-select-option input[type="checkbox"],
+body .getnote-tag-select-option input[type="checkbox"] {
+  flex: 0 0 16px;
+  width: 16px;
+  min-width: 16px;
+  max-width: 16px;
+  height: 16px;
+  margin: 0;
 }
 
 .getnote-knowledge-base-select-option span {
@@ -1938,6 +1938,6 @@
   color: var(--text-muted);
 }
 
-.getnote-ribbon-action-hidden {
-  display: none !important;
+body .getnote-ribbon-action-hidden {
+  display: none;
 }
