@@ -1453,7 +1453,7 @@ describe('SyncEngine — lastSyncEndTimestamp boundary re-check', () => {
 describe('SyncEngine — buildUidIndex', () => {
   it('返回空 Map 当 vault 没有 md 文件', () => {
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings());
+    const engine = new SyncEngine(app, makeSettings());
     // @ts-expect-error private helper is tested directly
     const index = engine['buildUidIndex']();
     expect(index.size).toBe(0);
@@ -1463,7 +1463,7 @@ describe('SyncEngine — buildUidIndex', () => {
     const app = makeMockApp();
     app.vault._addFile('得到大脑/纯文本/test.md', 'content', { uid: 'note_abc' });
     app.vault._addFolder('得到大脑/纯文本');
-    const engine = new SyncEngine(app as any, makeSettings());
+    const engine = new SyncEngine(app, makeSettings());
     // @ts-expect-error private helper is tested directly
     const index = engine['buildUidIndex']();
     expect(index.size).toBe(1);
@@ -1474,7 +1474,7 @@ describe('SyncEngine — buildUidIndex', () => {
     const app = makeMockApp();
     app.vault._addFile('得到大脑/纯文本/test.md', 'content', {});
     app.vault._addFolder('得到大脑/纯文本');
-    const engine = new SyncEngine(app as any, makeSettings());
+    const engine = new SyncEngine(app, makeSettings());
     // @ts-expect-error private helper is tested directly
     const index = engine['buildUidIndex']();
     expect(index.size).toBe(0);
@@ -1486,7 +1486,7 @@ describe('SyncEngine — buildUidIndex', () => {
     app.vault._addFile('其他/纯文本/other.md', 'content', { uid: 'note_002' });
     app.vault._addFolder('得到大脑/纯文本');
     app.vault._addFolder('其他/纯文本');
-    const engine = new SyncEngine(app as any, makeSettings());
+    const engine = new SyncEngine(app, makeSettings());
     // @ts-expect-error private helper is tested directly
     const index = engine['buildUidIndex']();
     expect(index.size).toBe(1);
