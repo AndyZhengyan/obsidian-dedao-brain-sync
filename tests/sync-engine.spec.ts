@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { App } from 'obsidian';
+import type { App, TFile } from 'obsidian';
 import { SyncEngine } from '../src/sync';
 import type { Settings, GetNoteNote } from '../src/types';
 import { DEFAULT_SETTINGS } from '../src/types';
@@ -1502,9 +1502,9 @@ describe('SyncEngine — writeNote', () => {
 
   it('新建笔记返回 created', async () => {
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings());
+    const engine = new SyncEngine(app, makeSettings());
     const note = makeNote({ note_id: 'new_001', title: '新笔记' });
-    const index = new Map<string, any>();
+    const index = new Map<string, TFile>();
     // @ts-expect-error private helper is tested directly
     const result = await engine['writeNote'](note, index);
     expect(result.status).toBe('created');
@@ -1518,9 +1518,9 @@ describe('SyncEngine — writeNote', () => {
       { uid: 'new_001', modified: '2026-04-28 10:00:00' }
     );
     app.vault._addFolder('得到大脑/纯文本');
-    const engine = new SyncEngine(app as any, makeSettings());
+    const engine = new SyncEngine(app, makeSettings());
     const note = makeNote({ note_id: 'new_001', title: '新笔记' });
-    const index = new Map<string, any>([['new_001', { path: '得到大脑/纯文本/新笔记.md' }]]);
+    const index = new Map<string, TFile>([['new_001', { path: '得到大脑/纯文本/新笔记.md' } as TFile]]);
     // @ts-expect-error private helper is tested directly
     const result = await engine['writeNote'](note, index);
     expect(result.status).toBe('skipped');
@@ -1534,14 +1534,14 @@ describe('SyncEngine — writeNote', () => {
       { uid: 'local_edit', modified: '2026-04-28 10:00:00' }
     );
     app.vault._addFolder('得到大脑/纯文本');
-    const engine = new SyncEngine(app as any, makeSettings());
+    const engine = new SyncEngine(app, makeSettings());
     const note = makeNote({
       note_id: 'local_edit',
       title: '本地编辑',
       content: '远端新内容',
       updated_at: '2026-04-29T10:00:00+08:00',
     });
-    const index = new Map<string, any>([['local_edit', { path: '得到大脑/纯文本/本地编辑.md' }]]);
+    const index = new Map<string, TFile>([['local_edit', { path: '得到大脑/纯文本/本地编辑.md' } as TFile]]);
 
     // @ts-expect-error private helper is tested directly
     const result = await engine['writeNote'](note, index);
