@@ -2,6 +2,17 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 
 const CLOSE_FLOATING_SELECTS_EVENT = 'getnote-close-floating-selects';
 
+function resolveHostRealm(root: HTMLDivElement | null): {
+  hostDocument: Document;
+  hostWindow: Window;
+} {
+  const fallbackDocument = typeof activeDocument === 'undefined' ? document : activeDocument;
+  const hostDocument = root?.ownerDocument ?? fallbackDocument;
+  const fallbackWindow = typeof activeWindow === 'undefined' ? window : activeWindow;
+  const hostWindow = hostDocument.defaultView ?? fallbackDocument.defaultView ?? fallbackWindow;
+  return { hostDocument, hostWindow };
+}
+
 export function useFloatingSelectMenu<TTrigger extends HTMLElement>() {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -10,8 +21,9 @@ export function useFloatingSelectMenu<TTrigger extends HTMLElement>() {
 
   useEffect(() => {
     const close = () => setOpen(false);
-    window.addEventListener(CLOSE_FLOATING_SELECTS_EVENT, close);
-    return () => window.removeEventListener(CLOSE_FLOATING_SELECTS_EVENT, close);
+    const { hostWindow } = resolveHostRealm(rootRef.current);
+    hostWindow.addEventListener(CLOSE_FLOATING_SELECTS_EVENT, close);
+    return () => hostWindow.removeEventListener(CLOSE_FLOATING_SELECTS_EVENT, close);
   }, []);
 
   useEffect(() => {
@@ -29,20 +41,25 @@ export function useFloatingSelectMenu<TTrigger extends HTMLElement>() {
       if (rootRef.current?.contains(event.target as Node)) return;
       setOpen(false);
     };
-    const hostDocument = rootRef.current?.ownerDocument ?? document;
+    const { hostDocument, hostWindow } = resolveHostRealm(rootRef.current);
     positionMenu();
     hostDocument.addEventListener('mousedown', handlePointerDown);
-    window.addEventListener('resize', positionMenu);
-    window.addEventListener('scroll', positionMenu, true);
+    hostWindow.addEventListener('resize', positionMenu);
+    hostWindow.addEventListener('scroll', positionMenu, true);
     return () => {
       hostDocument.removeEventListener('mousedown', handlePointerDown);
-      window.removeEventListener('resize', positionMenu);
-      window.removeEventListener('scroll', positionMenu, true);
+      hostWindow.removeEventListener('resize', positionMenu);
+      hostWindow.removeEventListener('scroll', positionMenu, true);
     };
   }, [open]);
 
   const toggleOpen = () => {
-    if (!open) window.dispatchEvent(new Event(CLOSE_FLOATING_SELECTS_EVENT));
+    if (!open) {
+      const { hostDocument, hostWindow } = resolveHostRealm(rootRef.current);
+      const closeEvent = hostDocument.createEvent('Event');
+      closeEvent.initEvent(CLOSE_FLOATING_SELECTS_EVENT, false, false);
+      hostWindow.dispatchEvent(closeEvent);
+    }
     setOpen(!open);
   };
 

@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Window } from 'happy-dom';
 import { h, render } from 'preact';
 import { act } from 'preact/test-utils';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NoteTypeSelect } from '../src/ui/note-type-select';
 
 afterEach(() => {
@@ -9,8 +10,20 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
+function createPopout() {
+  const popoutWindow = new Window({ url: 'https://getnote.test/popout' });
+  const container = popoutWindow.document.createElement('div');
+  popoutWindow.document.body.appendChild(container);
+  return { popoutWindow, container };
+}
+
+function openSelect(popoutWindow: Window, container: HTMLElement, index = 0) {
+  const trigger = container.querySelectorAll<HTMLButtonElement>('.getnote-note-type-select-trigger')[index];
+  trigger.dispatchEvent(new popoutWindow.MouseEvent('click', { bubbles: true }));
+}
+
 describe('floating select menu behavior', () => {
-  it('keeps the existing global close coordination between floating selects', async () => {
+  it('keeps one floating select open in the main window', async () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     render(
@@ -38,7 +51,7 @@ describe('floating select menu behavior', () => {
     expect(triggers[1].querySelector('.is-open')).toBeTruthy();
   });
 
-  it('closes an open floating select on outside mouse down', async () => {
+  it('closes an open floating select on outside mouse down in the main window', async () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     render(h(NoteTypeSelect, { onChange: vi.fn() }), container);
@@ -55,22 +68,133 @@ describe('floating select menu behavior', () => {
     expect(container.querySelector('.getnote-note-type-select-menu')).toBeNull();
   });
 
-  it('closes an open floating select on outside mouse down in its owning document', async () => {
-    const popoutDocument = document.implementation.createHTMLDocument('popout');
-    const container = popoutDocument.createElement('div');
-    popoutDocument.body.appendChild(container);
-    render(h(NoteTypeSelect, { onChange: vi.fn() }), container);
+  it('opens and selects an option in a popout window realm', async () => {
+    const { popoutWindow, container } = createPopout();
+    const onChange = vi.fn();
+    render(h(NoteTypeSelect, { onChange }), container);
+
+    await act(() => openSelect(popoutWindow, container));
+    const plainText = container.querySelector<HTMLInputElement>(
+      '.getnote-note-type-select-option:nth-child(2) input'
+    );
+    expect(plainText).toBeTruthy();
 
     await act(() => {
-      container.querySelector('button')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      plainText!.checked = false;
+      plainText!.dispatchEvent(new popoutWindow.Event('change', { bubbles: true }));
     });
+
+    expect(onChange).toHaveBeenCalledWith(expect.not.arrayContaining(['plain_text']));
+    render(null, container);
+    popoutWindow.close();
+  });
+
+  it('closes an open floating select on outside mouse down in its popout document', async () => {
+    const { popoutWindow, container } = createPopout();
+    render(h(NoteTypeSelect, { onChange: vi.fn() }), container);
+
+    await act(() => openSelect(popoutWindow, container));
     expect(container.querySelector('.getnote-note-type-select-menu')).toBeTruthy();
 
     await act(() => {
-      popoutDocument.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      popoutWindow.document.body.dispatchEvent(new popoutWindow.MouseEvent('mousedown', { bubbles: true }));
     });
 
     expect(container.querySelector('.getnote-note-type-select-menu')).toBeNull();
     render(null, container);
+    popoutWindow.close();
+  });
+
+  it('repositions a popout menu on its own resize and capture scroll events', async () => {
+    const { popoutWindow, container } = createPopout();
+    render(h(NoteTypeSelect, { onChange: vi.fn() }), container);
+    const trigger = container.querySelector<HTMLButtonElement>('.getnote-note-type-select-trigger')!;
+    let rect = { bottom: 20, left: 10, width: 120 };
+    vi.spyOn(trigger, 'getBoundingClientRect').mockImplementation(
+      () => ({ ...rect }) as DOMRect
+    );
+
+    await act(() => openSelect(popoutWindow, container));
+    const menu = container.querySelector<HTMLElement>('.getnote-note-type-select-menu')!;
+    expect(menu.style.top).toBe('24px');
+    expect(menu.style.left).toBe('10px');
+    expect(menu.style.width).toBe('120px');
+
+    rect = { bottom: 40, left: 30, width: 160 };
+    await act(() => {
+      popoutWindow.dispatchEvent(new popoutWindow.Event('resize'));
+    });
+    expect(menu.style.top).toBe('44px');
+    expect(menu.style.left).toBe('30px');
+    expect(menu.style.width).toBe('160px');
+
+    rect = { bottom: 60, left: 50, width: 180 };
+    const scrollTarget = popoutWindow.document.createElement('div');
+    container.appendChild(scrollTarget);
+    await act(() => {
+      scrollTarget.dispatchEvent(new popoutWindow.Event('scroll'));
+    });
+    expect(menu.style.top).toBe('64px');
+    expect(menu.style.left).toBe('50px');
+    expect(menu.style.width).toBe('180px');
+
+    render(null, container);
+    popoutWindow.close();
+  });
+
+  it('keeps one floating select open within a popout window', async () => {
+    const { popoutWindow, container } = createPopout();
+    render(
+      h('div', {}, [
+        h(NoteTypeSelect, { onChange: vi.fn() }),
+        h(NoteTypeSelect, { onChange: vi.fn() }),
+      ]),
+      container
+    );
+
+    await act(() => openSelect(popoutWindow, container, 0));
+    await act(() => openSelect(popoutWindow, container, 1));
+
+    const triggers = container.querySelectorAll('.getnote-note-type-select-trigger');
+    expect(container.querySelectorAll('.getnote-note-type-select-menu')).toHaveLength(1);
+    expect(triggers[0].querySelector('.is-open')).toBeNull();
+    expect(triggers[1].querySelector('.is-open')).toBeTruthy();
+
+    render(null, container);
+    popoutWindow.close();
+  });
+
+  it('ignores main-window coordination, resize, scroll, and outside events for a popout menu', async () => {
+    const { popoutWindow, container } = createPopout();
+    render(h(NoteTypeSelect, { onChange: vi.fn() }), container);
+    const popoutTrigger = container.querySelector<HTMLButtonElement>('.getnote-note-type-select-trigger')!;
+    let rect = { bottom: 20, left: 10, width: 120 };
+    vi.spyOn(popoutTrigger, 'getBoundingClientRect').mockImplementation(
+      () => ({ ...rect }) as DOMRect
+    );
+
+    await act(() => openSelect(popoutWindow, container));
+    const popoutMenu = container.querySelector<HTMLElement>('.getnote-note-type-select-menu')!;
+    expect(popoutMenu.style.top).toBe('24px');
+
+    const mainContainer = document.createElement('div');
+    document.body.appendChild(mainContainer);
+    render(h(NoteTypeSelect, { onChange: vi.fn() }), mainContainer);
+    rect = { bottom: 80, left: 70, width: 200 };
+    await act(() => {
+      window.dispatchEvent(new Event('resize'));
+      window.dispatchEvent(new Event('scroll'));
+      document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      mainContainer.querySelector('button')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(container.querySelector('.getnote-note-type-select-menu')).toBe(popoutMenu);
+    expect(popoutMenu.style.top).toBe('24px');
+    expect(popoutMenu.style.left).toBe('10px');
+    expect(popoutMenu.style.width).toBe('120px');
+
+    render(null, mainContainer);
+    render(null, container);
+    popoutWindow.close();
   });
 });
