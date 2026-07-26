@@ -1,6 +1,7 @@
 const DATE_TOKEN_PATTERN = /YYYY|MM|DD/g;
 const SAFE_SEPARATOR_PATTERN = /^[\/._ -]*$/;
 const RESERVED_SEGMENT_PATTERN = /[\\:*?"<>|\0]/;
+const WINDOWS_DEVICE_SEGMENT_PATTERN = /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)/i;
 
 function isSafeRelativePath(path: string): boolean {
   if (!path || path.startsWith('/') || path.endsWith('/') || path.includes('\\')) return false;
@@ -8,6 +9,9 @@ function isSafeRelativePath(path: string): boolean {
     segment.length > 0
     && segment !== '.'
     && segment !== '..'
+    && !segment.endsWith('.')
+    && !segment.endsWith(' ')
+    && !WINDOWS_DEVICE_SEGMENT_PATTERN.test(segment)
     && !RESERVED_SEGMENT_PATTERN.test(segment)
   );
 }
@@ -69,8 +73,11 @@ export function buildCanonicalCategoryDir(
   createdAt: string,
   format: string,
 ): string {
-  const root = rootFolder.trim();
-  const category = categoryDir.trim();
+  if (rootFolder !== rootFolder.trim() || categoryDir !== categoryDir.trim()) {
+    throw new Error('Unsafe category path');
+  }
+  const root = rootFolder;
+  const category = categoryDir;
   if (!isSafeRelativePath(root) || !isSafeRelativePath(category)) {
     throw new Error('Unsafe category path');
   }

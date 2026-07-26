@@ -51,6 +51,12 @@ describe('created-date paths', () => {
     '/YYYY/MM',
     'YYYY/MM/',
     'YYYY\\MM',
+    'YYYY/CON/MM',
+    'YYYY/AUX.txt/MM',
+    'YYYY/COM1/MM',
+    'YYYY/LPT9.md/MM',
+    'YYYY/folder./MM',
+    'YYYY/folder /MM',
   ])('rejects unsafe or unsupported format %j', (format) => {
     expect(validateDatePathFormat(format)).toBe(false);
     expect(() => formatCreatedDatePath('2026-07-03T23:59:00+08:00', format))
@@ -75,4 +81,22 @@ describe('created-date paths', () => {
       )).toThrow();
     },
   );
+
+  it.each([
+    'CON',
+    'PRN.md',
+    '知识库/AUX',
+    '知识库/NUL.txt',
+    '知识库/COM9',
+    '知识库/LPT1.backup',
+    '知识库/尾随.',
+    '知识库/尾随 ',
+  ])('rejects Windows-reserved category segment %j', (categoryDir) => {
+    expect(() => buildCanonicalCategoryDir(
+      '得到大脑',
+      categoryDir,
+      '2026-07-03T23:59:00+08:00',
+      'YYYY/MM',
+    )).toThrow();
+  });
 });

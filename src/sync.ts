@@ -949,8 +949,30 @@ export class SyncEngine {
           if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
           if (seenNoteIds.has(note.note_id)) continue;
           const parentMatchesTags = this.filterNotesByTags([note]).length > 0;
-          const noteToWrite = await this.enrichAudioNote(note, controller.signal);
+          const preCheck = this.preCheckNote(note, uidIndex);
+          if (preCheck.exists && parentMatchesTags) {
+            seenNoteIds.add(note.note_id);
+            result.total++;
+            for (const tag of note.tags ?? []) {
+              if (tag?.name) observedTagNames.add(tag.name);
+            }
+            result.skipped++;
+            this.recordItem(result, note, { status: 'skipped', file: preCheck.file });
+          }
 
+          const mayHaveAppendNotes = (note.children_count ?? 0) > 0 || Boolean(note.children_ids?.length);
+          if (preCheck.exists && !mayHaveAppendNotes) {
+            const updatedTime = parseNoteUpdatedTime(note);
+            if (updatedTime !== null && (lastNoteTimestampTime === null || updatedTime > lastNoteTimestampTime)) {
+              lastNoteTimestampTime = updatedTime;
+              result.lastNoteTimestamp = note.updated_at;
+            }
+            continue;
+          }
+
+          const noteToWrite = preCheck.exists
+            ? note
+            : await this.enrichAudioNote(note, controller.signal);
           const appendNotes = this.filterNotesByTags(await this.fetchAppendNotes(noteToWrite, controller.signal, result));
           if (!parentMatchesTags && appendNotes.length === 0) continue;
           const parentBaseName = this.buildBaseName(noteToWrite);
@@ -959,7 +981,7 @@ export class SyncEngine {
           const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
 
           // 写入父文档（含子文档链接）
-          if (parentMatchesTags) {
+          if (parentMatchesTags && !preCheck.exists) {
             seenNoteIds.add(note.note_id);
             result.total++;
             for (const tag of note.tags ?? []) {

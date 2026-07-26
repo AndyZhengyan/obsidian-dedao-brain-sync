@@ -121,6 +121,85 @@ function mockFetchResponse(body: unknown) {
   };
 }
 
+describe('SyncEngine — existing UID precheck before enrichment', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it.each([
+    {
+      label: 'image',
+      noteType: 'img_text',
+      detail: { attachments: [{ type: 'image', url: 'https://cdn.example.com/image.png', title: '图片' }] },
+    },
+    {
+      label: 'audio',
+      noteType: 'recorder_audio',
+      detail: {
+        audio: '转写',
+        attachments: [{ type: 'audio', url: 'https://cdn.example.com/audio.mp3', title: '录音' }],
+      },
+    },
+    {
+      label: 'link original',
+      noteType: 'link',
+      detail: {
+        linkOriginal: { title: '原文', url: 'https://example.com/source', content: '原文内容' },
+      },
+    },
+    {
+      label: 'generic attachment',
+      noteType: 'plain_text',
+      detail: { attachments: [{ type: 'document', url: 'https://cdn.example.com/file.pdf', title: '附件' }] },
+    },
+  ])('does not create orphan date-path assets for an existing $label note', async ({ noteType, detail }) => {
+    const note = makeNote({
+      note_id: `existing_${noteType}`,
+      title: '历史笔记',
+      note_type: noteType,
+      ...detail,
+    });
+    const app = makeMockApp();
+    app.vault._addFolder('得到大脑/纯文本');
+    app.vault._addFile(
+      '得到大脑/纯文本/历史笔记.md',
+      '本地内容',
+      { uid: note.note_id, modified: '2026-04-28 10:00:00' },
+    );
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation((url: unknown) => {
+      const urlString = typeof url === 'string' ? url : (url as Request).url;
+      if (urlString.includes('/resource/note/list')) {
+        return Promise.resolve(mockFetchResponse({
+          data: { notes: [note], has_more: false, next_cursor: '' },
+        }) as Response);
+      }
+      if (urlString.includes('/resource/note/detail')) {
+        return Promise.resolve(mockFetchResponse({ data: { note } }) as Response);
+      }
+      if (urlString.includes('/resource/note/original')) {
+        return Promise.resolve(mockFetchResponse({ data: note.linkOriginal }) as Response);
+      }
+      return Promise.resolve(mockFetchResponse({}) as Response);
+    });
+    const engine = new SyncEngine(app, makeSettings({
+      maxDays: 0,
+      datePathEnabled: true,
+      datePathFormat: 'YYYY/MM',
+    }));
+
+    const result = await engine.sync();
+
+    expect(result).toEqual(expect.objectContaining({ created: 0, updated: 0, skipped: 1 }));
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(app.vault.createFolder).not.toHaveBeenCalled();
+    expect(app.vault.create).not.toHaveBeenCalled();
+    expect(app.vault.createBinary).not.toHaveBeenCalled();
+    expect(app.vault.modify).not.toHaveBeenCalled();
+    expect(app.vault.getAbstractFileByPath('得到大脑/纯文本/历史笔记.md')).toBeTruthy();
+  });
+});
+
 describe('SyncEngine — filterRecentNotes', () => {
   it('disables maxDays when syncStartDate is set', () => {
     const app = makeMockApp();
