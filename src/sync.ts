@@ -15,6 +15,7 @@ import {
   getFilePath,
   getKnowledgeBaseDir,
 } from './sync-paths';
+import { buildCanonicalCategoryDir } from './date-paths';
 
 const AUDIO_NOTE_TYPES = new Set([
   'recorder_audio',
@@ -189,9 +190,15 @@ export class SyncEngine {
     this.onProgress = onProgress;
   }
 
-  private async ensureCategoryDir(categoryDir: string): Promise<string> {
-    const basePath = this.settings.folderName;
-    const fullPath = `${basePath}/${categoryDir}`;
+  private async ensureNoteCategoryDir(note: GetNoteNote, categoryDir: string): Promise<string> {
+    const fullPath = this.settings.datePathEnabled
+      ? buildCanonicalCategoryDir(
+        this.settings.folderName,
+        categoryDir,
+        note.created_at,
+        this.settings.datePathFormat,
+      )
+      : `${this.settings.folderName}/${categoryDir}`;
     const targetDir = this.app.vault.getAbstractFileByPath(fullPath);
     if (!targetDir) {
       await this.app.vault.createFolder(fullPath);
@@ -249,7 +256,7 @@ export class SyncEngine {
         return null;
       }
 
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureNoteCategoryDir(note, categoryOverride ?? getCategoryDir(note.note_type));
       const assetDir = `${categoryDir}/asset`;
       if (!this.app.vault.getAbstractFileByPath(assetDir)) {
         await this.app.vault.createFolder(assetDir);
@@ -288,7 +295,7 @@ export class SyncEngine {
         return null;
       }
 
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureNoteCategoryDir(note, categoryOverride ?? getCategoryDir(note.note_type));
       const assetDir = `${categoryDir}/asset`;
       if (!this.app.vault.getAbstractFileByPath(assetDir)) {
         await this.app.vault.createFolder(assetDir);
@@ -327,7 +334,7 @@ export class SyncEngine {
       }
 
       const kind = classifyAttachmentUrl(attachment.url);
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureNoteCategoryDir(note, categoryOverride ?? getCategoryDir(note.note_type));
       const assetDir = `${categoryDir}/asset`;
       if (!this.app.vault.getAbstractFileByPath(assetDir)) {
         await this.app.vault.createFolder(assetDir);
@@ -356,7 +363,7 @@ export class SyncEngine {
     if (!note.audio) return null;
 
     try {
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureNoteCategoryDir(note, categoryOverride ?? getCategoryDir(note.note_type));
       const assetDir = `${categoryDir}/asset`;
       if (!this.app.vault.getAbstractFileByPath(assetDir)) {
         await this.app.vault.createFolder(assetDir);
@@ -382,7 +389,7 @@ export class SyncEngine {
     if (!originalContent) return null;
 
     try {
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureNoteCategoryDir(note, categoryOverride ?? getCategoryDir(note.note_type));
       const assetDir = `${categoryDir}/asset`;
       if (!this.app.vault.getAbstractFileByPath(assetDir)) {
         await this.app.vault.createFolder(assetDir);
@@ -493,25 +500,25 @@ export class SyncEngine {
     categoryOverride?: string
   ): Promise<WriteNoteResult> {
     try {
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
-      let targetPath = `${categoryDir}/${this.getFileName(note, parentBaseName)}.md`;
       const existingByUid = uidIndex.get(note.note_id);
+      if (existingByUid) {
+        return { status: 'skipped', file: existingByUid };
+      }
+
+      const categoryDir = await this.ensureNoteCategoryDir(note, categoryOverride ?? getCategoryDir(note.note_type));
+      let targetPath = `${categoryDir}/${this.getFileName(note, parentBaseName)}.md`;
       const existingAtTarget = this.app.vault.getAbstractFileByPath(targetPath);
 
       if (existingAtTarget instanceof TFile) {
-        if (!existingByUid || existingAtTarget.path !== existingByUid.path) {
-          const cached = this.app.metadataCache.getFileCache(existingAtTarget);
-          const targetUid = cached?.frontmatter?.['uid'] as string | undefined;
-          if (targetUid && targetUid !== note.note_id) {
-            const baseName = this.getFileName(note);
-            targetPath = this.resolveConflict(categoryDir, baseName);
-          }
+        const cached = this.app.metadataCache.getFileCache(existingAtTarget);
+        const targetUid = cached?.frontmatter?.['uid'] as string | undefined;
+        if (targetUid && targetUid !== note.note_id) {
+          const baseName = this.getFileName(note);
+          targetPath = this.resolveConflict(categoryDir, baseName);
         }
       }
 
-      if (existingByUid) {
-        return { status: 'skipped', file: existingByUid };
-      } else if (existingAtTarget instanceof TFile) {
+      if (existingAtTarget instanceof TFile) {
         const content = renderNote(note, note.assetFileName, parentFileName, childFileNames);
         // File exists at target path but wasn't in uidIndex - check content
         const contentChanged = this.isContentChanged(existingAtTarget, note) || hasImageAssetPaths(note) || Boolean(note.linkOriginalFileName);

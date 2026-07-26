@@ -86,6 +86,8 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
     syncStartDate: '',
     lastSyncEndTimestamp: '',
     filenamePrefix: '',
+    datePathEnabled: false,
+    datePathFormat: 'YYYY/MM',
     scheduledSync: { enabled: false, intervalMinutes: 30, syncOnStart: false },
     syncHistory: [],
     ...overrides,
@@ -1760,6 +1762,116 @@ describe('SyncEngine — writeNote', () => {
     // @ts-expect-error private helper is tested directly
     const result = await engine['writeNote'](note, index);
     expect(result.status).toBe('created');
+  });
+
+  it('日期路径开启后按 created 时间在分类前创建新笔记', async () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app, makeSettings({
+      datePathEnabled: true,
+      datePathFormat: 'YYYY/MM/DD',
+    }));
+    const note = makeNote({
+      note_id: 'dated_001',
+      title: '日期笔记',
+      created_at: '2024-01-02T03:04:05+08:00',
+      updated_at: '2026-07-03T23:59:00+08:00',
+    });
+
+    // @ts-expect-error private helper is tested directly
+    const result = await engine['writeNote'](note, new Map<string, TFile>());
+
+    expect(result.status).toBe('created');
+    expect(app.vault.create).toHaveBeenCalledWith(
+      '得到大脑/2024/01/02/纯文本/日期笔记.md',
+      expect.any(String),
+    );
+  });
+
+  it('日期路径开启后知识库路径仍保留完整分类层级', async () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app, makeSettings({
+      datePathEnabled: true,
+      datePathFormat: 'YYYY/MM',
+    }));
+    const note = makeNote({ note_id: 'kb_dated', title: '知识库笔记' });
+
+    // @ts-expect-error private helper is tested directly
+    const result = await engine['writeNote'](
+      note,
+      new Map<string, TFile>(),
+      undefined,
+      undefined,
+      undefined,
+      '知识库/我的知识库',
+    );
+
+    expect(result.status).toBe('created');
+    expect(app.vault.create).toHaveBeenCalledWith(
+      '得到大脑/2026/04/知识库/我的知识库/知识库笔记.md',
+      expect.any(String),
+    );
+  });
+
+  it('日期路径开启时相同 UID 仍在原位置跳过且不创建日期目录', async () => {
+    const app = makeMockApp();
+    const existing = { path: '得到大脑/纯文本/历史笔记.md' } as TFile;
+    const engine = new SyncEngine(app, makeSettings({
+      datePathEnabled: true,
+      datePathFormat: 'YYYY/MM',
+    }));
+    const note = makeNote({ note_id: 'existing_dated', title: '历史笔记' });
+
+    // @ts-expect-error private helper is tested directly
+    const result = await engine['writeNote'](
+      note,
+      new Map<string, TFile>([['existing_dated', existing]]),
+    );
+
+    expect(result).toEqual({ status: 'skipped', file: existing });
+    expect(app.vault.createFolder).not.toHaveBeenCalled();
+    expect(app.vault.create).not.toHaveBeenCalled();
+  });
+
+  it('日期路径开启后附件写入新笔记相邻的 asset 目录', async () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app, makeSettings({
+      datePathEnabled: true,
+      datePathFormat: 'YYYY/MM',
+    }));
+    const note = makeNote({ note_id: 'dated_image', title: '日期图片' });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockFetchResponse({})));
+
+    // @ts-expect-error private helper is tested directly
+    const path = await engine['downloadImageAsset'](
+      note,
+      { type: 'image', url: 'https://example.com/image.png', title: '图片' },
+    );
+
+    expect(path).toBe('得到大脑/2026/04/纯文本/asset/日期图片_image.png');
+    expect(app.vault.createBinary).toHaveBeenCalledWith(
+      '得到大脑/2026/04/纯文本/asset/日期图片_image.png',
+      expect.any(ArrayBuffer),
+    );
+  });
+
+  it('日期路径开启且 created 无效时不降级到旧目录', async () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app, makeSettings({
+      datePathEnabled: true,
+      datePathFormat: 'YYYY/MM',
+    }));
+    const note = makeNote({
+      note_id: 'invalid_created',
+      title: '无效日期',
+      created_at: 'not-a-date',
+    });
+
+    // @ts-expect-error private helper is tested directly
+    const result = await engine['writeNote'](note, new Map<string, TFile>());
+
+    expect(result.status).toBe('failed');
+    expect(app.vault.createFolder).not.toHaveBeenCalled();
+    expect(app.vault.create).not.toHaveBeenCalled();
   });
 
   it('有相同 uid 的笔记无变化返回 skipped', async () => {
