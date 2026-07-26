@@ -830,7 +830,7 @@ export class SyncEngine {
     return appendNotes;
   }
 
-  private filterNotesByDateRange(notes: GetNoteNote[]): GetNoteNote[] {
+  private filterNotesByDateRange(notes: GetNoteNote[], includeBoundary = false): GetNoteNote[] {
     const { syncStartDate } = this.scopeOptions;
     if (!syncStartDate) return notes;
 
@@ -839,7 +839,7 @@ export class SyncEngine {
 
     return notes.filter(note => {
       const updated = parseNoteUpdatedTime(note);
-      return updated !== null && updated > startTime;
+      return updated !== null && (includeBoundary ? updated >= startTime : updated > startTime);
     });
   }
 
@@ -1056,31 +1056,33 @@ export class SyncEngine {
     });
 
     const filteredNotes = this.filterNotesByType(
-      this.filterNotesByDateRange(this.filterRecentNotes(knowledgeNotes))
+      this.filterNotesByDateRange(this.filterRecentNotes(knowledgeNotes), true)
     );
 
     const uidIndex = this.buildUidIndex();
     const seenNoteIds = new Set<string>();
     const knowledgeBaseNames = this.scopeOptions.knowledgeBaseNames ?? {};
+    let knowledgeProcessed = 0;
 
     for (const note of filteredNotes) {
       if (this.cancelled) throw new SyncCancelledError();
       if (seenNoteIds.has(note.note_id)) continue;
       const failuresBeforeNote = result.failed;
       seenNoteIds.add(note.note_id);
+      knowledgeProcessed++;
       result.total++;
       if (note.fetch_error) {
         result.failed++;
         result.checkpointBlocked = true;
         this.recordItem(result, note, { status: 'failed', error: note.fetch_error });
         this.onProgress?.({
-          processed: result.total,
+          processed: knowledgeProcessed,
           total: filteredNotes.length,
           created: result.created,
           updated: result.updated,
           skipped: result.skipped,
           failed: result.failed,
-          percent: filteredNotes.length ? Math.round((result.total / filteredNotes.length) * 100) : 100,
+          percent: filteredNotes.length ? Math.round((knowledgeProcessed / filteredNotes.length) * 100) : 100,
         });
         continue;
       }
@@ -1104,13 +1106,13 @@ export class SyncEngine {
       if (result.failed > failuresBeforeNote) {
         result.checkpointBlocked = true;
         this.onProgress?.({
-          processed: result.total,
+          processed: knowledgeProcessed,
           total: filteredNotes.length,
           created: result.created,
           updated: result.updated,
           skipped: result.skipped,
           failed: result.failed,
-          percent: filteredNotes.length ? Math.round((result.total / filteredNotes.length) * 100) : 100,
+          percent: filteredNotes.length ? Math.round((knowledgeProcessed / filteredNotes.length) * 100) : 100,
         });
         continue;
       }
@@ -1154,13 +1156,13 @@ export class SyncEngine {
       }
 
       this.onProgress?.({
-        processed: result.total,
-        total: result.total,
+        processed: knowledgeProcessed,
+        total: filteredNotes.length,
         created: result.created,
         updated: result.updated,
         skipped: result.skipped,
         failed: result.failed,
-        percent: 0,
+        percent: filteredNotes.length ? Math.round((knowledgeProcessed / filteredNotes.length) * 100) : 100,
       });
     }
   }

@@ -588,8 +588,14 @@ async function fetchBloggerContentDetail(
       signal
     );
     const detail = normalizeContent(normalizeData(data));
+    if (!detail) {
+      return {
+        content,
+        error: 'Invalid blogger content detail payload',
+      };
+    }
     return {
-      content: detail ? { ...content, ...detail, post_id_alias: content.post_id_alias } : content,
+      content: { ...content, ...detail, post_id_alias: content.post_id_alias },
     };
   } catch (error) {
     if (signal?.aborted) throw error;
