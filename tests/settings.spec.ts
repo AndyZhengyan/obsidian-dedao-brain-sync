@@ -48,6 +48,11 @@ function renderSettings(
       failed: number;
       issues: Array<{ code: string; path: string; message: string }>;
     }>;
+    confirmDatePathMigration?: (request: {
+      mode: 'apply' | 'reconcile';
+      current: { enabled: boolean; format: string };
+      target: { enabled: boolean; format: string };
+    }) => Promise<boolean>;
   } = {}
 ) {
   const container = document.createElement('div');
@@ -68,6 +73,7 @@ function renderSettings(
       syncProgress: options.syncProgress,
       initialKnowledgeBaseCache: options.initialKnowledgeBaseCache,
       applyDatePathSettings: options.applyDatePathSettings,
+      confirmDatePathMigration: options.confirmDatePathMigration,
     }),
     container
   );
@@ -107,6 +113,7 @@ function renderStatefulSettings(
         syncProgress: options.syncProgress,
         initialKnowledgeBaseCache: options.initialKnowledgeBaseCache,
         applyDatePathSettings: options.applyDatePathSettings,
+        confirmDatePathMigration: options.confirmDatePathMigration,
       }),
       container
     );
@@ -191,8 +198,10 @@ describe('created-date path settings', () => {
   it('cancels an enable confirmation without saving or migrating', async () => {
     const updateSetting = vi.fn();
     const applyDatePathSettings = vi.fn();
+    const confirmDatePathMigration = vi.fn().mockResolvedValue(false);
     const { container } = renderSettings(makeSettings(), updateSetting, vi.fn(), {
       applyDatePathSettings,
+      confirmDatePathMigration,
     });
     const dateItem = settingItem(container, '按创建日期整理路径');
     const toggle = dateItem.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
@@ -201,14 +210,18 @@ describe('created-date path settings', () => {
       toggle.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
-    await act(() => clickButton(dateItem, '应用'));
-    const dialog = container.querySelector<HTMLElement>('[role="dialog"]');
-    expect(dialog?.textContent).toContain('立即整理本地历史笔记');
-    expect(dialog?.textContent).toContain('实际引用的附件');
-    expect(dialog?.textContent).toContain('冲突会跳过，不会覆盖');
-    expect(dialog?.textContent).toContain('可重复执行');
-    await act(() => clickButton(dialog!, '取消'));
+    await act(async () => {
+      clickButton(dateItem, '应用');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
 
+    expect(confirmDatePathMigration).toHaveBeenCalledWith({
+      mode: 'apply',
+      current: { enabled: false, format: 'YYYY/MM' },
+      target: { enabled: true, format: 'YYYY/MM' },
+    });
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
     expect(applyDatePathSettings).not.toHaveBeenCalled();
     expect(updateSetting).not.toHaveBeenCalledWith('datePathEnabled', expect.anything());
   });
@@ -222,18 +235,25 @@ describe('created-date path settings', () => {
       failed: 1,
       issues: [{ code: 'target-conflict', path: '得到大脑/2026/07/纯文本/a.md', message: 'Target exists' }],
     });
+    const confirmDatePathMigration = vi.fn().mockResolvedValue(true);
     const { container } = renderSettings(makeSettings({
       datePathEnabled: true,
       datePathFormat: 'YYYY/MM',
-    }), vi.fn(), vi.fn(), { applyDatePathSettings });
+    }), vi.fn(), vi.fn(), { applyDatePathSettings, confirmDatePathMigration });
     const dateItem = settingItem(container, '按创建日期整理路径');
     await act(() => inputValue(dateItem.querySelector<HTMLInputElement>('input[type="text"]')!, 'YYYY/MM/DD'));
 
-    await act(() => clickButton(dateItem, '应用'));
-    let dialog = container.querySelector<HTMLElement>('[role="dialog"]')!;
-    expect(dialog.textContent).toContain('路径格式将从 YYYY/MM 改为 YYYY/MM/DD');
-    await act(async () => clickButton(dialog, '确认并立即整理'));
+    await act(async () => {
+      clickButton(dateItem, '应用');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
 
+    expect(confirmDatePathMigration).toHaveBeenLastCalledWith({
+      mode: 'apply',
+      current: { enabled: true, format: 'YYYY/MM' },
+      target: { enabled: true, format: 'YYYY/MM/DD' },
+    });
     expect(applyDatePathSettings).toHaveBeenLastCalledWith({ enabled: true, format: 'YYYY/MM/DD' });
     const result = dateItem.querySelector<HTMLElement>('[data-date-path-result]');
     expect(result?.textContent).toContain('扫描 5');
@@ -242,12 +262,65 @@ describe('created-date path settings', () => {
     expect(result?.textContent).toContain('跳过 1');
     expect(result?.textContent).toContain('失败 1');
     expect(result?.textContent).toContain('得到大脑/2026/07/纯文本/a.md');
+    expect(result?.textContent).toContain('目标路径已存在');
+    expect(result?.textContent).not.toContain('Target exists');
 
-    await act(() => clickButton(dateItem, '重新整理现有文件'));
-    dialog = container.querySelector<HTMLElement>('[role="dialog"]')!;
-    expect(dialog.textContent).toContain('按当前设置重新检查');
-    await act(async () => clickButton(dialog, '确认并立即整理'));
+    await act(async () => {
+      clickButton(dateItem, '重新整理现有文件');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(confirmDatePathMigration).toHaveBeenLastCalledWith({
+      mode: 'reconcile',
+      current: { enabled: true, format: 'YYYY/MM/DD' },
+      target: { enabled: true, format: 'YYYY/MM/DD' },
+    });
     expect(applyDatePathSettings).toHaveBeenLastCalledWith({ enabled: true, format: 'YYYY/MM/DD' });
+  });
+
+  it('localizes migration failures and limits issue details to the first 20', async () => {
+    const rawIssues = Array.from({ length: 22 }, (_, index) => ({
+      code: 'invalid-metadata',
+      path: `得到大脑/纯文本/${index}.md`,
+      message: `raw error ${index}`,
+    }));
+    const applyDatePathSettings = vi.fn()
+      .mockRejectedValueOnce(new Error('raw vault exception'))
+      .mockResolvedValueOnce({
+        scanned: 22, moved: 0, unchanged: 0, skipped: 22, failed: 0, issues: rawIssues,
+      });
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { container } = renderSettings(makeSettings(), vi.fn(), vi.fn(), {
+      applyDatePathSettings,
+      confirmDatePathMigration: vi.fn().mockResolvedValue(true),
+    });
+    const dateItem = settingItem(container, '按创建日期整理路径');
+    const toggle = dateItem.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+    await act(() => {
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    await act(async () => {
+      clickButton(dateItem, '应用');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(dateItem.querySelector('[role="alert"]')?.textContent).toContain('整理未完成，请重试');
+    expect(dateItem.textContent).not.toContain('raw vault exception');
+    expect(consoleError).toHaveBeenCalled();
+
+    await act(async () => {
+      clickButton(dateItem, '应用');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const result = dateItem.querySelector<HTMLElement>('[data-date-path-result]')!;
+    expect(result.textContent).toContain('缺少有效的笔记元数据');
+    expect(result.textContent).not.toContain('raw error 0');
+    expect(result.textContent).toContain('另有 2 条问题未展开');
+    expect(result.textContent).toContain('19.md');
+    expect(result.textContent).not.toContain('20.md');
   });
 });
 

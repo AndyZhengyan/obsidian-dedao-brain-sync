@@ -26,12 +26,21 @@ describe('date-path settings orchestration', () => {
     vi.clearAllMocks();
   });
 
-  it('persists desired settings only after a completed local migration', async () => {
+  it('persists desired settings before starting the local migration', async () => {
     const plugin = makePlugin();
-    const save = vi.spyOn(plugin, 'saveSettings').mockResolvedValue();
+    const order: string[] = [];
+    const save = vi.spyOn(plugin, 'saveSettings').mockImplementation(async () => {
+      order.push('save');
+    });
     vi.mocked(migrateDatePaths).mockResolvedValue({
       scanned: 2, moved: 1, unchanged: 0, skipped: 1, failed: 0,
       issues: [{ code: 'target-conflict', path: 'conflict.md', message: 'Target exists' }],
+    }).mockImplementationOnce(async () => {
+      order.push('migrate');
+      return {
+        scanned: 2, moved: 1, unchanged: 0, skipped: 1, failed: 0,
+        issues: [{ code: 'target-conflict', path: 'conflict.md', message: 'Target exists' }],
+      };
     });
 
     const result = await plugin.applyDatePathSettings({ enabled: true, format: 'YYYY/MM' });
@@ -39,10 +48,40 @@ describe('date-path settings orchestration', () => {
     expect(migrateDatePaths).toHaveBeenCalledWith(plugin.app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
     expect(plugin.settings.datePathEnabled).toBe(true);
     expect(save).toHaveBeenCalledOnce();
+    expect(order).toEqual(['save', 'migrate']);
     expect(result.skipped).toBe(1);
   });
 
-  it('does not persist on a top-level failure and blocks concurrent sync or migration', async () => {
+  it('restores in-memory settings and never migrates when the initial save fails', async () => {
+    const plugin = makePlugin();
+    vi.spyOn(plugin, 'saveSettings').mockRejectedValue(new Error('disk full'));
+
+    await expect(plugin.applyDatePathSettings({
+      enabled: true,
+      format: 'YYYY/MM/DD',
+    })).rejects.toThrow('disk full');
+
+    expect(plugin.settings.datePathEnabled).toBe(false);
+    expect(plugin.settings.datePathFormat).toBe('YYYY/MM');
+    expect(migrateDatePaths).not.toHaveBeenCalled();
+  });
+
+  it('keeps the persisted target when migration throws so reconcile can resume', async () => {
+    const plugin = makePlugin();
+    const save = vi.spyOn(plugin, 'saveSettings').mockResolvedValue();
+    vi.mocked(migrateDatePaths).mockRejectedValue(new Error('vault unavailable'));
+
+    await expect(plugin.applyDatePathSettings({
+      enabled: true,
+      format: 'YYYY/MM/DD',
+    })).rejects.toThrow('vault unavailable');
+
+    expect(plugin.settings.datePathEnabled).toBe(true);
+    expect(plugin.settings.datePathFormat).toBe('YYYY/MM/DD');
+    expect(save).toHaveBeenCalledOnce();
+  });
+
+  it('blocks concurrent sync or migration', async () => {
     const plugin = makePlugin();
     const save = vi.spyOn(plugin, 'saveSettings').mockResolvedValue();
     let finish!: (value: Awaited<ReturnType<typeof migrateDatePaths>>) => void;
@@ -55,11 +94,6 @@ describe('date-path settings orchestration', () => {
     expect(sync).not.toHaveBeenCalled();
     finish({ scanned: 0, moved: 0, unchanged: 0, skipped: 0, failed: 0, issues: [] });
     await first;
-    expect(save).toHaveBeenCalledOnce();
-
-    vi.mocked(migrateDatePaths).mockRejectedValue(new Error('vault unavailable'));
-    await expect(plugin.applyDatePathSettings({ enabled: false, format: 'YYYY/MM' })).rejects.toThrow('vault unavailable');
-    expect(plugin.settings.datePathEnabled).toBe(true);
     expect(save).toHaveBeenCalledOnce();
   });
 

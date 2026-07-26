@@ -15,7 +15,10 @@ The created date is authoritative. Updating a historical note does not move it t
 - When enabled, reveal a format input with default `YYYY/MM`.
 - Show token guidance for both filename-prefix and date-path inputs. Date tokens are `YYYY`, `MM`, and `DD`; separators are allowed.
 - Enabling, disabling, and applying a changed format each show a confirmation that describes the immediate local migration.
-- Cancel changes neither settings nor files. Confirm runs one serialized local-only migration and then persists the desired setting.
+- Cancel changes neither settings nor files. Confirm first persists the desired
+  layout, then runs one serialized local-only migration. If saving fails no
+  files move; if migration is interrupted, the persisted target lets the
+  idempotent reconcile action resume safely.
 
 ## Migration contract
 

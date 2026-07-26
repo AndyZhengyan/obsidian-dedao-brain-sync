@@ -273,10 +273,6 @@ export default class GetNoteSyncPlugin extends Plugin {
       format: this.settings.datePathFormat,
     };
     try {
-      const result = await migrateDatePaths(this.app, this.settings.folderName, {
-        enabled: target.enabled,
-        format,
-      });
       this.settings.datePathEnabled = target.enabled;
       this.settings.datePathFormat = format;
       try {
@@ -286,7 +282,10 @@ export default class GetNoteSyncPlugin extends Plugin {
         this.settings.datePathFormat = previous.format;
         throw error;
       }
-      return result;
+      return await migrateDatePaths(this.app, this.settings.folderName, {
+        enabled: target.enabled,
+        format,
+      });
     } finally {
       this.isDatePathMigrationRunning = false;
     }
