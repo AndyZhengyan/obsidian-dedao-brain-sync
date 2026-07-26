@@ -8,6 +8,8 @@ import { DEFAULT_SETTINGS } from '../src/types';
 import { NoteTypeSelect } from '../src/ui/note-type-select';
 
 const originalSetText = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'setText');
+const originalOnWindowMigrated = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'onWindowMigrated');
+const windowMigrationListeners = new WeakMap<HTMLElement, Set<(win: globalThis.Window) => void>>();
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -18,6 +20,11 @@ afterEach(() => {
     Object.defineProperty(HTMLElement.prototype, 'setText', originalSetText);
   } else {
     delete (HTMLElement.prototype as Partial<HTMLElement>).setText;
+  }
+  if (originalOnWindowMigrated) {
+    Object.defineProperty(HTMLElement.prototype, 'onWindowMigrated', originalOnWindowMigrated);
+  } else {
+    delete (HTMLElement.prototype as Partial<HTMLElement>).onWindowMigrated;
   }
 });
 
@@ -31,6 +38,29 @@ function createPopout() {
 function openSelect(popoutWindow: Window, container: HTMLElement, index = 0) {
   const trigger = container.querySelectorAll<HTMLButtonElement>('.getnote-note-type-select-trigger')[index];
   trigger.dispatchEvent(new popoutWindow.MouseEvent('click', { bubbles: true }));
+}
+
+function installWindowMigrationHook() {
+  Object.defineProperty(HTMLElement.prototype, 'onWindowMigrated', {
+    configurable: true,
+    value(this: HTMLElement, listener: (win: globalThis.Window) => void) {
+      const listeners = windowMigrationListeners.get(this) ?? new Set();
+      listeners.add(listener);
+      windowMigrationListeners.set(this, listeners);
+      return () => listeners.delete(listener);
+    },
+  });
+}
+
+function migrateToPopout(popoutWindow: Window, container: HTMLElement) {
+  const selectRoots = Array.from(container.querySelectorAll<HTMLElement>('.getnote-note-type-select'));
+  popoutWindow.document.adoptNode(container);
+  popoutWindow.document.body.appendChild(container);
+  for (const root of selectRoots) {
+    for (const listener of windowMigrationListeners.get(root) ?? []) {
+      listener(popoutWindow as unknown as globalThis.Window);
+    }
+  }
 }
 
 describe('floating select menu behavior', () => {
@@ -235,6 +265,123 @@ describe('floating select menu behavior', () => {
     });
     await act(() => {
       plugin.openManualSyncModal();
+    });
+
+    expect(container.querySelector('.getnote-note-type-select-menu')).toBeNull();
+    render(null, container);
+    popoutWindow.close();
+  });
+
+  it('keeps one menu open after Obsidian migrates mounted selects into a popout', async () => {
+    installWindowMigrationHook();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(() => {
+      render(
+        h('div', {}, [
+          h(NoteTypeSelect, { onChange: vi.fn() }),
+          h(NoteTypeSelect, { onChange: vi.fn() }),
+        ]),
+        container
+      );
+    });
+    const popoutWindow = new Window({ url: 'https://getnote.test/migrated-popout' });
+    migrateToPopout(popoutWindow, container);
+
+    await act(() => openSelect(popoutWindow, container, 0));
+    await act(() => openSelect(popoutWindow, container, 1));
+
+    const triggers = container.querySelectorAll('.getnote-note-type-select-trigger');
+    expect(container.querySelectorAll('.getnote-note-type-select-menu')).toHaveLength(1);
+    expect(triggers[0].querySelector('.is-open')).toBeNull();
+    expect(triggers[1].querySelector('.is-open')).toBeTruthy();
+
+    render(null, container);
+    popoutWindow.close();
+  });
+
+  it('closes a migrated popout menu before opening a command-driven modal', async () => {
+    installWindowMigrationHook();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(() => {
+      render(h(NoteTypeSelect, { onChange: vi.fn() }), container);
+    });
+    const popoutWindow = new Window({ url: 'https://getnote.test/migrated-command-popout' });
+    migrateToPopout(popoutWindow, container);
+    Object.assign(globalThis, {
+      activeDocument: popoutWindow.document,
+      activeWindow: popoutWindow,
+    });
+
+    await act(() => openSelect(popoutWindow, container));
+    expect(container.querySelector('.getnote-note-type-select-menu')).toBeTruthy();
+
+    const plugin = new GetNoteSyncPlugin(new App());
+    plugin.settings = { ...DEFAULT_SETTINGS };
+    Object.defineProperty(HTMLElement.prototype, 'setText', {
+      configurable: true,
+      value(text: string) {
+        this.textContent = text;
+      },
+    });
+    vi.spyOn(Modal.prototype, 'open').mockImplementation(() => {});
+    await act(() => {
+      plugin.openManualSyncModal();
+    });
+
+    expect(container.querySelector('.getnote-note-type-select-menu')).toBeNull();
+    render(null, container);
+    popoutWindow.close();
+  });
+
+  it('repositions an open menu after its mounted tree migrates to a popout', async () => {
+    installWindowMigrationHook();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(() => {
+      render(h(NoteTypeSelect, { onChange: vi.fn() }), container);
+    });
+    const trigger = container.querySelector<HTMLButtonElement>('.getnote-note-type-select-trigger')!;
+    let rect = { bottom: 20, left: 10, width: 120 };
+    vi.spyOn(trigger, 'getBoundingClientRect').mockImplementation(
+      () => ({ ...rect }) as DOMRect
+    );
+    await act(() => {
+      trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    const menu = container.querySelector<HTMLElement>('.getnote-note-type-select-menu')!;
+    expect(menu.style.top).toBe('24px');
+
+    const popoutWindow = new Window({ url: 'https://getnote.test/migrated-open-popout' });
+    migrateToPopout(popoutWindow, container);
+    rect = { bottom: 40, left: 30, width: 160 };
+    await act(() => {
+      popoutWindow.dispatchEvent(new popoutWindow.Event('resize'));
+    });
+
+    expect(menu.style.top).toBe('44px');
+    expect(menu.style.left).toBe('30px');
+    expect(menu.style.width).toBe('160px');
+    render(null, container);
+    popoutWindow.close();
+  });
+
+  it('closes an open menu from its new document after mounted-tree migration', async () => {
+    installWindowMigrationHook();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    await act(() => {
+      render(h(NoteTypeSelect, { onChange: vi.fn() }), container);
+    });
+    await act(() => {
+      container.querySelector('button')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    const popoutWindow = new Window({ url: 'https://getnote.test/migrated-open-outside' });
+    migrateToPopout(popoutWindow, container);
+
+    await act(() => {
+      popoutWindow.document.body.dispatchEvent(new popoutWindow.MouseEvent('mousedown', { bubbles: true }));
     });
 
     expect(container.querySelector('.getnote-note-type-select-menu')).toBeNull();

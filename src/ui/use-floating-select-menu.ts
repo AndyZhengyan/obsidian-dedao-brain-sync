@@ -21,9 +21,17 @@ export function useFloatingSelectMenu<TTrigger extends HTMLElement>() {
 
   useEffect(() => {
     const close = () => setOpen(false);
-    const { hostWindow } = resolveHostRealm(rootRef.current);
+    let { hostWindow } = resolveHostRealm(rootRef.current);
     hostWindow.addEventListener(CLOSE_FLOATING_SELECTS_EVENT, close);
-    return () => hostWindow.removeEventListener(CLOSE_FLOATING_SELECTS_EVENT, close);
+    const stopListeningForMigration = rootRef.current?.onWindowMigrated?.((nextWindow) => {
+      hostWindow.removeEventListener(CLOSE_FLOATING_SELECTS_EVENT, close);
+      hostWindow = nextWindow;
+      hostWindow.addEventListener(CLOSE_FLOATING_SELECTS_EVENT, close);
+    });
+    return () => {
+      stopListeningForMigration?.();
+      hostWindow.removeEventListener(CLOSE_FLOATING_SELECTS_EVENT, close);
+    };
   }, []);
 
   useEffect(() => {
@@ -41,15 +49,29 @@ export function useFloatingSelectMenu<TTrigger extends HTMLElement>() {
       if (rootRef.current?.contains(event.target as Node)) return;
       setOpen(false);
     };
-    const { hostDocument, hostWindow } = resolveHostRealm(rootRef.current);
-    positionMenu();
-    hostDocument.addEventListener('mousedown', handlePointerDown);
-    hostWindow.addEventListener('resize', positionMenu);
-    hostWindow.addEventListener('scroll', positionMenu, true);
-    return () => {
+    let { hostDocument, hostWindow } = resolveHostRealm(rootRef.current);
+    const addHostListeners = () => {
+      hostDocument.addEventListener('mousedown', handlePointerDown);
+      hostWindow.addEventListener('resize', positionMenu);
+      hostWindow.addEventListener('scroll', positionMenu, true);
+    };
+    const removeHostListeners = () => {
       hostDocument.removeEventListener('mousedown', handlePointerDown);
       hostWindow.removeEventListener('resize', positionMenu);
       hostWindow.removeEventListener('scroll', positionMenu, true);
+    };
+    positionMenu();
+    addHostListeners();
+    const stopListeningForMigration = rootRef.current?.onWindowMigrated?.((nextWindow) => {
+      removeHostListeners();
+      hostDocument = rootRef.current?.ownerDocument ?? nextWindow.document;
+      hostWindow = nextWindow;
+      positionMenu();
+      addHostListeners();
+    });
+    return () => {
+      stopListeningForMigration?.();
+      removeHostListeners();
     };
   }, [open]);
 
