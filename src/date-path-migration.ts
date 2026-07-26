@@ -407,8 +407,7 @@ export async function migrateDatePaths(
   };
   const root = rootFolder.trim();
   if (root !== rootFolder || !root.split('/').every(isSafeSegment)) {
-    issue(result, 'unsafe-path', rootFolder, 'Unsafe root folder');
-    return result;
+    throw new Error(`Unsafe root folder: ${rootFolder}`);
   }
 
   const files = app.vault.getMarkdownFiles()
@@ -419,20 +418,9 @@ export async function migrateDatePaths(
   const candidates: NoteCandidate[] = [];
   for (const file of files) {
     const cache = app.metadataCache.getFileCache(file);
-    const source = readRequiredString(cache?.frontmatter, 'source');
-    if (!source || !PLUGIN_SOURCES.has(source)) {
-      result.skipped++;
-      issue(result, 'not-plugin-owned', file.path, 'Plugin ownership marker is missing or invalid');
-      continue;
-    }
-
-    const uid = readRequiredString(cache?.frontmatter, 'uid');
-    const created = readRequiredString(cache?.frontmatter, 'created');
-    const noteType = readRequiredString(cache?.frontmatter, 'note_type');
     const links = resolveLinks(app, file, cache ?? {});
     const candidate: NoteCandidate = {
       file,
-      ...(uid ? { uid } : {}),
       assets: [],
       assetClaims: new Set(
         links
@@ -444,6 +432,23 @@ export async function migrateDatePaths(
       skipped: false,
     };
     candidates.push(candidate);
+
+    const source = readRequiredString(cache?.frontmatter, 'source');
+    if (!source || !PLUGIN_SOURCES.has(source)) {
+      skipCandidate(
+        candidate,
+        result,
+        'not-plugin-owned',
+        file.path,
+        'Plugin ownership marker is missing or invalid',
+      );
+      continue;
+    }
+
+    const uid = readRequiredString(cache?.frontmatter, 'uid');
+    const created = readRequiredString(cache?.frontmatter, 'created');
+    const noteType = readRequiredString(cache?.frontmatter, 'note_type');
+    if (uid) candidate.uid = uid;
 
     if (!uid || !created || !noteType) {
       skipCandidate(

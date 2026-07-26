@@ -186,16 +186,16 @@ describe('migrateDatePaths', () => {
     ]);
   });
 
-  it('rejects a root folder with surrounding whitespace without scanning the trimmed root', async () => {
+  it('throws for a root folder with surrounding whitespace before scanning the trimmed root', async () => {
     app.vault.addFile('得到大脑/纯文本/不可触碰.md', 'note', pluginCache());
+    const scan = vi.spyOn(app.vault, 'getMarkdownFiles');
 
-    const result = await migrateDatePaths(app, ' 得到大脑 ', {
+    await expect(migrateDatePaths(app, ' 得到大脑 ', {
       enabled: true,
       format: 'YYYY/MM',
-    });
+    })).rejects.toThrow('Unsafe root folder');
 
-    expect(result).toMatchObject({ scanned: 0, moved: 0, skipped: 0, failed: 0 });
-    expect(issueCodes(result)).toEqual(['unsafe-path']);
+    expect(scan).not.toHaveBeenCalled();
     expect(app.vault.paths()).toEqual(['得到大脑/纯文本/不可触碰.md']);
   });
 
@@ -270,6 +270,28 @@ describe('migrateDatePaths', () => {
 
     expect(result).toMatchObject({ scanned: 4, moved: 0, skipped: 4, failed: 0 });
     expect(issueCodes(result)).toEqual(expect.arrayContaining(['target-conflict', 'shared-asset']));
+  });
+
+  it('lets non-plugin notes claim adjacent assets so plugin plans cannot move user-owned files', async () => {
+    app.vault.addFile('得到大脑/图片笔记/插件.md', '[[asset/shared.png]]', pluginCache(
+      { uid: 'plugin', note_type: 'img_text' },
+      { embeds: [{ link: 'asset/shared.png' }] },
+    ));
+    app.vault.addFile('得到大脑/图片笔记/用户.md', '[[asset/shared.png]]', pluginCache(
+      { uid: 'user', note_type: 'img_text', source: '手工笔记' },
+      { embeds: [{ link: 'asset/shared.png' }] },
+    ));
+    app.vault.addFile('得到大脑/图片笔记/asset/shared.png', 'user-owned');
+
+    const result = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+
+    expect(result).toMatchObject({ scanned: 2, moved: 0, skipped: 2, failed: 0 });
+    expect(issueCodes(result)).toEqual(expect.arrayContaining(['not-plugin-owned', 'shared-asset']));
+    expect(app.vault.paths()).toEqual([
+      '得到大脑/图片笔记/asset/shared.png',
+      '得到大脑/图片笔记/插件.md',
+      '得到大脑/图片笔记/用户.md',
+    ]);
   });
 
   it('keeps UID and asset claims from plugin notes that later fail planning', async () => {
