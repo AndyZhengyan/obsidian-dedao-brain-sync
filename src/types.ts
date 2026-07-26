@@ -22,6 +22,7 @@ export interface GetNoteNote {
   assetPaths?: string[];      // 内部使用：所有附件文件的完整路径（图片、音频等）
   prime_id?: string;          // Web API detail identifier
   topic_id?: string;          // Knowledge-base topic identifier
+  fetch_error?: string;       // Internal: per-note knowledge detail failure
 }
 
 export interface LinkOriginal {

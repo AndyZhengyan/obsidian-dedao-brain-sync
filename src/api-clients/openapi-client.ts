@@ -571,7 +571,13 @@ async function fetchBloggerContents(topicId: string, blogger: Blogger, token: st
   return contents;
 }
 
-async function fetchBloggerContentDetail(topicId: string, content: BloggerContent, token: string, clientId: string, signal?: AbortSignal): Promise<BloggerContent> {
+async function fetchBloggerContentDetail(
+  topicId: string,
+  content: BloggerContent,
+  token: string,
+  clientId: string,
+  signal?: AbortSignal
+): Promise<{ content: BloggerContent; error?: string }> {
   const params = new URLSearchParams({ topic_id: topicId, post_id: content.post_id_alias });
   const url = `https://openapi.biji.com/open/api/v1/resource/knowledge/blogger/content/detail?${params.toString()}`;
   try {
@@ -582,10 +588,15 @@ async function fetchBloggerContentDetail(topicId: string, content: BloggerConten
       signal
     );
     const detail = normalizeContent(normalizeData(data));
-    return detail ? { ...content, ...detail, post_id_alias: content.post_id_alias } : content;
+    return {
+      content: detail ? { ...content, ...detail, post_id_alias: content.post_id_alias } : content,
+    };
   } catch (error) {
     if (signal?.aborted) throw error;
-    return content;
+    return {
+      content,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
@@ -617,8 +628,10 @@ export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions):
       if (bloggerIdSet && !bloggerIdSet.has(blogger.follow_id)) continue;
       const contents = await fetchBloggerContents(topic.topic_id, blogger, token, clientId, signal, remainingNoteIds);
       for (const content of contents) {
-        const detail = await fetchBloggerContentDetail(topic.topic_id, content, token, clientId, signal);
-        notes.push(bloggerContentToNote(detail, topic, blogger));
+        const detailResult = await fetchBloggerContentDetail(topic.topic_id, content, token, clientId, signal);
+        const note = bloggerContentToNote(detailResult.content, topic, blogger);
+        if (detailResult.error) note.fetch_error = detailResult.error;
+        notes.push(note);
       }
       if (remainingNoteIds?.size === 0) return notes;
     }

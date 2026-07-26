@@ -1069,6 +1069,12 @@ export class SyncEngine {
       const failuresBeforeNote = result.failed;
       seenNoteIds.add(note.note_id);
       result.total++;
+      if (note.fetch_error) {
+        result.failed++;
+        result.checkpointBlocked = true;
+        this.recordItem(result, note, { status: 'failed', error: note.fetch_error });
+        continue;
+      }
       const knowledgeBaseName = note.topic_id ? knowledgeBaseNames[note.topic_id] : undefined;
       const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;
 
@@ -1080,34 +1086,28 @@ export class SyncEngine {
       if (preCheck.exists) {
         result.skipped++;
         this.recordItem(result, note, { status: 'skipped' });
-        this.onProgress?.({
-          processed: result.total,
-          total: result.total,
-          created: result.created,
-          updated: result.updated,
-          skipped: result.skipped,
-          failed: result.failed,
-          percent: 0,
-        });
-        continue;
       }
 
-      const noteToWrite = await this.enrichAudioNote(note, signal, categoryOverride);
+      const noteToWrite = preCheck.exists
+        ? note
+        : await this.enrichAudioNote(note, signal, categoryOverride);
       const appendNotes = await this.fetchAppendNotes(noteToWrite, signal, result, categoryOverride);
       const parentBaseName = this.buildBaseName(noteToWrite);
       const parentFileName = this.getFileName(noteToWrite);
       const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
 
-      const writeResult = await this.writeNote(
-        noteToWrite,
-        uidIndex,
-        undefined,
-        undefined,
-        childFileNames,
-        categoryOverride
-      );
-      this.applyWriteResult(result, writeResult);
-      this.recordItem(result, noteToWrite, writeResult);
+      if (!preCheck.exists) {
+        const writeResult = await this.writeNote(
+          noteToWrite,
+          uidIndex,
+          undefined,
+          undefined,
+          childFileNames,
+          categoryOverride
+        );
+        this.applyWriteResult(result, writeResult);
+        this.recordItem(result, noteToWrite, writeResult);
+      }
       const updatedTime = parseNoteUpdatedTime(noteToWrite);
       const currentLastTime = result.lastNoteTimestamp ? parseSyncBoundaryTime(result.lastNoteTimestamp) : null;
       if (updatedTime !== null && (currentLastTime === null || updatedTime > currentLastTime)) {
@@ -1351,6 +1351,14 @@ export class SyncEngine {
       for (const note of filteredNotes) {
         if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
         if (seenNoteIds.has(note.note_id)) continue;
+        if (note.fetch_error) {
+          seenNoteIds.add(note.note_id);
+          result.total++;
+          result.failed++;
+          result.checkpointBlocked = true;
+          this.recordItem(result, note, { status: 'failed', error: note.fetch_error });
+          continue;
+        }
         const parentMatchesTags = this.filterNotesByTags([note], syncOptions.syncTags).length > 0;
         const knowledgeBaseName = syncOptions.knowledgeBaseNames?.[note.note_id] ?? syncOptions.knowledgeBaseName;
         const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;

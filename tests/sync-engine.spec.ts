@@ -920,7 +920,7 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
     }
   });
 
-  it('falls back to the OpenAPI content preview when the detail request times out', async () => {
+  it('records an OpenAPI blogger detail failure and continues with the next article', async () => {
     vi.useFakeTimers();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       const requestUrl = String(url);
@@ -937,19 +937,39 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
       if (requestUrl.includes('/resource/knowledge/blogger/contents')) {
         return mockFetchResponse({
           data: {
-            contents: [{
-              post_id_alias: 'old_post',
-              title: '旧文章',
-              summary: '详情接口不可用时仍应同步的摘要',
-              created_at: '2026-01-01T10:00:00+08:00',
-              updated_at: '2026-01-01T10:00:00+08:00',
-            }],
+            contents: [
+              {
+                post_id_alias: 'failed_post',
+                title: '详情失败文章',
+                summary: '不可静默写入的预览摘要',
+                created_at: '2026-01-01T10:00:00+08:00',
+                updated_at: '2026-01-01T10:00:00+08:00',
+              },
+              {
+                post_id_alias: 'successful_post',
+                title: '后续文章',
+                summary: '后续文章摘要',
+                created_at: '2026-01-02T10:00:00+08:00',
+                updated_at: '2026-01-02T10:00:00+08:00',
+              },
+            ],
             has_more: false,
           },
         }) as Response;
       }
       if (requestUrl.includes('/resource/knowledge/blogger/content/detail')) {
-        return new Promise<Response>(() => {});
+        if (requestUrl.includes('post_id=failed_post')) {
+          return new Promise<Response>(() => {});
+        }
+        return mockFetchResponse({
+          data: {
+            post_id: 'successful_post',
+            title: '后续文章',
+            content: '后续文章详情',
+            created_at: '2026-01-02T10:00:00+08:00',
+            updated_at: '2026-01-02T10:00:00+08:00',
+          },
+        }) as Response;
       }
       throw new Error(`Unexpected request: ${requestUrl}`);
     });
@@ -963,16 +983,35 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
       }));
 
       const resultPromise = engine.syncSubscribedKnowledge(undefined, {
-        selectedNoteIds: ['blogger_old_post'],
+        syncAll: true,
+        topicIds: ['topic_1'],
+        knowledgeBaseName: '长期专题',
       });
       await vi.runAllTimersAsync();
       const result = await resultPromise;
 
-      expect(result.total).toBe(1);
+      expect(result.total).toBe(2);
       expect(result.created).toBe(1);
+      expect(result.failed).toBe(1);
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          noteId: 'blogger_failed_post',
+          status: 'failed',
+          error: expect.any(String),
+        }),
+        expect.objectContaining({
+          noteId: 'blogger_successful_post',
+          status: 'created',
+        }),
+      ]);
+      expect(result.checkpointBlocked).toBe(true);
       expect(app.vault.create).toHaveBeenCalledWith(
         expect.any(String),
-        expect.stringContaining('详情接口不可用时仍应同步的摘要')
+        expect.stringContaining('后续文章详情')
+      );
+      expect(app.vault.create).not.toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('不可静默写入的预览摘要')
       );
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
@@ -3515,6 +3554,91 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
       expect(result.created).toBe(1);
       expect(result.failed).toBe(1);
       expect(result.checkpointBlocked).toBe(true);
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+      vi.doUnmock('../src/api');
+      vi.resetModules();
+    }
+  });
+
+  it('下轮同步在父笔记已存在时重试失败的 append 子笔记并恢复断点', async () => {
+    const parentNote = makeNote({
+      id: 'parent',
+      note_id: 'knowledge_parent',
+      title: '父笔记',
+      note_type: 'plain_text',
+      source: 'knowledge',
+      topic_id: 'kb-1',
+      children_count: 1,
+      children_ids: ['knowledge_child'],
+      updated_at: '2026-07-17T11:00:00+08:00',
+    });
+    const fetchDetailSpy = vi.fn()
+      .mockRejectedValueOnce(new Error('temporary child fetch failure'))
+      .mockResolvedValue({
+        id: 'child',
+        note_id: 'knowledge_child',
+        title: '子笔记',
+        content: '子笔记正文',
+        note_type: 'plain_text',
+        source: 'knowledge',
+        tags: [],
+        created_at: '2026-07-17T10:00:00+08:00',
+        updated_at: '2026-07-17T10:00:00+08:00',
+        parent_id: 'knowledge_parent',
+        is_child_note: true,
+      });
+    fetchSubscribedSpy.mockResolvedValue([parentNote]);
+    vi.doMock('../src/api', async () => {
+      const actual = await vi.importActual<typeof import('../src/api')>('../src/api');
+      return {
+        ...actual,
+        fetchSubscribedKnowledgeNotes: fetchSubscribedSpy,
+        fetchNoteDetail: fetchDetailSpy,
+      };
+    });
+    vi.resetModules();
+    const { SyncEngine: EngineReloaded } = await import('../src/sync');
+
+    try {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({
+        success: true,
+        data: { notes: [], has_more: false, next_cursor: '0' },
+      }) as Response);
+      const app = makeMockApp();
+      const settings = makeSettings({ maxDays: 0 });
+      const scope = {
+        maxDays: 0,
+        syncKnowledgeBases: ['kb-1'],
+        knowledgeBaseNames: { 'kb-1': '测试知识库' },
+      };
+
+      const firstResult = await new EngineReloaded(app, settings, undefined, scope).sync();
+
+      expect(firstResult.items).toEqual([
+        expect.objectContaining({
+          noteId: 'knowledge_child',
+          status: 'failed',
+          error: 'temporary child fetch failure',
+        }),
+        expect.objectContaining({ noteId: 'knowledge_parent', status: 'created' }),
+      ]);
+      expect(firstResult.checkpointBlocked).toBe(true);
+      app.vault._addFile(
+        '得到大脑/知识库/测试知识库/纯文本/父笔记.md',
+        '---\nuid: "knowledge_parent"\nmodified: "2026-07-17 11:00:00"\n---\n父笔记正文',
+        { uid: 'knowledge_parent', modified: '2026-07-17 11:00:00' }
+      );
+
+      const secondResult = await new EngineReloaded(app, settings, undefined, scope).sync();
+
+      expect(secondResult.items).toEqual([
+        expect.objectContaining({ noteId: 'knowledge_parent', status: 'skipped' }),
+        expect.objectContaining({ noteId: 'knowledge_child', status: 'created' }),
+      ]);
+      expect(secondResult.checkpointBlocked).not.toBe(true);
+      expect(secondResult.lastNoteTimestamp).toBe('2026-07-17T11:00:00+08:00');
+      expect(fetchDetailSpy).toHaveBeenCalledTimes(2);
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
       vi.doUnmock('../src/api');
