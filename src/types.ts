@@ -127,6 +127,11 @@ export interface Settings {
   datePathEnabled: boolean;
   datePathFormat: string;
   datePathCategoryOrigins: Record<string, { path: string; category: string }>;
+  datePathAssetMoveEvidence: Record<string, {
+    uid: string;
+    sourcePath: string;
+    targetPath: string;
+  }>;
   templateFilePath: string;
   maxDays: number;
   syncStartDate: string;  // ISO date string, empty means no limit
@@ -202,6 +207,7 @@ export const DEFAULT_SETTINGS: Settings = {
   datePathEnabled: false,
   datePathFormat: 'YYYY/MM',
   datePathCategoryOrigins: {},
+  datePathAssetMoveEvidence: {},
   templateFilePath: '',
   maxDays: 30,
   syncStartDate: '',

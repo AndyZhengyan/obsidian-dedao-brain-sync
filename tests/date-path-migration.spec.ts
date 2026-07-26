@@ -3,6 +3,7 @@ import { TFile, type App } from 'obsidian';
 import {
   migrateDatePaths,
   type DatePathCategoryOrigin,
+  type DatePathAssetMoveEvidence,
   type DatePathMigrationIssueCode,
   type DatePathMigrationTarget,
 } from '../src/date-path-migration';
@@ -155,11 +156,13 @@ describe('migrateDatePaths', () => {
   let app: MigrationApp;
   let currentLayout: DatePathMigrationTarget;
   let categoryOrigins: Record<string, DatePathCategoryOrigin>;
+  let assetMoveEvidence: Record<string, DatePathAssetMoveEvidence>;
 
   beforeEach(() => {
     app = makeApp();
     currentLayout = { enabled: false, format: 'YYYY/MM' };
     categoryOrigins = {};
+    assetMoveEvidence = {};
   });
 
   const migrate = async (
@@ -170,8 +173,10 @@ describe('migrateDatePaths', () => {
     return migrateDatePaths(app, rootFolder, target, {
       source,
       categoryOrigins,
-      beforeExecute: async nextOrigins => {
+      assetMoveEvidence,
+      beforeExecute: async (nextOrigins, nextAssetMoveEvidence) => {
         categoryOrigins = nextOrigins;
+        assetMoveEvidence = nextAssetMoveEvidence;
         currentLayout = target;
       },
     });
@@ -327,6 +332,45 @@ describe('migrateDatePaths', () => {
     expect(app.vault.paths()).toContain(source);
     expect(app.vault.content('个人笔记/索引.md')).toBe('[[得到大脑/纯文本/被引用]]');
     expect(app.fileManager.renameFile).not.toHaveBeenCalled();
+  });
+
+  it('skips a moving note whose same-directory Markdown link would resolve elsewhere', async () => {
+    const source = '得到大脑/纯文本/含相对链接.md';
+    const stationary = '得到大脑/纯文本/用户笔记.md';
+    app.vault.addFile(
+      source,
+      '[用户笔记](用户笔记.md)',
+      pluginCache(
+        { uid: 'relative-outbound' },
+        { links: [{ link: '用户笔记.md' }] },
+      ),
+    );
+    app.vault.addFile(stationary, 'user-owned');
+
+    const result = await migrate({ enabled: true, format: 'YYYY/MM' });
+
+    expect(result).toMatchObject({ moved: 0, skipped: 1, failed: 0 });
+    expect(issueCodes(result)).toContain('inbound-link');
+    expect(app.vault.paths()).toEqual([source, stationary]);
+    expect(app.vault.content(source)).toBe('[用户笔记](用户笔记.md)');
+  });
+
+  it('skips a target whose stationary same-directory Markdown link would stop resolving', async () => {
+    const source = '得到大脑/纯文本/被引用.md';
+    const stationary = '得到大脑/纯文本/用户索引.md';
+    app.vault.addFile(source, 'synced', pluginCache({ uid: 'same-dir-inbound' }));
+    app.vault.addFile(
+      stationary,
+      '[同步笔记](被引用.md)',
+      { links: [{ link: '被引用.md' }] },
+    );
+
+    const result = await migrate({ enabled: true, format: 'YYYY/MM' });
+
+    expect(result).toMatchObject({ moved: 0, skipped: 1, failed: 0 });
+    expect(issueCodes(result)).toContain('inbound-link');
+    expect(app.vault.paths()).toEqual([stationary, source]);
+    expect(app.vault.content(stationary)).toBe('[同步笔记](被引用.md)');
   });
 
   it('skips the whole note when an external path-qualified link targets its asset', async () => {
@@ -489,6 +533,11 @@ describe('migrateDatePaths', () => {
       { embeds: [{ link: 'asset/崩溃_image.png' }] },
     ));
     app.vault.addFile('得到大脑/2026/07/图片笔记/asset/崩溃_image.png', 'image');
+    assetMoveEvidence['得到大脑/2026/07/图片笔记/asset/崩溃_image.png'] = {
+      uid: 'crash',
+      sourcePath: '得到大脑/图片笔记/asset/崩溃_image.png',
+      targetPath: '得到大脑/2026/07/图片笔记/asset/崩溃_image.png',
+    };
 
     const resumed = await migrate({ enabled: true, format: 'YYYY/MM' });
     const repeated = await migrate({ enabled: true, format: 'YYYY/MM' });
@@ -499,6 +548,27 @@ describe('migrateDatePaths', () => {
       '得到大脑/2026/07/图片笔记/asset/崩溃_image.png',
       '得到大脑/2026/07/图片笔记/崩溃.md',
     ]);
+  });
+
+  it('rejects an unverified same-name target asset and leaves the whole note untouched', async () => {
+    const noteSource = '得到大脑/图片笔记/冲突附件.md';
+    const assetTarget = '得到大脑/2026/07/图片笔记/asset/冲突附件_image.png';
+    const noteContent = '![[asset/冲突附件_image.png]]';
+    app.vault.addFile(noteSource, noteContent, pluginCache(
+      { uid: 'unverified-target-asset', note_type: 'img_text' },
+      { embeds: [{ link: 'asset/冲突附件_image.png' }] },
+    ));
+    app.vault.addFile(assetTarget, 'unrelated');
+
+    const result = await migrate({ enabled: true, format: 'YYYY/MM' });
+
+    expect(result).toMatchObject({ moved: 0, skipped: 1, failed: 0 });
+    expect(issueCodes(result)).toContain('target-conflict');
+    expect(app.vault.paths()).toEqual([assetTarget, noteSource]);
+    expect(app.vault.content(noteSource)).toBe(noteContent);
+    expect(app.vault.content(assetTarget)).toBe('unrelated');
+    expect(app.vault.rename).not.toHaveBeenCalled();
+    expect(assetMoveEvidence).toEqual({});
   });
 
   it('retries safely after rollback itself left an asset at the deterministic target', async () => {

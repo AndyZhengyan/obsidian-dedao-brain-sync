@@ -36,6 +36,12 @@ describe('date-path settings orchestration', () => {
       order.push('plan');
       await context.beforeExecute({
         'uid-1': { path: '得到大脑/项目/笔记.md', category: '项目' },
+      }, {
+        '得到大脑/2026/07/项目/asset/图.png': {
+          uid: 'uid-1',
+          sourcePath: '得到大脑/项目/asset/图.png',
+          targetPath: '得到大脑/2026/07/项目/asset/图.png',
+        },
       });
       order.push('execute');
       return {
@@ -53,12 +59,20 @@ describe('date-path settings orchestration', () => {
       expect.objectContaining({
         source: { enabled: false, format: 'YYYY/MM' },
         categoryOrigins: {},
+        assetMoveEvidence: {},
         beforeExecute: expect.any(Function),
       }),
     );
     expect(plugin.settings.datePathEnabled).toBe(true);
     expect(plugin.settings.datePathCategoryOrigins).toEqual({
       'uid-1': { path: '得到大脑/项目/笔记.md', category: '项目' },
+    });
+    expect(plugin.settings.datePathAssetMoveEvidence).toEqual({
+      '得到大脑/2026/07/项目/asset/图.png': {
+        uid: 'uid-1',
+        sourcePath: '得到大脑/项目/asset/图.png',
+        targetPath: '得到大脑/2026/07/项目/asset/图.png',
+      },
     });
     expect(save).toHaveBeenCalledOnce();
     expect(order).toEqual(['plan', 'save', 'execute']);
@@ -71,7 +85,7 @@ describe('date-path settings orchestration', () => {
     vi.mocked(migrateDatePaths).mockImplementationOnce(async (_app, _root, _target, context) => {
       await context.beforeExecute({
         'uid-1': { path: '得到大脑/项目/笔记.md', category: '项目' },
-      });
+      }, {});
       throw new Error('unreachable');
     });
 
@@ -92,7 +106,7 @@ describe('date-path settings orchestration', () => {
     vi.mocked(migrateDatePaths).mockImplementationOnce(async (_app, _root, _target, context) => {
       await context.beforeExecute({
         'uid-1': { path: '得到大脑/项目/笔记.md', category: '项目' },
-      });
+      }, {});
       throw new Error('vault unavailable');
     });
 
@@ -114,7 +128,7 @@ describe('date-path settings orchestration', () => {
     const save = vi.spyOn(plugin, 'saveSettings').mockResolvedValue();
     let finish!: (value: Awaited<ReturnType<typeof migrateDatePaths>>) => void;
     vi.mocked(migrateDatePaths).mockImplementation(async (_app, _root, _target, context) => {
-      await context.beforeExecute({});
+      await context.beforeExecute({}, {});
       return new Promise(resolve => { finish = resolve; });
     });
     const sync = vi.spyOn(SyncEngine.prototype, 'sync');

@@ -12,11 +12,19 @@ export interface DatePathCategoryOrigin {
   category: string;
 }
 
+export interface DatePathAssetMoveEvidence {
+  uid: string;
+  sourcePath: string;
+  targetPath: string;
+}
+
 export interface DatePathMigrationContext {
   source: DatePathMigrationTarget;
   categoryOrigins: Record<string, DatePathCategoryOrigin>;
+  assetMoveEvidence: Record<string, DatePathAssetMoveEvidence>;
   beforeExecute: (
     categoryOrigins: Record<string, DatePathCategoryOrigin>,
+    assetMoveEvidence: Record<string, DatePathAssetMoveEvidence>,
   ) => Promise<void>;
 }
 
@@ -79,6 +87,28 @@ function dirname(path: string): string {
 function basename(path: string): string {
   const separator = path.lastIndexOf('/');
   return separator < 0 ? path : path.slice(separator + 1);
+}
+
+function normalizeVaultPath(path: string): string | null {
+  const segments: string[] = [];
+  for (const segment of path.split('/')) {
+    if (!segment || segment === '.') continue;
+    if (segment === '..') {
+      if (segments.length === 0) return null;
+      segments.pop();
+      continue;
+    }
+    segments.push(segment);
+  }
+  return segments.join('/');
+}
+
+function pathMatchesFile(path: string | null, filePath: string): boolean {
+  return path === filePath || (
+    Boolean(path)
+    && !basename(path as string).includes('.')
+    && `${path}.md` === filePath
+  );
 }
 
 function isSafeSegment(segment: string): boolean {
@@ -237,6 +267,7 @@ function planCandidateAssets(
   candidate: NoteCandidate,
   links: LinkResolution[],
   result: DatePathMigrationResult,
+  evidence: Record<string, DatePathAssetMoveEvidence>,
 ): void {
   const targetPath = candidate.targetPath;
   if (!targetPath) return;
@@ -263,6 +294,22 @@ function planCandidateAssets(
     );
     if (recovered) {
       const logicalSource = `${dirname(candidate.file.path)}/asset/${basename(recovered.path)}`;
+      const recorded = evidence[recovered.path];
+      if (
+        !candidate.uid
+        || recorded?.uid !== candidate.uid
+        || recorded.sourcePath !== logicalSource
+        || recorded.targetPath !== recovered.path
+      ) {
+        skipCandidate(
+          candidate,
+          result,
+          'target-conflict',
+          recovered.path,
+          `Target asset has no matching migration evidence: ${recovered.path}`,
+        );
+        continue;
+      }
       candidate.assetClaims.add(logicalSource);
       assets.set(recovered.path, {
         file: recovered,
@@ -377,68 +424,86 @@ function preflightInboundLinks(
   result: DatePathMigrationResult,
 ): void {
   const noteOwners = new Map(candidates.map(candidate => [candidate.file.path, candidate]));
-  const moveOwners = new Map<string, NoteCandidate>();
+  const moveOwners = new Map<string, { owner: NoteCandidate; targetPath: string }>();
   for (const candidate of candidates) {
     if (!candidate.pluginOwned || !hasPlannedMove(candidate)) continue;
     if (candidate.targetPath && candidate.file.path !== candidate.targetPath) {
-      moveOwners.set(candidate.file.path, candidate);
+      moveOwners.set(candidate.file.path, { owner: candidate, targetPath: candidate.targetPath });
     }
     for (const asset of candidate.assets) {
       if (asset.sourcePath !== asset.targetPath) {
-        moveOwners.set(asset.sourcePath, candidate);
+        moveOwners.set(asset.sourcePath, { owner: candidate, targetPath: asset.targetPath });
       }
     }
   }
 
-  const reported = new Set<string>();
-  for (const sourceFile of allMarkdownFiles) {
-    const cache = app.metadataCache.getFileCache(sourceFile);
-    for (const { link, resolved } of resolveLinks(app, sourceFile, cache ?? {})) {
-      const linkPath = link.split('#', 1)[0].trim();
-      if (!resolved || !linkPath.includes('/')) continue;
+  const futurePath = (path: string): string => {
+    const move = moveOwners.get(path);
+    return move && !move.owner.blocked ? move.targetPath : path;
+  };
+  const remainsResolved = (
+    link: string,
+    sourceBefore: string,
+    sourceAfter: string,
+    targetBefore: string,
+    targetAfter: string,
+  ): boolean => {
+    const linkPath = link.split('#', 1)[0].trim();
+    if (!linkPath) return true;
+    const relativeBefore = normalizeVaultPath(`${dirname(sourceBefore)}/${linkPath}`);
+    if (pathMatchesFile(relativeBefore, targetBefore)) {
+      return pathMatchesFile(
+        normalizeVaultPath(`${dirname(sourceAfter)}/${linkPath}`),
+        targetAfter,
+      );
+    }
+    const rootBefore = normalizeVaultPath(linkPath.replace(/^\/+/, ''));
+    if (pathMatchesFile(rootBefore, targetBefore)) {
+      return pathMatchesFile(rootBefore, targetAfter);
+    }
+    // A basename-only Obsidian link cannot be proven stable when either side
+    // moves because source proximity can change which duplicate is selected.
+    return sourceBefore === sourceAfter && targetBefore === targetAfter;
+  };
 
-      const targetOwner = moveOwners.get(resolved.path);
-      const sourceOwner = noteOwners.get(sourceFile.path);
-      if (!targetOwner || sourceOwner === targetOwner) continue;
-      if (targetOwner.blocked) {
-        if (
-          sourceOwner?.pluginOwned
-          && !sourceOwner.blocked
-          && hasPlannedMove(sourceOwner)
-        ) {
+  const reported = new Set<string>();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const sourceFile of allMarkdownFiles) {
+      const cache = app.metadataCache.getFileCache(sourceFile);
+      for (const { link, resolved } of resolveLinks(app, sourceFile, cache ?? {})) {
+        if (!resolved) continue;
+        const sourceOwner = noteOwners.get(sourceFile.path);
+        const targetMove = moveOwners.get(resolved.path);
+        const sourceMoves = Boolean(sourceOwner?.pluginOwned && !sourceOwner.blocked
+          && futurePath(sourceFile.path) !== sourceFile.path);
+        const targetMoves = Boolean(targetMove && !targetMove.owner.blocked);
+        if (!sourceMoves && !targetMoves) continue;
+
+        const sourceAfter = futurePath(sourceFile.path);
+        const targetAfter = futurePath(resolved.path);
+        if (remainsResolved(link, sourceFile.path, sourceAfter, resolved.path, targetAfter)) {
+          continue;
+        }
+
+        const relation = `${sourceFile.path}\0${resolved.path}\0${link}`;
+        if (reported.has(relation)) continue;
+        reported.add(relation);
+        const owners = new Set<NoteCandidate>();
+        if (sourceMoves && sourceOwner) owners.add(sourceOwner);
+        if (targetMoves && targetMove) owners.add(targetMove.owner);
+        for (const owner of owners) {
+          if (owner.blocked) continue;
           block(
-            sourceOwner,
+            owner,
             result,
             'inbound-link',
-            sourceOwner.file.path,
-            `Path-qualified outbound link targets a blocked move: ${linkPath}`,
+            owner.file.path,
+            `Link would resolve differently after migration (${sourceFile.path}): ${link}`,
           );
+          changed = true;
         }
-        continue;
-      }
-
-      const relation = `${sourceFile.path}\0${resolved.path}\0${linkPath}`;
-      if (reported.has(relation)) continue;
-      reported.add(relation);
-      block(
-        targetOwner,
-        result,
-        'inbound-link',
-        targetOwner.file.path,
-        `Path-qualified inbound link from ${sourceFile.path}: ${linkPath}`,
-      );
-      if (
-        sourceOwner?.pluginOwned
-        && !sourceOwner.blocked
-        && hasPlannedMove(sourceOwner)
-      ) {
-        block(
-          sourceOwner,
-          result,
-          'inbound-link',
-          sourceOwner.file.path,
-          `Path-qualified outbound link targets a blocked move: ${linkPath}`,
-        );
       }
     }
   }
@@ -582,12 +647,24 @@ export async function migrateDatePaths(
       continue;
     }
 
-    planCandidateAssets(app, candidate, links, result);
+    planCandidateAssets(app, candidate, links, result, context.assetMoveEvidence);
   }
 
-  await context.beforeExecute(nextCategoryOrigins);
   preflightPlans(app, candidates, result);
   preflightInboundLinks(app, allMarkdownFiles, candidates, result);
+  const nextAssetMoveEvidence = { ...context.assetMoveEvidence };
+  for (const candidate of candidates) {
+    if (!candidate.pluginOwned || candidate.skipped || candidate.blocked || !candidate.uid) continue;
+    for (const asset of candidate.assets) {
+      if (asset.sourcePath === asset.targetPath) continue;
+      nextAssetMoveEvidence[asset.targetPath] = {
+        uid: candidate.uid,
+        sourcePath: asset.sourcePath,
+        targetPath: asset.targetPath,
+      };
+    }
+  }
+  await context.beforeExecute(nextCategoryOrigins, nextAssetMoveEvidence);
   for (const candidate of candidates) {
     if (
       !candidate.skipped

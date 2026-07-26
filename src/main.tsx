@@ -272,6 +272,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       enabled: this.settings.datePathEnabled,
       format: this.settings.datePathFormat,
       categoryOrigins: this.settings.datePathCategoryOrigins,
+      assetMoveEvidence: this.settings.datePathAssetMoveEvidence,
     };
     let targetPersisted = false;
     try {
@@ -285,8 +286,10 @@ export default class GetNoteSyncPlugin extends Plugin {
           {
             source: { enabled: previous.enabled, format: previous.format },
             categoryOrigins: previous.categoryOrigins,
-            beforeExecute: async categoryOrigins => {
+            assetMoveEvidence: previous.assetMoveEvidence,
+            beforeExecute: async (categoryOrigins, assetMoveEvidence) => {
               this.settings.datePathCategoryOrigins = categoryOrigins;
+              this.settings.datePathAssetMoveEvidence = assetMoveEvidence;
               await this.saveSettings();
               targetPersisted = true;
             },
@@ -297,6 +300,7 @@ export default class GetNoteSyncPlugin extends Plugin {
           this.settings.datePathEnabled = previous.enabled;
           this.settings.datePathFormat = previous.format;
           this.settings.datePathCategoryOrigins = previous.categoryOrigins;
+          this.settings.datePathAssetMoveEvidence = previous.assetMoveEvidence;
         }
         throw error;
       }
