@@ -3383,6 +3383,145 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
     fetchSubscribedSpy.mockReset();
   });
 
+  it('普通跨库同步复用 maxDays 和笔记类型过滤', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-17T12:00:00+08:00'));
+    fetchSubscribedSpy.mockResolvedValue([
+      makeNote({
+        id: 'recent-blogger',
+        note_id: 'blogger_recent',
+        title: '近期博主文章',
+        note_type: 'blogger_post',
+        source: 'blogger',
+        topic_id: 'kb-1',
+        created_at: '2026-07-16T10:00:00+08:00',
+        updated_at: '2026-07-16T10:00:00+08:00',
+      }),
+      makeNote({
+        id: 'old-blogger',
+        note_id: 'blogger_old',
+        title: '过期博主文章',
+        note_type: 'blogger_post',
+        source: 'blogger',
+        topic_id: 'kb-1',
+        created_at: '2026-06-01T10:00:00+08:00',
+        updated_at: '2026-06-01T10:00:00+08:00',
+      }),
+      makeNote({
+        id: 'recent-plain',
+        note_id: 'recent_plain',
+        title: '近期普通笔记',
+        note_type: 'plain_text',
+        source: 'knowledge',
+        topic_id: 'kb-1',
+        created_at: '2026-07-16T10:00:00+08:00',
+        updated_at: '2026-07-16T10:00:00+08:00',
+      }),
+    ]);
+    vi.doMock('../src/api', async () => {
+      const actual = await vi.importActual<typeof import('../src/api')>('../src/api');
+      return {
+        ...actual,
+        fetchSubscribedKnowledgeNotes: fetchSubscribedSpy,
+      };
+    });
+    vi.resetModules();
+    const { SyncEngine: EngineReloaded } = await import('../src/sync');
+
+    try {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({
+        success: true,
+        data: { notes: [], has_more: false, next_cursor: '0' },
+      }) as Response);
+      const app = makeMockApp();
+      const engine = new EngineReloaded(app, makeSettings({ maxDays: 7 }), undefined, {
+        maxDays: 7,
+        enabledNoteTypes: ['blogger_post'],
+        syncKnowledgeBases: ['kb-1'],
+        knowledgeBaseNames: { 'kb-1': '测试知识库' },
+      });
+
+      const result = await engine.sync();
+
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          noteId: 'blogger_recent',
+          noteType: 'blogger_post',
+          status: 'created',
+        }),
+      ]);
+      expect(app.vault.create).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+      vi.doUnmock('../src/api');
+      vi.resetModules();
+      vi.useRealTimers();
+    }
+  });
+
+  it('跨库单笔写入失败后继续后续笔记并阻止自动断点前移', async () => {
+    fetchSubscribedSpy.mockResolvedValue([
+      makeNote({
+        id: 'failed-blogger',
+        note_id: 'blogger_failed',
+        title: '写入失败文章',
+        note_type: 'blogger_post',
+        source: 'blogger',
+        topic_id: 'kb-1',
+        updated_at: '2026-07-17T11:00:00+08:00',
+      }),
+      makeNote({
+        id: 'successful-blogger',
+        note_id: 'blogger_successful',
+        title: '后续成功文章',
+        note_type: 'blogger_post',
+        source: 'blogger',
+        topic_id: 'kb-1',
+        updated_at: '2026-07-17T10:00:00+08:00',
+      }),
+    ]);
+    vi.doMock('../src/api', async () => {
+      const actual = await vi.importActual<typeof import('../src/api')>('../src/api');
+      return {
+        ...actual,
+        fetchSubscribedKnowledgeNotes: fetchSubscribedSpy,
+      };
+    });
+    vi.resetModules();
+    const { SyncEngine: EngineReloaded } = await import('../src/sync');
+
+    try {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({
+        success: true,
+        data: { notes: [], has_more: false, next_cursor: '0' },
+      }) as Response);
+      const app = makeMockApp();
+      vi.mocked(app.vault.create).mockRejectedValueOnce(new Error('disk full'));
+      const engine = new EngineReloaded(app, makeSettings({
+        maxDays: 0,
+        lastSyncEndTimestamp: '2026-07-16T10:00:00+08:00',
+      }), undefined, {
+        maxDays: 0,
+        syncKnowledgeBases: ['kb-1'],
+        knowledgeBaseNames: { 'kb-1': '测试知识库' },
+      });
+
+      const result = await engine.sync();
+
+      expect(result.items).toEqual([
+        expect.objectContaining({ noteId: 'blogger_failed', status: 'failed', error: 'disk full' }),
+        expect.objectContaining({ noteId: 'blogger_successful', status: 'created' }),
+      ]);
+      expect(result.created).toBe(1);
+      expect(result.failed).toBe(1);
+      expect(result.checkpointBlocked).toBe(true);
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+      vi.doUnmock('../src/api');
+      vi.resetModules();
+    }
+  });
+
   it('syncKnowledgeBases=[] 时不调用 fetchSubscribedKnowledgeNotes（关闭跨库同步）', async () => {
     fetchSubscribedSpy.mockResolvedValue([]);
     vi.doMock('../src/api', async () => {

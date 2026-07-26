@@ -1055,15 +1055,9 @@ export class SyncEngine {
       bloggerIds,
     });
 
-    const cutoffTime = this.scopeOptions.syncStartDate
-      ? parseSyncBoundaryTime(this.scopeOptions.syncStartDate)
-      : null;
-
-    const filteredNotes = knowledgeNotes.filter(note => {
-      if (cutoffTime === null) return true;
-      const updated = parseNoteUpdatedTime(note);
-      return updated !== null && updated >= cutoffTime;
-    });
+    const filteredNotes = this.filterNotesByType(
+      this.filterNotesByDateRange(this.filterRecentNotes(knowledgeNotes))
+    );
 
     const uidIndex = this.buildUidIndex();
     const seenNoteIds = new Set<string>();
@@ -1072,6 +1066,7 @@ export class SyncEngine {
     for (const note of filteredNotes) {
       if (this.cancelled) throw new SyncCancelledError();
       if (seenNoteIds.has(note.note_id)) continue;
+      const failuresBeforeNote = result.failed;
       seenNoteIds.add(note.note_id);
       result.total++;
       const knowledgeBaseName = note.topic_id ? knowledgeBaseNames[note.topic_id] : undefined;
@@ -1130,6 +1125,10 @@ export class SyncEngine {
         );
         this.applyWriteResult(result, appendWriteResult);
         this.recordItem(result, appendNote, appendWriteResult);
+      }
+
+      if (result.failed > failuresBeforeNote) {
+        result.checkpointBlocked = true;
       }
 
       this.onProgress?.({

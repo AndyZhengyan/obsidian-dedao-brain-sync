@@ -370,8 +370,8 @@ export default class GetNoteSyncPlugin extends Plugin {
     }
 
     // lastSyncEndTimestamp only belongs to auto sync
-    // 更新断点只要：有笔记成功同步且有 lastNoteTimestamp（即使有部分失败）
-    if (type === 'auto' && status === 'success') {
+    // Ordinary partial failures may still advance; retryable knowledge-base failures keep the old checkpoint.
+    if (type === 'auto' && status === 'success' && !result.checkpointBlocked) {
       this.settings.lastSyncEndTimestamp = result.lastNoteTimestamp ?? new Date(finishedAt).toISOString();
     }
 

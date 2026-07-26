@@ -266,6 +266,7 @@ export interface SyncResult {
   total: number;
   items?: SyncResultItem[];
   lastNoteTimestamp?: string;  // updated_at of the last processed note
+  checkpointBlocked?: boolean; // note-level failure requires retry from the existing durable checkpoint
   /**
    * Tag names observed on processed notes during the sync. Used to
    * incrementally update the local tag cache without an extra network call.
