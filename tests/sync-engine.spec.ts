@@ -976,11 +976,12 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
 
     try {
       const app = makeMockApp();
+      const progressSpy = vi.fn();
       const engine = new SyncEngine(app, makeSettings({
         authMode: 'openapi',
         openApiToken: 'openapi-token',
         openApiClientId: 'openapi-client',
-      }));
+      }), progressSpy);
 
       const resultPromise = engine.syncSubscribedKnowledge(undefined, {
         syncAll: true,
@@ -1005,6 +1006,11 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
         }),
       ]);
       expect(result.checkpointBlocked).toBe(true);
+      expect(progressSpy).toHaveBeenCalledWith(expect.objectContaining({
+        processed: 1,
+        total: 2,
+        failed: 1,
+      }));
       expect(app.vault.create).toHaveBeenCalledWith(
         expect.any(String),
         expect.stringContaining('后续文章详情')
@@ -3561,7 +3567,7 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
     }
   });
 
-  it('下轮同步在父笔记已存在时重试失败的 append 子笔记并恢复断点', async () => {
+  it('append 获取不完整时不写父子文件并在下轮原子重试完整关系', async () => {
     const parentNote = makeNote({
       id: 'parent',
       note_id: 'knowledge_parent',
@@ -3569,25 +3575,35 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
       note_type: 'plain_text',
       source: 'knowledge',
       topic_id: 'kb-1',
-      children_count: 1,
-      children_ids: ['knowledge_child'],
+      children_count: 2,
+      children_ids: ['knowledge_child_1', 'knowledge_child_2'],
       updated_at: '2026-07-17T11:00:00+08:00',
     });
+    const firstChild = {
+      id: 'child-1',
+      note_id: 'knowledge_child_1',
+      title: '子笔记一',
+      content: '子笔记一正文',
+      note_type: 'plain_text',
+      source: 'knowledge',
+      tags: [],
+      created_at: '2026-07-17T10:00:00+08:00',
+      updated_at: '2026-07-17T10:00:00+08:00',
+      parent_id: 'knowledge_parent',
+      is_child_note: true,
+    };
+    const secondChild = {
+      ...firstChild,
+      id: 'child-2',
+      note_id: 'knowledge_child_2',
+      title: '子笔记二',
+      content: '子笔记二正文',
+    };
     const fetchDetailSpy = vi.fn()
+      .mockResolvedValueOnce(firstChild)
       .mockRejectedValueOnce(new Error('temporary child fetch failure'))
-      .mockResolvedValue({
-        id: 'child',
-        note_id: 'knowledge_child',
-        title: '子笔记',
-        content: '子笔记正文',
-        note_type: 'plain_text',
-        source: 'knowledge',
-        tags: [],
-        created_at: '2026-07-17T10:00:00+08:00',
-        updated_at: '2026-07-17T10:00:00+08:00',
-        parent_id: 'knowledge_parent',
-        is_child_note: true,
-      });
+      .mockResolvedValueOnce(firstChild)
+      .mockResolvedValueOnce(secondChild);
     fetchSubscribedSpy.mockResolvedValue([parentNote]);
     vi.doMock('../src/api', async () => {
       const actual = await vi.importActual<typeof import('../src/api')>('../src/api');
@@ -3612,33 +3628,43 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
         syncKnowledgeBases: ['kb-1'],
         knowledgeBaseNames: { 'kb-1': '测试知识库' },
       };
+      const firstProgressSpy = vi.fn();
 
-      const firstResult = await new EngineReloaded(app, settings, undefined, scope).sync();
+      const firstResult = await new EngineReloaded(app, settings, firstProgressSpy, scope).sync();
 
       expect(firstResult.items).toEqual([
         expect.objectContaining({
-          noteId: 'knowledge_child',
+          noteId: 'knowledge_child_2',
           status: 'failed',
           error: 'temporary child fetch failure',
         }),
-        expect.objectContaining({ noteId: 'knowledge_parent', status: 'created' }),
       ]);
       expect(firstResult.checkpointBlocked).toBe(true);
-      app.vault._addFile(
-        '得到大脑/知识库/测试知识库/纯文本/父笔记.md',
-        '---\nuid: "knowledge_parent"\nmodified: "2026-07-17 11:00:00"\n---\n父笔记正文',
-        { uid: 'knowledge_parent', modified: '2026-07-17 11:00:00' }
-      );
+      expect(firstProgressSpy).toHaveBeenCalledWith(expect.objectContaining({
+        processed: 1,
+        total: 1,
+        failed: 1,
+      }));
+      expect(app.vault.create).not.toHaveBeenCalled();
 
       const secondResult = await new EngineReloaded(app, settings, undefined, scope).sync();
 
       expect(secondResult.items).toEqual([
-        expect.objectContaining({ noteId: 'knowledge_parent', status: 'skipped' }),
-        expect.objectContaining({ noteId: 'knowledge_child', status: 'created' }),
+        expect.objectContaining({ noteId: 'knowledge_parent', status: 'created' }),
+        expect.objectContaining({ noteId: 'knowledge_child_1', status: 'created' }),
+        expect.objectContaining({ noteId: 'knowledge_child_2', status: 'created' }),
       ]);
       expect(secondResult.checkpointBlocked).not.toBe(true);
       expect(secondResult.lastNoteTimestamp).toBe('2026-07-17T11:00:00+08:00');
-      expect(fetchDetailSpy).toHaveBeenCalledTimes(2);
+      expect(fetchDetailSpy).toHaveBeenCalledTimes(4);
+      expect(app.vault.create).toHaveBeenCalledWith(
+        expect.stringContaining('/父笔记.md'),
+        expect.stringContaining('[[父笔记__子笔记一]]')
+      );
+      expect(app.vault.create).toHaveBeenCalledWith(
+        expect.stringContaining('/父笔记.md'),
+        expect.stringContaining('[[父笔记__子笔记二]]')
+      );
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
       vi.doUnmock('../src/api');

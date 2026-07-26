@@ -1073,6 +1073,15 @@ export class SyncEngine {
         result.failed++;
         result.checkpointBlocked = true;
         this.recordItem(result, note, { status: 'failed', error: note.fetch_error });
+        this.onProgress?.({
+          processed: result.total,
+          total: filteredNotes.length,
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: result.failed,
+          percent: filteredNotes.length ? Math.round((result.total / filteredNotes.length) * 100) : 100,
+        });
         continue;
       }
       const knowledgeBaseName = note.topic_id ? knowledgeBaseNames[note.topic_id] : undefined;
@@ -1092,6 +1101,19 @@ export class SyncEngine {
         ? note
         : await this.enrichAudioNote(note, signal, categoryOverride);
       const appendNotes = await this.fetchAppendNotes(noteToWrite, signal, result, categoryOverride);
+      if (result.failed > failuresBeforeNote) {
+        result.checkpointBlocked = true;
+        this.onProgress?.({
+          processed: result.total,
+          total: filteredNotes.length,
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: result.failed,
+          percent: filteredNotes.length ? Math.round((result.total / filteredNotes.length) * 100) : 100,
+        });
+        continue;
+      }
       const parentBaseName = this.buildBaseName(noteToWrite);
       const parentFileName = this.getFileName(noteToWrite);
       const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
@@ -1357,6 +1379,15 @@ export class SyncEngine {
           result.failed++;
           result.checkpointBlocked = true;
           this.recordItem(result, note, { status: 'failed', error: note.fetch_error });
+          this.onProgress?.({
+            processed: result.total,
+            total: filteredNotes.length,
+            created: result.created,
+            updated: result.updated,
+            skipped: result.skipped,
+            failed: result.failed,
+            percent: filteredNotes.length ? Math.round((result.total / filteredNotes.length) * 100) : 100,
+          });
           continue;
         }
         const parentMatchesTags = this.filterNotesByTags([note], syncOptions.syncTags).length > 0;
