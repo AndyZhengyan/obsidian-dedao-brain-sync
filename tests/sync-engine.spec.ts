@@ -1025,6 +1025,72 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
     }
   });
 
+  it('propagates OpenAPI quota exhaustion from a blogger detail request', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const requestUrl = String(url);
+      if (requestUrl.includes('/resource/knowledge/subscribe/list')) {
+        return mockFetchResponse({
+          data: { topics: [{ topic_id: 'topic_1', name: '长期专题' }], has_more: false },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/bloggers')) {
+        return mockFetchResponse({
+          data: { bloggers: [{ follow_id: 'blogger_1', name: '主理人' }], has_more: false },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/blogger/contents')) {
+        return mockFetchResponse({
+          data: {
+            contents: [{
+              post_id_alias: 'quota_exhausted',
+              title: '配额耗尽文章',
+              summary: '不可降级写入的预览摘要',
+              created_at: '2026-01-01T10:00:00+08:00',
+              updated_at: '2026-01-01T10:00:00+08:00',
+            }],
+            has_more: false,
+          },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/blogger/content/detail')) {
+        return {
+          status: 429,
+          text: async () => JSON.stringify({
+            error: { reason: 'quota_day', message: 'quota exhausted' },
+          }),
+        } as Response;
+      }
+      throw new Error(`Unexpected request: ${requestUrl}`);
+    });
+
+    try {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app, makeSettings({
+        authMode: 'openapi',
+        openApiToken: 'openapi-token',
+        openApiClientId: 'openapi-client',
+      }));
+
+      const outcomePromise = engine.syncSubscribedKnowledge(undefined, {
+        syncAll: true,
+        topicIds: ['topic_1'],
+        knowledgeBaseName: '长期专题',
+      }).then(
+        value => ({ value }),
+        error => ({ error }),
+      );
+      await vi.runAllTimersAsync();
+      const outcome = await outcomePromise;
+
+      expect(outcome).toEqual({ error: expect.any(Error) });
+      expect(app.vault.create).not.toHaveBeenCalled();
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   it('records an OpenAPI blogger detail payload that cannot be normalized as fetch_error', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       const requestUrl = String(url);

@@ -4,6 +4,8 @@ import { isRecord, normalizeBearerToken, parseJsonObjectOrEmpty, parseJsonPreser
 
 export const GETNOTE_LIST_LIMIT = 20;
 
+class QuotaExceededError extends Error {}
+
 // Module-level quota tracker. Updated before throwing quota-day/month errors so
 // the calling layer can persist it via Settings.lastQuotaState.
 let lastQuota: ApiQuotaState = { exhausted: false };
@@ -127,7 +129,7 @@ async function handleRateLimit<T>(
   const reason = errObj.reason as string | undefined;
   if (reason === 'quota_day' || reason === 'quota_month') {
     lastQuota = { exhausted: true, reason, checkedAt: Date.now() };
-    throw new Error(t('error.quotaExceeded'));
+    throw new QuotaExceededError(t('error.quotaExceeded'));
   }
   if (retries > 0) {
     await waitForRetryDelay(signal);
@@ -599,6 +601,7 @@ async function fetchBloggerContentDetail(
     };
   } catch (error) {
     if (signal?.aborted) throw error;
+    if (error instanceof QuotaExceededError) throw error;
     return {
       content,
       error: error instanceof Error ? error.message : String(error),
