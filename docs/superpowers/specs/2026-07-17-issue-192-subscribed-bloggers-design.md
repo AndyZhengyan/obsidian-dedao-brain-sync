@@ -25,4 +25,3 @@ Failures are isolated per note. A run with note-level failures must not advance 
 - Full and explicit single-item runs preserve existing semantics.
 - One note failure does not stop later notes and remains retryable.
 - No UI, copy, path, ID, timestamp, or version change.
-

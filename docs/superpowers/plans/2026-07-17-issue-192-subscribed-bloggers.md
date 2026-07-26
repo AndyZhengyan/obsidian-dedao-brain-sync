@@ -5,4 +5,3 @@
 3. Isolate note fetch/write failures and prevent failed notes from being skipped by an advanced checkpoint.
 4. Run targeted sync/API tests, then `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`.
 5. Review the diff for ID/timestamp and sync-semantics regressions, push the branch, open a PR targeting `main`, and monitor required checks.
-
