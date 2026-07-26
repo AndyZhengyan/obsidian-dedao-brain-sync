@@ -1091,6 +1091,81 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
     }
   });
 
+  it.each([
+    {
+      name: 'authentication',
+      detailResponse: () => ({
+        status: 401,
+        text: async () => '',
+      } as Response),
+    },
+    {
+      name: 'membership',
+      detailResponse: () => ({
+        status: 403,
+        text: async () => JSON.stringify({
+          success: false,
+          error: { code: 10201, message: 'membership required' },
+        }),
+      } as Response),
+    },
+  ])('propagates OpenAPI $name failure from a blogger detail request', async ({ detailResponse }) => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const requestUrl = String(url);
+      if (requestUrl.includes('/resource/knowledge/subscribe/list')) {
+        return mockFetchResponse({
+          data: { topics: [{ topic_id: 'topic_1', name: '长期专题' }], has_more: false },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/bloggers')) {
+        return mockFetchResponse({
+          data: { bloggers: [{ follow_id: 'blogger_1', name: '主理人' }], has_more: false },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/blogger/contents')) {
+        return mockFetchResponse({
+          data: {
+            contents: [{
+              post_id_alias: 'fatal_detail_failure',
+              title: '全局错误文章',
+              summary: '不可降级写入的预览摘要',
+              created_at: '2026-01-01T10:00:00+08:00',
+              updated_at: '2026-01-01T10:00:00+08:00',
+            }],
+            has_more: false,
+          },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/blogger/content/detail')) {
+        return detailResponse();
+      }
+      throw new Error(`Unexpected request: ${requestUrl}`);
+    });
+
+    try {
+      const app = makeMockApp();
+      const engine = new SyncEngine(app, makeSettings({
+        authMode: 'openapi',
+        openApiToken: 'openapi-token',
+        openApiClientId: 'openapi-client',
+      }));
+
+      const outcome = await engine.syncSubscribedKnowledge(undefined, {
+        syncAll: true,
+        topicIds: ['topic_1'],
+        knowledgeBaseName: '长期专题',
+      }).then(
+        value => ({ value }),
+        error => ({ error }),
+      );
+
+      expect(outcome).toEqual({ error: expect.any(Error) });
+      expect(app.vault.create).not.toHaveBeenCalled();
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
   it('records an OpenAPI blogger detail payload that cannot be normalized as fetch_error', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       const requestUrl = String(url);

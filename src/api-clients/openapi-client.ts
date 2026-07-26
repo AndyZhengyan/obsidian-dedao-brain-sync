@@ -4,7 +4,7 @@ import { isRecord, normalizeBearerToken, parseJsonObjectOrEmpty, parseJsonPreser
 
 export const GETNOTE_LIST_LIMIT = 20;
 
-class QuotaExceededError extends Error {}
+class FatalOpenApiError extends Error {}
 
 // Module-level quota tracker. Updated before throwing quota-day/month errors so
 // the calling layer can persist it via Settings.lastQuotaState.
@@ -28,7 +28,7 @@ function normalizeListData(value: unknown): { notes: GetNoteNote[]; hasMore: boo
   const data = isRecord(value.data) ? value.data : value;
   // Handle not_member error: server returns { success: true, data: { msg: "rejected" } }
   if (data.msg === 'rejected') {
-    throw new Error(t('error.openApiNotMember'));
+    throw new FatalOpenApiError(t('error.openApiNotMember'));
   }
   const notes = Array.isArray(data.notes) ? data.notes as GetNoteNote[] : [];
   const hasMore = Boolean(data.has_more ?? data.hasMore);
@@ -129,7 +129,7 @@ async function handleRateLimit<T>(
   const reason = errObj.reason as string | undefined;
   if (reason === 'quota_day' || reason === 'quota_month') {
     lastQuota = { exhausted: true, reason, checkedAt: Date.now() };
-    throw new QuotaExceededError(t('error.quotaExceeded'));
+    throw new FatalOpenApiError(t('error.quotaExceeded'));
   }
   if (retries > 0) {
     await waitForRetryDelay(signal);
@@ -143,7 +143,7 @@ async function apiRequest<T>(url: string, options: RequestInit, retries = 1, sig
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   const res = await fetch(url, { ...options, signal });
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-  if (res.status === 401) throw new Error(t('error.invalidCredentials'));
+  if (res.status === 401) throw new FatalOpenApiError(t('error.invalidCredentials'));
   if (res.status === 429) return handleRateLimit<T>(url, options, res, retries, signal);
   if (res.status < 200 || res.status >= 300) {
     const text = await res.text();
@@ -151,7 +151,7 @@ async function apiRequest<T>(url: string, options: RequestInit, retries = 1, sig
     if (res.status === 403 && json.success === false) {
       const errObj = (json.error ?? json) as Record<string, unknown>;
       const code = errObj?.code as number | undefined;
-      if (code === 10201) throw new Error(t('error.openApiNotMember'));
+      if (code === 10201) throw new FatalOpenApiError(t('error.openApiNotMember'));
     }
     throw new Error(t('error.apiServerError', { status: res.status }));
   }
@@ -161,7 +161,7 @@ async function apiRequest<T>(url: string, options: RequestInit, retries = 1, sig
   if (json.success === false) {
     const errObj = (json.error ?? json) as Record<string, unknown>;
     const code = errObj?.code as number | undefined;
-    if (code === 10201) throw new Error(t('error.openApiNotMember'));
+    if (code === 10201) throw new FatalOpenApiError(t('error.openApiNotMember'));
     if (code === 10202 && retries > 0) {
       await waitForRetryDelay(signal);
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -601,7 +601,7 @@ async function fetchBloggerContentDetail(
     };
   } catch (error) {
     if (signal?.aborted) throw error;
-    if (error instanceof QuotaExceededError) throw error;
+    if (error instanceof FatalOpenApiError) throw error;
     return {
       content,
       error: error instanceof Error ? error.message : String(error),
