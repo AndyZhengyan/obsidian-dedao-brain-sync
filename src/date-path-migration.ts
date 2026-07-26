@@ -8,7 +8,6 @@ export interface DatePathMigrationTarget {
 }
 
 export type DatePathMigrationIssueCode =
-  | 'not-plugin-owned'
   | 'invalid-metadata'
   | 'unsafe-path'
   | 'missing-generated-asset'
@@ -44,6 +43,7 @@ interface PlannedMove {
 
 interface NoteCandidate {
   file: TFile;
+  pluginOwned: boolean;
   uid?: string;
   targetPath?: string;
   assets: PlannedMove[];
@@ -324,7 +324,9 @@ function preflightPlans(
   for (const [assetPath, owners] of assetOwners) {
     if (owners.size < 2) continue;
     for (const owner of owners) {
-      block(owner, result, 'shared-asset', assetPath, `Asset is referenced by multiple notes: ${assetPath}`);
+      if (owner.pluginOwned) {
+        block(owner, result, 'shared-asset', assetPath, `Asset is referenced by multiple notes: ${assetPath}`);
+      }
     }
   }
 
@@ -413,14 +415,13 @@ export async function migrateDatePaths(
   const files = app.vault.getMarkdownFiles()
     .filter(file => isInsideRoot(file.path, root))
     .sort((left, right) => left.path.localeCompare(right.path));
-  result.scanned = files.length;
-
   const candidates: NoteCandidate[] = [];
   for (const file of files) {
     const cache = app.metadataCache.getFileCache(file);
     const links = resolveLinks(app, file, cache ?? {});
     const candidate: NoteCandidate = {
       file,
+      pluginOwned: false,
       assets: [],
       assetClaims: new Set(
         links
@@ -435,15 +436,10 @@ export async function migrateDatePaths(
 
     const source = readRequiredString(cache?.frontmatter, 'source');
     if (!source || !PLUGIN_SOURCES.has(source)) {
-      skipCandidate(
-        candidate,
-        result,
-        'not-plugin-owned',
-        file.path,
-        'Plugin ownership marker is missing or invalid',
-      );
       continue;
     }
+    candidate.pluginOwned = true;
+    result.scanned++;
 
     const uid = readRequiredString(cache?.frontmatter, 'uid');
     const created = readRequiredString(cache?.frontmatter, 'created');
@@ -481,6 +477,7 @@ export async function migrateDatePaths(
   for (const candidate of candidates) {
     if (
       !candidate.skipped
+      && candidate.pluginOwned
       && candidate.uid
       && candidate.targetPath
     ) {

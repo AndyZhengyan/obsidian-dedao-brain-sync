@@ -176,8 +176,8 @@ describe('migrateDatePaths', () => {
 
     const result = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
 
-    expect(result).toMatchObject({ scanned: 4, moved: 2, skipped: 2, failed: 0 });
-    expect(issueCodes(result).filter(code => code === 'not-plugin-owned')).toHaveLength(2);
+    expect(result).toMatchObject({ scanned: 2, moved: 2, skipped: 0, failed: 0 });
+    expect(result.issues).toEqual([]);
     expect(app.vault.paths()).toEqual([
       '得到大脑/2026/07/纯文本/当前.md',
       '得到大脑/2026/07/纯文本/旧版.md',
@@ -268,7 +268,7 @@ describe('migrateDatePaths', () => {
 
     const result = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
 
-    expect(result).toMatchObject({ scanned: 4, moved: 0, skipped: 4, failed: 0 });
+    expect(result).toMatchObject({ scanned: 3, moved: 0, skipped: 3, failed: 0 });
     expect(issueCodes(result)).toEqual(expect.arrayContaining(['target-conflict', 'shared-asset']));
   });
 
@@ -285,8 +285,8 @@ describe('migrateDatePaths', () => {
 
     const result = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
 
-    expect(result).toMatchObject({ scanned: 2, moved: 0, skipped: 2, failed: 0 });
-    expect(issueCodes(result)).toEqual(expect.arrayContaining(['not-plugin-owned', 'shared-asset']));
+    expect(result).toMatchObject({ scanned: 1, moved: 0, skipped: 1, failed: 0 });
+    expect(issueCodes(result)).toEqual(['shared-asset']);
     expect(app.vault.paths()).toEqual([
       '得到大脑/图片笔记/asset/shared.png',
       '得到大脑/图片笔记/插件.md',
