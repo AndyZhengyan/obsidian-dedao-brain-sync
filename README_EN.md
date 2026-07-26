@@ -225,6 +225,19 @@ Examples:
 
 The plugin substitutes placeholders with the note's `created_at` timestamp. Placeholders are case-sensitive: `mm` is minutes, `MM` is month.
 
+## Organize paths by created date
+
+The **Organize paths by created date** toggle sits with **Filename prefix** in the file-organization settings. When enabled, its format accepts `YYYY`, `MM`, `DD`, and separators; the default is `YYYY/MM`. The note's `created` / `created_at` value is authoritative. Updating an old note never moves it to an update-date folder.
+
+The canonical path keeps the existing category hierarchy after the date:
+
+- Normal note: `得到大脑/2026/07/纯文本/Note.md`
+- Knowledge-base note: `得到大脑/2026/07/知识库/Knowledge Base Name/Note.md`
+
+Enabling, disabling, or changing the format from A to B requires **Apply** and a confirmation. Confirming immediately migrates local historical notes and only the adjacent attachments actually referenced by those notes. Disabling immediately rolls them back to the original category paths. This is a local-only operation: it does not contact Dedao Brain, run a full sync, or change sync checkpoints.
+
+Migration is idempotent and resumable. **Reorganize existing files** checks the current layout again, while files already at their target path remain unchanged. Target conflicts, invalid metadata, and missing or shared attachments skip the whole note: existing files are never overwritten and duplicate names are never manufactured. A failed note move attempts to roll back its completed renames. Remote sync only chooses the configured path for new notes; it does not migrate historical files or change the existing local overwrite/skip contract.
+
 ## Settings
 
 | Setting | Description | Default |
@@ -233,6 +246,7 @@ The plugin substitutes placeholders with the note's `created_at` timestamp. Plac
 | Client ID | Dedao Brain Open Platform client ID | empty |
 | Target folder | Sync target folder inside the vault | `得到大脑` |
 | Filename prefix | Date/time prefix format, e.g. `YYYY-MM-DD` | empty |
+| Organize paths by created date | Add a `YYYY` / `MM` / `DD` layer before the existing category hierarchy, with immediate local migration/rollback | off (format `YYYY/MM`) |
 | Auto sync range | Scheduled sync only pulls notes updated within the last N days; `0` means unlimited | `30` |
 | Sync start date | Absolute start date for manual sync | empty |
 | Scheduled sync | Background automatic sync toggle | off |

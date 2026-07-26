@@ -13,6 +13,11 @@ import { fetchNotes } from '../api';
 import { t } from '../i18n';
 import { ExternalLink } from './external-link';
 import { getLocalDateInputValue } from '../ui/date-input';
+import { validateDatePathFormat } from '../date-paths';
+import type {
+  DatePathMigrationResult,
+  DatePathMigrationTarget,
+} from '../date-path-migration';
 
 type SuggestionProvider = (query: string) => string[];
 
@@ -84,6 +89,7 @@ interface SettingsComponentProps {
   lastSyncTime?: number;
   syncHistory?: SyncHistoryEntry[];
   initialKnowledgeBaseCache?: { entries: Array<{ topicId: string; name: string; source?: 'subscribed' | 'created' }>; cacheUpdatedAt?: number };
+  applyDatePathSettings?: (target: DatePathMigrationTarget) => Promise<DatePathMigrationResult>;
 }
 
 export function SettingsComponent({
@@ -102,6 +108,7 @@ export function SettingsComponent({
   lastSyncTime,
   syncHistory = [],
   initialKnowledgeBaseCache,
+  applyDatePathSettings,
 }: SettingsComponentProps) {
   const [authMode, setAuthMode] = useState<AuthMode>(settings.authMode);
   const initialOpenApiToken = settings.openApiToken || (settings.authMode === 'openapi' ? settings.apiToken : '');
@@ -115,6 +122,14 @@ export function SettingsComponent({
   const [showApiToken, setShowApiToken] = useState(false);
   const [folderName, setFolderName] = useState(settings.folderName);
   const [filenamePrefix, setFilenamePrefix] = useState(settings.filenamePrefix);
+  const [appliedDatePathEnabled, setAppliedDatePathEnabled] = useState(settings.datePathEnabled);
+  const [appliedDatePathFormat, setAppliedDatePathFormat] = useState(settings.datePathFormat || 'YYYY/MM');
+  const [datePathEnabled, setDatePathEnabled] = useState(settings.datePathEnabled);
+  const [datePathFormat, setDatePathFormat] = useState(settings.datePathFormat || 'YYYY/MM');
+  const [datePathConfirmation, setDatePathConfirmation] = useState<'apply' | 'reconcile' | null>(null);
+  const [datePathMigrationBusy, setDatePathMigrationBusy] = useState(false);
+  const [datePathMigrationResult, setDatePathMigrationResult] = useState<DatePathMigrationResult | null>(null);
+  const [datePathMigrationError, setDatePathMigrationError] = useState('');
   const [templateFilePath, setTemplateFilePath] = useState(settings.templateFilePath);
   // Only show actual lastSyncEndTimestamp — do NOT fallback to syncStartDate
   const lastSyncedTo = settings.lastSyncEndTimestamp || '';
@@ -284,6 +299,51 @@ export function SettingsComponent({
     },
     [updateSetting]
   );
+
+  const normalizedDatePathFormat = datePathFormat.trim();
+  const datePathDirty =
+    datePathEnabled !== appliedDatePathEnabled
+    || normalizedDatePathFormat !== appliedDatePathFormat;
+  const datePathFormatValid = validateDatePathFormat(normalizedDatePathFormat);
+
+  const openDatePathConfirmation = (mode: 'apply' | 'reconcile') => {
+    if (isSyncing || datePathMigrationBusy || !datePathFormatValid) return;
+    setDatePathMigrationError('');
+    setDatePathConfirmation(mode);
+  };
+
+  const confirmDatePathMigration = async () => {
+    if (!datePathConfirmation || !applyDatePathSettings || datePathMigrationBusy) return;
+    const target = {
+      enabled: datePathEnabled,
+      format: normalizedDatePathFormat,
+    };
+    setDatePathMigrationBusy(true);
+    setDatePathMigrationError('');
+    try {
+      const result = await applyDatePathSettings(target);
+      setAppliedDatePathEnabled(target.enabled);
+      setAppliedDatePathFormat(target.format);
+      setDatePathFormat(target.format);
+      setDatePathMigrationResult(result);
+      setDatePathConfirmation(null);
+    } catch (error) {
+      setDatePathMigrationError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setDatePathMigrationBusy(false);
+    }
+  };
+
+  const datePathConfirmationSummary = datePathConfirmation === 'reconcile'
+    ? t('settings.datePath.confirm.reconcile')
+    : !appliedDatePathEnabled && datePathEnabled
+      ? t('settings.datePath.confirm.enable')
+      : appliedDatePathEnabled && !datePathEnabled
+        ? t('settings.datePath.confirm.disable')
+        : t('settings.datePath.confirm.format', {
+          from: appliedDatePathFormat,
+          to: normalizedDatePathFormat,
+        });
 
   const handleTemplateFilePathChange = useCallback(
     (value: string) => {
@@ -666,7 +726,12 @@ export function SettingsComponent({
       {/* 文件名前缀 */}
       <SettingItem
         name={t('settings.prefix.label')}
-        description={t('settings.prefix.desc')}
+        description={(
+          <>
+            <div>{t('settings.prefix.desc')}</div>
+            <div className="getnote-input-hint">{t('settings.prefix.hint')}</div>
+          </>
+        )}
       >
         <input
           type="text"
@@ -676,6 +741,110 @@ export function SettingsComponent({
           onInput={(e) => handleFilenamePrefixChange((e.target as HTMLInputElement).value)}
         />
       </SettingItem>
+
+      <SettingItem
+        name={t('settings.datePath.label')}
+        description={t('settings.datePath.desc')}
+      >
+        <div className="getnote-date-path-settings">
+          <div className="getnote-date-path-toggle-row">
+            <Toggle
+              value={datePathEnabled}
+              onChange={setDatePathEnabled}
+              disabled={isSyncing || datePathMigrationBusy}
+            />
+          </div>
+          {datePathEnabled && (
+            <input
+              type="text"
+              className="getnote-input"
+              aria-label={t('settings.datePath.format')}
+              value={datePathFormat}
+              disabled={isSyncing || datePathMigrationBusy}
+              onInput={(event) => setDatePathFormat((event.target as HTMLInputElement).value)}
+            />
+          )}
+          <div className="getnote-input-hint">{t('settings.datePath.hint')}</div>
+          {!datePathFormatValid && (
+            <div className="getnote-date-path-error" role="alert">
+              {t('settings.datePath.invalidFormat')}
+            </div>
+          )}
+          <div className="getnote-date-path-actions">
+            <button
+              type="button"
+              className="mod-cta"
+              disabled={!datePathDirty || !datePathFormatValid || isSyncing || datePathMigrationBusy}
+              onClick={() => openDatePathConfirmation('apply')}
+            >
+              {t('settings.datePath.apply')}
+            </button>
+            <button
+              type="button"
+              className="mod-secondary"
+              disabled={datePathDirty || !datePathFormatValid || isSyncing || datePathMigrationBusy}
+              onClick={() => openDatePathConfirmation('reconcile')}
+            >
+              {t('settings.datePath.reconcile')}
+            </button>
+          </div>
+          {datePathMigrationResult && (
+            <div className="getnote-date-path-result" data-date-path-result>
+              <div>
+                {t('settings.datePath.result', {
+                  scanned: datePathMigrationResult.scanned,
+                  moved: datePathMigrationResult.moved,
+                  unchanged: datePathMigrationResult.unchanged,
+                  skipped: datePathMigrationResult.skipped,
+                  failed: datePathMigrationResult.failed,
+                })}
+              </div>
+              {datePathMigrationResult.issues.length > 0 && (
+                <ul>
+                  {datePathMigrationResult.issues.map((migrationIssue, index) => (
+                    <li key={`${migrationIssue.code}-${migrationIssue.path}-${index}`}>
+                      {migrationIssue.path}: {migrationIssue.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      </SettingItem>
+
+      {datePathConfirmation && (
+        <div className="getnote-date-path-modal-backdrop">
+          <div className="getnote-date-path-modal" role="dialog" aria-modal="true">
+            <h3>{t('settings.datePath.confirm.title')}</h3>
+            <p>{datePathConfirmationSummary}</p>
+            <p>{t('settings.datePath.confirm.details')}</p>
+            {datePathMigrationError && (
+              <div className="getnote-date-path-error" role="alert">{datePathMigrationError}</div>
+            )}
+            <div className="getnote-date-path-modal-actions">
+              <button
+                type="button"
+                className="mod-secondary"
+                disabled={datePathMigrationBusy}
+                onClick={() => setDatePathConfirmation(null)}
+              >
+                {t('settings.datePath.cancel')}
+              </button>
+              <button
+                type="button"
+                className="mod-cta"
+                disabled={datePathMigrationBusy}
+                onClick={() => void confirmDatePathMigration()}
+              >
+                {datePathMigrationBusy
+                  ? t('settings.datePath.running')
+                  : t('settings.datePath.confirm.action')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <SettingItem
         name={t('settings.templateFile.label')}

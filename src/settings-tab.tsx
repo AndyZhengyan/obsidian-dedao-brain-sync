@@ -34,6 +34,7 @@ export class GetNoteSettingsTab extends PluginSettingTab {
         app={this.app}
         lastSyncTime={this.plugin.lastSyncResult?.timestamp}
         syncHistory={this.plugin.syncHistory}
+        applyDatePathSettings={(target) => this.plugin.applyDatePathSettings(target)}
       />,
       this.containerEl
     );

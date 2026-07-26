@@ -40,6 +40,14 @@ function renderSettings(
     startSubscribedKnowledgeSync?: () => void;
     initialKnowledgeBaseCache?: { entries: Array<{ topicId: string; name: string }>; cacheUpdatedAt?: number };
     app?: App;
+    applyDatePathSettings?: (target: { enabled: boolean; format: string }) => Promise<{
+      scanned: number;
+      moved: number;
+      unchanged: number;
+      skipped: number;
+      failed: number;
+      issues: Array<{ code: string; path: string; message: string }>;
+    }>;
   } = {}
 ) {
   const container = document.createElement('div');
@@ -59,6 +67,7 @@ function renderSettings(
       app: options.app ?? new App(),
       syncProgress: options.syncProgress,
       initialKnowledgeBaseCache: options.initialKnowledgeBaseCache,
+      applyDatePathSettings: options.applyDatePathSettings,
     }),
     container
   );
@@ -97,6 +106,7 @@ function renderStatefulSettings(
         app: new App(),
         syncProgress: options.syncProgress,
         initialKnowledgeBaseCache: options.initialKnowledgeBaseCache,
+        applyDatePathSettings: options.applyDatePathSettings,
       }),
       container
     );
@@ -140,6 +150,105 @@ afterEach(() => {
   render(null, document.body);
   document.body.innerHTML = '';
   delete (window as Window & { require?: unknown }).require;
+});
+
+describe('created-date path settings', () => {
+  function settingItem(container: HTMLElement, label: string): HTMLElement {
+    const item = Array.from(container.querySelectorAll<HTMLElement>('.setting-item'))
+      .find(element => element.querySelector('.setting-item-name')?.textContent === label);
+    expect(item).toBeTruthy();
+    return item!;
+  }
+
+  function clickButton(container: HTMLElement, label: string): void {
+    const button = Array.from(container.querySelectorAll<HTMLButtonElement>('button'))
+      .find(element => element.textContent?.trim() === label);
+    expect(button).toBeTruthy();
+    button!.click();
+  }
+
+  it('keeps date-path edits local and shows token guidance beside the filename prefix', async () => {
+    const updateSetting = vi.fn();
+    const { container } = renderSettings(makeSettings(), updateSetting);
+
+    expect(settingItem(container, '文件名前缀').textContent).toContain('YYYY / MM / DD / HH / mm / ss');
+    const dateItem = settingItem(container, '按创建日期整理路径');
+    expect(dateItem.textContent).toContain('YYYY / MM / DD');
+
+    const toggle = dateItem.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+    await act(() => {
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const formatInput = dateItem.querySelector<HTMLInputElement>('input[type="text"]');
+    expect(formatInput?.value).toBe('YYYY/MM');
+    inputValue(formatInput!, 'YYYY-MM');
+
+    expect(updateSetting).not.toHaveBeenCalledWith('datePathEnabled', expect.anything());
+    expect(updateSetting).not.toHaveBeenCalledWith('datePathFormat', expect.anything());
+  });
+
+  it('cancels an enable confirmation without saving or migrating', async () => {
+    const updateSetting = vi.fn();
+    const applyDatePathSettings = vi.fn();
+    const { container } = renderSettings(makeSettings(), updateSetting, vi.fn(), {
+      applyDatePathSettings,
+    });
+    const dateItem = settingItem(container, '按创建日期整理路径');
+    const toggle = dateItem.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+    await act(() => {
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    await act(() => clickButton(dateItem, '应用'));
+    const dialog = container.querySelector<HTMLElement>('[role="dialog"]');
+    expect(dialog?.textContent).toContain('立即整理本地历史笔记');
+    expect(dialog?.textContent).toContain('实际引用的附件');
+    expect(dialog?.textContent).toContain('冲突会跳过，不会覆盖');
+    expect(dialog?.textContent).toContain('可重复执行');
+    await act(() => clickButton(dialog!, '取消'));
+
+    expect(applyDatePathSettings).not.toHaveBeenCalled();
+    expect(updateSetting).not.toHaveBeenCalledWith('datePathEnabled', expect.anything());
+  });
+
+  it('confirms a format change, reports the result, and supports an unchanged reconcile', async () => {
+    const applyDatePathSettings = vi.fn().mockResolvedValue({
+      scanned: 5,
+      moved: 2,
+      unchanged: 1,
+      skipped: 1,
+      failed: 1,
+      issues: [{ code: 'target-conflict', path: '得到大脑/2026/07/纯文本/a.md', message: 'Target exists' }],
+    });
+    const { container } = renderSettings(makeSettings({
+      datePathEnabled: true,
+      datePathFormat: 'YYYY/MM',
+    }), vi.fn(), vi.fn(), { applyDatePathSettings });
+    const dateItem = settingItem(container, '按创建日期整理路径');
+    await act(() => inputValue(dateItem.querySelector<HTMLInputElement>('input[type="text"]')!, 'YYYY/MM/DD'));
+
+    await act(() => clickButton(dateItem, '应用'));
+    let dialog = container.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(dialog.textContent).toContain('路径格式将从 YYYY/MM 改为 YYYY/MM/DD');
+    await act(async () => clickButton(dialog, '确认并立即整理'));
+
+    expect(applyDatePathSettings).toHaveBeenLastCalledWith({ enabled: true, format: 'YYYY/MM/DD' });
+    const result = dateItem.querySelector<HTMLElement>('[data-date-path-result]');
+    expect(result?.textContent).toContain('扫描 5');
+    expect(result?.textContent).toContain('移动 2');
+    expect(result?.textContent).toContain('未变化 1');
+    expect(result?.textContent).toContain('跳过 1');
+    expect(result?.textContent).toContain('失败 1');
+    expect(result?.textContent).toContain('得到大脑/2026/07/纯文本/a.md');
+
+    await act(() => clickButton(dateItem, '重新整理现有文件'));
+    dialog = container.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(dialog.textContent).toContain('按当前设置重新检查');
+    await act(async () => clickButton(dialog, '确认并立即整理'));
+    expect(applyDatePathSettings).toHaveBeenLastCalledWith({ enabled: true, format: 'YYYY/MM/DD' });
+  });
 });
 
 describe('SettingsComponent auth credentials', () => {

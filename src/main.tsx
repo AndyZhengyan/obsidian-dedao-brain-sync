@@ -15,6 +15,12 @@ import { getLastQuotaState, resetQuotaState } from './api-clients/openapi-client
 import { fetchRecallSearch } from './api';
 import { mergeTagCache } from './utils/tag-aggregator';
 import { SearchPanel, findSyncedNoteFile } from './ui/search-view';
+import {
+  migrateDatePaths,
+  type DatePathMigrationResult,
+  type DatePathMigrationTarget,
+} from './date-path-migration';
+import { validateDatePathFormat } from './date-paths';
 
 const MAX_SYNC_HISTORY = 20;
 const TAG_MIGRATION_VERSION = 2;
@@ -128,6 +134,7 @@ function normalizeSyncHistory(value: unknown): SyncHistoryEntry[] {
 export default class GetNoteSyncPlugin extends Plugin {
   declare settings: Settings;
   isSyncing = false;
+  isDatePathMigrationRunning = false;
   syncProgress: SyncProgressDetail = { message: '', count: '', percent: 0 };
   syncHistory: SyncHistoryEntry[] = [];
   lastSyncResult: SyncHistoryEntry | null = null;
@@ -252,6 +259,37 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+  }
+
+  async applyDatePathSettings(target: DatePathMigrationTarget): Promise<DatePathMigrationResult> {
+    if (this.isSyncing) throw new Error('Cannot reorganize date paths while sync is running');
+    if (this.isDatePathMigrationRunning) throw new Error('Date-path migration is already running');
+    const format = target.format.trim();
+    if (!validateDatePathFormat(format)) throw new Error('Invalid date path format');
+
+    this.isDatePathMigrationRunning = true;
+    const previous = {
+      enabled: this.settings.datePathEnabled,
+      format: this.settings.datePathFormat,
+    };
+    try {
+      const result = await migrateDatePaths(this.app, this.settings.folderName, {
+        enabled: target.enabled,
+        format,
+      });
+      this.settings.datePathEnabled = target.enabled;
+      this.settings.datePathFormat = format;
+      try {
+        await this.saveSettings();
+      } catch (error) {
+        this.settings.datePathEnabled = previous.enabled;
+        this.settings.datePathFormat = previous.format;
+        throw error;
+      }
+      return result;
+    } finally {
+      this.isDatePathMigrationRunning = false;
+    }
   }
 
   /**
@@ -384,7 +422,7 @@ export default class GetNoteSyncPlugin extends Plugin {
     scopeOptions?: Partial<SyncScopeOptions>,
     selectedIds?: string[]
   ): Promise<void> {
-    if (this.isSyncing) return;
+    if (this.isSyncing || this.isDatePathMigrationRunning) return;
     const credentials = getAuthCredentials(this.settings);
     if (!credentials.token || (credentials.authMode !== 'web' && !credentials.clientId)) {
       showError(t('notice.fillCredentials'));
@@ -538,6 +576,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 
   openManualSyncModal(): void {
+    if (this.isDatePathMigrationRunning) return;
     closeFloatingSelects();
     const wrapper = new ManualSyncModalWrapper(this.app, this);
     wrapper.open();
@@ -548,6 +587,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 
   openNotePicker(): void {
+    if (this.isDatePathMigrationRunning) return;
     closeFloatingSelects();
     const wrapper = new NotePickerModalWrapper(this.app, this);
     wrapper.open();
@@ -594,6 +634,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 
   syncSubscribedKnowledge(): void {
+    if (this.isDatePathMigrationRunning) return;
     closeFloatingSelects();
     const wrapper = new TopicPickerModalWrapper(this.app, this);
     wrapper.open();
@@ -607,7 +648,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 
   private async runSubscribedKnowledgeSync(syncOptions?: TopicPickerSelection): Promise<void> {
-    if (this.isSyncing) return;
+    if (this.isSyncing || this.isDatePathMigrationRunning) return;
     const credentials = getAuthCredentials(this.settings);
     if (!credentials.token || (credentials.authMode !== 'web' && !credentials.clientId)) {
       showError(t('notice.fillCredentials'));
@@ -671,6 +712,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 
   openLocalUploadModal(): void {
+    if (this.isDatePathMigrationRunning) return;
     const credentials = getAuthCredentials(this.settings);
     if (!credentials.token || (credentials.authMode !== 'web' && !credentials.clientId)) {
       showError(t('notice.fillCredentials'));
@@ -686,7 +728,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 
   private async reverseSyncToGetNote(files?: TFile[]): Promise<void> {
-    if (this.isSyncing) return;
+    if (this.isSyncing || this.isDatePathMigrationRunning) return;
     const startedAt = Date.now();
     this.isSyncing = true;
     this.syncProgress = { message: t('reverseSync.running'), count: '', percent: 0 };
