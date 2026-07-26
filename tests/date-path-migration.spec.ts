@@ -11,7 +11,7 @@ type Cache = {
   links?: Array<{ link: string }>;
 };
 
-type MigrationApp = Pick<App, 'vault' | 'metadataCache'> & {
+type MigrationApp = Pick<App, 'vault' | 'metadataCache' | 'fileManager'> & {
   vault: App['vault'] & {
     addFile(path: string, content: string, cache?: Cache): TFile;
     content(path: string): string | undefined;
@@ -92,6 +92,18 @@ function makeApp(): MigrationApp {
     }),
   };
 
+  const fileManager = {
+    renameFile: vi.fn(async (file: TFile, targetPath: string) => {
+      const sourcePath = file.path;
+      await vault.rename(file, targetPath);
+      const sourceLink = sourcePath.replace(/\.md$/, '');
+      const targetLink = targetPath.replace(/\.md$/, '');
+      for (const entry of files.values()) {
+        entry.content = entry.content.replaceAll(sourceLink, targetLink);
+      }
+    }),
+  };
+
   const metadataCache = {
     getFileCache: (file: TFile) => caches.get(file.path) ?? null,
     getFirstLinkpathDest: (linkpath: string, sourcePath: string) => {
@@ -114,7 +126,7 @@ function makeApp(): MigrationApp {
     },
   };
 
-  return { vault, metadataCache } as unknown as MigrationApp;
+  return { vault, fileManager, metadataCache } as unknown as MigrationApp;
 }
 
 function pluginCache(
@@ -214,6 +226,55 @@ describe('migrateDatePaths', () => {
     expect(reformatted.moved).toBe(1);
     expect(disabled.moved).toBe(1);
     expect(app.vault.paths()).toEqual(['得到大脑/知识库/写作/历史.md']);
+  });
+
+  it('preserves a custom category hierarchy through enable, format change, and disable', async () => {
+    const originalPath = '得到大脑/项目/客户甲/历史.md';
+    app.vault.addFile(originalPath, 'custom', pluginCache({ uid: 'custom-category' }));
+
+    const enabled = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    expect(enabled.moved).toBe(1);
+    expect(app.vault.paths()).toEqual(['得到大脑/2026/07/项目/客户甲/历史.md']);
+
+    const reformatted = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY-MM-DD' });
+    expect(reformatted.moved).toBe(1);
+    expect(app.vault.paths()).toEqual(['得到大脑/2026-07-03/项目/客户甲/历史.md']);
+
+    const disabled = await migrateDatePaths(app, '得到大脑', { enabled: false, format: 'YYYY-MM-DD' });
+    expect(disabled.moved).toBe(1);
+    expect(app.vault.paths()).toEqual([originalPath]);
+  });
+
+  it('replaces the entire prior date layer when changing to a shorter format', async () => {
+    app.vault.addFile(
+      '得到大脑/项目/历史.md',
+      'custom',
+      pluginCache({ uid: 'shorter-date-format' }),
+    );
+
+    await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM/DD' });
+    const reformatted = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY' });
+
+    expect(reformatted.moved).toBe(1);
+    expect(app.vault.paths()).toEqual(['得到大脑/2026/项目/历史.md']);
+  });
+
+  it('skips a move that would break an external path-qualified inbound link', async () => {
+    const source = '得到大脑/纯文本/被引用.md';
+    app.vault.addFile(source, 'synced', pluginCache({ uid: 'inbound-target' }));
+    app.vault.addFile(
+      '个人笔记/索引.md',
+      '[[得到大脑/纯文本/被引用]]',
+      { links: [{ link: '得到大脑/纯文本/被引用' }] },
+    );
+
+    const result = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+
+    expect(result).toMatchObject({ moved: 0, skipped: 1, failed: 0 });
+    expect(issueCodes(result)).toContain('inbound-link');
+    expect(app.vault.paths()).toContain(source);
+    expect(app.vault.content('个人笔记/索引.md')).toBe('[[得到大脑/纯文本/被引用]]');
+    expect(app.fileManager.renameFile).not.toHaveBeenCalled();
   });
 
   it('moves only exact referenced adjacent assets and leaves unreferenced siblings in place', async () => {

@@ -1,5 +1,5 @@
 import type { App, CachedMetadata, TFile } from 'obsidian';
-import { buildCanonicalCategoryDir } from './date-paths';
+import { buildCanonicalCategoryDir, formatCreatedDatePath } from './date-paths';
 import { getCategoryDir } from './types';
 
 export interface DatePathMigrationTarget {
@@ -14,6 +14,7 @@ export type DatePathMigrationIssueCode =
   | 'shared-asset'
   | 'duplicate-uid'
   | 'target-conflict'
+  | 'inbound-link'
   | 'rename-failed'
   | 'rollback-failed';
 
@@ -86,17 +87,36 @@ function readRequiredString(
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-function knowledgeBaseCategory(filePath: string, rootFolder: string): string | null {
-  const relativeSegments = filePath.slice(rootFolder.length + 1).split('/');
-  const knowledgeBaseIndex = relativeSegments.indexOf('知识库');
-  if (
-    knowledgeBaseIndex < 0
-    || knowledgeBaseIndex + 1 >= relativeSegments.length - 1
-  ) {
-    return null;
+function isCreatedDateSegment(segment: string, created: string): boolean {
+  const values = [
+    formatCreatedDatePath(created, 'YYYY'),
+    formatCreatedDatePath(created, 'MM'),
+    formatCreatedDatePath(created, 'DD'),
+  ];
+  let remainder = segment;
+  let matched = false;
+  for (const value of values) {
+    if (remainder.includes(value)) {
+      matched = true;
+      remainder = remainder.replaceAll(value, '');
+    }
   }
-  const name = relativeSegments[knowledgeBaseIndex + 1];
-  return isSafeSegment(name) ? `知识库/${name}` : null;
+  return matched && /^[._ -]*$/.test(remainder);
+}
+
+function existingCategoryDir(
+  filePath: string,
+  rootFolder: string,
+  created: string,
+): string | null {
+  const relativeDir = dirname(filePath).slice(rootFolder.length + 1);
+  if (!relativeDir) return null;
+
+  const segments = relativeDir.split('/');
+  while (segments.length > 1 && isCreatedDateSegment(segments[0], created)) {
+    segments.shift();
+  }
+  return segments.join('/');
 }
 
 function desiredNotePath(
@@ -106,8 +126,8 @@ function desiredNotePath(
   noteType: string,
   target: DatePathMigrationTarget,
 ): string {
-  const knowledgeBaseDir = knowledgeBaseCategory(file.path, rootFolder);
-  const categoryDir = knowledgeBaseDir ?? getCategoryDir(noteType);
+  const categoryDir = existingCategoryDir(file.path, rootFolder, created)
+    ?? getCategoryDir(noteType);
   if (!categoryDir.split('/').every(isSafeSegment)) {
     throw new Error('Unsafe category path');
   }
@@ -338,6 +358,90 @@ function preflightPlans(
   }
 }
 
+function hasPlannedMove(candidate: NoteCandidate): boolean {
+  return Boolean(
+    candidate.targetPath
+    && (
+      candidate.file.path !== candidate.targetPath
+      || candidate.assets.some(asset => asset.sourcePath !== asset.targetPath)
+    )
+  );
+}
+
+function preflightInboundLinks(
+  app: MigrationApp,
+  allMarkdownFiles: TFile[],
+  candidates: NoteCandidate[],
+  result: DatePathMigrationResult,
+): void {
+  const noteOwners = new Map(candidates.map(candidate => [candidate.file.path, candidate]));
+  const moveOwners = new Map<string, NoteCandidate>();
+  for (const candidate of candidates) {
+    if (!candidate.pluginOwned || !hasPlannedMove(candidate)) continue;
+    if (candidate.targetPath && candidate.file.path !== candidate.targetPath) {
+      moveOwners.set(candidate.file.path, candidate);
+    }
+    for (const asset of candidate.assets) {
+      if (asset.sourcePath !== asset.targetPath) {
+        moveOwners.set(asset.sourcePath, candidate);
+      }
+    }
+  }
+
+  const reported = new Set<string>();
+  for (const sourceFile of allMarkdownFiles) {
+    const cache = app.metadataCache.getFileCache(sourceFile);
+    for (const { link, resolved } of resolveLinks(app, sourceFile, cache ?? {})) {
+      const linkPath = link.split('#', 1)[0].trim();
+      if (!resolved || !linkPath.includes('/')) continue;
+
+      const targetOwner = moveOwners.get(resolved.path);
+      const sourceOwner = noteOwners.get(sourceFile.path);
+      if (!targetOwner || sourceOwner === targetOwner) continue;
+      if (targetOwner.blocked) {
+        if (
+          sourceOwner?.pluginOwned
+          && !sourceOwner.blocked
+          && hasPlannedMove(sourceOwner)
+        ) {
+          block(
+            sourceOwner,
+            result,
+            'inbound-link',
+            sourceOwner.file.path,
+            `Path-qualified outbound link targets a blocked move: ${linkPath}`,
+          );
+        }
+        continue;
+      }
+
+      const relation = `${sourceFile.path}\0${resolved.path}\0${linkPath}`;
+      if (reported.has(relation)) continue;
+      reported.add(relation);
+      block(
+        targetOwner,
+        result,
+        'inbound-link',
+        targetOwner.file.path,
+        `Path-qualified inbound link from ${sourceFile.path}: ${linkPath}`,
+      );
+      if (
+        sourceOwner?.pluginOwned
+        && !sourceOwner.blocked
+        && hasPlannedMove(sourceOwner)
+      ) {
+        block(
+          sourceOwner,
+          result,
+          'inbound-link',
+          sourceOwner.file.path,
+          `Path-qualified outbound link targets a blocked move: ${linkPath}`,
+        );
+      }
+    }
+  }
+}
+
 async function executePlan(
   app: MigrationApp,
   plan: NoteCandidate & { uid: string; targetPath: string },
@@ -412,7 +516,8 @@ export async function migrateDatePaths(
     throw new Error(`Unsafe root folder: ${rootFolder}`);
   }
 
-  const files = app.vault.getMarkdownFiles()
+  const allMarkdownFiles = app.vault.getMarkdownFiles();
+  const files = allMarkdownFiles
     .filter(file => isInsideRoot(file.path, root))
     .sort((left, right) => left.path.localeCompare(right.path));
   const candidates: NoteCandidate[] = [];
@@ -474,6 +579,7 @@ export async function migrateDatePaths(
   }
 
   preflightPlans(app, candidates, result);
+  preflightInboundLinks(app, allMarkdownFiles, candidates, result);
   for (const candidate of candidates) {
     if (
       !candidate.skipped

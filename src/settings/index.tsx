@@ -348,6 +348,7 @@ export function SettingsComponent({
       case 'shared-asset': return t('settings.datePath.issue.sharedAsset');
       case 'duplicate-uid': return t('settings.datePath.issue.duplicateUid');
       case 'target-conflict': return t('settings.datePath.issue.targetConflict');
+      case 'inbound-link': return t('settings.datePath.issue.inboundLink');
       case 'rename-failed': return t('settings.datePath.issue.renameFailed');
       case 'rollback-failed': return t('settings.datePath.issue.rollbackFailed');
       default: return t('settings.datePath.issue.unknown');
