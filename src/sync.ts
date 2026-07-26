@@ -618,6 +618,27 @@ export class SyncEngine {
     return LINK_NOTE_TYPES.has(note.note_type) && !note.linkOriginal;
   }
 
+  private async enrichNoteRelationships(note: GetNoteNote, signal: AbortSignal): Promise<GetNoteNote> {
+    if (!this.needsRelationDetail(note)) return note;
+    const credentials = getAuthCredentials(this.settings);
+    if (credentials.authMode === 'web') return note;
+
+    try {
+      const detailId = (note as { prime_id?: string }).prime_id ?? note.note_id;
+      const detail = await fetchNoteDetail(
+        detailId,
+        credentials.token,
+        credentials.clientId,
+        signal,
+        credentials.authMode,
+      );
+      return this.mergeNoteDetail(note, detail);
+    } catch (err) {
+      console.warn(`[DedaoBrain] Failed to enrich note relationships ${note.note_id}:`, err);
+      return note;
+    }
+  }
+
   private async enrichAudioNote(
     note: GetNoteNote,
     signal: AbortSignal,
@@ -732,7 +753,8 @@ export class SyncEngine {
     parent: GetNoteNote,
     signal: AbortSignal,
     result: SyncResult,
-    categoryOverride?: string
+    categoryOverride?: string,
+    uidIndex?: Map<string, TFile>,
   ): Promise<GetNoteNote[]> {
     const credentials = getAuthCredentials(this.settings);
     if (credentials.authMode === 'web' && (parent.children_count ?? 0) > 0) {
@@ -751,7 +773,9 @@ export class SyncEngine {
             parent_id: child.parent_id || parent.note_id,
             is_child_note: child.is_child_note ?? true,
           };
-          appendNotes.push(await this.enrichAudioNote(baseChild, signal, categoryOverride));
+          appendNotes.push(uidIndex?.has(baseChild.note_id)
+            ? baseChild
+            : await this.enrichAudioNote(baseChild, signal, categoryOverride));
         }
         return appendNotes;
       } catch (err) {
@@ -806,11 +830,10 @@ export class SyncEngine {
           children_ids: childDetail.children_ids,
           is_child_note: childDetail.is_child_note ?? true,
         };
-        const child = await this.enrichAudioNote(
-          this.mergeNoteDetail(baseChild, childDetail),
-          signal,
-          categoryOverride
-        );
+        const mergedChild = this.mergeNoteDetail(baseChild, childDetail);
+        const child = uidIndex?.has(mergedChild.note_id)
+          ? mergedChild
+          : await this.enrichAudioNote(mergedChild, signal, categoryOverride);
         appendNotes.push(child);
       } catch (err) {
         result.failed++;
@@ -960,7 +983,11 @@ export class SyncEngine {
             this.recordItem(result, note, { status: 'skipped', file: preCheck.file });
           }
 
-          const mayHaveAppendNotes = (note.children_count ?? 0) > 0 || Boolean(note.children_ids?.length);
+          const relationshipNote = preCheck.exists
+            ? await this.enrichNoteRelationships(note, controller.signal)
+            : note;
+          const mayHaveAppendNotes = (relationshipNote.children_count ?? 0) > 0
+            || Boolean(relationshipNote.children_ids?.length);
           if (preCheck.exists && !mayHaveAppendNotes) {
             const updatedTime = parseNoteUpdatedTime(note);
             if (updatedTime !== null && (lastNoteTimestampTime === null || updatedTime > lastNoteTimestampTime)) {
@@ -971,9 +998,11 @@ export class SyncEngine {
           }
 
           const noteToWrite = preCheck.exists
-            ? note
+            ? relationshipNote
             : await this.enrichAudioNote(note, controller.signal);
-          const appendNotes = this.filterNotesByTags(await this.fetchAppendNotes(noteToWrite, controller.signal, result));
+          const appendNotes = this.filterNotesByTags(
+            await this.fetchAppendNotes(noteToWrite, controller.signal, result, undefined, uidIndex),
+          );
           if (!parentMatchesTags && appendNotes.length === 0) continue;
           const parentBaseName = this.buildBaseName(noteToWrite);
           const parentFileName = this.getFileName(noteToWrite);
@@ -1131,7 +1160,7 @@ export class SyncEngine {
       const noteToWrite = preCheck.exists
         ? note
         : await this.enrichAudioNote(note, signal, categoryOverride);
-      const appendNotes = await this.fetchAppendNotes(noteToWrite, signal, result, categoryOverride);
+      const appendNotes = await this.fetchAppendNotes(noteToWrite, signal, result, categoryOverride, uidIndex);
       if (result.failed > failuresBeforeNote) {
         result.checkpointBlocked = true;
         this.onProgress?.({
@@ -1309,7 +1338,9 @@ export class SyncEngine {
         }
         const noteToWrite = await this.enrichAudioNote(typeFiltered[0], controller.signal);
 
-        const appendNotes = this.filterNotesByTags(await this.fetchAppendNotes(noteToWrite, controller.signal, result));
+        const appendNotes = this.filterNotesByTags(
+          await this.fetchAppendNotes(noteToWrite, controller.signal, result, undefined, uidIndex),
+        );
         if (!parentMatchesTags && appendNotes.length === 0) continue;
         const parentBaseName = this.buildBaseName(noteToWrite);
         const parentFileName = this.getFileName(noteToWrite);
@@ -1426,7 +1457,7 @@ export class SyncEngine {
         const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;
         const noteToWrite = await this.enrichAudioNote(note, controller.signal, categoryOverride);
         const appendNotes = this.filterNotesByTags(
-          await this.fetchAppendNotes(noteToWrite, controller.signal, result, categoryOverride),
+          await this.fetchAppendNotes(noteToWrite, controller.signal, result, categoryOverride, uidIndex),
           syncOptions.syncTags
         );
         if (!parentMatchesTags && appendNotes.length === 0) continue;

@@ -198,6 +198,100 @@ describe('SyncEngine — existing UID precheck before enrichment', () => {
     expect(app.vault.modify).not.toHaveBeenCalled();
     expect(app.vault.getAbstractFileByPath('得到大脑/纯文本/历史笔记.md')).toBeTruthy();
   });
+
+  it('does not enrich an existing append child before skipping it', async () => {
+    const parent = makeNote({
+      note_id: 'existing_parent',
+      title: '历史父笔记',
+      children_count: 1,
+      children_ids: ['existing_child'],
+    });
+    const child = makeNote({
+      note_id: 'existing_child',
+      title: '历史子笔记',
+      note_type: 'img_text',
+      parent_id: parent.note_id,
+      is_child_note: true,
+      attachments: [{ type: 'image', url: 'https://cdn.example.com/child.png', title: '图片' }],
+    });
+    const app = makeMockApp();
+    app.vault._addFile('得到大脑/纯文本/父.md', '父', { uid: parent.note_id });
+    app.vault._addFile('得到大脑/图片笔记/子.md', '子', { uid: child.note_id });
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: unknown) => {
+      const value = String(url);
+      if (value.includes('/resource/note/list')) {
+        return Promise.resolve(mockFetchResponse({ data: { notes: [parent], has_more: false } }) as Response);
+      }
+      if (value.includes(`id=${child.note_id}`)) {
+        return Promise.resolve(mockFetchResponse({ data: { note: child } }) as Response);
+      }
+      return Promise.resolve(mockFetchResponse({}) as Response);
+    });
+
+    const result = await new SyncEngine(app, makeSettings({
+      maxDays: 0,
+      datePathEnabled: true,
+    })).sync();
+
+    expect(result).toEqual(expect.objectContaining({ created: 0, skipped: 2 }));
+    expect(app.vault.createFolder).not.toHaveBeenCalled();
+    expect(app.vault.createBinary).not.toHaveBeenCalled();
+    expect(app.vault.create).not.toHaveBeenCalled();
+    expect(app.vault.modify).not.toHaveBeenCalled();
+  });
+
+  it('fetches only relationship detail for an existing parent and creates a missing child', async () => {
+    const parent = makeNote({
+      note_id: 'relation_parent',
+      title: '关系父笔记',
+      note_type: 'recorder_audio',
+      children_count: 1,
+      children_ids: undefined,
+    });
+    const child = makeNote({
+      note_id: 'missing_child',
+      title: '缺失子笔记',
+      parent_id: parent.note_id,
+      is_child_note: true,
+    });
+    const app = makeMockApp();
+    app.vault._addFile('得到大脑/录音笔记/父.md', '本地父内容', { uid: parent.note_id });
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: unknown) => {
+      const value = String(url);
+      if (value.includes('/resource/note/list')) {
+        return Promise.resolve(mockFetchResponse({ data: { notes: [parent], has_more: false } }) as Response);
+      }
+      if (value.includes(`id=${parent.note_id}`)) {
+        return Promise.resolve(mockFetchResponse({
+          data: {
+            note: {
+              ...parent,
+              children_ids: [child.note_id],
+              attachments: [{ type: 'audio', url: 'https://cdn.example.com/parent.mp3', title: '父录音' }],
+              audio: '父转写',
+            },
+          },
+        }) as Response);
+      }
+      if (value.includes(`id=${child.note_id}`)) {
+        return Promise.resolve(mockFetchResponse({ data: { note: child } }) as Response);
+      }
+      return Promise.resolve(mockFetchResponse({}) as Response);
+    });
+
+    const result = await new SyncEngine(app, makeSettings({
+      maxDays: 0,
+      datePathEnabled: true,
+    })).sync();
+
+    expect(result).toEqual(expect.objectContaining({ created: 1, skipped: 1 }));
+    expect(app.vault.create).toHaveBeenCalledWith(
+      '得到大脑/2026/04/纯文本/关系父笔记__缺失子笔记.md',
+      expect.any(String),
+    );
+    expect(app.vault.createBinary).not.toHaveBeenCalled();
+    expect(app.vault.modify).not.toHaveBeenCalled();
+  });
 });
 
 describe('SyncEngine — filterRecentNotes', () => {
