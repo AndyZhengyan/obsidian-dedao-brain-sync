@@ -126,6 +126,7 @@ export interface Settings {
   filenamePrefix: string;
   datePathEnabled: boolean;
   datePathFormat: string;
+  datePathCategoryOrigins: Record<string, { path: string; category: string }>;
   templateFilePath: string;
   maxDays: number;
   syncStartDate: string;  // ISO date string, empty means no limit
@@ -200,6 +201,7 @@ export const DEFAULT_SETTINGS: Settings = {
   filenamePrefix: '',
   datePathEnabled: false,
   datePathFormat: 'YYYY/MM',
+  datePathCategoryOrigins: {},
   templateFilePath: '',
   maxDays: 30,
   syncStartDate: '',

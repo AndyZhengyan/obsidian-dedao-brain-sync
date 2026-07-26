@@ -788,6 +788,63 @@ describe('SyncEngine — filterNotesByDateRange', () => {
 });
 
 describe('SyncEngine — subscribed knowledge selected notes', () => {
+  it('skips an existing legacy-path UID before writing dated attachments', async () => {
+    const noteId = 'existing_knowledge_image';
+    const note = makeNote({
+      note_id: noteId,
+      title: '历史知识库图片',
+      note_type: 'img_text',
+      attachments: [{ type: 'image', url: 'https://cdn.example.com/existing.png', title: 'existing.png' }],
+    });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const requestUrl = String(url);
+      if (requestUrl.includes('/resource/knowledge/list')) {
+        return mockFetchResponse({
+          data: { topics: [{ topic_id: 'created_topic', name: '我的知识库' }], has_more: false },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/subscribe/list')) {
+        return mockFetchResponse({ data: { topics: [], has_more: false } }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/notes')) {
+        return mockFetchResponse({ data: { notes: [note], has_more: false } }) as Response;
+      }
+      if (requestUrl.includes('/resource/note/detail')) {
+        return mockFetchResponse({ data: { note } }) as Response;
+      }
+      if (requestUrl.startsWith('https://cdn.example.com/')) {
+        return { status: 200, arrayBuffer: async () => new ArrayBuffer(32) } as Response;
+      }
+      throw new Error(`Unexpected request: ${requestUrl}`);
+    });
+    const app = makeMockApp();
+    const existingPath = '得到大脑/知识库/我的知识库/历史知识库图片.md';
+    app.vault._addFile(existingPath, 'local', { uid: noteId });
+    const engine = new SyncEngine(app, makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'openapi-token',
+      openApiClientId: 'openapi-client',
+      datePathEnabled: true,
+      datePathFormat: 'YYYY/MM',
+    }));
+
+    const result = await engine.syncSubscribedKnowledge(undefined, {
+      selectedNoteIds: [noteId],
+      createdTopicIds: ['created_topic'],
+      knowledgeBaseNames: { [noteId]: '我的知识库' },
+    });
+
+    expect(result).toEqual(expect.objectContaining({ total: 1, created: 0, skipped: 1, failed: 0 }));
+    const requestedUrls = fetchSpy.mock.calls.map(([url]) => String(url));
+    expect(requestedUrls.some(url => url.includes('/resource/note/detail'))).toBe(false);
+    expect(requestedUrls.some(url => url.startsWith('https://cdn.example.com/'))).toBe(false);
+    expect(app.vault.createFolder).not.toHaveBeenCalled();
+    expect(app.vault.createBinary).not.toHaveBeenCalled();
+    expect(app.vault.create).not.toHaveBeenCalled();
+    expect(app.vault.modify).not.toHaveBeenCalled();
+    expect(app.vault.getAbstractFileByPath(existingPath)).toBeTruthy();
+  });
+
   it.each([
     {
       noteId: 'created_image_note',

@@ -271,21 +271,35 @@ export default class GetNoteSyncPlugin extends Plugin {
     const previous = {
       enabled: this.settings.datePathEnabled,
       format: this.settings.datePathFormat,
+      categoryOrigins: this.settings.datePathCategoryOrigins,
     };
+    let targetPersisted = false;
     try {
       this.settings.datePathEnabled = target.enabled;
       this.settings.datePathFormat = format;
       try {
-        await this.saveSettings();
+        return await migrateDatePaths(
+          this.app,
+          this.settings.folderName,
+          { enabled: target.enabled, format },
+          {
+            source: { enabled: previous.enabled, format: previous.format },
+            categoryOrigins: previous.categoryOrigins,
+            beforeExecute: async categoryOrigins => {
+              this.settings.datePathCategoryOrigins = categoryOrigins;
+              await this.saveSettings();
+              targetPersisted = true;
+            },
+          },
+        );
       } catch (error) {
-        this.settings.datePathEnabled = previous.enabled;
-        this.settings.datePathFormat = previous.format;
+        if (!targetPersisted) {
+          this.settings.datePathEnabled = previous.enabled;
+          this.settings.datePathFormat = previous.format;
+          this.settings.datePathCategoryOrigins = previous.categoryOrigins;
+        }
         throw error;
       }
-      return await migrateDatePaths(this.app, this.settings.folderName, {
-        enabled: target.enabled,
-        format,
-      });
     } finally {
       this.isDatePathMigrationRunning = false;
     }

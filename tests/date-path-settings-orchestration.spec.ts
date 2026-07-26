@@ -26,17 +26,18 @@ describe('date-path settings orchestration', () => {
     vi.clearAllMocks();
   });
 
-  it('persists desired settings before starting the local migration', async () => {
+  it('persists desired settings and category origins before executing file moves', async () => {
     const plugin = makePlugin();
     const order: string[] = [];
     const save = vi.spyOn(plugin, 'saveSettings').mockImplementation(async () => {
       order.push('save');
     });
-    vi.mocked(migrateDatePaths).mockResolvedValue({
-      scanned: 2, moved: 1, unchanged: 0, skipped: 1, failed: 0,
-      issues: [{ code: 'target-conflict', path: 'conflict.md', message: 'Target exists' }],
-    }).mockImplementationOnce(async () => {
-      order.push('migrate');
+    vi.mocked(migrateDatePaths).mockImplementationOnce(async (_app, _root, _target, context) => {
+      order.push('plan');
+      await context.beforeExecute({
+        'uid-1': { path: '得到大脑/项目/笔记.md', category: '项目' },
+      });
+      order.push('execute');
       return {
         scanned: 2, moved: 1, unchanged: 0, skipped: 1, failed: 0,
         issues: [{ code: 'target-conflict', path: 'conflict.md', message: 'Target exists' }],
@@ -45,16 +46,34 @@ describe('date-path settings orchestration', () => {
 
     const result = await plugin.applyDatePathSettings({ enabled: true, format: 'YYYY/MM' });
 
-    expect(migrateDatePaths).toHaveBeenCalledWith(plugin.app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    expect(migrateDatePaths).toHaveBeenCalledWith(
+      plugin.app,
+      '得到大脑',
+      { enabled: true, format: 'YYYY/MM' },
+      expect.objectContaining({
+        source: { enabled: false, format: 'YYYY/MM' },
+        categoryOrigins: {},
+        beforeExecute: expect.any(Function),
+      }),
+    );
     expect(plugin.settings.datePathEnabled).toBe(true);
+    expect(plugin.settings.datePathCategoryOrigins).toEqual({
+      'uid-1': { path: '得到大脑/项目/笔记.md', category: '项目' },
+    });
     expect(save).toHaveBeenCalledOnce();
-    expect(order).toEqual(['save', 'migrate']);
+    expect(order).toEqual(['plan', 'save', 'execute']);
     expect(result.skipped).toBe(1);
   });
 
-  it('restores in-memory settings and never migrates when the initial save fails', async () => {
+  it('restores in-memory settings and executes no file moves when the initial save fails', async () => {
     const plugin = makePlugin();
     vi.spyOn(plugin, 'saveSettings').mockRejectedValue(new Error('disk full'));
+    vi.mocked(migrateDatePaths).mockImplementationOnce(async (_app, _root, _target, context) => {
+      await context.beforeExecute({
+        'uid-1': { path: '得到大脑/项目/笔记.md', category: '项目' },
+      });
+      throw new Error('unreachable');
+    });
 
     await expect(plugin.applyDatePathSettings({
       enabled: true,
@@ -63,13 +82,19 @@ describe('date-path settings orchestration', () => {
 
     expect(plugin.settings.datePathEnabled).toBe(false);
     expect(plugin.settings.datePathFormat).toBe('YYYY/MM');
-    expect(migrateDatePaths).not.toHaveBeenCalled();
+    expect(plugin.settings.datePathCategoryOrigins).toEqual({});
+    expect(migrateDatePaths).toHaveBeenCalledOnce();
   });
 
   it('keeps the persisted target when migration throws so reconcile can resume', async () => {
     const plugin = makePlugin();
     const save = vi.spyOn(plugin, 'saveSettings').mockResolvedValue();
-    vi.mocked(migrateDatePaths).mockRejectedValue(new Error('vault unavailable'));
+    vi.mocked(migrateDatePaths).mockImplementationOnce(async (_app, _root, _target, context) => {
+      await context.beforeExecute({
+        'uid-1': { path: '得到大脑/项目/笔记.md', category: '项目' },
+      });
+      throw new Error('vault unavailable');
+    });
 
     await expect(plugin.applyDatePathSettings({
       enabled: true,
@@ -78,6 +103,9 @@ describe('date-path settings orchestration', () => {
 
     expect(plugin.settings.datePathEnabled).toBe(true);
     expect(plugin.settings.datePathFormat).toBe('YYYY/MM/DD');
+    expect(plugin.settings.datePathCategoryOrigins).toEqual({
+      'uid-1': { path: '得到大脑/项目/笔记.md', category: '项目' },
+    });
     expect(save).toHaveBeenCalledOnce();
   });
 
@@ -85,7 +113,10 @@ describe('date-path settings orchestration', () => {
     const plugin = makePlugin();
     const save = vi.spyOn(plugin, 'saveSettings').mockResolvedValue();
     let finish!: (value: Awaited<ReturnType<typeof migrateDatePaths>>) => void;
-    vi.mocked(migrateDatePaths).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    vi.mocked(migrateDatePaths).mockImplementation(async (_app, _root, _target, context) => {
+      await context.beforeExecute({});
+      return new Promise(resolve => { finish = resolve; });
+    });
     const sync = vi.spyOn(SyncEngine.prototype, 'sync');
 
     const first = plugin.applyDatePathSettings({ enabled: true, format: 'YYYY/MM/DD' });

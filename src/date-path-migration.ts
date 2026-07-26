@@ -7,6 +7,19 @@ export interface DatePathMigrationTarget {
   format: string;
 }
 
+export interface DatePathCategoryOrigin {
+  path: string;
+  category: string;
+}
+
+export interface DatePathMigrationContext {
+  source: DatePathMigrationTarget;
+  categoryOrigins: Record<string, DatePathCategoryOrigin>;
+  beforeExecute: (
+    categoryOrigins: Record<string, DatePathCategoryOrigin>,
+  ) => Promise<void>;
+}
+
 export type DatePathMigrationIssueCode =
   | 'invalid-metadata'
   | 'unsafe-path'
@@ -87,47 +100,36 @@ function readRequiredString(
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-function isCreatedDateSegment(segment: string, created: string): boolean {
-  const values = [
-    formatCreatedDatePath(created, 'YYYY'),
-    formatCreatedDatePath(created, 'MM'),
-    formatCreatedDatePath(created, 'DD'),
-  ];
-  let remainder = segment;
-  let matched = false;
-  for (const value of values) {
-    if (remainder.includes(value)) {
-      matched = true;
-      remainder = remainder.replaceAll(value, '');
-    }
-  }
-  return matched && /^[._ -]*$/.test(remainder);
-}
-
 function existingCategoryDir(
   filePath: string,
   rootFolder: string,
   created: string,
+  uid: string,
+  context: DatePathMigrationContext,
 ): string | null {
   const relativeDir = dirname(filePath).slice(rootFolder.length + 1);
   if (!relativeDir) return null;
 
-  const segments = relativeDir.split('/');
-  while (segments.length > 1 && isCreatedDateSegment(segments[0], created)) {
-    segments.shift();
+  const origin = context.categoryOrigins[uid];
+  if (origin?.path === filePath) return origin.category;
+
+  if (context.source.enabled) {
+    const sourceDatePath = formatCreatedDatePath(created, context.source.format);
+    if (relativeDir.startsWith(`${sourceDatePath}/`)) {
+      return relativeDir.slice(sourceDatePath.length + 1);
+    }
   }
-  return segments.join('/');
+
+  return relativeDir;
 }
 
 function desiredNotePath(
   file: TFile,
   rootFolder: string,
   created: string,
-  noteType: string,
+  categoryDir: string,
   target: DatePathMigrationTarget,
 ): string {
-  const categoryDir = existingCategoryDir(file.path, rootFolder, created)
-    ?? getCategoryDir(noteType);
   if (!categoryDir.split('/').every(isSafeSegment)) {
     throw new Error('Unsafe category path');
   }
@@ -502,6 +504,7 @@ export async function migrateDatePaths(
   app: MigrationApp,
   rootFolder: string,
   target: DatePathMigrationTarget,
+  context: DatePathMigrationContext,
 ): Promise<DatePathMigrationResult> {
   const result: DatePathMigrationResult = {
     scanned: 0,
@@ -521,6 +524,7 @@ export async function migrateDatePaths(
     .filter(file => isInsideRoot(file.path, root))
     .sort((left, right) => left.path.localeCompare(right.path));
   const candidates: NoteCandidate[] = [];
+  const nextCategoryOrigins = { ...context.categoryOrigins };
   for (const file of files) {
     const cache = app.metadataCache.getFileCache(file);
     const links = resolveLinks(app, file, cache ?? {});
@@ -563,7 +567,10 @@ export async function migrateDatePaths(
     }
 
     try {
-      candidate.targetPath = desiredNotePath(file, root, created, noteType, target);
+      const category = existingCategoryDir(file.path, root, created, uid, context)
+        ?? getCategoryDir(noteType);
+      candidate.targetPath = desiredNotePath(file, root, created, category, target);
+      nextCategoryOrigins[uid] = { path: file.path, category };
     } catch (error) {
       skipCandidate(
         candidate,
@@ -578,6 +585,7 @@ export async function migrateDatePaths(
     planCandidateAssets(app, candidate, links, result);
   }
 
+  await context.beforeExecute(nextCategoryOrigins);
   preflightPlans(app, candidates, result);
   preflightInboundLinks(app, allMarkdownFiles, candidates, result);
   for (const candidate of candidates) {

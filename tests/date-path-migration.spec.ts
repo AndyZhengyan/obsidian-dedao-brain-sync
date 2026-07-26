@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TFile, type App } from 'obsidian';
 import {
   migrateDatePaths,
+  type DatePathCategoryOrigin,
   type DatePathMigrationIssueCode,
+  type DatePathMigrationTarget,
 } from '../src/date-path-migration';
 
 type Cache = {
@@ -151,17 +153,36 @@ function issueCodes(result: Awaited<ReturnType<typeof migrateDatePaths>>): DateP
 
 describe('migrateDatePaths', () => {
   let app: MigrationApp;
+  let currentLayout: DatePathMigrationTarget;
+  let categoryOrigins: Record<string, DatePathCategoryOrigin>;
 
   beforeEach(() => {
     app = makeApp();
+    currentLayout = { enabled: false, format: 'YYYY/MM' };
+    categoryOrigins = {};
   });
+
+  const migrate = async (
+    target: DatePathMigrationTarget,
+    rootFolder = '得到大脑',
+  ) => {
+    const source = currentLayout;
+    return migrateDatePaths(app, rootFolder, target, {
+      source,
+      categoryOrigins,
+      beforeExecute: async nextOrigins => {
+        categoryOrigins = nextOrigins;
+        currentLayout = target;
+      },
+    });
+  };
 
   it('enables created-date paths for normal notes without changing markdown bytes', async () => {
     const source = '得到大脑/纯文本/历史.md';
     const original = '---\r\nuid: "1909193892067130512"\r\n---\r\n正文\r\n';
     app.vault.addFile(source, original, pluginCache());
 
-    const result = await migrateDatePaths(app, '得到大脑', {
+    const result = await migrate({
       enabled: true,
       format: 'YYYY/MM',
     });
@@ -186,7 +207,7 @@ describe('migrateDatePaths', () => {
       source: undefined,
     }));
 
-    const result = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    const result = await migrate({ enabled: true, format: 'YYYY/MM' });
 
     expect(result).toMatchObject({ scanned: 2, moved: 2, skipped: 0, failed: 0 });
     expect(result.issues).toEqual([]);
@@ -202,10 +223,10 @@ describe('migrateDatePaths', () => {
     app.vault.addFile('得到大脑/纯文本/不可触碰.md', 'note', pluginCache());
     const scan = vi.spyOn(app.vault, 'getMarkdownFiles');
 
-    await expect(migrateDatePaths(app, ' 得到大脑 ', {
+    await expect(migrate({
       enabled: true,
       format: 'YYYY/MM',
-    })).rejects.toThrow('Unsafe root folder');
+    }, ' 得到大脑 ')).rejects.toThrow('Unsafe root folder');
 
     expect(scan).not.toHaveBeenCalled();
     expect(app.vault.paths()).toEqual(['得到大脑/纯文本/不可触碰.md']);
@@ -218,9 +239,9 @@ describe('migrateDatePaths', () => {
       pluginCache({ uid: 'kb-1', note_type: 'img_text' }),
     );
 
-    const enabled = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
-    const reformatted = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY-MM-DD' });
-    const disabled = await migrateDatePaths(app, '得到大脑', { enabled: false, format: 'YYYY-MM-DD' });
+    const enabled = await migrate({ enabled: true, format: 'YYYY/MM' });
+    const reformatted = await migrate({ enabled: true, format: 'YYYY-MM-DD' });
+    const disabled = await migrate({ enabled: false, format: 'YYYY-MM-DD' });
 
     expect(enabled.moved).toBe(1);
     expect(reformatted.moved).toBe(1);
@@ -232,15 +253,15 @@ describe('migrateDatePaths', () => {
     const originalPath = '得到大脑/项目/客户甲/历史.md';
     app.vault.addFile(originalPath, 'custom', pluginCache({ uid: 'custom-category' }));
 
-    const enabled = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    const enabled = await migrate({ enabled: true, format: 'YYYY/MM' });
     expect(enabled.moved).toBe(1);
     expect(app.vault.paths()).toEqual(['得到大脑/2026/07/项目/客户甲/历史.md']);
 
-    const reformatted = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY-MM-DD' });
+    const reformatted = await migrate({ enabled: true, format: 'YYYY-MM-DD' });
     expect(reformatted.moved).toBe(1);
     expect(app.vault.paths()).toEqual(['得到大脑/2026-07-03/项目/客户甲/历史.md']);
 
-    const disabled = await migrateDatePaths(app, '得到大脑', { enabled: false, format: 'YYYY-MM-DD' });
+    const disabled = await migrate({ enabled: false, format: 'YYYY-MM-DD' });
     expect(disabled.moved).toBe(1);
     expect(app.vault.paths()).toEqual([originalPath]);
   });
@@ -252,11 +273,42 @@ describe('migrateDatePaths', () => {
       pluginCache({ uid: 'shorter-date-format' }),
     );
 
-    await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM/DD' });
-    const reformatted = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY' });
+    await migrate({ enabled: true, format: 'YYYY/MM/DD' });
+    const reformatted = await migrate({ enabled: true, format: 'YYYY' });
 
     expect(reformatted.moved).toBe(1);
     expect(app.vault.paths()).toEqual(['得到大脑/2026/项目/历史.md']);
+  });
+
+  it('preserves a date-like custom category instead of treating it as a generated layer', async () => {
+    const originalPath = '得到大脑/2026/项目/日期同名目录.md';
+    const uid = 'date-like-custom-category';
+    app.vault.addFile(originalPath, 'custom', pluginCache({ uid }));
+
+    const enabled = await migrate({ enabled: true, format: 'YYYY' });
+
+    expect(enabled.moved).toBe(1);
+    expect(app.vault.paths()).toEqual(['得到大脑/2026/2026/项目/日期同名目录.md']);
+
+    const disabled = await migrate({ enabled: false, format: 'YYYY' });
+
+    expect(disabled.moved).toBe(1);
+    expect(app.vault.paths()).toEqual([originalPath]);
+  });
+
+  it('resumes a failed date-like custom-category move from its persisted origin', async () => {
+    const source = '得到大脑/2026/项目/待恢复.md';
+    const target = '得到大脑/2026/2026/项目/待恢复.md';
+    app.vault.addFile(source, 'custom', pluginCache({ uid: 'date-like-resume' }));
+    app.vault.failRename(source, target);
+
+    const failed = await migrate({ enabled: true, format: 'YYYY' });
+    app.vault.clearRenameFailures();
+    const resumed = await migrate({ enabled: true, format: 'YYYY' });
+
+    expect(failed).toMatchObject({ moved: 0, failed: 1 });
+    expect(resumed).toMatchObject({ moved: 1, skipped: 0, failed: 0 });
+    expect(app.vault.paths()).toEqual([target]);
   });
 
   it('skips a move that would break an external path-qualified inbound link', async () => {
@@ -268,13 +320,43 @@ describe('migrateDatePaths', () => {
       { links: [{ link: '得到大脑/纯文本/被引用' }] },
     );
 
-    const result = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    const result = await migrate({ enabled: true, format: 'YYYY/MM' });
 
     expect(result).toMatchObject({ moved: 0, skipped: 1, failed: 0 });
     expect(issueCodes(result)).toContain('inbound-link');
     expect(app.vault.paths()).toContain(source);
     expect(app.vault.content('个人笔记/索引.md')).toBe('[[得到大脑/纯文本/被引用]]');
     expect(app.fileManager.renameFile).not.toHaveBeenCalled();
+  });
+
+  it('skips the whole note when an external path-qualified link targets its asset', async () => {
+    const notePath = '得到大脑/图片笔记/带外链附件.md';
+    const assetPath = '得到大脑/图片笔记/asset/带外链附件_image.png';
+    const noteContent = '![[asset/带外链附件_image.png]]';
+    const indexContent = '![[得到大脑/图片笔记/asset/带外链附件_image.png]]';
+    app.vault.addFile(notePath, noteContent, pluginCache(
+      { uid: 'external-asset-link', note_type: 'img_text' },
+      { embeds: [{ link: 'asset/带外链附件_image.png' }] },
+    ));
+    app.vault.addFile(assetPath, 'image');
+    app.vault.addFile(
+      '个人笔记/附件索引.md',
+      indexContent,
+      { embeds: [{ link: '得到大脑/图片笔记/asset/带外链附件_image.png' }] },
+    );
+
+    const result = await migrate({ enabled: true, format: 'YYYY/MM' });
+
+    expect(result).toMatchObject({ moved: 0, skipped: 1, failed: 0 });
+    expect(issueCodes(result)).toContain('inbound-link');
+    expect(app.vault.paths()).toEqual([
+      '个人笔记/附件索引.md',
+      assetPath,
+      notePath,
+    ]);
+    expect(app.vault.content(notePath)).toBe(noteContent);
+    expect(app.vault.content('个人笔记/附件索引.md')).toBe(indexContent);
+    expect(app.vault.rename).not.toHaveBeenCalled();
   });
 
   it('moves only exact referenced adjacent assets and leaves unreferenced siblings in place', async () => {
@@ -285,7 +367,7 @@ describe('migrateDatePaths', () => {
     app.vault.addFile('得到大脑/图片笔记/asset/带图_image.png', 'image');
     app.vault.addFile('得到大脑/图片笔记/asset/未引用.png', 'orphan');
 
-    const result = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    const result = await migrate({ enabled: true, format: 'YYYY/MM' });
 
     expect(result.moved).toBe(1);
     expect(app.vault.paths()).toEqual([
@@ -306,7 +388,7 @@ describe('migrateDatePaths', () => {
       { links: [{ link: '不存在的普通笔记' }] },
     ));
 
-    const result = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    const result = await migrate({ enabled: true, format: 'YYYY/MM' });
 
     expect(result).toMatchObject({ scanned: 3, moved: 1, skipped: 2, failed: 0 });
     expect(issueCodes(result)).toEqual(expect.arrayContaining(['invalid-metadata', 'missing-generated-asset']));
@@ -327,7 +409,7 @@ describe('migrateDatePaths', () => {
     }
     app.vault.addFile('得到大脑/纯文本/asset/shared.png', 'shared');
 
-    const result = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    const result = await migrate({ enabled: true, format: 'YYYY/MM' });
 
     expect(result).toMatchObject({ scanned: 3, moved: 0, skipped: 3, failed: 0 });
     expect(issueCodes(result)).toEqual(expect.arrayContaining(['target-conflict', 'shared-asset']));
@@ -344,7 +426,7 @@ describe('migrateDatePaths', () => {
     ));
     app.vault.addFile('得到大脑/图片笔记/asset/shared.png', 'user-owned');
 
-    const result = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    const result = await migrate({ enabled: true, format: 'YYYY/MM' });
 
     expect(result).toMatchObject({ scanned: 1, moved: 0, skipped: 1, failed: 0 });
     expect(issueCodes(result)).toEqual(['shared-asset']);
@@ -366,7 +448,7 @@ describe('migrateDatePaths', () => {
     ));
     app.vault.addFile('得到大脑/图片笔记/asset/shared.png', 'shared');
 
-    const result = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    const result = await migrate({ enabled: true, format: 'YYYY/MM' });
 
     expect(result).toMatchObject({ scanned: 2, moved: 0, skipped: 2, failed: 0 });
     expect(issueCodes(result)).toEqual(expect.arrayContaining([
@@ -390,7 +472,7 @@ describe('migrateDatePaths', () => {
     );
     app.vault.addFile('得到大脑/纯文本/继续.md', 'ok', pluginCache({ uid: 'continue' }));
 
-    const result = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    const result = await migrate({ enabled: true, format: 'YYYY/MM' });
 
     expect(result).toMatchObject({ scanned: 2, moved: 1, skipped: 0, failed: 1 });
     expect(issueCodes(result)).toContain('rename-failed');
@@ -408,8 +490,8 @@ describe('migrateDatePaths', () => {
     ));
     app.vault.addFile('得到大脑/2026/07/图片笔记/asset/崩溃_image.png', 'image');
 
-    const resumed = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
-    const repeated = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    const resumed = await migrate({ enabled: true, format: 'YYYY/MM' });
+    const repeated = await migrate({ enabled: true, format: 'YYYY/MM' });
 
     expect(resumed).toMatchObject({ scanned: 1, moved: 1, skipped: 0, failed: 0 });
     expect(repeated).toMatchObject({ scanned: 1, moved: 0, unchanged: 1, skipped: 0, failed: 0 });
@@ -432,9 +514,9 @@ describe('migrateDatePaths', () => {
     app.vault.failRename(noteSource, noteTarget);
     app.vault.failRename(assetTarget, assetSource);
 
-    const failed = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    const failed = await migrate({ enabled: true, format: 'YYYY/MM' });
     app.vault.clearRenameFailures();
-    const retried = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    const retried = await migrate({ enabled: true, format: 'YYYY/MM' });
 
     expect(failed).toMatchObject({ moved: 0, failed: 1 });
     expect(issueCodes(failed)).toEqual(expect.arrayContaining(['rename-failed', 'rollback-failed']));
@@ -445,8 +527,8 @@ describe('migrateDatePaths', () => {
   it('is idempotent and reconciles misplaced notes even when the target setting is unchanged', async () => {
     app.vault.addFile('得到大脑/纯文本/错位.md', 'note', pluginCache({ uid: 'misplaced' }));
 
-    const first = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
-    const second = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    const first = await migrate({ enabled: true, format: 'YYYY/MM' });
+    const second = await migrate({ enabled: true, format: 'YYYY/MM' });
 
     expect(first.moved).toBe(1);
     expect(second).toMatchObject({ scanned: 1, moved: 0, unchanged: 1, skipped: 0, failed: 0 });

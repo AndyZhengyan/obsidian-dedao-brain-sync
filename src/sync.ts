@@ -1455,6 +1455,23 @@ export class SyncEngine {
         const parentMatchesTags = this.filterNotesByTags([note], syncOptions.syncTags).length > 0;
         const knowledgeBaseName = syncOptions.knowledgeBaseNames?.[note.note_id] ?? syncOptions.knowledgeBaseName;
         const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;
+        const preCheck = this.preCheckNote(note, uidIndex, categoryOverride);
+        if (preCheck.exists) {
+          seenNoteIds.add(note.note_id);
+          result.total++;
+          result.skipped++;
+          this.recordItem(result, note, { status: 'skipped', file: preCheck.file });
+          this.onProgress?.({
+            processed: result.total,
+            total: filteredNotes.length,
+            created: result.created,
+            updated: result.updated,
+            skipped: result.skipped,
+            failed: result.failed,
+            percent: filteredNotes.length ? Math.round((result.total / filteredNotes.length) * 100) : 100,
+          });
+          continue;
+        }
         const noteToWrite = await this.enrichAudioNote(note, controller.signal, categoryOverride);
         const appendNotes = this.filterNotesByTags(
           await this.fetchAppendNotes(noteToWrite, controller.signal, result, categoryOverride, uidIndex),
