@@ -17,6 +17,7 @@ type MigrationApp = Pick<App, 'vault' | 'metadataCache'> & {
     content(path: string): string | undefined;
     paths(): string[];
     failRename(from: string, to: string): void;
+    clearRenameFailures(): void;
   };
 };
 
@@ -54,6 +55,9 @@ function makeApp(): MigrationApp {
     },
     failRename(from: string, to: string) {
       failedRenames.add(`${from}=>${to}`);
+    },
+    clearRenameFailures() {
+      failedRenames.clear();
     },
     getMarkdownFiles: () =>
       [...files.values()]
@@ -114,7 +118,7 @@ function makeApp(): MigrationApp {
 }
 
 function pluginCache(
-  overrides: Partial<Record<'uid' | 'created' | 'note_type', unknown>> = {},
+  overrides: Partial<Record<'uid' | 'created' | 'note_type' | 'source', unknown>> = {},
   links: Cache = {},
 ): Cache {
   return {
@@ -122,6 +126,7 @@ function pluginCache(
       uid: '1909193892067130512',
       created: '2026-07-03T10:20:30+08:00',
       note_type: 'plain_text',
+      source: '得到大脑',
       ...overrides,
     },
     ...links,
@@ -152,6 +157,46 @@ describe('migrateDatePaths', () => {
     expect(result).toMatchObject({ scanned: 1, moved: 1, unchanged: 0, skipped: 0, failed: 0 });
     expect(app.vault.paths()).toEqual(['得到大脑/2026/07/纯文本/历史.md']);
     expect(app.vault.content('得到大脑/2026/07/纯文本/历史.md')).toBe(original);
+  });
+
+  it('moves only notes with current or legacy plugin ownership markers', async () => {
+    app.vault.addFile('得到大脑/纯文本/当前.md', 'current', pluginCache({ uid: 'current' }));
+    app.vault.addFile('得到大脑/纯文本/旧版.md', 'legacy', pluginCache({
+      uid: 'legacy',
+      source: 'Get笔记',
+    }));
+    app.vault.addFile('得到大脑/纯文本/用户.md', 'user', pluginCache({
+      uid: 'user',
+      source: '手工笔记',
+    }));
+    app.vault.addFile('得到大脑/纯文本/无来源.md', 'missing', pluginCache({
+      uid: 'missing',
+      source: undefined,
+    }));
+
+    const result = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+
+    expect(result).toMatchObject({ scanned: 4, moved: 2, skipped: 2, failed: 0 });
+    expect(issueCodes(result).filter(code => code === 'not-plugin-owned')).toHaveLength(2);
+    expect(app.vault.paths()).toEqual([
+      '得到大脑/2026/07/纯文本/当前.md',
+      '得到大脑/2026/07/纯文本/旧版.md',
+      '得到大脑/纯文本/无来源.md',
+      '得到大脑/纯文本/用户.md',
+    ]);
+  });
+
+  it('rejects a root folder with surrounding whitespace without scanning the trimmed root', async () => {
+    app.vault.addFile('得到大脑/纯文本/不可触碰.md', 'note', pluginCache());
+
+    const result = await migrateDatePaths(app, ' 得到大脑 ', {
+      enabled: true,
+      format: 'YYYY/MM',
+    });
+
+    expect(result).toMatchObject({ scanned: 0, moved: 0, skipped: 0, failed: 0 });
+    expect(issueCodes(result)).toEqual(['unsafe-path']);
+    expect(app.vault.paths()).toEqual(['得到大脑/纯文本/不可触碰.md']);
   });
 
   it('enables, changes format, and disables knowledge-base paths using the created date', async () => {
@@ -227,6 +272,29 @@ describe('migrateDatePaths', () => {
     expect(issueCodes(result)).toEqual(expect.arrayContaining(['target-conflict', 'shared-asset']));
   });
 
+  it('keeps UID and asset claims from plugin notes that later fail planning', async () => {
+    app.vault.addFile('得到大脑/图片笔记/有效.md', '[[asset/shared.png]]', pluginCache(
+      { uid: 'claimed', note_type: 'img_text' },
+      { embeds: [{ link: 'asset/shared.png' }] },
+    ));
+    app.vault.addFile('得到大脑/图片笔记/无效.md', '[[asset/shared.png]]', pluginCache(
+      { uid: 'claimed', created: 'not-a-date', note_type: 'img_text' },
+      { embeds: [{ link: 'asset/shared.png' }] },
+    ));
+    app.vault.addFile('得到大脑/图片笔记/asset/shared.png', 'shared');
+
+    const result = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+
+    expect(result).toMatchObject({ scanned: 2, moved: 0, skipped: 2, failed: 0 });
+    expect(issueCodes(result)).toEqual(expect.arrayContaining([
+      'unsafe-path',
+      'duplicate-uid',
+      'shared-asset',
+    ]));
+    expect(app.vault.paths()).toContain('得到大脑/图片笔记/有效.md');
+    expect(app.vault.paths()).toContain('得到大脑/图片笔记/asset/shared.png');
+  });
+
   it('rolls back moved assets when markdown rename fails and continues with later notes', async () => {
     app.vault.addFile('得到大脑/图片笔记/失败.md', '[[asset/失败_image.png]]', pluginCache(
       { uid: 'failure', note_type: 'img_text' },
@@ -248,6 +316,47 @@ describe('migrateDatePaths', () => {
       '得到大脑/图片笔记/asset/失败_image.png',
       '得到大脑/图片笔记/失败.md',
     ]);
+  });
+
+  it('resumes when an interrupted run already moved the deterministic target asset', async () => {
+    app.vault.addFile('得到大脑/图片笔记/崩溃.md', '[[asset/崩溃_image.png]]', pluginCache(
+      { uid: 'crash', note_type: 'img_text' },
+      { embeds: [{ link: 'asset/崩溃_image.png' }] },
+    ));
+    app.vault.addFile('得到大脑/2026/07/图片笔记/asset/崩溃_image.png', 'image');
+
+    const resumed = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    const repeated = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+
+    expect(resumed).toMatchObject({ scanned: 1, moved: 1, skipped: 0, failed: 0 });
+    expect(repeated).toMatchObject({ scanned: 1, moved: 0, unchanged: 1, skipped: 0, failed: 0 });
+    expect(app.vault.paths()).toEqual([
+      '得到大脑/2026/07/图片笔记/asset/崩溃_image.png',
+      '得到大脑/2026/07/图片笔记/崩溃.md',
+    ]);
+  });
+
+  it('retries safely after rollback itself left an asset at the deterministic target', async () => {
+    const noteSource = '得到大脑/图片笔记/回滚失败.md';
+    const noteTarget = '得到大脑/2026/07/图片笔记/回滚失败.md';
+    const assetSource = '得到大脑/图片笔记/asset/回滚失败_image.png';
+    const assetTarget = '得到大脑/2026/07/图片笔记/asset/回滚失败_image.png';
+    app.vault.addFile(noteSource, '[[asset/回滚失败_image.png]]', pluginCache(
+      { uid: 'rollback-crash', note_type: 'img_text' },
+      { embeds: [{ link: 'asset/回滚失败_image.png' }] },
+    ));
+    app.vault.addFile(assetSource, 'image');
+    app.vault.failRename(noteSource, noteTarget);
+    app.vault.failRename(assetTarget, assetSource);
+
+    const failed = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+    app.vault.clearRenameFailures();
+    const retried = await migrateDatePaths(app, '得到大脑', { enabled: true, format: 'YYYY/MM' });
+
+    expect(failed).toMatchObject({ moved: 0, failed: 1 });
+    expect(issueCodes(failed)).toEqual(expect.arrayContaining(['rename-failed', 'rollback-failed']));
+    expect(retried).toMatchObject({ scanned: 1, moved: 1, skipped: 0, failed: 0 });
+    expect(app.vault.paths()).toEqual([assetTarget, noteTarget]);
   });
 
   it('is idempotent and reconciles misplaced notes even when the target setting is unchanged', async () => {

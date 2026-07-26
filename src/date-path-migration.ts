@@ -8,6 +8,7 @@ export interface DatePathMigrationTarget {
 }
 
 export type DatePathMigrationIssueCode =
+  | 'not-plugin-owned'
   | 'invalid-metadata'
   | 'unsafe-path'
   | 'missing-generated-asset'
@@ -41,15 +42,18 @@ interface PlannedMove {
   targetPath: string;
 }
 
-interface NotePlan {
+interface NoteCandidate {
   file: TFile;
-  uid: string;
-  targetPath: string;
+  uid?: string;
+  targetPath?: string;
   assets: PlannedMove[];
+  assetClaims: Set<string>;
   blocked: boolean;
+  skipped: boolean;
 }
 
 const RESERVED_SEGMENT_PATTERN = /[\\:*?"<>|\0]/;
+const PLUGIN_SOURCES = new Set(['得到大脑', 'Get笔记']);
 const GENERATED_ASSET_PATTERN =
   /(?:^|\/)asset\/|_(?:image(?:_\d+)?|audio|transcript|original|file_\d+)(?:\.|$)/i;
 
@@ -76,7 +80,7 @@ function isInsideRoot(path: string, rootFolder: string): boolean {
 
 function readRequiredString(
   frontmatter: Record<string, unknown> | undefined,
-  key: 'uid' | 'created' | 'note_type',
+  key: 'uid' | 'created' | 'note_type' | 'source',
 ): string | null {
   const value = frontmatter?.[key];
   return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -139,49 +143,125 @@ function issue(
 }
 
 function block(
-  plan: NotePlan,
+  candidate: NoteCandidate,
   result: DatePathMigrationResult,
   code: DatePathMigrationIssueCode,
   path: string,
   message: string,
 ): void {
-  if (!plan.blocked) {
-    plan.blocked = true;
+  if (!candidate.skipped) {
+    candidate.skipped = true;
     result.skipped++;
   }
-  issue(result, code, path, message, plan.uid);
+  candidate.blocked = true;
+  issue(result, code, path, message, candidate.uid);
 }
 
-function planAssets(
+function skipCandidate(
+  candidate: NoteCandidate,
+  result: DatePathMigrationResult,
+  code: DatePathMigrationIssueCode,
+  path: string,
+  message: string,
+): void {
+  if (!candidate.skipped) {
+    candidate.skipped = true;
+    result.skipped++;
+  }
+  issue(result, code, path, message, candidate.uid);
+}
+
+interface LinkResolution {
+  link: string;
+  resolved: TFile | null;
+}
+
+function resolveLinks(
   app: MigrationApp,
   file: TFile,
-  targetPath: string,
   cache: CachedMetadata,
-): { assets: PlannedMove[]; missingGeneratedLink?: string } {
-  const assets = new Map<string, TFile>();
-  for (const link of referencedLinks(cache)) {
-    const resolved = app.metadataCache.getFirstLinkpathDest(link, file.path);
-    if (!resolved) {
-      if (GENERATED_ASSET_PATTERN.test(link)) {
-        return { assets: [], missingGeneratedLink: link };
-      }
-      continue;
-    }
-    if (isAdjacentAsset(resolved.path, file.path)) {
-      assets.set(resolved.path, resolved);
+): LinkResolution[] {
+  return referencedLinks(cache).map(link => ({
+    link,
+    resolved: app.metadataCache.getFirstLinkpathDest(link, file.path),
+  }));
+}
+
+function targetAssetForLink(
+  app: MigrationApp,
+  targetPath: string,
+  link: string,
+): TFile | null {
+  const linkPath = link.split('#', 1)[0].replace(/^\.\//, '');
+  const name = basename(linkPath);
+  if (!name || !isSafeSegment(name)) return null;
+  const targetAssetDir = `${dirname(targetPath)}/asset`;
+  for (const candidatePath of [`${targetAssetDir}/${name}`, `${targetAssetDir}/${name}.md`]) {
+    const candidate = app.vault.getAbstractFileByPath(candidatePath);
+    if (
+      candidate
+      && typeof candidate === 'object'
+      && 'path' in candidate
+      && 'extension' in candidate
+    ) {
+      return candidate as TFile;
     }
   }
+  return null;
+}
 
-  const targetAssetDir = `${dirname(targetPath)}/asset`;
-  return {
-    assets: [...assets.values()]
-      .sort((left, right) => left.path.localeCompare(right.path))
-      .map(asset => ({
-        file: asset,
-        sourcePath: asset.path,
-        targetPath: `${targetAssetDir}/${basename(asset.path)}`,
-      })),
-  };
+function planCandidateAssets(
+  app: MigrationApp,
+  candidate: NoteCandidate,
+  links: LinkResolution[],
+  result: DatePathMigrationResult,
+): void {
+  const targetPath = candidate.targetPath;
+  if (!targetPath) return;
+
+  const assets = new Map<string, PlannedMove>();
+  for (const { link, resolved } of links) {
+    if (resolved && isAdjacentAsset(resolved.path, candidate.file.path)) {
+      const targetAssetPath = `${dirname(targetPath)}/asset/${basename(resolved.path)}`;
+      candidate.assetClaims.add(resolved.path);
+      assets.set(targetAssetPath, {
+        file: resolved,
+        sourcePath: resolved.path,
+        targetPath: targetAssetPath,
+      });
+      continue;
+    }
+
+    const recovered = (
+      resolved && isAdjacentAsset(resolved.path, targetPath)
+        ? resolved
+        : GENERATED_ASSET_PATTERN.test(link)
+          ? targetAssetForLink(app, targetPath, link)
+          : null
+    );
+    if (recovered) {
+      const logicalSource = `${dirname(candidate.file.path)}/asset/${basename(recovered.path)}`;
+      candidate.assetClaims.add(logicalSource);
+      assets.set(recovered.path, {
+        file: recovered,
+        sourcePath: recovered.path,
+        targetPath: recovered.path,
+      });
+      continue;
+    }
+
+    if (GENERATED_ASSET_PATTERN.test(link)) {
+      skipCandidate(
+        candidate,
+        result,
+        'missing-generated-asset',
+        candidate.file.path,
+        `Generated asset cannot be resolved: ${link}`,
+      );
+    }
+  }
+  candidate.assets = [...assets.values()]
+    .sort((left, right) => left.targetPath.localeCompare(right.targetPath));
 }
 
 async function ensureFolder(app: MigrationApp, folderPath: string): Promise<void> {
@@ -192,37 +272,39 @@ async function ensureFolder(app: MigrationApp, folderPath: string): Promise<void
 
 function preflightPlans(
   app: MigrationApp,
-  plans: NotePlan[],
+  candidates: NoteCandidate[],
   result: DatePathMigrationResult,
 ): void {
-  const uidOwners = new Map<string, NotePlan[]>();
-  const assetOwners = new Map<string, NotePlan[]>();
-  const targetOwners = new Map<string, NotePlan[]>();
+  const uidOwners = new Map<string, Set<NoteCandidate>>();
+  const assetOwners = new Map<string, Set<NoteCandidate>>();
+  const targetOwners = new Map<string, Set<NoteCandidate>>();
 
-  for (const plan of plans) {
-    const uidPlans = uidOwners.get(plan.uid) ?? [];
-    uidPlans.push(plan);
-    uidOwners.set(plan.uid, uidPlans);
-
-    for (const asset of plan.assets) {
-      const owners = assetOwners.get(asset.sourcePath) ?? [];
-      owners.push(plan);
-      assetOwners.set(asset.sourcePath, owners);
+  for (const candidate of candidates) {
+    if (candidate.uid) {
+      const uidCandidates = uidOwners.get(candidate.uid) ?? new Set();
+      uidCandidates.add(candidate);
+      uidOwners.set(candidate.uid, uidCandidates);
     }
 
+    for (const assetPath of candidate.assetClaims) {
+      const owners = assetOwners.get(assetPath) ?? new Set();
+      owners.add(candidate);
+      assetOwners.set(assetPath, owners);
+    }
+
+    if (!candidate.targetPath) continue;
     const moves = [
-      ...plan.assets,
-      { file: plan.file, sourcePath: plan.file.path, targetPath: plan.targetPath },
+      ...candidate.assets,
+      { file: candidate.file, sourcePath: candidate.file.path, targetPath: candidate.targetPath },
     ];
     for (const move of moves) {
-      if (move.sourcePath === move.targetPath) continue;
-      const owners = targetOwners.get(move.targetPath) ?? [];
-      owners.push(plan);
+      const owners = targetOwners.get(move.targetPath) ?? new Set();
+      owners.add(candidate);
       targetOwners.set(move.targetPath, owners);
 
-      if (app.vault.getAbstractFileByPath(move.targetPath)) {
+      if (move.sourcePath !== move.targetPath && app.vault.getAbstractFileByPath(move.targetPath)) {
         block(
-          plan,
+          candidate,
           result,
           'target-conflict',
           move.targetPath,
@@ -233,21 +315,21 @@ function preflightPlans(
   }
 
   for (const [uid, owners] of uidOwners) {
-    if (owners.length < 2) continue;
+    if (owners.size < 2) continue;
     for (const owner of owners) {
       block(owner, result, 'duplicate-uid', owner.file.path, `UID appears in multiple notes: ${uid}`);
     }
   }
 
   for (const [assetPath, owners] of assetOwners) {
-    if (owners.length < 2) continue;
+    if (owners.size < 2) continue;
     for (const owner of owners) {
       block(owner, result, 'shared-asset', assetPath, `Asset is referenced by multiple notes: ${assetPath}`);
     }
   }
 
   for (const [targetPath, owners] of targetOwners) {
-    if (owners.length < 2) continue;
+    if (owners.size < 2) continue;
     for (const owner of owners) {
       block(owner, result, 'target-conflict', targetPath, `Multiple notes target the same path: ${targetPath}`);
     }
@@ -256,7 +338,7 @@ function preflightPlans(
 
 async function executePlan(
   app: MigrationApp,
-  plan: NotePlan,
+  plan: NoteCandidate & { uid: string; targetPath: string },
   result: DatePathMigrationResult,
 ): Promise<void> {
   const moves = [
@@ -324,7 +406,7 @@ export async function migrateDatePaths(
     issues: [],
   };
   const root = rootFolder.trim();
-  if (!root.split('/').every(isSafeSegment)) {
+  if (root !== rootFolder || !root.split('/').every(isSafeSegment)) {
     issue(result, 'unsafe-path', rootFolder, 'Unsafe root folder');
     return result;
   }
@@ -334,57 +416,75 @@ export async function migrateDatePaths(
     .sort((left, right) => left.path.localeCompare(right.path));
   result.scanned = files.length;
 
-  const plans: NotePlan[] = [];
+  const candidates: NoteCandidate[] = [];
   for (const file of files) {
     const cache = app.metadataCache.getFileCache(file);
-    const uid = readRequiredString(cache?.frontmatter, 'uid');
-    const created = readRequiredString(cache?.frontmatter, 'created');
-    const noteType = readRequiredString(cache?.frontmatter, 'note_type');
-    if (!uid || !created || !noteType) {
+    const source = readRequiredString(cache?.frontmatter, 'source');
+    if (!source || !PLUGIN_SOURCES.has(source)) {
       result.skipped++;
-      issue(result, 'invalid-metadata', file.path, 'Required string metadata is missing');
+      issue(result, 'not-plugin-owned', file.path, 'Plugin ownership marker is missing or invalid');
       continue;
     }
 
-    let targetPath: string;
+    const uid = readRequiredString(cache?.frontmatter, 'uid');
+    const created = readRequiredString(cache?.frontmatter, 'created');
+    const noteType = readRequiredString(cache?.frontmatter, 'note_type');
+    const links = resolveLinks(app, file, cache ?? {});
+    const candidate: NoteCandidate = {
+      file,
+      ...(uid ? { uid } : {}),
+      assets: [],
+      assetClaims: new Set(
+        links
+          .map(link => link.resolved)
+          .filter((asset): asset is TFile => Boolean(asset && isAdjacentAsset(asset.path, file.path)))
+          .map(asset => asset.path),
+      ),
+      blocked: false,
+      skipped: false,
+    };
+    candidates.push(candidate);
+
+    if (!uid || !created || !noteType) {
+      skipCandidate(
+        candidate,
+        result,
+        'invalid-metadata',
+        file.path,
+        'Required string metadata is missing',
+      );
+      continue;
+    }
+
     try {
-      targetPath = desiredNotePath(file, root, created, noteType, target);
+      candidate.targetPath = desiredNotePath(file, root, created, noteType, target);
     } catch (error) {
-      result.skipped++;
-      issue(
+      skipCandidate(
+        candidate,
         result,
         'unsafe-path',
         file.path,
         error instanceof Error ? error.message : String(error),
-        uid,
       );
       continue;
     }
 
-    const plannedAssets = planAssets(app, file, targetPath, cache ?? {});
-    if (plannedAssets.missingGeneratedLink) {
-      result.skipped++;
-      issue(
-        result,
-        'missing-generated-asset',
-        file.path,
-        `Generated asset cannot be resolved: ${plannedAssets.missingGeneratedLink}`,
-        uid,
-      );
-      continue;
-    }
-    plans.push({
-      file,
-      uid,
-      targetPath,
-      assets: plannedAssets.assets,
-      blocked: false,
-    });
+    planCandidateAssets(app, candidate, links, result);
   }
 
-  preflightPlans(app, plans, result);
-  for (const plan of plans) {
-    if (!plan.blocked) await executePlan(app, plan, result);
+  preflightPlans(app, candidates, result);
+  for (const candidate of candidates) {
+    if (
+      !candidate.skipped
+      && candidate.uid
+      && candidate.targetPath
+    ) {
+      await executePlan(
+        app,
+        candidate as NoteCandidate & { uid: string; targetPath: string },
+        result,
+      );
+    }
   }
   return result;
 }
