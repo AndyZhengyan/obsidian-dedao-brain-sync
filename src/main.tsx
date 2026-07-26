@@ -55,7 +55,12 @@ export function notifyLegacyPluginDataMigrated(migrated: boolean): void {
 }
 
 function closeFloatingSelects(): void {
-  window.dispatchEvent(new Event(CLOSE_FLOATING_SELECTS_EVENT));
+  const hostDocument = typeof activeDocument === 'undefined' ? document : activeDocument;
+  const hostWindow = hostDocument.defaultView
+    ?? (typeof activeWindow === 'undefined' ? window : activeWindow);
+  const closeEvent = hostDocument.createEvent('Event');
+  closeEvent.initEvent(CLOSE_FLOATING_SELECTS_EVENT, false, false);
+  hostWindow.dispatchEvent(closeEvent);
 }
 
 async function findExistingLegacyDataPath(adapter: PluginDataMigrationAdapter): Promise<string | null> {

@@ -1,13 +1,24 @@
 import { Window } from 'happy-dom';
+import { App, Modal } from 'obsidian';
 import { h, render } from 'preact';
 import { act } from 'preact/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import GetNoteSyncPlugin from '../src/main';
+import { DEFAULT_SETTINGS } from '../src/types';
 import { NoteTypeSelect } from '../src/ui/note-type-select';
+
+const originalSetText = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'setText');
 
 afterEach(() => {
   vi.restoreAllMocks();
   render(null, document.body);
   document.body.innerHTML = '';
+  Object.assign(globalThis, { activeDocument: document, activeWindow: window });
+  if (originalSetText) {
+    Object.defineProperty(HTMLElement.prototype, 'setText', originalSetText);
+  } else {
+    delete (HTMLElement.prototype as Partial<HTMLElement>).setText;
+  }
 });
 
 function createPopout() {
@@ -194,6 +205,39 @@ describe('floating select menu behavior', () => {
     expect(popoutMenu.style.width).toBe('120px');
 
     render(null, mainContainer);
+    render(null, container);
+    popoutWindow.close();
+  });
+
+  it('closes a popout floating select only when its window owns the command-driven modal', async () => {
+    const { popoutWindow, container } = createPopout();
+    render(h(NoteTypeSelect, { onChange: vi.fn() }), container);
+    await act(() => openSelect(popoutWindow, container));
+    expect(container.querySelector('.getnote-note-type-select-menu')).toBeTruthy();
+
+    const plugin = new GetNoteSyncPlugin(new App());
+    plugin.settings = { ...DEFAULT_SETTINGS };
+    Object.defineProperty(HTMLElement.prototype, 'setText', {
+      configurable: true,
+      value(text: string) {
+        this.textContent = text;
+      },
+    });
+    vi.spyOn(Modal.prototype, 'open').mockImplementation(() => {});
+    await act(() => {
+      plugin.openManualSyncModal();
+    });
+    expect(container.querySelector('.getnote-note-type-select-menu')).toBeTruthy();
+
+    Object.assign(globalThis, {
+      activeDocument: popoutWindow.document,
+      activeWindow: popoutWindow,
+    });
+    await act(() => {
+      plugin.openManualSyncModal();
+    });
+
+    expect(container.querySelector('.getnote-note-type-select-menu')).toBeNull();
     render(null, container);
     popoutWindow.close();
   });
