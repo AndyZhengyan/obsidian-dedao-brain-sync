@@ -46,11 +46,11 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     return plugin;
   }
 
-  function watchSettingsRefresh(plugin: GetNoteSyncPlugin) {
+  function watchSettingsRuntimeUpdate(plugin: GetNoteSyncPlugin) {
     const settingsTab = new GetNoteSettingsTab(plugin.app, plugin);
-    const refresh = vi.spyOn(settingsTab, 'refresh').mockImplementation(() => {});
+    const updateRuntimeState = vi.spyOn(settingsTab, 'updateRuntimeState').mockImplementation(() => {});
     plugin['settingsTab'] = settingsTab;
-    return refresh;
+    return updateRuntimeState;
   }
 
   it('refreshes settings after clearing stale quota state', async () => {
@@ -62,11 +62,11 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
       reason: 'quota_day',
       checkedAt: new Date('2026-07-21T23:00:00+08:00').getTime(),
     };
-    const refresh = watchSettingsRefresh(plugin);
+    const updateRuntimeState = watchSettingsRuntimeUpdate(plugin);
 
     await plugin['clearStaleQuotaState']();
 
-    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(updateRuntimeState).toHaveBeenCalledTimes(1);
   });
 
   it('refreshes settings when manual sync starts', async () => {
@@ -75,10 +75,10 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
       resolveSync = resolve;
     }));
     const plugin = makePlugin();
-    const refresh = watchSettingsRefresh(plugin);
+    const updateRuntimeState = watchSettingsRuntimeUpdate(plugin);
 
     const syncPromise = plugin['runSync']('full', { maxDays: 0, syncStartDate: '' });
-    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(updateRuntimeState).toHaveBeenCalledTimes(1);
 
     resolveSync({ created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] });
     await syncPromise;
@@ -87,11 +87,11 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
   it('refreshes settings when manual sync is cancelled', async () => {
     vi.spyOn(SyncEngine.prototype, 'sync').mockRejectedValue(new SyncCancelledError());
     const plugin = makePlugin();
-    const refresh = watchSettingsRefresh(plugin);
+    const updateRuntimeState = watchSettingsRuntimeUpdate(plugin);
 
     await plugin['runSync']('full', { maxDays: 0, syncStartDate: '' });
 
-    expect(refresh).toHaveBeenCalledTimes(2);
+    expect(updateRuntimeState).toHaveBeenCalledTimes(2);
   });
 
   it('refreshes settings when manual sync completes', async () => {
@@ -104,11 +104,11 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
       items: [],
     });
     const plugin = makePlugin();
-    const refresh = watchSettingsRefresh(plugin);
+    const updateRuntimeState = watchSettingsRuntimeUpdate(plugin);
 
     await plugin['runSync']('full', { maxDays: 0, syncStartDate: '' });
 
-    expect(refresh).toHaveBeenCalledTimes(2);
+    expect(updateRuntimeState).toHaveBeenCalledTimes(2);
   });
 
   it('manual sync failure clears syncing state', async () => {
