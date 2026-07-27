@@ -1554,7 +1554,7 @@ describe('SyncEngine — writeNote', () => {
 describe('SyncEngine — append note sync', () => {
   it('详情关系字段覆盖列表里的 stale is_child_note', () => {
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
+    const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }));
     const listNote = makeNote({
       note_id: '1909246675068292528',
       parent_id: '1909193892067130512',
@@ -1618,7 +1618,7 @@ describe('SyncEngine — append note sync', () => {
     const app = makeMockApp();
 
     try {
-      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
+      const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }));
       const result = await engine.sync();
 
       expect(result.created).toBe(2);
@@ -1671,7 +1671,7 @@ describe('SyncEngine — append note sync', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }), undefined, { syncTags: ['工作'] });
+      const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }), undefined, { syncTags: ['工作'] });
       const result = await engine.sync();
 
       expect(result.items.map(item => item.noteId)).toEqual([childNote.note_id]);
