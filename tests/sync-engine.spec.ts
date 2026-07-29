@@ -1747,7 +1747,7 @@ describe('SyncEngine — audio note sync', () => {
     });
 
     try {
-      const engine = new SyncEngine(mockApp as any, makeSettings({ maxDays: 0 }));
+      const engine = new SyncEngine(mockApp, makeSettings({ maxDays: 0 }));
       const result = await engine.sync();
 
       // 验证 asset 目录被创建/写入
@@ -1833,7 +1833,7 @@ describe('SyncEngine — audio note sync', () => {
     });
 
     try {
-      const engine = new SyncEngine(mockApp as any, makeSettings({ maxDays: 0 }));
+      const engine = new SyncEngine(mockApp, makeSettings({ maxDays: 0 }));
       const result = await engine.sync();
 
       expect(result.created).toBe(1);
@@ -1903,7 +1903,7 @@ describe('SyncEngine — audio note sync', () => {
     );
 
     try {
-      const engine = new SyncEngine(app as any, makeSettings());
+      const engine = new SyncEngine(app, makeSettings());
       const result = await engine.syncNoteIds(['image_existing']);
 
       expect(result.skipped).toBe(1);
