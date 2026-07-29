@@ -18,7 +18,7 @@ For the project background and origin story, see this Chinese article: [Project 
 
 - **🧩 Consistent picker timestamps**: Note and knowledge-base pickers now share one relative-time formatter, while missing timestamps remain blank.
 - **🎨 Better theme compatibility**: More specific checkbox and sidebar-button selectors preserve the current layout without unnecessarily overriding Obsidian themes.
-- **🛡️ Safer attachment paths**: Control characters and unsafe paths are rejected more explicitly before attachment links are written to Markdown.
+- **🧹 Code and style cleanup**: Static-analysis findings in the parser, settings, and search view are resolved while preserving existing behavior and reducing unnecessary style overrides.
 - **⚙️ Runtime and toolchain refresh**: Compatible Preact, TypeScript, and ESLint updates land alongside broader sync-boundary test coverage.
 
 1.4.1 improvements remain live (cleaner note card previews, knowledge-base refreshes, tag normalization, and settings timer cleanup).
