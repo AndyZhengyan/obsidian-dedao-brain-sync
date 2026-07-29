@@ -14,14 +14,14 @@ For the project background and origin story, see this Chinese article: [Project 
 
 * * *
 
-## 🎉 1.4.1 — Latest Update
+## 🎉 1.4.2 — Latest Update
 
-- **🧹 Cleaner note card previews**: All card previews in search, knowledge-base, and topic pickers now strip Markdown syntax so you read prose, not raw `**bold**`, `# headings`, or `[links](...)`.
-- **🗂 Knowledge-base selector follows auth mode**: Switching the auth mode or re-logging refreshes the knowledge-base list immediately instead of stale entries.
-- **🏷️ Tag whitelist normalization**: The tag aggregator normalizes casing, whitespace, and separators so the same tag is no longer split into multiple groups.
-- **🧼 Settings timers cleaned up**: Feedback timers in the settings page and OAuth flow are cleared on unmount, so nothing pops up after you leave the page.
+- **🧩 Consistent picker timestamps**: Note and knowledge-base pickers now share one relative-time formatter, while missing timestamps remain blank.
+- **🎨 Better theme compatibility**: More specific checkbox and sidebar-button selectors preserve the current layout without unnecessarily overriding Obsidian themes.
+- **🛡️ Safer attachment paths**: Control characters and unsafe paths are rejected more explicitly before attachment links are written to Markdown.
+- **⚙️ Runtime and toolchain refresh**: Compatible Preact, TypeScript, and ESLint updates land alongside broader sync-boundary test coverage.
 
-1.4.0 features remain live (OpenAPI search sidebar, template files, link original content, conservative download policy, recreate missing notes, etc.).
+1.4.1 improvements remain live (cleaner note card previews, knowledge-base refreshes, tag normalization, and settings timer cleanup).
 
 The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 
