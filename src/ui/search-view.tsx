@@ -20,9 +20,15 @@ function formatSearchTime(result: RecallSearchResult): string {
   return result.updated_at || result.created_at || '';
 }
 
-export function findSyncedNoteFile(app: Pick<App, 'vault' | 'metadataCache'>, folderName: string, noteId: string): TFile | null {
+export function findSyncedNoteFile(
+  app: Pick<App, 'vault' | 'metadataCache'>,
+  folderName: string,
+  noteId: string,
+  candidateFiles?: TFile[]
+): TFile | null {
   const prefix = `${folderName}/`;
-  for (const file of app.vault.getMarkdownFiles()) {
+  const files = candidateFiles ?? app.vault.getMarkdownFiles();
+  for (const file of files) {
     if (!file.path.startsWith(prefix)) continue;
     const uid: unknown = app.metadataCache.getFileCache(file)?.frontmatter?.['uid'];
     if (String(uid ?? '') === noteId) return file;

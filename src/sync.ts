@@ -7,6 +7,7 @@ import { applyTagFilter } from './utils/tag-aggregator';
 import type { SyncModal } from './ui/sync-modal';
 import { t } from './i18n';
 import { tryWriteBinary } from './utils/vault-fs';
+import type { FileIndex } from './utils/file-index';
 import { classifyAttachmentUrl, isAttachmentTypeEnabled } from './utils/attachments';
 import {
   buildNoteBaseName,
@@ -169,10 +170,18 @@ export class SyncEngine {
   private onCancel?: () => void;
   private cancelled = false;
   private abortController: AbortController | null = null;
+  private readonly fileIndex: FileIndex | null;
 
-  constructor(app: App, settings: Settings, onProgress?: SyncProgressCallback, scopeOptions?: Partial<SyncScopeOptions>) {
+  constructor(
+    app: App,
+    settings: Settings,
+    onProgress?: SyncProgressCallback,
+    scopeOptions?: Partial<SyncScopeOptions>,
+    fileIndex?: FileIndex
+  ) {
     this.app = app;
     this.settings = settings;
+    this.fileIndex = fileIndex ?? null;
     const syncStartDate = scopeOptions?.syncStartDate ?? settings.syncStartDate;
     const enabledNoteTypes = scopeOptions?.enabledNoteTypes;
     const syncTags = scopeOptions?.syncTags;
@@ -442,7 +451,7 @@ export class SyncEngine {
   private buildUidIndex(): Map<string, TFile> {
     const index = new Map<string, TFile>();
     const prefix = this.settings.folderName + '/';
-    const allFiles = this.app.vault.getMarkdownFiles();
+    const allFiles = this.fileIndex ? this.fileIndex.getAll() : this.app.vault.getMarkdownFiles();
     for (const file of allFiles) {
       if (!file.path.startsWith(prefix)) continue;
       const cached = this.app.metadataCache.getFileCache(file);

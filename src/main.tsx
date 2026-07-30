@@ -14,6 +14,7 @@ import { migrateSyncedNoteTags } from './tag-migration';
 import { getLastQuotaState, resetQuotaState } from './api-clients/openapi-client';
 import { fetchRecallSearch } from './api';
 import { mergeTagCache } from './utils/tag-aggregator';
+import { FileIndex, type SerializedFileEntry } from './utils/file-index';
 import { SearchPanel, findSyncedNoteFile } from './ui/search-view';
 
 const MAX_SYNC_HISTORY = 20;
@@ -139,6 +140,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   private searchRibbonEl?: HTMLElement;
   private lastProgressUpdate = 0;
   private autoSyncFailCount = 0;
+  protected fileIndex: FileIndex | null = null;
 
   async onload(): Promise<void> {
     initI18n(getLanguage());
@@ -219,6 +221,25 @@ export default class GetNoteSyncPlugin extends Plugin {
     // Clear stale quota-exhausted state if it's from a prior UTC+8 day
     await this.clearStaleQuotaState();
 
+    // Hydrate the cached markdown file index so the 6 enumeration sites
+    // (UID index, local upload picker, template suggest, reverse sync, tag
+    // migration, search navigation) avoid paying the full-vault scan cost on
+    // every interaction. See issue #230.
+    this.fileIndex = new FileIndex({
+      app: this.app,
+      registerEvent: (ref) => this.registerEvent(ref as Parameters<Plugin['registerEvent']>[0]),
+      persistence: {
+        load: async () => this.readPersistedFileIndex(),
+        save: async (entries) => {
+          this.persistedFileIndex = entries;
+          await this.saveDataBlob({ fileIndex: entries });
+        },
+      },
+    });
+    void this.fileIndex.hydrate().catch((err) => {
+      console.warn('[DedaoBrain] FileIndex hydration failed:', err);
+    });
+
     // Always run the hourly quota check so the banner clears at UTC+8 midnight
     // even for users who never enable auto-sync.
     if (this.quotaTickIntervalId === undefined) {
@@ -237,6 +258,14 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   onunload(): void {
     this.stopAutoSync();
+    if (this.fileIndex) {
+      void this.fileIndex.flushPendingSave();
+    }
+  }
+
+  /** Public accessor for modal wrappers that need cached file lists. */
+  getCachedFiles(): TFile[] | undefined {
+    return this.fileIndex?.getAll();
   }
 
   private registerRibbonActions(): void {
@@ -251,7 +280,42 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 
   async saveSettings(): Promise<void> {
-    await this.saveData(this.settings);
+    await this.saveData(this.settings as unknown as Record<string, unknown>);
+  }
+
+  /**
+   * Merge the cached file index into the data.json payload alongside
+   * settings. `Plugin.saveData` writes the entire blob atomically, so any
+   * caller that needs to persist state must go through `saveDataBlob`.
+   */
+  private async saveDataBlob(extra: Record<string, unknown>): Promise<void> {
+    const merged: Record<string, unknown> = {
+      ...(this.settings as unknown as Record<string, unknown>),
+      ...extra,
+    };
+    await this.saveData(merged);
+  }
+
+  /**
+   * Read the persisted `fileIndex` field from data.json alongside settings.
+   * `Plugin.saveData` writes the entire payload, so we only need to peek at
+   * the last-written blob. Falls back to a fresh `loadData()` on cold start.
+   */
+  private persistedFileIndex: SerializedFileEntry[] | undefined;
+
+  private async readPersistedFileIndex(): Promise<SerializedFileEntry[] | undefined> {
+    if (this.persistedFileIndex) return this.persistedFileIndex;
+    const data = ((await this.loadData()) ?? {}) as Record<string, unknown>;
+    const raw = data['fileIndex'];
+    if (Array.isArray(raw)) {
+      this.persistedFileIndex = raw.filter(
+        (entry): entry is SerializedFileEntry =>
+          Boolean(entry) &&
+          typeof (entry as { path?: unknown }).path === 'string' &&
+          typeof (entry as { mtime?: unknown }).mtime === 'number'
+      );
+    }
+    return this.persistedFileIndex;
   }
 
   /**
@@ -409,7 +473,7 @@ export default class GetNoteSyncPlugin extends Plugin {
     this.refreshSettingsTab();
     showNotice(t('sync.started'));
 
-    const engine = new SyncEngine(this.app, this.settings, (info) => this.setProgress(info), scopeOptions);
+    const engine = new SyncEngine(this.app, this.settings, (info) => this.setProgress(info), scopeOptions, this.fileIndex ?? undefined);
     this.currentSyncEngine = engine;
     engine.setOnCancel(() => this.cancelSync());
     let shouldResetSyncState = type === 'auto';
@@ -586,7 +650,8 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 
   findSyncedNoteFile(noteId: string): TFile | null {
-    return findSyncedNoteFile(this.app, this.settings.folderName, noteId);
+    const cached = this.fileIndex?.getAll();
+    return findSyncedNoteFile(this.app, this.settings.folderName, noteId, cached);
   }
 
   async openLocalNote(file: TFile): Promise<void> {
@@ -919,9 +984,10 @@ class LocalUploadModalWrapper extends Modal {
   }
 
   onOpen() {
+    const cachedFiles = this.plugin.getCachedFiles();
     ReactDOM.render(
       <LocalUploadModal
-        files={this.app.vault.getMarkdownFiles()}
+        files={cachedFiles ?? this.app.vault.getMarkdownFiles()}
         initialFolder={this.plugin.settings.folderName}
         onConfirm={(files) => {
           this.close();

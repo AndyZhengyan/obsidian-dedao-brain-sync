@@ -8,7 +8,7 @@ import { TagSelect } from '../ui/tag-select';
 import { KnowledgeBaseSelect } from '../ui/knowledge-base-select';
 import { Toggle } from './toggle';
 import { getAuthCredentials, type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressDetail } from '../types';
-import { App, AbstractInputSuggest } from 'obsidian';
+import { App, AbstractInputSuggest, type TFile } from 'obsidian';
 import { fetchNotes } from '../api';
 import { t } from '../i18n';
 import { ExternalLink } from './external-link';
@@ -55,11 +55,11 @@ function getFolderSuggestions(app: App, query: string): string[] {
     .filter(path => !normalizedQuery || path.toLowerCase().includes(normalizedQuery));
 }
 
-function getTemplateFileSuggestions(app: App, query: string): string[] {
+function getTemplateFileSuggestions(app: App, query: string, cachedFiles?: TFile[]): string[] {
   const normalizedQuery = (query ?? '').trim().toLowerCase();
+  const source = cachedFiles ?? app.vault.getMarkdownFiles();
   return Array.from(new Set(
-    app.vault
-      .getMarkdownFiles()
+    source
       .map(file => file.path)
       .filter(Boolean),
   ))

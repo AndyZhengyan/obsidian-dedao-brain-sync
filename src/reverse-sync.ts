@@ -2,6 +2,7 @@ import type { App, TFile } from 'obsidian';
 import { createNote, fetchNoteDetail, type CreateNoteResult } from './api';
 import { t } from './i18n';
 import { getAuthCredentials, type AuthCredentials, type Settings, type SyncResultItem } from './types';
+import type { FileIndex } from './utils/file-index';
 
 export interface ReverseSyncResult {
   created: number;
@@ -163,7 +164,8 @@ export class ReverseSyncEngine {
   constructor(
     private app: App,
     private settings: Settings,
-    private onProgress?: (progress: ReverseSyncProgress) => void
+    private onProgress?: (progress: ReverseSyncProgress) => void,
+    private fileIndex?: FileIndex
   ) {}
 
   cancel(): void {
@@ -362,7 +364,8 @@ export class ReverseSyncEngine {
   }
 
   async syncBack(): Promise<ReverseSyncResult> {
-    const files = this.app.vault.getMarkdownFiles().filter(item => isInsideFolder(item, this.settings.folderName));
+    const allFiles = this.fileIndex ? this.fileIndex.getAll() : this.app.vault.getMarkdownFiles();
+    const files = allFiles.filter(item => isInsideFolder(item, this.settings.folderName));
     return this.syncFiles(files);
   }
 }
