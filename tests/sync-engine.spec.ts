@@ -1921,7 +1921,7 @@ describe('SyncEngine — audio note sync', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
     const mockApp = makeMockApp();
-    const engine = new SyncEngine(mockApp as any, makeSettings());
+    const engine = new SyncEngine(mockApp, makeSettings());
 
     // @ts-expect-error accessing private method for security regression coverage
     const result = await engine['downloadAudioAsset'](audioNote, {
@@ -1954,7 +1954,7 @@ describe('SyncEngine — audio note sync', () => {
     } as Response);
 
     const mockApp = makeMockApp();
-    const engine = new SyncEngine(mockApp as any, makeSettings());
+    const engine = new SyncEngine(mockApp, makeSettings());
 
     try {
       // @ts-expect-error accessing private method for security regression coverage
@@ -2020,7 +2020,7 @@ describe('SyncEngine — audio note sync', () => {
     });
 
     try {
-      const engine = new SyncEngine(mockApp as any, makeSettings({ maxDays: 0 }));
+      const engine = new SyncEngine(mockApp, makeSettings({ maxDays: 0 }));
       const result = await engine.sync();
 
       expect(result.failed).toBe(0);
