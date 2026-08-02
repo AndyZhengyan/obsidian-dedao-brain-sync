@@ -2073,7 +2073,7 @@ describe('SyncEngine — link original sync', () => {
     const app = makeMockApp();
 
     try {
-      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
+      const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }));
       const result = await engine.sync();
 
       expect(result.created).toBe(1);
@@ -2118,7 +2118,7 @@ describe('SyncEngine — link original sync', () => {
     const app = makeMockApp();
 
     try {
-      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }));
+      const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }));
       const result = await engine.sync();
 
       expect(result.created).toBe(1);
@@ -2170,7 +2170,7 @@ describe('SyncEngine — link original sync', () => {
     );
 
     try {
-      const engine = new SyncEngine(app as any, makeSettings());
+      const engine = new SyncEngine(app, makeSettings());
       const result = await engine.syncNoteIds(['link_001']);
 
       expect(result.skipped).toBe(1);
