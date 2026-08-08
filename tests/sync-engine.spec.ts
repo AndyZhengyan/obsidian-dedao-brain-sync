@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { App, TFile } from 'obsidian';
+import type { App } from 'obsidian';
+import { TFile, TFolder } from 'obsidian';
 import { SyncEngine } from '../src/sync';
 import type { Settings, GetNoteNote } from '../src/types';
 import { DEFAULT_SETTINGS } from '../src/types';
@@ -13,54 +14,106 @@ type MockApp = App & {
   vault: App['vault'] & {
     _addFile: (path: string, content: string, frontmatter?: Record<string, string>) => void;
     _addFolder: (path: string) => void;
+    _addFileAtPath: (path: string, kind: 'file' | 'folder') => void;
     createFolderSync: (path: string) => void;
   };
 };
 
+type StoredFile = TFile & { content: string; frontmatter: Record<string, string> };
+
+function makeMockFile(path: string, content = '', frontmatter: Record<string, string> = {}): StoredFile {
+  const file = Object.create(TFile.prototype) as StoredFile;
+  Object.defineProperty(file, 'path', { value: path, writable: true, enumerable: true });
+  Object.defineProperty(file, 'name', { value: path.split('/').pop() ?? '', writable: true, enumerable: true });
+  Object.defineProperty(file, 'basename', {
+    value: (path.split('/').pop() ?? '').replace(/\.md$/, ''),
+    writable: true,
+    enumerable: true,
+  });
+  Object.defineProperty(file, 'extension', { value: 'md', writable: true, enumerable: true });
+  Object.defineProperty(file, 'stat', {
+    value: { ctime: 0, mtime: 0, size: content.length },
+    writable: true,
+    enumerable: true,
+  });
+  Object.defineProperty(file, 'content', { value: content, writable: true, enumerable: true });
+  Object.defineProperty(file, 'frontmatter', { value: frontmatter, writable: true, enumerable: true });
+  return file;
+}
+
+function makeMockFolder(path: string): TFolder {
+  const folder = Object.create(TFolder.prototype) as TFolder;
+  Object.defineProperty(folder, 'path', { value: path, writable: true, enumerable: true });
+  Object.defineProperty(folder, 'name', { value: path.split('/').pop() ?? '', writable: true, enumerable: true });
+  Object.defineProperty(folder, 'children', { value: [], writable: true, enumerable: true });
+  Object.defineProperty(folder, 'isRoot', { value: () => false, writable: true, enumerable: true });
+  return folder;
+}
+
 // Minimal mock app for SyncEngine tests
 function makeMockApp(): MockApp {
-  const files: Map<string, { path: string; content: string; frontmatter: Record<string, string> }> = new Map();
-  const folders = new Set<string>();
+  const files = new Map<string, StoredFile>();
+  const folders = new Map<string, TFolder>();
 
   return {
     vault: {
       getAllFolders: () =>
-        [...folders].map((path) => ({ path })),
-      getAbstractFileByPath: (path: string) => files.get(path) || null,
+        [...folders.values()].map((f) => ({ path: f.path })),
+      getAbstractFileByPath: (path: string) => files.get(path) ?? folders.get(path) ?? null,
       getMarkdownFiles: () =>
         [...files.values()]
           .filter((f) => f.path.endsWith('.md'))
           .map((f) => ({ path: f.path })),
       read: vi.fn().mockImplementation(async (file: { path: string }) => files.get(file.path)?.content ?? ''),
-      createFolder: vi.fn().mockResolvedValue(undefined),
+      createFolder: vi.fn().mockImplementation((path: string) => {
+        if (!folders.has(path)) folders.set(path, makeMockFolder(path));
+        return Promise.resolve(folders.get(path)!);
+      }),
       create: vi.fn().mockImplementation((path: string, data: string) => {
-        files.set(path, { path, content: data, frontmatter: {} });
-        return { path };
+        const file = makeMockFile(path, data, {});
+        files.set(path, file);
+        return file;
       }),
       createBinary: vi.fn().mockImplementation(async (path: string, data: Uint8Array) => {
-        files.set(path, { path, content: `[binary:${data.byteLength}]`, frontmatter: {} });
-        return { path };
+        const file = makeMockFile(path, `[binary:${data.byteLength}]`, {});
+        files.set(path, file);
+        return file;
       }),
       modify: vi.fn().mockImplementation((file: { path: string }, data: string) => {
         const existing = files.get(file.path);
         if (existing) {
-          files.set(file.path, { ...existing, content: data });
+          existing.content = data;
         }
         return Promise.resolve();
       }),
       rename: vi.fn().mockImplementation((file: { path: string }, newPath: string) => {
         const existing = files.get(file.path);
         if (existing) {
+          if (folders.has(newPath)) folders.delete(newPath);
+          Object.defineProperty(existing, 'path', { value: newPath, writable: true, enumerable: true });
           files.delete(file.path);
           files.set(newPath, existing);
         }
         return Promise.resolve();
       }),
-      createFolderSync: (path: string) => { folders.add(path); },
-      _addFile: (path: string, content: string, frontmatter: Record<string, string> = {}) => {
-        files.set(path, { path, content, frontmatter });
+      createFolderSync: (path: string) => {
+        if (!folders.has(path)) folders.set(path, makeMockFolder(path));
       },
-      _addFolder: (path: string) => { folders.add(path); },
+      _addFile: (path: string, content: string, frontmatter: Record<string, string> = {}) => {
+        if (folders.has(path)) folders.delete(path);
+        files.set(path, makeMockFile(path, content, frontmatter));
+      },
+      _addFileAtPath: (path: string, kind: 'file' | 'folder') => {
+        if (kind === 'file') {
+          files.set(path, makeMockFile(path));
+        } else {
+          folders.set(path, makeMockFolder(path));
+        }
+      },
+      _addFolder: (path: string) => {
+        if (files.has(path)) files.delete(path);
+        folders.set(path, makeMockFolder(path));
+      },
     },
     metadataCache: {
       getFileCache: (file: { path: string }) => {
@@ -291,6 +344,121 @@ describe('SyncEngine — existing UID precheck before enrichment', () => {
     );
     expect(app.vault.createBinary).not.toHaveBeenCalled();
     expect(app.vault.modify).not.toHaveBeenCalled();
+  });
+});
+
+describe('SyncEngine — TFile narrowing for vault writes (#220)', () => {
+  const linkNote = makeNote({
+    note_id: 'link_220',
+    title: '链接标题',
+    content: 'AI 摘要正文',
+    note_type: 'link',
+    created_at: '2026-05-09T10:00:00+08:00',
+    updated_at: '2026-05-09T10:05:00+08:00',
+  });
+
+  function mockLinkOriginalFetch(linkNoteForFetch: GetNoteNote) {
+    return vi.spyOn(globalThis, 'fetch').mockImplementation((url: unknown) => {
+      const urlStr = typeof url === 'string' ? url : (url as Request).url;
+      if (urlStr.includes('/resource/note/list')) {
+        return Promise.resolve(mockFetchResponse({
+          data: { notes: [linkNoteForFetch], has_more: false, next_cursor: '' },
+        }) as Response);
+      }
+      if (urlStr.includes('/resource/note/detail')) {
+        return Promise.resolve(mockFetchResponse({
+          success: true,
+          data: {
+            note: {
+              ...linkNoteForFetch,
+              web_page: {
+                title: '原网页标题',
+                url: 'https://example.com/source',
+                content: '链接原文全文',
+              },
+            },
+          },
+        }) as Response);
+      }
+      throw new Error(`Unexpected request: ${urlStr}`);
+    });
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('writeLinkOriginalAsset does not call vault.modify or vault.create when the asset path is a folder', async () => {
+    mockLinkOriginalFetch(linkNote);
+
+    const app = makeMockApp();
+    app.vault._addFolder('得到大脑/链接笔记/asset');
+    app.vault._addFileAtPath('得到大脑/链接笔记/asset/链接标题_link_220_original.md', 'folder');
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }));
+      const result = await engine.sync();
+
+      expect(result.created).toBe(1);
+      const modifyCalls = vi.mocked(app.vault.modify).mock.calls
+        .map(call => String((call[0] as { path: string }).path));
+      expect(modifyCalls.some(p => p === '得到大脑/链接笔记/asset/链接标题_link_220_original.md')).toBe(false);
+      const createCalls = vi.mocked(app.vault.create).mock.calls
+        .map(call => String(call[0]));
+      expect(createCalls.some(p => p === '得到大脑/链接笔记/asset/链接标题_link_220_original.md')).toBe(false);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('folder'));
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('writeLinkOriginalAsset still updates an existing TFile asset', async () => {
+    mockLinkOriginalFetch(linkNote);
+
+    const app = makeMockApp();
+    app.vault._addFolder('得到大脑/链接笔记/asset');
+    app.vault._addFile(
+      '得到大脑/链接笔记/asset/链接标题_link_220_original.md',
+      '# 原网页标题\n\n来源链接：https://example.com/source\n\n旧原文'
+    );
+
+    try {
+      const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }));
+      await engine.sync();
+
+      const modifyCalls = vi.mocked(app.vault.modify).mock.calls
+        .map(call => String((call[0] as { path: string }).path));
+      expect(modifyCalls).toContain('得到大脑/链接笔记/asset/链接标题_link_220_original.md');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('readTemplateFile returns null and warns when the template path is a folder', async () => {
+    mockLinkOriginalFetch(linkNote);
+
+    const app = makeMockApp();
+    app.vault._addFileAtPath('templates/note-template.md', 'folder');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const engine = new SyncEngine(app, makeSettings({
+        maxDays: 0,
+        templateFilePath: 'templates/note-template.md',
+      }));
+      const result = await engine.sync();
+
+      expect(result.created).toBe(1);
+      const readCalls = vi.mocked(app.vault.read).mock.calls
+        .map(call => String((call[0] as { path: string }).path));
+      expect(readCalls).not.toContain('templates/note-template.md');
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('folder'));
+    } finally {
+      warn.mockRestore();
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
   });
 });
 
