@@ -221,7 +221,7 @@ export function SettingsComponent({
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [credentials.token, credentials.clientId, credentials.authMode]);
 
   useEffect(() => {
     const inputEl = folderInputRef.current;

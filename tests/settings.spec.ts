@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { h, render } from 'preact';
 import { act } from 'preact/test-utils';
 import { App } from 'obsidian';
@@ -1254,6 +1254,92 @@ describe('SettingsComponent auth credentials', () => {
       .find((item): item is HTMLButtonElement => item.textContent === '查看日志');
     expect(button).toBeTruthy();
     expect(button!.classList.contains('getnote-view-history-btn')).toBe(true);
+  });
+});
+
+describe('SettingsComponent — tag cache lazy seed (#238)', () => {
+  beforeEach(() => {
+    vi.mocked(fetchNotes).mockClear();
+    vi.mocked(fetchNotes).mockResolvedValue({ notes: [], hasMore: false });
+  });
+
+  it('seeds the tag cache once credentials are configured after the first render', async () => {
+    const initialNotes = [
+      { note_id: 'n1', tags: [{ name: 'AI' }] },
+      { note_id: 'n2', tags: [{ name: '管理' }] },
+    ];
+    vi.mocked(fetchNotes).mockResolvedValueOnce({ notes: initialNotes, hasMore: false });
+
+    const { container, updateSetting } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: '',
+      openApiClientId: '',
+      apiToken: '',
+      clientId: '',
+      tagCache: { tags: [], lastUpdated: 0 },
+    }));
+
+    // The first run sees no token and returns early; no fetch issued yet.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(fetchNotes).not.toHaveBeenCalled();
+
+    // Configure credentials in the inputs (the way the user actually does).
+    const clientIdInput = container.querySelector('input[placeholder="Client ID：cli_xxx"]') as HTMLInputElement;
+    const tokenInput = container.querySelector('input[type="password"]') as HTMLInputElement;
+    expect(clientIdInput).not.toBeNull();
+    expect(tokenInput).not.toBeNull();
+    await act(() => {
+      inputValue(clientIdInput!, 'cli-openapi');
+      inputValue(tokenInput!, 'gk-openapi-token');
+    });
+
+    // Wait for the lazy-seed effect to re-run and call fetchNotes.
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('openApiClientId', 'cli-openapi');
+    expect(updateSetting).toHaveBeenCalledWith('openApiToken', 'gk-openapi-token');
+    expect(fetchNotes).toHaveBeenCalledWith(expect.objectContaining({
+      authMode: 'openapi',
+      token: 'gk-openapi-token',
+      clientId: 'cli-openapi',
+      sinceId: '0',
+    }));
+  });
+
+  it('does not refetch the tag cache when credentials change after the cache is already seeded', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'gk-openapi-token',
+      openApiClientId: 'cli-openapi',
+      apiToken: 'gk-openapi-token',
+      clientId: 'cli-openapi',
+      tagCache: { tags: ['AI', '管理'], lastUpdated: Date.now() },
+    }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(fetchNotes).not.toHaveBeenCalled();
+
+    // Switch credentials — guard on cache.lastUpdated > 0 should still skip.
+    const tokenInput = container.querySelector('input[type="password"]') as HTMLInputElement;
+    expect(tokenInput).not.toBeNull();
+    await act(() => {
+      inputValue(tokenInput!, 'gk-other-token');
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('openApiToken', 'gk-other-token');
+    expect(fetchNotes).not.toHaveBeenCalled();
   });
 });
 
