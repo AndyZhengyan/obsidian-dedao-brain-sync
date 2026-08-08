@@ -604,6 +604,16 @@ export default class GetNoteSyncPlugin extends Plugin {
     wrapper.open();
   }
 
+  openSettingsTab(): void {
+    // Obsidian's `app.setting` is internal API; the public TypeScript
+    // bindings (1.13+) do not expose it, but the runtime still supports
+    // it. Revisit if Obsidian ships a public replacement.
+    // @ts-expect-error — internal API, see comment above
+    this.app.setting.open();
+    // @ts-expect-error — internal API, see comment above
+    this.app.setting.openTabById(this.manifest.id);
+  }
+
   startSync(scopeOptions: SyncScopeOptions): void {
     void this.runSync('full', scopeOptions);
   }
@@ -887,6 +897,10 @@ class ManualSyncModalWrapper extends Modal {
           syncTags: this.plugin.settings.syncTags,
         }}
         tagOptions={this.plugin.settings.tagCache?.tags ?? []}
+        onOpenSettings={() => {
+          this.close();
+          this.plugin.openSettingsTab();
+        }}
         onConfirm={(options) => {
           this.close();
           this.plugin.startSync(options);

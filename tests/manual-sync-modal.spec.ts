@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest';
 import { h, render } from 'preact';
 import { act } from 'preact/test-utils';
 import { ManualSyncModal } from '../src/ui/manual-sync-modal';
+import { initI18n } from '../src/i18n';
 
 function renderModal(initialOptions: { syncStartDate: string; maxDays: number; enabledNoteTypes?: string[] }, onConfirm = vi.fn()) {
   const container = document.createElement('div');
@@ -18,6 +19,7 @@ function renderModal(initialOptions: { syncStartDate: string; maxDays: number; e
 }
 
 afterEach(() => {
+  initI18n('zh');
   vi.useRealTimers();
   vi.restoreAllMocks();
   render(null, document.body);
@@ -25,6 +27,41 @@ afterEach(() => {
 });
 
 describe('ManualSyncModal filters', () => {
+  it('hides the open-settings entry by default (no onOpenSettings prop)', async () => {
+    const { container } = renderModal({ syncStartDate: '', maxDays: 30 });
+
+    const settingsBtn = container.querySelector('.getnote-picker-btns .mod-secondary');
+    expect(settingsBtn).toBeNull();
+  });
+
+  it('renders and triggers onOpenSettings when the prop is supplied (#237)', async () => {
+    initI18n('en');
+    const onConfirm = vi.fn();
+    const onOpenSettings = vi.fn();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    render(
+      h(ManualSyncModal, {
+        initialOptions: { syncStartDate: '', maxDays: 30 },
+        onConfirm,
+        onCancel: vi.fn(),
+        onOpenSettings,
+      }),
+      container
+    );
+
+    const settingsBtn = container.querySelector('.getnote-picker-btns .mod-secondary') as HTMLButtonElement;
+    expect(settingsBtn).toBeTruthy();
+    expect(settingsBtn.textContent).toContain('Open settings');
+
+    await act(() => {
+      settingsBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
   it('defaults to days mode and submits maxDays >= 1', async () => {
     const { container, onConfirm } = renderModal({ syncStartDate: '', maxDays: 0 });
 
