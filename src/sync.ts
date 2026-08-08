@@ -409,7 +409,11 @@ export class SyncEngine {
       const sourceLine = url ? `来源链接：${url}\n\n` : '';
       const content = `# ${title}\n\n${sourceLine}${originalContent}`;
       const existing = this.app.vault.getAbstractFileByPath(targetPath);
-      if (existing) return targetPath;
+      if (existing instanceof TFile) return targetPath;
+      if (existing) {
+        console.warn(`[DedaoBrain] Link original target path is a folder, not a file: ${targetPath}`);
+        return null;
+      }
       await this.app.vault.create(targetPath, content);
       return targetPath;
     } catch (err) {
@@ -476,13 +480,17 @@ export class SyncEngine {
     if (!templatePath) return null;
 
     const templateFile = this.app.vault.getAbstractFileByPath(templatePath);
-    if (!templateFile || typeof templateFile !== 'object' || !('path' in templateFile)) {
+    if (!templateFile) {
       console.warn(`[DedaoBrain] Template file not found: ${templatePath}`);
+      return null;
+    }
+    if (!(templateFile instanceof TFile)) {
+      console.warn(`[DedaoBrain] Template path is a folder, not a file: ${templatePath}`);
       return null;
     }
 
     try {
-      return await this.app.vault.read(templateFile as TFile);
+      return await this.app.vault.read(templateFile);
     } catch (err) {
       console.warn(`[DedaoBrain] Failed to read template file ${templatePath}:`, err);
       return null;
