@@ -22,6 +22,7 @@ export interface GetNoteNote {
   assetPaths?: string[];      // 内部使用：所有附件文件的完整路径（图片、音频等）
   prime_id?: string;          // Web API detail identifier
   topic_id?: string;          // Knowledge-base topic identifier
+  fetch_error?: string;       // Internal: per-note knowledge detail failure
 }
 
 export interface LinkOriginal {
@@ -266,6 +267,7 @@ export interface SyncResult {
   total: number;
   items?: SyncResultItem[];
   lastNoteTimestamp?: string;  // updated_at of the last processed note
+  checkpointBlocked?: boolean; // note-level failure requires retry from the existing durable checkpoint
   /**
    * Tag names observed on processed notes during the sync. Used to
    * incrementally update the local tag cache without an extra network call.

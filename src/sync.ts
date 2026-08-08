@@ -830,7 +830,7 @@ export class SyncEngine {
     return appendNotes;
   }
 
-  private filterNotesByDateRange(notes: GetNoteNote[]): GetNoteNote[] {
+  private filterNotesByDateRange(notes: GetNoteNote[], includeBoundary = false): GetNoteNote[] {
     const { syncStartDate } = this.scopeOptions;
     if (!syncStartDate) return notes;
 
@@ -839,7 +839,7 @@ export class SyncEngine {
 
     return notes.filter(note => {
       const updated = parseNoteUpdatedTime(note);
-      return updated !== null && updated > startTime;
+      return updated !== null && (includeBoundary ? updated >= startTime : updated > startTime);
     });
   }
 
@@ -1055,25 +1055,37 @@ export class SyncEngine {
       bloggerIds,
     });
 
-    const cutoffTime = this.scopeOptions.syncStartDate
-      ? parseSyncBoundaryTime(this.scopeOptions.syncStartDate)
-      : null;
-
-    const filteredNotes = knowledgeNotes.filter(note => {
-      if (cutoffTime === null) return true;
-      const updated = parseNoteUpdatedTime(note);
-      return updated !== null && updated >= cutoffTime;
-    });
+    const filteredNotes = this.filterNotesByType(
+      this.filterNotesByDateRange(this.filterRecentNotes(knowledgeNotes), true)
+    );
 
     const uidIndex = this.buildUidIndex();
     const seenNoteIds = new Set<string>();
     const knowledgeBaseNames = this.scopeOptions.knowledgeBaseNames ?? {};
+    let knowledgeProcessed = 0;
 
     for (const note of filteredNotes) {
       if (this.cancelled) throw new SyncCancelledError();
       if (seenNoteIds.has(note.note_id)) continue;
+      const failuresBeforeNote = result.failed;
       seenNoteIds.add(note.note_id);
+      knowledgeProcessed++;
       result.total++;
+      if (note.fetch_error) {
+        result.failed++;
+        result.checkpointBlocked = true;
+        this.recordItem(result, note, { status: 'failed', error: note.fetch_error });
+        this.onProgress?.({
+          processed: knowledgeProcessed,
+          total: filteredNotes.length,
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: result.failed,
+          percent: filteredNotes.length ? Math.round((knowledgeProcessed / filteredNotes.length) * 100) : 100,
+        });
+        continue;
+      }
       const knowledgeBaseName = note.topic_id ? knowledgeBaseNames[note.topic_id] : undefined;
       const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;
 
@@ -1085,34 +1097,41 @@ export class SyncEngine {
       if (preCheck.exists) {
         result.skipped++;
         this.recordItem(result, note, { status: 'skipped' });
+      }
+
+      const noteToWrite = preCheck.exists
+        ? note
+        : await this.enrichAudioNote(note, signal, categoryOverride);
+      const appendNotes = await this.fetchAppendNotes(noteToWrite, signal, result, categoryOverride);
+      if (result.failed > failuresBeforeNote) {
+        result.checkpointBlocked = true;
         this.onProgress?.({
-          processed: result.total,
-          total: result.total,
+          processed: knowledgeProcessed,
+          total: filteredNotes.length,
           created: result.created,
           updated: result.updated,
           skipped: result.skipped,
           failed: result.failed,
-          percent: 0,
+          percent: filteredNotes.length ? Math.round((knowledgeProcessed / filteredNotes.length) * 100) : 100,
         });
         continue;
       }
-
-      const noteToWrite = await this.enrichAudioNote(note, signal, categoryOverride);
-      const appendNotes = await this.fetchAppendNotes(noteToWrite, signal, result, categoryOverride);
       const parentBaseName = this.buildBaseName(noteToWrite);
       const parentFileName = this.getFileName(noteToWrite);
       const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
 
-      const writeResult = await this.writeNote(
-        noteToWrite,
-        uidIndex,
-        undefined,
-        undefined,
-        childFileNames,
-        categoryOverride
-      );
-      this.applyWriteResult(result, writeResult);
-      this.recordItem(result, noteToWrite, writeResult);
+      if (!preCheck.exists) {
+        const writeResult = await this.writeNote(
+          noteToWrite,
+          uidIndex,
+          undefined,
+          undefined,
+          childFileNames,
+          categoryOverride
+        );
+        this.applyWriteResult(result, writeResult);
+        this.recordItem(result, noteToWrite, writeResult);
+      }
       const updatedTime = parseNoteUpdatedTime(noteToWrite);
       const currentLastTime = result.lastNoteTimestamp ? parseSyncBoundaryTime(result.lastNoteTimestamp) : null;
       if (updatedTime !== null && (currentLastTime === null || updatedTime > currentLastTime)) {
@@ -1132,14 +1151,18 @@ export class SyncEngine {
         this.recordItem(result, appendNote, appendWriteResult);
       }
 
+      if (result.failed > failuresBeforeNote) {
+        result.checkpointBlocked = true;
+      }
+
       this.onProgress?.({
-        processed: result.total,
-        total: result.total,
+        processed: knowledgeProcessed,
+        total: filteredNotes.length,
         created: result.created,
         updated: result.updated,
         skipped: result.skipped,
         failed: result.failed,
-        percent: 0,
+        percent: filteredNotes.length ? Math.round((knowledgeProcessed / filteredNotes.length) * 100) : 100,
       });
     }
   }
@@ -1352,6 +1375,23 @@ export class SyncEngine {
       for (const note of filteredNotes) {
         if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
         if (seenNoteIds.has(note.note_id)) continue;
+        if (note.fetch_error) {
+          seenNoteIds.add(note.note_id);
+          result.total++;
+          result.failed++;
+          result.checkpointBlocked = true;
+          this.recordItem(result, note, { status: 'failed', error: note.fetch_error });
+          this.onProgress?.({
+            processed: result.total,
+            total: filteredNotes.length,
+            created: result.created,
+            updated: result.updated,
+            skipped: result.skipped,
+            failed: result.failed,
+            percent: filteredNotes.length ? Math.round((result.total / filteredNotes.length) * 100) : 100,
+          });
+          continue;
+        }
         const parentMatchesTags = this.filterNotesByTags([note], syncOptions.syncTags).length > 0;
         const knowledgeBaseName = syncOptions.knowledgeBaseNames?.[note.note_id] ?? syncOptions.knowledgeBaseName;
         const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;

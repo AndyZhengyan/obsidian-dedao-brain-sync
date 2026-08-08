@@ -300,6 +300,28 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     expect(plugin.settings.lastSyncEndTimestamp).toBe('2026-05-10T12:00:00+08:00');
   });
 
+  it('keeps the existing auto-sync checkpoint when a retryable knowledge note failed', async () => {
+    vi.spyOn(SyncEngine.prototype, 'sync').mockResolvedValue({
+      created: 1,
+      updated: 0,
+      skipped: 0,
+      failed: 1,
+      total: 2,
+      items: [],
+      lastNoteTimestamp: '2026-05-10T12:00:00+08:00',
+      checkpointBlocked: true,
+    });
+    const plugin = makePlugin();
+    plugin.settings.lastSyncEndTimestamp = '2026-05-09T10:00:00+08:00';
+
+    await plugin['runSync']('auto', {
+      maxDays: 0,
+      syncStartDate: plugin.settings.lastSyncEndTimestamp,
+    });
+
+    expect(plugin.settings.lastSyncEndTimestamp).toBe('2026-05-09T10:00:00+08:00');
+  });
+
   it('selected sync records the note type filter from the picker scope', async () => {
     vi.spyOn(SyncEngine.prototype, 'syncNoteIds').mockResolvedValue({
       created: 0,
