@@ -12,6 +12,7 @@ interface ManualSyncModalProps {
   tagOptions?: string[];
   onConfirm: (options: SyncScopeOptions) => void;
   onCancel: () => void;
+  onOpenSettings?: () => void;
 }
 
 function resolveInitialSyncMode(initialOptions: SyncScopeOptions): SyncMode {
@@ -28,7 +29,7 @@ function resolveInitialSyncMode(initialOptions: SyncScopeOptions): SyncMode {
   return daysCutoff >= startTime ? 'days' : 'date';
 }
 
-export function ManualSyncModal({ initialOptions, tagOptions = [], onConfirm, onCancel }: ManualSyncModalProps) {
+export function ManualSyncModal({ initialOptions, tagOptions = [], onConfirm, onCancel, onOpenSettings }: ManualSyncModalProps) {
   const [syncMode, setSyncMode] = useState<SyncMode>(resolveInitialSyncMode(initialOptions));
   const [syncStartDate, setSyncStartDate] = useState(initialOptions.syncStartDate || getLocalDateInputValue());
   const [maxDays, setMaxDays] = useState(String(initialOptions.maxDays));
@@ -121,6 +122,16 @@ export function ManualSyncModal({ initialOptions, tagOptions = [], onConfirm, on
       <div className="getnote-picker-footer">
         <span className="getnote-picker-count">{t('manualSync.once')}</span>
         <div className="getnote-picker-btns">
+          {onOpenSettings && (
+            <button
+              className="getnote-settings-link"
+              type="button"
+              onClick={onOpenSettings}
+              aria-label={t('manualSync.openSettings')}
+            >
+              {t('manualSync.openSettings')}
+            </button>
+          )}
           <button className="mod-cancel" onClick={onCancel}>{t('picker.cancel')}</button>
           <button className="mod-cta" onClick={handleConfirm}>{t('picker.confirm')}</button>
         </div>
