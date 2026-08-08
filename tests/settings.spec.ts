@@ -558,7 +558,7 @@ describe('SettingsComponent auth credentials', () => {
     expect(uploadButton!.disabled).toBe(true);
   });
 
-  it('keeps the syncing progress block visible when upload progress changes', async () => {
+  it('updates syncing progress without forcing the settings page to scroll', async () => {
     const scrollIntoView = vi.fn();
     const originalScrollIntoView = Element.prototype.scrollIntoView;
     Element.prototype.scrollIntoView = scrollIntoView;
@@ -593,7 +593,9 @@ describe('SettingsComponent auth credentials', () => {
         );
       });
 
-      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', behavior: 'smooth' });
+      expect(container.textContent).toContain('处理中 2 条...');
+      expect(container.textContent).toContain('100%');
+      expect(scrollIntoView).not.toHaveBeenCalled();
     } finally {
       Element.prototype.scrollIntoView = originalScrollIntoView;
     }

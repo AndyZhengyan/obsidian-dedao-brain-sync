@@ -334,7 +334,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       this.settings.lastQuotaState = undefined;
       resetQuotaState();
       await this.saveSettings();
-      this.refreshSettingsTab();
+      this.updateSettingsRuntimeState();
     }
   }
 
@@ -363,8 +363,8 @@ export default class GetNoteSyncPlugin extends Plugin {
     return Array.from(folders).sort();
   }
 
-  private refreshSettingsTab(): void {
-    if (this.settingsTab) this.settingsTab.display();
+  private updateSettingsRuntimeState(): void {
+    this.settingsTab?.updateRuntimeState();
   }
 
   startAutoSync(): void {
@@ -466,7 +466,7 @@ export default class GetNoteSyncPlugin extends Plugin {
     this.isSyncing = true;
     this.syncProgress = { message: t('sync.fetching', { page: 1 }), count: '', percent: 0 };
     this.currentSyncEngine = null;
-    this.refreshSettingsTab();
+    this.updateSettingsRuntimeState();
     showNotice(t('sync.started'));
 
     const engine = new SyncEngine(this.app, this.settings, (info) => this.setProgress(info), scopeOptions);
@@ -498,7 +498,7 @@ export default class GetNoteSyncPlugin extends Plugin {
         this.syncProgress = { message: '', count: '', percent: 0 };
         this.isSyncing = false;
         this.currentSyncEngine = null;
-        this.refreshSettingsTab();
+        this.updateSettingsRuntimeState();
         return;
       }
     } catch (err) {
@@ -543,7 +543,7 @@ export default class GetNoteSyncPlugin extends Plugin {
         if (type === 'auto') {
           this.syncProgress = { message: '', count: '', percent: 0 };
         }
-        this.refreshSettingsTab();
+        this.updateSettingsRuntimeState();
       }
     }
   }
@@ -593,7 +593,7 @@ export default class GetNoteSyncPlugin extends Plugin {
     const now = Date.now();
     if (now - this.lastProgressUpdate > 300) {
       this.lastProgressUpdate = now;
-      this.refreshSettingsTab();
+      this.updateSettingsRuntimeState();
     }
   }
 
@@ -681,7 +681,7 @@ export default class GetNoteSyncPlugin extends Plugin {
     this.isSyncing = true;
     this.syncProgress = { message: t('sync.subscribedKnowledge.fetching'), count: '', percent: 0 };
     this.currentSyncEngine = null;
-    this.refreshSettingsTab();
+    this.updateSettingsRuntimeState();
     showNotice(t('sync.subscribedKnowledge.started'));
 
     const engine = new SyncEngine(this.app, this.settings, (info) => this.setProgress(info), {
@@ -729,7 +729,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       this.isSyncing = false;
       this.currentSyncEngine = null;
       this.syncProgress = { message: '', count: '', percent: 0 };
-      this.refreshSettingsTab();
+      this.updateSettingsRuntimeState();
     }
   }
 
@@ -754,7 +754,7 @@ export default class GetNoteSyncPlugin extends Plugin {
     const startedAt = Date.now();
     this.isSyncing = true;
     this.syncProgress = { message: t('reverseSync.running'), count: '', percent: 0 };
-    this.refreshSettingsTab();
+    this.updateSettingsRuntimeState();
 
     try {
       const engine = new ReverseSyncEngine(this.app, this.settings, (progress) => {
@@ -764,7 +764,7 @@ export default class GetNoteSyncPlugin extends Plugin {
           count: `${t('modal.countProgress', { processed: progress.processed })} ${progress.title}`,
           percent,
         };
-        this.refreshSettingsTab();
+        this.updateSettingsRuntimeState();
       });
       this.currentSyncEngine = engine;
       const result = files ? await engine.syncFiles(files) : await engine.syncBack();
@@ -808,7 +808,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       this.isSyncing = false;
       this.currentSyncEngine = null;
       this.syncProgress = { message: '', count: '', percent: 0 };
-      this.refreshSettingsTab();
+      this.updateSettingsRuntimeState();
     }
   }
 
