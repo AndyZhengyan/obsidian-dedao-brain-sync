@@ -2780,7 +2780,7 @@ describe('SyncEngine — selective sync cancellation', () => {
   describe('SyncEngine — preCheckNote', () => {
     it('不存在 uidIndex 时返回 { exists: false }', () => {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings());
+      const engine = new SyncEngine(app, makeSettings());
       const note = makeNote({ note_id: 'note_missing' });
       // @ts-expect-error private helper is tested directly
       const result = engine['preCheckNote'](note, new Map());
@@ -2795,7 +2795,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         { uid: 'note_changed', modified: '2026-04-27 10:00:00' }
       );
       app.vault._addFolder('得到大脑/纯文本');
-      const engine = new SyncEngine(app as any, makeSettings());
+      const engine = new SyncEngine(app, makeSettings());
       const note = makeNote({
         note_id: 'note_changed',
         updated_at: '2026-04-28T10:00:00+08:00',
@@ -2815,7 +2815,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         { uid: 'note_unchanged', modified: '2026-04-28 10:00:00' }
       );
       app.vault._addFolder('得到大脑/纯文本');
-      const engine = new SyncEngine(app as any, makeSettings());
+      const engine = new SyncEngine(app, makeSettings());
       const note = makeNote({
         note_id: 'note_unchanged',
         note_type: 'plain_text',
@@ -2838,7 +2838,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       app.vault._addFolder('得到大脑/录音笔记/asset');
       app.vault._addFile('得到大脑/录音笔记/asset/测试笔记_audio.mp3', '');
       app.vault._addFile('得到大脑/录音笔记/asset/测试笔记_transcript.md', '');
-      const engine = new SyncEngine(app as any, makeSettings());
+      const engine = new SyncEngine(app, makeSettings());
       const note = makeNote({
         note_id: 'audio_ready',
         title: '测试笔记',
@@ -2861,7 +2861,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       app.vault._addFolder('得到大脑/录音笔记');
       app.vault._addFolder('得到大脑/录音笔记/asset');
       app.vault._addFile('得到大脑/录音笔记/asset/测试笔记_transcript.md', '');
-      const engine = new SyncEngine(app as any, makeSettings());
+      const engine = new SyncEngine(app, makeSettings());
       const note = makeNote({
         note_id: 'audio_missing_mp3',
         title: '测试笔记',
@@ -2884,7 +2884,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       app.vault._addFolder('得到大脑/录音笔记');
       app.vault._addFolder('得到大脑/录音笔记/asset');
       app.vault._addFile('得到大脑/录音笔记/asset/测试笔记_audio.mp3', '');
-      const engine = new SyncEngine(app as any, makeSettings());
+      const engine = new SyncEngine(app, makeSettings());
       const note = makeNote({
         note_id: 'audio_missing_transcript',
         title: '测试笔记',
@@ -2905,7 +2905,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         { uid: 'note_link', modified: '2026-04-28 10:00:00' }
       );
       app.vault._addFolder('得到大脑/纯文本');
-      const engine = new SyncEngine(app as any, makeSettings());
+      const engine = new SyncEngine(app, makeSettings());
       const note = makeNote({
         note_id: 'note_link',
         note_type: 'plain_text',
@@ -2927,7 +2927,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       app.vault._addFolder('得到大脑/图片笔记');
       app.vault._addFolder('得到大脑/图片笔记/asset');
       app.vault._addFile('得到大脑/图片笔记/asset/测试笔记_image.jpg', '');
-      const engine = new SyncEngine(app as any, makeSettings());
+      const engine = new SyncEngine(app, makeSettings());
       const note = makeNote({
         note_id: 'image_ready',
         title: '测试笔记',
@@ -2945,7 +2945,7 @@ describe('SyncEngine — selective sync cancellation', () => {
 
     it('图片笔记：图片笔记目录下的非音频笔记也会下载多张图片附件', async () => {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings());
+      const engine = new SyncEngine(app, makeSettings());
       const note = makeNote({
         note_id: 'image_multi',
         title: '测试笔记',
@@ -2974,7 +2974,7 @@ describe('SyncEngine — selective sync cancellation', () => {
 
     it('同一笔记的同名通用附件会下载到不同文件', async () => {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings());
+      const engine = new SyncEngine(app, makeSettings());
       const note = makeNote({
         note_id: 'duplicate_generic_names',
         title: '测试笔记',
@@ -3002,7 +3002,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       const basePath = await mkdtemp(join(tmpdir(), 'dedao-generic-asset-'));
       const app = makeMockApp();
       app.vault.adapter = { getBasePath: () => basePath };
-      const engine = new SyncEngine(app as any, makeSettings());
+      const engine = new SyncEngine(app, makeSettings());
       const note = makeNote({
         note_id: 'local_fast_path',
         title: '测试笔记',
@@ -3030,7 +3030,7 @@ describe('SyncEngine — selective sync cancellation', () => {
 
     it('通用附件文件名会忽略 URL fragment', async () => {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings());
+      const engine = new SyncEngine(app, makeSettings());
       const note = makeNote({
         note_id: 'fragment_generic_name',
         title: '测试笔记',
@@ -3054,7 +3054,7 @@ describe('SyncEngine — selective sync cancellation', () => {
 
     it('Web API 模式会处理列表响应中已有的通用附件', async () => {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({
+      const engine = new SyncEngine(app, makeSettings({
         authMode: 'web',
         webApiToken: 'web-token',
       }));
@@ -3081,7 +3081,7 @@ describe('SyncEngine — selective sync cancellation', () => {
 
     it('禁用音频导入时不会保留会渲染成断链的音频字段', async () => {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({
+      const engine = new SyncEngine(app, makeSettings({
         attachmentImport: { image: true, audio: false, video: true, document: true },
       }));
       const note = makeNote({
@@ -3137,7 +3137,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       );
 
       try {
-        const engine = new SyncEngine(app as any, makeSettings());
+        const engine = new SyncEngine(app, makeSettings());
         const result = await engine.syncNoteIds(['pre_skip']);
 
         expect(result.total).toBe(1);
@@ -3179,7 +3179,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       );
 
       try {
-        const engine = new SyncEngine(app as any, makeSettings());
+        const engine = new SyncEngine(app, makeSettings());
         const result = await engine.syncNoteIds(['pre_proceed']);
 
         expect(result.total).toBe(1);
@@ -3231,7 +3231,7 @@ describe('SyncEngine — selective sync cancellation', () => {
       );
 
       try {
-        const engine = new SyncEngine(app as any, makeSettings());
+        const engine = new SyncEngine(app, makeSettings());
         const result = await engine.syncNoteIds(['existing', 'new_one']);
 
         expect(result.total).toBe(2);
@@ -3263,7 +3263,7 @@ describe('SyncEngine — selective sync cancellation', () => {
     );
 
     const mockApp = makeMockApp();
-    const engine = new SyncEngine(mockApp as any, makeSettings(), (info) => {
+    const engine = new SyncEngine(mockApp, makeSettings(), (info) => {
       if (info.processed === 1) {
         engine.cancel();
       }
@@ -3294,7 +3294,7 @@ describe('SyncEngine auth credential chains', () => {
       mockFetchResponse({ data: { notes: [], has_more: false, next_cursor: '' } }) as Response
     );
 
-    const engine = new SyncEngine(makeMockApp() as any, makeSettings({
+    const engine = new SyncEngine(makeMockApp(), makeSettings({
       authMode: 'openapi',
       apiToken: 'active-web-token',
       clientId: 'legacy-client',
@@ -3320,7 +3320,7 @@ describe('SyncEngine auth credential chains', () => {
       mockFetchResponse({ h: {}, c: { list: [], has_more: false } }) as Response
     );
 
-    const engine = new SyncEngine(makeMockApp() as any, makeSettings({
+    const engine = new SyncEngine(makeMockApp(), makeSettings({
       authMode: 'web',
       apiToken: 'active-openapi-token',
       clientId: 'openapi-client',
@@ -3349,7 +3349,7 @@ describe('SyncEngine auth credential chains', () => {
       }) as Response
     );
 
-    const engine = new SyncEngine(makeMockApp() as any, makeSettings({
+    const engine = new SyncEngine(makeMockApp(), makeSettings({
       authMode: 'openapi',
       apiToken: 'active-web-token',
       clientId: 'legacy-client',
@@ -3378,7 +3378,7 @@ describe('SyncEngine auth credential chains', () => {
       }) as Response
     );
 
-    const engine = new SyncEngine(makeMockApp() as any, makeSettings({
+    const engine = new SyncEngine(makeMockApp(), makeSettings({
       authMode: 'web',
       apiToken: 'active-openapi-token',
       clientId: 'openapi-client',
@@ -3409,7 +3409,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('sync-core-openapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'openapi',
       openApiToken: 'test-openapi-token',
       openApiClientId: 'test-client',
@@ -3440,7 +3440,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('sync-core-openapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'openapi',
       openApiToken: 'test-openapi-token',
       openApiClientId: 'test-client',
@@ -3467,7 +3467,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('sync-core-webapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'web',
       webApiToken: 'test-web-token',
       maxDays: 0,
@@ -3497,7 +3497,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('sync-core-webapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'web',
       webApiToken: 'test-web-token',
       maxDays: 0,
@@ -3523,7 +3523,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('selective-sync-webapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'web',
       webApiToken: 'test-web-token',
       maxDays: 0,
@@ -3546,7 +3546,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('selective-sync-openapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'openapi',
       openApiToken: 'test-openapi-token',
       openApiClientId: 'test-client',
@@ -3572,7 +3572,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('selective-sync-webapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'web',
       webApiToken: 'test-web-token',
       maxDays: 0,
@@ -3597,7 +3597,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('sync-parent-and-children-webapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'web',
       webApiToken: 'test-web-token',
       maxDays: 0,
@@ -3630,7 +3630,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('sync-parent-and-children-openapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'openapi',
       openApiToken: 'test-openapi-token',
       openApiClientId: 'test-client',
@@ -3664,7 +3664,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('sync-stale-children-openapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'openapi',
       openApiToken: 'test-openapi-token',
       openApiClientId: 'test-client',
@@ -3693,7 +3693,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('sync-stale-children-webapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'web',
       webApiToken: 'test-web-token',
       maxDays: 0,
@@ -3726,7 +3726,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('sync-parent-and-children-webapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'web',
       webApiToken: 'test-web-token',
       maxDays: 0,
@@ -3760,7 +3760,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('sync-failed-child-openapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'openapi',
       openApiToken: 'test-openapi-token',
       openApiClientId: 'test-client',
@@ -3781,7 +3781,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('sync-failed-child-webapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'web',
       webApiToken: 'test-web-token',
       maxDays: 0,
@@ -3804,7 +3804,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('sync-parent-primeid-webapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'web',
       webApiToken: 'test-web-token',
       maxDays: 0,
@@ -3827,7 +3827,7 @@ describe('SyncEngine — fixture-based sync integration', () => {
     loadScenario('selective-sync-openapi');
 
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings({
+    const engine = new SyncEngine(app, makeSettings({
       authMode: 'openapi',
       openApiToken: 'test-openapi-token',
       openApiClientId: 'test-client',
@@ -3865,7 +3865,7 @@ describe('SyncEngine — tag whitelist filter', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }), undefined, { syncTags: [] });
+      const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }), undefined, { syncTags: [] });
       const result = await engine.sync();
       expect(result.total).toBe(2);
     } finally {
@@ -3890,7 +3890,7 @@ describe('SyncEngine — tag whitelist filter', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }), undefined, { syncTags: ['work'] });
+      const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }), undefined, { syncTags: ['work'] });
       const result = await engine.sync();
       expect(result.total).toBe(1);
       expect(result.items?.map(i => i.noteId)).toEqual(['a']);
@@ -3914,7 +3914,7 @@ describe('SyncEngine — tag whitelist filter', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }), undefined, { syncTags: ['work'] });
+      const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }), undefined, { syncTags: ['work'] });
       const result = await engine.sync();
       expect(result.total).toBe(1);
     } finally {
@@ -3937,7 +3937,7 @@ describe('SyncEngine — tag whitelist filter', () => {
 
     try {
       const app = makeMockApp();
-      const engine = new SyncEngine(app as any, makeSettings({ maxDays: 0 }), undefined, { syncTags: ['nope'] });
+      const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }), undefined, { syncTags: ['nope'] });
       const result = await engine.sync();
       expect(result.total).toBe(0);
     } finally {
@@ -3947,7 +3947,7 @@ describe('SyncEngine — tag whitelist filter', () => {
 
   it('filterNotesByTags private method returns all notes when whitelist is undefined', () => {
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings());
+    const engine = new SyncEngine(app, makeSettings());
     const notes = [
       makeNote({ note_id: 'a', tags: [{ name: 'work' }] }),
       makeNote({ note_id: 'b', tags: [] }),
@@ -3958,7 +3958,7 @@ describe('SyncEngine — tag whitelist filter', () => {
 
   it('filterNotesByTags private method returns matching notes for non-empty whitelist', () => {
     const app = makeMockApp();
-    const engine = new SyncEngine(app as any, makeSettings());
+    const engine = new SyncEngine(app, makeSettings());
     const notes = [
       makeNote({ note_id: 'a', tags: [{ name: 'work' }, { name: 'project' }] }),
       makeNote({ note_id: 'b', tags: [{ name: 'daily' }] }),
@@ -4348,9 +4348,9 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({
         success: true,
         data: { notes: [], has_more: false, next_cursor: '0' },
-      }) as any);
+      }) as Response);
 
-      const engine = new EngineReloaded(app as any, settings, undefined, {
+      const engine = new EngineReloaded(app, settings, undefined, {
         maxDays: 0,
         syncStartDate: '2026-04-27',
       });
@@ -4410,7 +4410,7 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({
         success: true,
         data: { notes: [], has_more: false, next_cursor: '0' },
-      }) as any);
+      }) as Response);
 
       const settings = makeSettings({
         scheduledSync: {
@@ -4420,7 +4420,7 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
         },
       });
 
-      const engine = new EngineReloaded(app as any, settings, undefined, {
+      const engine = new EngineReloaded(app, settings, undefined, {
         maxDays: 0,
         syncStartDate: '2026-04-27',
         syncKnowledgeBases: ['kb-1'],
@@ -4476,7 +4476,7 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({
         success: true,
         data: { notes: [], has_more: false, next_cursor: '0' },
-      }) as any);
+      }) as Response);
 
       const settings = makeSettings({
         scheduledSync: {
@@ -4486,7 +4486,7 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
         },
       });
 
-      const engine = new EngineReloaded(app as any, settings, undefined, {
+      const engine = new EngineReloaded(app, settings, undefined, {
         maxDays: 0,
         syncStartDate: '2026-04-27',
         syncKnowledgeBases: ['kb-3'],
@@ -4545,7 +4545,7 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
       );
       app.vault._addFile('得到大脑/知识库/跨库专题/asset/跨库音频笔记_transcript.md', '');
 
-      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any) => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: Request | string | URL) => {
         const urlStr = typeof url === 'string' ? url : url?.url ?? '';
         if (urlStr.includes('/resource/note/list')) {
           return mockFetchResponse({
@@ -4590,11 +4590,11 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
         },
       });
 
-      const engine = new EngineReloaded(app as any, settings, undefined, {
+      const engine = new EngineReloaded(app, settings, undefined, {
         maxDays: 0,
         syncStartDate: '2026-04-27',
         syncKnowledgeBases: ['kb-audio'],
-        knowledgeBaseNames: { kb_audio: '跨库专题', kb_audio_missing: '跨库专题' } as any,
+        knowledgeBaseNames: { kb_audio: '跨库专题', kb_audio_missing: '跨库专题' } as Record<string, string>,
       });
 
       const result = await engine.sync();
