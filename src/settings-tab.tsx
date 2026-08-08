@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { SettingsComponent } from './settings/index';
 import type { Settings } from './types';
 import type GetNoteSyncPlugin from './main';
+import { confirmDatePathMigration } from './ui/date-path-confirm-modal';
 
 export class GetNoteSettingsTab extends PluginSettingTab {
   private plugin: GetNoteSyncPlugin;
@@ -34,6 +35,8 @@ export class GetNoteSettingsTab extends PluginSettingTab {
         app={this.app}
         lastSyncTime={this.plugin.lastSyncResult?.timestamp}
         syncHistory={this.plugin.syncHistory}
+        applyDatePathSettings={(target) => this.plugin.applyDatePathSettings(target)}
+        confirmDatePathMigration={(request) => confirmDatePathMigration(this.app, request)}
       />,
       this.containerEl
     );

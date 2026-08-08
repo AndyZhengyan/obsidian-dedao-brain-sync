@@ -1941,3 +1941,46 @@ body .getnote-tag-select-option input[type="checkbox"] {
 body .getnote-ribbon-action-hidden {
   display: none;
 }
+
+.getnote-date-path-settings {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: min(100%, var(--getnote-primary-input-width));
+}
+
+.getnote-date-path-toggle-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.getnote-date-path-actions,
+.getnote-date-path-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.getnote-date-path-error {
+  color: var(--text-error);
+  font-size: var(--font-ui-smaller);
+}
+
+.getnote-date-path-result {
+  padding: 8px 10px;
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  font-size: var(--font-ui-smaller);
+  overflow-wrap: anywhere;
+}
+
+.getnote-date-path-result ul {
+  margin: 6px 0 0;
+  padding-inline-start: 20px;
+}
+
+.getnote-date-path-confirm-content {
+  max-width: 520px;
+}

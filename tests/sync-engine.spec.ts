@@ -86,6 +86,8 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
     syncStartDate: '',
     lastSyncEndTimestamp: '',
     filenamePrefix: '',
+    datePathEnabled: false,
+    datePathFormat: 'YYYY/MM',
     scheduledSync: { enabled: false, intervalMinutes: 30, syncOnStart: false },
     syncHistory: [],
     ...overrides,
@@ -118,6 +120,179 @@ function mockFetchResponse(body: unknown) {
     arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
   };
 }
+
+describe('SyncEngine — existing UID precheck before enrichment', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it.each([
+    {
+      label: 'image',
+      noteType: 'img_text',
+      detail: { attachments: [{ type: 'image', url: 'https://cdn.example.com/image.png', title: '图片' }] },
+    },
+    {
+      label: 'audio',
+      noteType: 'recorder_audio',
+      detail: {
+        audio: '转写',
+        attachments: [{ type: 'audio', url: 'https://cdn.example.com/audio.mp3', title: '录音' }],
+      },
+    },
+    {
+      label: 'link original',
+      noteType: 'link',
+      detail: {
+        linkOriginal: { title: '原文', url: 'https://example.com/source', content: '原文内容' },
+      },
+    },
+    {
+      label: 'generic attachment',
+      noteType: 'plain_text',
+      detail: { attachments: [{ type: 'document', url: 'https://cdn.example.com/file.pdf', title: '附件' }] },
+    },
+  ])('does not create orphan date-path assets for an existing $label note', async ({ noteType, detail }) => {
+    const note = makeNote({
+      note_id: `existing_${noteType}`,
+      title: '历史笔记',
+      note_type: noteType,
+      ...detail,
+    });
+    const app = makeMockApp();
+    app.vault._addFolder('得到大脑/纯文本');
+    app.vault._addFile(
+      '得到大脑/纯文本/历史笔记.md',
+      '本地内容',
+      { uid: note.note_id, modified: '2026-04-28 10:00:00' },
+    );
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation((url: unknown) => {
+      const urlString = typeof url === 'string' ? url : (url as Request).url;
+      if (urlString.includes('/resource/note/list')) {
+        return Promise.resolve(mockFetchResponse({
+          data: { notes: [note], has_more: false, next_cursor: '' },
+        }) as Response);
+      }
+      if (urlString.includes('/resource/note/detail')) {
+        return Promise.resolve(mockFetchResponse({ data: { note } }) as Response);
+      }
+      if (urlString.includes('/resource/note/original')) {
+        return Promise.resolve(mockFetchResponse({ data: note.linkOriginal }) as Response);
+      }
+      return Promise.resolve(mockFetchResponse({}) as Response);
+    });
+    const engine = new SyncEngine(app, makeSettings({
+      maxDays: 0,
+      datePathEnabled: true,
+      datePathFormat: 'YYYY/MM',
+    }));
+
+    const result = await engine.sync();
+
+    expect(result).toEqual(expect.objectContaining({ created: 0, updated: 0, skipped: 1 }));
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(app.vault.createFolder).not.toHaveBeenCalled();
+    expect(app.vault.create).not.toHaveBeenCalled();
+    expect(app.vault.createBinary).not.toHaveBeenCalled();
+    expect(app.vault.modify).not.toHaveBeenCalled();
+    expect(app.vault.getAbstractFileByPath('得到大脑/纯文本/历史笔记.md')).toBeTruthy();
+  });
+
+  it('does not enrich an existing append child before skipping it', async () => {
+    const parent = makeNote({
+      note_id: 'existing_parent',
+      title: '历史父笔记',
+      children_count: 1,
+      children_ids: ['existing_child'],
+    });
+    const child = makeNote({
+      note_id: 'existing_child',
+      title: '历史子笔记',
+      note_type: 'img_text',
+      parent_id: parent.note_id,
+      is_child_note: true,
+      attachments: [{ type: 'image', url: 'https://cdn.example.com/child.png', title: '图片' }],
+    });
+    const app = makeMockApp();
+    app.vault._addFile('得到大脑/纯文本/父.md', '父', { uid: parent.note_id });
+    app.vault._addFile('得到大脑/图片笔记/子.md', '子', { uid: child.note_id });
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: unknown) => {
+      const value = String(url);
+      if (value.includes('/resource/note/list')) {
+        return Promise.resolve(mockFetchResponse({ data: { notes: [parent], has_more: false } }) as Response);
+      }
+      if (value.includes(`id=${child.note_id}`)) {
+        return Promise.resolve(mockFetchResponse({ data: { note: child } }) as Response);
+      }
+      return Promise.resolve(mockFetchResponse({}) as Response);
+    });
+
+    const result = await new SyncEngine(app, makeSettings({
+      maxDays: 0,
+      datePathEnabled: true,
+    })).sync();
+
+    expect(result).toEqual(expect.objectContaining({ created: 0, skipped: 2 }));
+    expect(app.vault.createFolder).not.toHaveBeenCalled();
+    expect(app.vault.createBinary).not.toHaveBeenCalled();
+    expect(app.vault.create).not.toHaveBeenCalled();
+    expect(app.vault.modify).not.toHaveBeenCalled();
+  });
+
+  it('fetches only relationship detail for an existing parent and creates a missing child', async () => {
+    const parent = makeNote({
+      note_id: 'relation_parent',
+      title: '关系父笔记',
+      note_type: 'recorder_audio',
+      children_count: 1,
+      children_ids: undefined,
+    });
+    const child = makeNote({
+      note_id: 'missing_child',
+      title: '缺失子笔记',
+      parent_id: parent.note_id,
+      is_child_note: true,
+    });
+    const app = makeMockApp();
+    app.vault._addFile('得到大脑/录音笔记/父.md', '本地父内容', { uid: parent.note_id });
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: unknown) => {
+      const value = String(url);
+      if (value.includes('/resource/note/list')) {
+        return Promise.resolve(mockFetchResponse({ data: { notes: [parent], has_more: false } }) as Response);
+      }
+      if (value.includes(`id=${parent.note_id}`)) {
+        return Promise.resolve(mockFetchResponse({
+          data: {
+            note: {
+              ...parent,
+              children_ids: [child.note_id],
+              attachments: [{ type: 'audio', url: 'https://cdn.example.com/parent.mp3', title: '父录音' }],
+              audio: '父转写',
+            },
+          },
+        }) as Response);
+      }
+      if (value.includes(`id=${child.note_id}`)) {
+        return Promise.resolve(mockFetchResponse({ data: { note: child } }) as Response);
+      }
+      return Promise.resolve(mockFetchResponse({}) as Response);
+    });
+
+    const result = await new SyncEngine(app, makeSettings({
+      maxDays: 0,
+      datePathEnabled: true,
+    })).sync();
+
+    expect(result).toEqual(expect.objectContaining({ created: 1, skipped: 1 }));
+    expect(app.vault.create).toHaveBeenCalledWith(
+      '得到大脑/2026/04/纯文本/关系父笔记__缺失子笔记.md',
+      expect.any(String),
+    );
+    expect(app.vault.createBinary).not.toHaveBeenCalled();
+    expect(app.vault.modify).not.toHaveBeenCalled();
+  });
+});
 
 describe('SyncEngine — filterRecentNotes', () => {
   it('disables maxDays when syncStartDate is set', () => {
@@ -613,6 +788,63 @@ describe('SyncEngine — filterNotesByDateRange', () => {
 });
 
 describe('SyncEngine — subscribed knowledge selected notes', () => {
+  it('skips an existing legacy-path UID before writing dated attachments', async () => {
+    const noteId = 'existing_knowledge_image';
+    const note = makeNote({
+      note_id: noteId,
+      title: '历史知识库图片',
+      note_type: 'img_text',
+      attachments: [{ type: 'image', url: 'https://cdn.example.com/existing.png', title: 'existing.png' }],
+    });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const requestUrl = String(url);
+      if (requestUrl.includes('/resource/knowledge/list')) {
+        return mockFetchResponse({
+          data: { topics: [{ topic_id: 'created_topic', name: '我的知识库' }], has_more: false },
+        }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/subscribe/list')) {
+        return mockFetchResponse({ data: { topics: [], has_more: false } }) as Response;
+      }
+      if (requestUrl.includes('/resource/knowledge/notes')) {
+        return mockFetchResponse({ data: { notes: [note], has_more: false } }) as Response;
+      }
+      if (requestUrl.includes('/resource/note/detail')) {
+        return mockFetchResponse({ data: { note } }) as Response;
+      }
+      if (requestUrl.startsWith('https://cdn.example.com/')) {
+        return { status: 200, arrayBuffer: async () => new ArrayBuffer(32) } as Response;
+      }
+      throw new Error(`Unexpected request: ${requestUrl}`);
+    });
+    const app = makeMockApp();
+    const existingPath = '得到大脑/知识库/我的知识库/历史知识库图片.md';
+    app.vault._addFile(existingPath, 'local', { uid: noteId });
+    const engine = new SyncEngine(app, makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'openapi-token',
+      openApiClientId: 'openapi-client',
+      datePathEnabled: true,
+      datePathFormat: 'YYYY/MM',
+    }));
+
+    const result = await engine.syncSubscribedKnowledge(undefined, {
+      selectedNoteIds: [noteId],
+      createdTopicIds: ['created_topic'],
+      knowledgeBaseNames: { [noteId]: '我的知识库' },
+    });
+
+    expect(result).toEqual(expect.objectContaining({ total: 1, created: 0, skipped: 1, failed: 0 }));
+    const requestedUrls = fetchSpy.mock.calls.map(([url]) => String(url));
+    expect(requestedUrls.some(url => url.includes('/resource/note/detail'))).toBe(false);
+    expect(requestedUrls.some(url => url.startsWith('https://cdn.example.com/'))).toBe(false);
+    expect(app.vault.createFolder).not.toHaveBeenCalled();
+    expect(app.vault.createBinary).not.toHaveBeenCalled();
+    expect(app.vault.create).not.toHaveBeenCalled();
+    expect(app.vault.modify).not.toHaveBeenCalled();
+    expect(app.vault.getAbstractFileByPath(existingPath)).toBeTruthy();
+  });
+
   it.each([
     {
       noteId: 'created_image_note',
@@ -1760,6 +1992,116 @@ describe('SyncEngine — writeNote', () => {
     // @ts-expect-error private helper is tested directly
     const result = await engine['writeNote'](note, index);
     expect(result.status).toBe('created');
+  });
+
+  it('日期路径开启后按 created 时间在分类前创建新笔记', async () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app, makeSettings({
+      datePathEnabled: true,
+      datePathFormat: 'YYYY/MM/DD',
+    }));
+    const note = makeNote({
+      note_id: 'dated_001',
+      title: '日期笔记',
+      created_at: '2024-01-02T03:04:05+08:00',
+      updated_at: '2026-07-03T23:59:00+08:00',
+    });
+
+    // @ts-expect-error private helper is tested directly
+    const result = await engine['writeNote'](note, new Map<string, TFile>());
+
+    expect(result.status).toBe('created');
+    expect(app.vault.create).toHaveBeenCalledWith(
+      '得到大脑/2024/01/02/纯文本/日期笔记.md',
+      expect.any(String),
+    );
+  });
+
+  it('日期路径开启后知识库路径仍保留完整分类层级', async () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app, makeSettings({
+      datePathEnabled: true,
+      datePathFormat: 'YYYY/MM',
+    }));
+    const note = makeNote({ note_id: 'kb_dated', title: '知识库笔记' });
+
+    // @ts-expect-error private helper is tested directly
+    const result = await engine['writeNote'](
+      note,
+      new Map<string, TFile>(),
+      undefined,
+      undefined,
+      undefined,
+      '知识库/我的知识库',
+    );
+
+    expect(result.status).toBe('created');
+    expect(app.vault.create).toHaveBeenCalledWith(
+      '得到大脑/2026/04/知识库/我的知识库/知识库笔记.md',
+      expect.any(String),
+    );
+  });
+
+  it('日期路径开启时相同 UID 仍在原位置跳过且不创建日期目录', async () => {
+    const app = makeMockApp();
+    const existing = { path: '得到大脑/纯文本/历史笔记.md' } as TFile;
+    const engine = new SyncEngine(app, makeSettings({
+      datePathEnabled: true,
+      datePathFormat: 'YYYY/MM',
+    }));
+    const note = makeNote({ note_id: 'existing_dated', title: '历史笔记' });
+
+    // @ts-expect-error private helper is tested directly
+    const result = await engine['writeNote'](
+      note,
+      new Map<string, TFile>([['existing_dated', existing]]),
+    );
+
+    expect(result).toEqual({ status: 'skipped', file: existing });
+    expect(app.vault.createFolder).not.toHaveBeenCalled();
+    expect(app.vault.create).not.toHaveBeenCalled();
+  });
+
+  it('日期路径开启后附件写入新笔记相邻的 asset 目录', async () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app, makeSettings({
+      datePathEnabled: true,
+      datePathFormat: 'YYYY/MM',
+    }));
+    const note = makeNote({ note_id: 'dated_image', title: '日期图片' });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockFetchResponse({})));
+
+    // @ts-expect-error private helper is tested directly
+    const path = await engine['downloadImageAsset'](
+      note,
+      { type: 'image', url: 'https://example.com/image.png', title: '图片' },
+    );
+
+    expect(path).toBe('得到大脑/2026/04/纯文本/asset/日期图片_image.png');
+    expect(app.vault.createBinary).toHaveBeenCalledWith(
+      '得到大脑/2026/04/纯文本/asset/日期图片_image.png',
+      expect.any(ArrayBuffer),
+    );
+  });
+
+  it('日期路径开启且 created 无效时不降级到旧目录', async () => {
+    const app = makeMockApp();
+    const engine = new SyncEngine(app, makeSettings({
+      datePathEnabled: true,
+      datePathFormat: 'YYYY/MM',
+    }));
+    const note = makeNote({
+      note_id: 'invalid_created',
+      title: '无效日期',
+      created_at: 'not-a-date',
+    });
+
+    // @ts-expect-error private helper is tested directly
+    const result = await engine['writeNote'](note, new Map<string, TFile>());
+
+    expect(result.status).toBe('failed');
+    expect(app.vault.createFolder).not.toHaveBeenCalled();
+    expect(app.vault.create).not.toHaveBeenCalled();
   });
 
   it('有相同 uid 的笔记无变化返回 skipped', async () => {

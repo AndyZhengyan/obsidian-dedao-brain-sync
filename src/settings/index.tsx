@@ -13,6 +13,13 @@ import { fetchNotes } from '../api';
 import { t } from '../i18n';
 import { ExternalLink } from './external-link';
 import { getLocalDateInputValue } from '../ui/date-input';
+import { validateDatePathFormat } from '../date-paths';
+import type {
+  DatePathMigrationIssueCode,
+  DatePathMigrationResult,
+  DatePathMigrationTarget,
+} from '../date-path-migration';
+import type { DatePathConfirmationRequest } from '../ui/date-path-confirm-modal';
 
 type SuggestionProvider = (query: string) => string[];
 
@@ -84,6 +91,8 @@ interface SettingsComponentProps {
   lastSyncTime?: number;
   syncHistory?: SyncHistoryEntry[];
   initialKnowledgeBaseCache?: { entries: Array<{ topicId: string; name: string; source?: 'subscribed' | 'created' }>; cacheUpdatedAt?: number };
+  applyDatePathSettings?: (target: DatePathMigrationTarget) => Promise<DatePathMigrationResult>;
+  confirmDatePathMigration?: (request: DatePathConfirmationRequest) => Promise<boolean>;
 }
 
 export function SettingsComponent({
@@ -102,6 +111,8 @@ export function SettingsComponent({
   lastSyncTime,
   syncHistory = [],
   initialKnowledgeBaseCache,
+  applyDatePathSettings,
+  confirmDatePathMigration,
 }: SettingsComponentProps) {
   const [authMode, setAuthMode] = useState<AuthMode>(settings.authMode);
   const initialOpenApiToken = settings.openApiToken || (settings.authMode === 'openapi' ? settings.apiToken : '');
@@ -115,6 +126,13 @@ export function SettingsComponent({
   const [showApiToken, setShowApiToken] = useState(false);
   const [folderName, setFolderName] = useState(settings.folderName);
   const [filenamePrefix, setFilenamePrefix] = useState(settings.filenamePrefix);
+  const [appliedDatePathEnabled, setAppliedDatePathEnabled] = useState(settings.datePathEnabled);
+  const [appliedDatePathFormat, setAppliedDatePathFormat] = useState(settings.datePathFormat || 'YYYY/MM');
+  const [datePathEnabled, setDatePathEnabled] = useState(settings.datePathEnabled);
+  const [datePathFormat, setDatePathFormat] = useState(settings.datePathFormat || 'YYYY/MM');
+  const [datePathMigrationBusy, setDatePathMigrationBusy] = useState(false);
+  const [datePathMigrationResult, setDatePathMigrationResult] = useState<DatePathMigrationResult | null>(null);
+  const [datePathMigrationFailed, setDatePathMigrationFailed] = useState(false);
   const [templateFilePath, setTemplateFilePath] = useState(settings.templateFilePath);
   // Only show actual lastSyncEndTimestamp — do NOT fallback to syncStartDate
   const lastSyncedTo = settings.lastSyncEndTimestamp || '';
@@ -284,6 +302,58 @@ export function SettingsComponent({
     },
     [updateSetting]
   );
+
+  const normalizedDatePathFormat = datePathFormat.trim();
+  const datePathDirty =
+    datePathEnabled !== appliedDatePathEnabled
+    || normalizedDatePathFormat !== appliedDatePathFormat;
+  const datePathFormatValid = validateDatePathFormat(normalizedDatePathFormat);
+
+  const runDatePathMigration = async (mode: 'apply' | 'reconcile') => {
+    if (isSyncing || datePathMigrationBusy || !datePathFormatValid) return;
+    const target = {
+      enabled: datePathEnabled,
+      format: normalizedDatePathFormat,
+    };
+    setDatePathMigrationBusy(true);
+    setDatePathMigrationFailed(false);
+    try {
+      const confirmed = await confirmDatePathMigration?.({
+        mode,
+        current: {
+          enabled: appliedDatePathEnabled,
+          format: appliedDatePathFormat,
+        },
+        target,
+      });
+      if (!confirmed || !applyDatePathSettings) return;
+      const result = await applyDatePathSettings(target);
+      setAppliedDatePathEnabled(target.enabled);
+      setAppliedDatePathFormat(target.format);
+      setDatePathFormat(target.format);
+      setDatePathMigrationResult(result);
+    } catch (error) {
+      console.error('[DedaoBrain] Date-path migration failed', error);
+      setDatePathMigrationFailed(true);
+    } finally {
+      setDatePathMigrationBusy(false);
+    }
+  };
+
+  const datePathIssueLabel = (code: DatePathMigrationIssueCode): string => {
+    switch (code) {
+      case 'invalid-metadata': return t('settings.datePath.issue.invalidMetadata');
+      case 'unsafe-path': return t('settings.datePath.issue.unsafePath');
+      case 'missing-generated-asset': return t('settings.datePath.issue.missingAsset');
+      case 'shared-asset': return t('settings.datePath.issue.sharedAsset');
+      case 'duplicate-uid': return t('settings.datePath.issue.duplicateUid');
+      case 'target-conflict': return t('settings.datePath.issue.targetConflict');
+      case 'inbound-link': return t('settings.datePath.issue.inboundLink');
+      case 'rename-failed': return t('settings.datePath.issue.renameFailed');
+      case 'rollback-failed': return t('settings.datePath.issue.rollbackFailed');
+      default: return t('settings.datePath.issue.unknown');
+    }
+  };
 
   const handleTemplateFilePathChange = useCallback(
     (value: string) => {
@@ -666,7 +736,12 @@ export function SettingsComponent({
       {/* 文件名前缀 */}
       <SettingItem
         name={t('settings.prefix.label')}
-        description={t('settings.prefix.desc')}
+        description={(
+          <>
+            <div>{t('settings.prefix.desc')}</div>
+            <div className="getnote-input-hint">{t('settings.prefix.hint')}</div>
+          </>
+        )}
       >
         <input
           type="text"
@@ -675,6 +750,89 @@ export function SettingsComponent({
           value={filenamePrefix}
           onInput={(e) => handleFilenamePrefixChange((e.target as HTMLInputElement).value)}
         />
+      </SettingItem>
+
+      <SettingItem
+        name={t('settings.datePath.label')}
+        description={t('settings.datePath.desc')}
+      >
+        <div className="getnote-date-path-settings">
+          <div className="getnote-date-path-toggle-row">
+            <Toggle
+              value={datePathEnabled}
+              onChange={setDatePathEnabled}
+              disabled={isSyncing || datePathMigrationBusy}
+            />
+          </div>
+          {datePathEnabled && (
+            <input
+              type="text"
+              className="getnote-input"
+              aria-label={t('settings.datePath.format')}
+              value={datePathFormat}
+              disabled={isSyncing || datePathMigrationBusy}
+              onInput={(event) => setDatePathFormat((event.target as HTMLInputElement).value)}
+            />
+          )}
+          <div className="getnote-input-hint">{t('settings.datePath.hint')}</div>
+          {!datePathFormatValid && (
+            <div className="getnote-date-path-error" role="alert">
+              {t('settings.datePath.invalidFormat')}
+            </div>
+          )}
+          <div className="getnote-date-path-actions">
+            <button
+              type="button"
+              className="mod-cta"
+              disabled={!datePathDirty || !datePathFormatValid || isSyncing || datePathMigrationBusy}
+              onClick={() => void runDatePathMigration('apply')}
+            >
+              {t('settings.datePath.apply')}
+            </button>
+            <button
+              type="button"
+              className="mod-secondary"
+              disabled={datePathDirty || !datePathFormatValid || isSyncing || datePathMigrationBusy}
+              onClick={() => void runDatePathMigration('reconcile')}
+            >
+              {t('settings.datePath.reconcile')}
+            </button>
+          </div>
+          {datePathMigrationResult && (
+            <div className="getnote-date-path-result" data-date-path-result>
+              <div>
+                {t('settings.datePath.result', {
+                  scanned: datePathMigrationResult.scanned,
+                  moved: datePathMigrationResult.moved,
+                  unchanged: datePathMigrationResult.unchanged,
+                  skipped: datePathMigrationResult.skipped,
+                  failed: datePathMigrationResult.failed,
+                })}
+              </div>
+              {datePathMigrationResult.issues.length > 0 && (
+                <ul>
+                  {datePathMigrationResult.issues.slice(0, 20).map((migrationIssue, index) => (
+                    <li key={`${migrationIssue.code}-${migrationIssue.path}-${index}`}>
+                      {migrationIssue.path}: {datePathIssueLabel(migrationIssue.code)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {datePathMigrationResult.issues.length > 20 && (
+                <div>
+                  {t('settings.datePath.issuesRemaining', {
+                    count: datePathMigrationResult.issues.length - 20,
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+          {datePathMigrationFailed && (
+            <div className="getnote-date-path-error" role="alert">
+              {t('settings.datePath.error.generic')}
+            </div>
+          )}
+        </div>
       </SettingItem>
 
       <SettingItem

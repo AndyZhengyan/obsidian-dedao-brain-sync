@@ -15,6 +15,7 @@ import {
   getFilePath,
   getKnowledgeBaseDir,
 } from './sync-paths';
+import { buildCanonicalCategoryDir } from './date-paths';
 
 const AUDIO_NOTE_TYPES = new Set([
   'recorder_audio',
@@ -189,9 +190,15 @@ export class SyncEngine {
     this.onProgress = onProgress;
   }
 
-  private async ensureCategoryDir(categoryDir: string): Promise<string> {
-    const basePath = this.settings.folderName;
-    const fullPath = `${basePath}/${categoryDir}`;
+  private async ensureNoteCategoryDir(note: GetNoteNote, categoryDir: string): Promise<string> {
+    const fullPath = this.settings.datePathEnabled
+      ? buildCanonicalCategoryDir(
+        this.settings.folderName,
+        categoryDir,
+        note.created_at,
+        this.settings.datePathFormat,
+      )
+      : `${this.settings.folderName}/${categoryDir}`;
     const targetDir = this.app.vault.getAbstractFileByPath(fullPath);
     if (!targetDir) {
       await this.app.vault.createFolder(fullPath);
@@ -249,7 +256,7 @@ export class SyncEngine {
         return null;
       }
 
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureNoteCategoryDir(note, categoryOverride ?? getCategoryDir(note.note_type));
       const assetDir = `${categoryDir}/asset`;
       if (!this.app.vault.getAbstractFileByPath(assetDir)) {
         await this.app.vault.createFolder(assetDir);
@@ -288,7 +295,7 @@ export class SyncEngine {
         return null;
       }
 
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureNoteCategoryDir(note, categoryOverride ?? getCategoryDir(note.note_type));
       const assetDir = `${categoryDir}/asset`;
       if (!this.app.vault.getAbstractFileByPath(assetDir)) {
         await this.app.vault.createFolder(assetDir);
@@ -327,7 +334,7 @@ export class SyncEngine {
       }
 
       const kind = classifyAttachmentUrl(attachment.url);
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureNoteCategoryDir(note, categoryOverride ?? getCategoryDir(note.note_type));
       const assetDir = `${categoryDir}/asset`;
       if (!this.app.vault.getAbstractFileByPath(assetDir)) {
         await this.app.vault.createFolder(assetDir);
@@ -356,7 +363,7 @@ export class SyncEngine {
     if (!note.audio) return null;
 
     try {
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureNoteCategoryDir(note, categoryOverride ?? getCategoryDir(note.note_type));
       const assetDir = `${categoryDir}/asset`;
       if (!this.app.vault.getAbstractFileByPath(assetDir)) {
         await this.app.vault.createFolder(assetDir);
@@ -382,7 +389,7 @@ export class SyncEngine {
     if (!originalContent) return null;
 
     try {
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
+      const categoryDir = await this.ensureNoteCategoryDir(note, categoryOverride ?? getCategoryDir(note.note_type));
       const assetDir = `${categoryDir}/asset`;
       if (!this.app.vault.getAbstractFileByPath(assetDir)) {
         await this.app.vault.createFolder(assetDir);
@@ -493,25 +500,25 @@ export class SyncEngine {
     categoryOverride?: string
   ): Promise<WriteNoteResult> {
     try {
-      const categoryDir = await this.ensureCategoryDir(categoryOverride ?? getCategoryDir(note.note_type));
-      let targetPath = `${categoryDir}/${this.getFileName(note, parentBaseName)}.md`;
       const existingByUid = uidIndex.get(note.note_id);
+      if (existingByUid) {
+        return { status: 'skipped', file: existingByUid };
+      }
+
+      const categoryDir = await this.ensureNoteCategoryDir(note, categoryOverride ?? getCategoryDir(note.note_type));
+      let targetPath = `${categoryDir}/${this.getFileName(note, parentBaseName)}.md`;
       const existingAtTarget = this.app.vault.getAbstractFileByPath(targetPath);
 
       if (existingAtTarget instanceof TFile) {
-        if (!existingByUid || existingAtTarget.path !== existingByUid.path) {
-          const cached = this.app.metadataCache.getFileCache(existingAtTarget);
-          const targetUid = cached?.frontmatter?.['uid'] as string | undefined;
-          if (targetUid && targetUid !== note.note_id) {
-            const baseName = this.getFileName(note);
-            targetPath = this.resolveConflict(categoryDir, baseName);
-          }
+        const cached = this.app.metadataCache.getFileCache(existingAtTarget);
+        const targetUid = cached?.frontmatter?.['uid'] as string | undefined;
+        if (targetUid && targetUid !== note.note_id) {
+          const baseName = this.getFileName(note);
+          targetPath = this.resolveConflict(categoryDir, baseName);
         }
       }
 
-      if (existingByUid) {
-        return { status: 'skipped', file: existingByUid };
-      } else if (existingAtTarget instanceof TFile) {
+      if (existingAtTarget instanceof TFile) {
         const content = renderNote(note, note.assetFileName, parentFileName, childFileNames);
         // File exists at target path but wasn't in uidIndex - check content
         const contentChanged = this.isContentChanged(existingAtTarget, note) || hasImageAssetPaths(note) || Boolean(note.linkOriginalFileName);
@@ -609,6 +616,27 @@ export class SyncEngine {
 
   private needsLinkOriginalDetail(note: GetNoteNote): boolean {
     return LINK_NOTE_TYPES.has(note.note_type) && !note.linkOriginal;
+  }
+
+  private async enrichNoteRelationships(note: GetNoteNote, signal: AbortSignal): Promise<GetNoteNote> {
+    if (!this.needsRelationDetail(note)) return note;
+    const credentials = getAuthCredentials(this.settings);
+    if (credentials.authMode === 'web') return note;
+
+    try {
+      const detailId = (note as { prime_id?: string }).prime_id ?? note.note_id;
+      const detail = await fetchNoteDetail(
+        detailId,
+        credentials.token,
+        credentials.clientId,
+        signal,
+        credentials.authMode,
+      );
+      return this.mergeNoteDetail(note, detail);
+    } catch (err) {
+      console.warn(`[DedaoBrain] Failed to enrich note relationships ${note.note_id}:`, err);
+      return note;
+    }
   }
 
   private async enrichAudioNote(
@@ -725,7 +753,8 @@ export class SyncEngine {
     parent: GetNoteNote,
     signal: AbortSignal,
     result: SyncResult,
-    categoryOverride?: string
+    categoryOverride?: string,
+    uidIndex?: Map<string, TFile>,
   ): Promise<GetNoteNote[]> {
     const credentials = getAuthCredentials(this.settings);
     if (credentials.authMode === 'web' && (parent.children_count ?? 0) > 0) {
@@ -744,7 +773,9 @@ export class SyncEngine {
             parent_id: child.parent_id || parent.note_id,
             is_child_note: child.is_child_note ?? true,
           };
-          appendNotes.push(await this.enrichAudioNote(baseChild, signal, categoryOverride));
+          appendNotes.push(uidIndex?.has(baseChild.note_id)
+            ? baseChild
+            : await this.enrichAudioNote(baseChild, signal, categoryOverride));
         }
         return appendNotes;
       } catch (err) {
@@ -799,11 +830,10 @@ export class SyncEngine {
           children_ids: childDetail.children_ids,
           is_child_note: childDetail.is_child_note ?? true,
         };
-        const child = await this.enrichAudioNote(
-          this.mergeNoteDetail(baseChild, childDetail),
-          signal,
-          categoryOverride
-        );
+        const mergedChild = this.mergeNoteDetail(baseChild, childDetail);
+        const child = uidIndex?.has(mergedChild.note_id)
+          ? mergedChild
+          : await this.enrichAudioNote(mergedChild, signal, categoryOverride);
         appendNotes.push(child);
       } catch (err) {
         result.failed++;
@@ -942,9 +972,37 @@ export class SyncEngine {
           if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
           if (seenNoteIds.has(note.note_id)) continue;
           const parentMatchesTags = this.filterNotesByTags([note]).length > 0;
-          const noteToWrite = await this.enrichAudioNote(note, controller.signal);
+          const preCheck = this.preCheckNote(note, uidIndex);
+          if (preCheck.exists && parentMatchesTags) {
+            seenNoteIds.add(note.note_id);
+            result.total++;
+            for (const tag of note.tags ?? []) {
+              if (tag?.name) observedTagNames.add(tag.name);
+            }
+            result.skipped++;
+            this.recordItem(result, note, { status: 'skipped', file: preCheck.file });
+          }
 
-          const appendNotes = this.filterNotesByTags(await this.fetchAppendNotes(noteToWrite, controller.signal, result));
+          const relationshipNote = preCheck.exists
+            ? await this.enrichNoteRelationships(note, controller.signal)
+            : note;
+          const mayHaveAppendNotes = (relationshipNote.children_count ?? 0) > 0
+            || Boolean(relationshipNote.children_ids?.length);
+          if (preCheck.exists && !mayHaveAppendNotes) {
+            const updatedTime = parseNoteUpdatedTime(note);
+            if (updatedTime !== null && (lastNoteTimestampTime === null || updatedTime > lastNoteTimestampTime)) {
+              lastNoteTimestampTime = updatedTime;
+              result.lastNoteTimestamp = note.updated_at;
+            }
+            continue;
+          }
+
+          const noteToWrite = preCheck.exists
+            ? relationshipNote
+            : await this.enrichAudioNote(note, controller.signal);
+          const appendNotes = this.filterNotesByTags(
+            await this.fetchAppendNotes(noteToWrite, controller.signal, result, undefined, uidIndex),
+          );
           if (!parentMatchesTags && appendNotes.length === 0) continue;
           const parentBaseName = this.buildBaseName(noteToWrite);
           const parentFileName = this.getFileName(noteToWrite);
@@ -952,7 +1010,7 @@ export class SyncEngine {
           const childFileNames = appendNotes.map(child => this.getFileName(child, parentBaseName));
 
           // 写入父文档（含子文档链接）
-          if (parentMatchesTags) {
+          if (parentMatchesTags && !preCheck.exists) {
             seenNoteIds.add(note.note_id);
             result.total++;
             for (const tag of note.tags ?? []) {
@@ -1102,7 +1160,7 @@ export class SyncEngine {
       const noteToWrite = preCheck.exists
         ? note
         : await this.enrichAudioNote(note, signal, categoryOverride);
-      const appendNotes = await this.fetchAppendNotes(noteToWrite, signal, result, categoryOverride);
+      const appendNotes = await this.fetchAppendNotes(noteToWrite, signal, result, categoryOverride, uidIndex);
       if (result.failed > failuresBeforeNote) {
         result.checkpointBlocked = true;
         this.onProgress?.({
@@ -1280,7 +1338,9 @@ export class SyncEngine {
         }
         const noteToWrite = await this.enrichAudioNote(typeFiltered[0], controller.signal);
 
-        const appendNotes = this.filterNotesByTags(await this.fetchAppendNotes(noteToWrite, controller.signal, result));
+        const appendNotes = this.filterNotesByTags(
+          await this.fetchAppendNotes(noteToWrite, controller.signal, result, undefined, uidIndex),
+        );
         if (!parentMatchesTags && appendNotes.length === 0) continue;
         const parentBaseName = this.buildBaseName(noteToWrite);
         const parentFileName = this.getFileName(noteToWrite);
@@ -1395,9 +1455,26 @@ export class SyncEngine {
         const parentMatchesTags = this.filterNotesByTags([note], syncOptions.syncTags).length > 0;
         const knowledgeBaseName = syncOptions.knowledgeBaseNames?.[note.note_id] ?? syncOptions.knowledgeBaseName;
         const categoryOverride = knowledgeBaseName ? this.getKnowledgeBaseDir(knowledgeBaseName) : undefined;
+        const preCheck = this.preCheckNote(note, uidIndex, categoryOverride);
+        if (preCheck.exists) {
+          seenNoteIds.add(note.note_id);
+          result.total++;
+          result.skipped++;
+          this.recordItem(result, note, { status: 'skipped', file: preCheck.file });
+          this.onProgress?.({
+            processed: result.total,
+            total: filteredNotes.length,
+            created: result.created,
+            updated: result.updated,
+            skipped: result.skipped,
+            failed: result.failed,
+            percent: filteredNotes.length ? Math.round((result.total / filteredNotes.length) * 100) : 100,
+          });
+          continue;
+        }
         const noteToWrite = await this.enrichAudioNote(note, controller.signal, categoryOverride);
         const appendNotes = this.filterNotesByTags(
-          await this.fetchAppendNotes(noteToWrite, controller.signal, result, categoryOverride),
+          await this.fetchAppendNotes(noteToWrite, controller.signal, result, categoryOverride, uidIndex),
           syncOptions.syncTags
         );
         if (!parentMatchesTags && appendNotes.length === 0) continue;

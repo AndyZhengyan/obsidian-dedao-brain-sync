@@ -71,6 +71,10 @@ describe('DEFAULT_SETTINGS', () => {
     expect(DEFAULT_SETTINGS.syncHistory).toEqual([]);
   });
 
+  it('旧设置缺少附件迁移记录时默认使用空记录', () => {
+    expect(DEFAULT_SETTINGS.datePathAssetMoveEvidence).toEqual({});
+  });
+
   it('scheduledSync.enabledNoteTypes 默认不设置表示定时同步全部类型', () => {
     expect(DEFAULT_SETTINGS.scheduledSync.enabledNoteTypes).toBeUndefined();
   });
