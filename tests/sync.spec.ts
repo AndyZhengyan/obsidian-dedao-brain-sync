@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { App, Modal, TFile } from 'obsidian';
+import { App, Modal, TFile, issuedNotices, resetIssuedNotices } from 'obsidian';
 import GetNoteSyncPlugin from '../src/main';
 import { ReverseSyncEngine } from '../src/reverse-sync';
 import { GetNoteSettingsTab } from '../src/settings-tab';
@@ -30,6 +30,7 @@ describe('SyncCancelledError', () => {
 
 describe('GetNoteSyncPlugin runSync cleanup', () => {
   afterEach(() => {
+    resetIssuedNotices();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -111,6 +112,41 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     expect(updateRuntimeState).toHaveBeenCalledTimes(2);
   });
 
+  it('records a completed manual sync with failed items as partial', async () => {
+    vi.spyOn(SyncEngine.prototype, 'sync').mockResolvedValue({
+      created: 1,
+      updated: 0,
+      skipped: 0,
+      failed: 1,
+      total: 2,
+      items: [],
+    });
+    const plugin = makePlugin();
+
+    await plugin['runSync']('full', { maxDays: 0, syncStartDate: '' });
+
+    expect(plugin.syncHistory.at(-1)?.status).toBe('partial');
+  });
+
+  it('shows a manual partial result as an error notice for 15 seconds', async () => {
+    vi.spyOn(SyncEngine.prototype, 'sync').mockResolvedValue({
+      created: 1,
+      updated: 0,
+      skipped: 0,
+      failed: 1,
+      total: 2,
+      items: [],
+    });
+    const plugin = makePlugin();
+
+    await plugin['runSync']('full', { maxDays: 0, syncStartDate: '' });
+
+    expect(issuedNotices.at(-1)).toEqual({
+      message: '❌ [得到大脑] 同步部分完成：新增 1 · 更新 0 · 跳过 0 · 失败 1',
+      timeout: 15000,
+    });
+  });
+
   it('manual sync failure clears syncing state', async () => {
     vi.spyOn(SyncEngine.prototype, 'sync').mockRejectedValue(new Error('boom'));
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -174,6 +210,41 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
         selectedCount: 1,
         selectedIds: ['blogger_old_post'],
       },
+    });
+  });
+
+  it('records a completed knowledge-base sync with failed items as partial', async () => {
+    vi.spyOn(SyncEngine.prototype, 'syncSubscribedKnowledge').mockResolvedValue({
+      created: 1,
+      updated: 0,
+      skipped: 0,
+      failed: 1,
+      total: 2,
+      items: [],
+    });
+    const plugin = makePlugin();
+
+    await plugin['runSubscribedKnowledgeSync']({ selectedNoteIds: ['note-1'] });
+
+    expect(plugin.syncHistory.at(-1)?.status).toBe('partial');
+  });
+
+  it('shows a knowledge-base partial result as an error notice for 15 seconds', async () => {
+    vi.spyOn(SyncEngine.prototype, 'syncSubscribedKnowledge').mockResolvedValue({
+      created: 1,
+      updated: 0,
+      skipped: 0,
+      failed: 1,
+      total: 2,
+      items: [],
+    });
+    const plugin = makePlugin();
+
+    await plugin['runSubscribedKnowledgeSync']({ selectedNoteIds: ['note-1'] });
+
+    expect(issuedNotices.at(-1)).toEqual({
+      message: '❌ [得到大脑] 同步部分完成：新增 1 · 更新 0 · 跳过 0 · 失败 1',
+      timeout: 15000,
     });
   });
 
@@ -364,6 +435,7 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
 
     // checkpoint advances because created > 0, even though failed = 1
     expect(plugin.settings.lastSyncEndTimestamp).toBe('2026-05-10T12:00:00+08:00');
+    expect(plugin.syncHistory.at(-1)?.status).toBe('partial');
   });
 
   it('keeps the existing auto-sync checkpoint when a retryable knowledge note failed', async () => {
@@ -386,6 +458,41 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     });
 
     expect(plugin.settings.lastSyncEndTimestamp).toBe('2026-05-09T10:00:00+08:00');
+    expect(plugin.syncHistory.at(-1)?.status).toBe('partial');
+  });
+
+  it('warns once when scheduled sync reaches three consecutive partial results', async () => {
+    const sync = vi.spyOn(SyncEngine.prototype, 'sync').mockResolvedValue({
+      created: 1,
+      updated: 0,
+      skipped: 0,
+      failed: 1,
+      total: 2,
+      items: [],
+    });
+    const plugin = makePlugin();
+
+    await plugin['runSync']('auto');
+    await plugin['runSync']('auto');
+    expect(issuedNotices.filter(({ message }) => message.includes('连续 3 次自动同步存在失败'))).toHaveLength(0);
+
+    await plugin['runSync']('auto');
+    expect(issuedNotices.filter(({ message }) => message.includes('连续 3 次自动同步存在失败'))).toHaveLength(1);
+
+    await plugin['runSync']('auto');
+    expect(issuedNotices.filter(({ message }) => message.includes('连续 3 次自动同步存在失败'))).toHaveLength(1);
+    expect(plugin['autoSyncFailCount']).toBe(4);
+
+    sync.mockResolvedValueOnce({
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+      total: 0,
+      items: [],
+    });
+    await plugin['runSync']('auto');
+    expect(plugin['autoSyncFailCount']).toBe(0);
   });
 
   it('selected sync records the note type filter from the picker scope', async () => {
@@ -508,7 +615,7 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     });
   });
 
-  it('records failed upload history when selected local upload fails', async () => {
+  it('records partial upload history when a completed local upload has failed items', async () => {
     vi.spyOn(ReverseSyncEngine.prototype, 'syncFiles').mockResolvedValue({
       created: 0,
       skipped: 0,
@@ -531,7 +638,7 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
       expect(plugin.syncHistory.at(-1)).toEqual(expect.objectContaining({
         type: 'upload',
         mode: 'local-upload',
-        status: 'failed',
+        status: 'partial',
         error: '失败 1 篇',
         result: expect.objectContaining({
           items: [
@@ -544,7 +651,45 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
         }),
       }));
     });
+    expect(issuedNotices.at(-1)).toEqual({
+      message: '❌ [得到大脑] 同步部分完成：新增 0 · 更新 0 · 跳过 0 · 失败 1',
+      timeout: 15000,
+    });
     expect(plugin.isSyncing).toBe(false);
+  });
+});
+
+describe('GetNoteSyncPlugin history normalization', () => {
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('preserves a persisted partial status during plugin load', async () => {
+    vi.useFakeTimers();
+    const plugin = new GetNoteSyncPlugin(new App());
+    Object.assign(plugin.app.vault.adapter, {
+      exists: vi.fn().mockResolvedValue(false),
+      mkdir: vi.fn(),
+      copy: vi.fn(),
+    });
+    vi.spyOn(plugin, 'loadData').mockResolvedValue({
+      syncHistory: [{
+        id: 'partial-1',
+        startedAt: 1000,
+        finishedAt: 2000,
+        durationMs: 1000,
+        timestamp: 2000,
+        result: { created: 1, updated: 0, skipped: 0, failed: 1, total: 2, items: [] },
+        type: 'full',
+        status: 'partial',
+      }],
+    });
+
+    await plugin.onload();
+
+    expect(plugin.syncHistory[0]?.status).toBe('partial');
   });
 });
 

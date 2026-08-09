@@ -100,7 +100,9 @@ function normalizeSyncHistory(value: unknown): SyncHistoryEntry[] {
             : type === 'auto'
               ? 'auto'
               : 'time';
-      const status: SyncHistoryEntry['status'] = entry.status === 'failed' || entry.status === 'cancelled' ? entry.status : 'success';
+      const status: SyncHistoryEntry['status'] = entry.status === 'partial' || entry.status === 'failed' || entry.status === 'cancelled'
+        ? entry.status
+        : 'success';
       const maybeScope = entry.scope;
       return {
         id: typeof entry.id === 'string' ? entry.id : `${timestamp}-${index}`,
@@ -431,7 +433,7 @@ export default class GetNoteSyncPlugin extends Plugin {
 
     // lastSyncEndTimestamp only belongs to auto sync
     // Ordinary partial failures may still advance; retryable knowledge-base failures keep the old checkpoint.
-    if (type === 'auto' && status === 'success' && !result.checkpointBlocked) {
+    if (type === 'auto' && (status === 'success' || status === 'partial') && !result.checkpointBlocked) {
       this.settings.lastSyncEndTimestamp = result.lastNoteTimestamp ?? new Date(finishedAt).toISOString();
     }
 
@@ -479,7 +481,8 @@ export default class GetNoteSyncPlugin extends Plugin {
         ? await engine.syncNoteIds(selectedIds)
         : await engine.sync();
 
-      await this.recordSyncHistory(result, type, startedAt, resolvedScope);
+      const status: SyncHistoryEntry['status'] = result.failed > 0 ? 'partial' : 'success';
+      await this.recordSyncHistory(result, type, startedAt, resolvedScope, status);
 
         // Clear exhausted quota state on successful sync
         if (credentials.authMode === 'openapi' && this.settings.lastQuotaState?.exhausted) {
@@ -489,12 +492,33 @@ export default class GetNoteSyncPlugin extends Plugin {
         }
 
       if (type === 'auto') {
-        this.autoSyncFailCount = 0;
-        if (result.created > 0 || result.updated > 0 || result.skipped > 0) {
+        if (status === 'partial') {
+          this.autoSyncFailCount++;
+          if (this.autoSyncFailCount === 3) {
+            showError(t('notice.autoSyncPartialThreshold'));
+          }
+        } else {
+          this.autoSyncFailCount = 0;
+        }
+        if (status === 'success' && (result.created > 0 || result.updated > 0 || result.skipped > 0)) {
           showNotice(t('notice.autoSynced', { created: result.created, updated: result.updated, skipped: result.skipped }));
         }
       } else {
-        showSuccess(t('notice.syncComplete', { created: result.created, updated: result.updated, skipped: result.skipped, failed: result.failed > 0 ? ` · ${t('modal.failed', { failed: result.failed })}` : '' }), 8000);
+        if (status === 'partial') {
+          showError(t('notice.syncPartial', {
+            created: result.created,
+            updated: result.updated,
+            skipped: result.skipped,
+            failed: result.failed,
+          }), 15000);
+        } else {
+          showSuccess(t('notice.syncComplete', {
+            created: result.created,
+            updated: result.updated,
+            skipped: result.skipped,
+            failed: '',
+          }), 8000);
+        }
         this.syncProgress = { message: '', count: '', percent: 0 };
         this.isSyncing = false;
         this.currentSyncEngine = null;
@@ -707,13 +731,22 @@ export default class GetNoteSyncPlugin extends Plugin {
         syncStartDate: '',
         selectedCount: syncOptions?.selectedNoteIds?.length,
         selectedIds: syncOptions?.selectedNoteIds,
-      }, 'success', undefined, 'knowledge-base');
-      showSuccess(t('notice.syncComplete', {
-        created: result.created,
-        updated: result.updated,
-        skipped: result.skipped,
-        failed: result.failed > 0 ? ` · ${t('modal.failed', { failed: result.failed })}` : '',
-      }), 8000);
+      }, result.failed > 0 ? 'partial' : 'success', undefined, 'knowledge-base');
+      if (result.failed > 0) {
+        showError(t('notice.syncPartial', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: result.failed,
+        }), 15000);
+      } else {
+        showSuccess(t('notice.syncComplete', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: '',
+        }), 8000);
+      }
     } catch (err) {
       if (err instanceof SyncCancelledError) {
         await this.recordSyncHistory(emptySyncResult(), 'full', startedAt, {
@@ -779,11 +812,20 @@ export default class GetNoteSyncPlugin extends Plugin {
       this.currentSyncEngine = engine;
       const result = files ? await engine.syncFiles(files) : await engine.syncBack();
       await this.recordUploadHistory(result, startedAt, files?.map(file => file.path));
-      showSuccess(t('reverseSync.complete', {
-        created: result.created,
-        skipped: result.skipped,
-        failed: result.failed,
-      }), 8000);
+      if (result.failed > 0) {
+        showError(t('notice.syncPartial', {
+          created: result.created,
+          updated: 0,
+          skipped: result.skipped,
+          failed: result.failed,
+        }), 15000);
+      } else {
+        showSuccess(t('reverseSync.complete', {
+          created: result.created,
+          skipped: result.skipped,
+          failed: result.failed,
+        }), 8000);
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         await this.recordUploadHistory({
@@ -847,7 +889,7 @@ export default class GetNoteSyncPlugin extends Plugin {
         selectedCount: selectedIds?.length,
         selectedIds,
       },
-      status ?? (error || result.failed > 0 ? 'failed' : 'success'),
+      status ?? (error ? 'failed' : result.failed > 0 ? 'partial' : 'success'),
       error ?? (result.failed > 0 ? t('reverseSync.failedCount', { failed: result.failed }) : undefined)
     );
   }

@@ -110,6 +110,7 @@ class SyncHistoryModal extends Modal {
       };
 
       const formatStatus = (status: SyncHistoryEntry['status']): string => {
+        if (status === 'partial') return t('syncHistory.status.partial');
         if (status === 'failed') return t('syncHistory.status.failed');
         if (status === 'cancelled') return t('syncHistory.status.cancelled');
         return t('syncHistory.status.success');
@@ -194,12 +195,24 @@ class SyncHistoryModal extends Modal {
       const paginationEl = contentEl.createDiv('getnote-history-pagination');
 
       const renderEntry = (entry: SyncHistoryEntry, index: number): void => {
-        const entryEl = listEl.createEl('details', { cls: 'getnote-history-entry' });
-        entryEl.open = index === 0;
+        const entryEl = listEl.createEl('details', { cls: `getnote-history-entry is-${entry.status}` });
+        const isWarningStatus = entry.status === 'partial' || entry.status === 'failed';
+        entryEl.open = index === 0 || isWarningStatus;
         const headerEl = entryEl
           .createEl('summary', { cls: 'getnote-history-header' });
         const countsText = formatItemCounts(entry);
-        headerEl.setText(`${formatTime(entry.finishedAt)} · ${formatHistoryMode(entry)} · ${formatStatus(entry.status)}`);
+        if (isWarningStatus) {
+          const warningIcon = headerEl.createSpan({ cls: 'getnote-history-warning-icon', text: '⚠' });
+          warningIcon.setAttribute('aria-hidden', 'true');
+        }
+        headerEl.createSpan({
+          cls: 'getnote-history-header-context',
+          text: `${formatTime(entry.finishedAt)} · ${formatHistoryMode(entry)} · `,
+        });
+        headerEl.createSpan({
+          cls: `getnote-history-status-text is-${entry.status}`,
+          text: formatStatus(entry.status),
+        });
         headerEl.setAttribute('data-counts', countsText);
 
         const detailEl = entryEl.createDiv('getnote-history-entry-body');
