@@ -29,7 +29,7 @@ jobs:
         if: env.OPENAI_API_KEY == ''
         run: echo "OPENAI_API_KEY is not configured; skipping Codex review."
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: env.OPENAI_API_KEY != ''
         with:
           ref: refs/pull/${{ github.event.pull_request.number }}/merge
@@ -47,7 +47,7 @@ jobs:
       - name: Run Codex review
         if: env.OPENAI_API_KEY != ''
         id: run_codex
-        uses: openai/codex-action@v1
+        uses: openai/codex-action@52fe01ec70a42f454c9d2ebd47598f9fd6893d56 # v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           sandbox: read-only
@@ -83,7 +83,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Report Codex feedback
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           CODEX_FINAL_MESSAGE: ${{ needs.codex.outputs.final_message }}
         with:
