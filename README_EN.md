@@ -14,14 +14,15 @@ For the project background and origin story, see this Chinese article: [Project 
 
 * * *
 
-## 🎉 1.4.2 — Latest Update
+## 🎉 1.4.3 — Latest Update
 
-- **🧩 Consistent picker timestamps**: Note and knowledge-base pickers now share one relative-time formatter, while missing timestamps remain blank.
-- **🎨 Better theme compatibility**: More specific checkbox and sidebar-button selectors preserve the current layout without unnecessarily overriding Obsidian themes.
-- **🧹 Code and style cleanup**: Static-analysis findings in the parser, settings, and search view are resolved while preserving existing behavior and reducing unnecessary style overrides.
-- **⚙️ Runtime and toolchain refresh**: Compatible Preact, TypeScript, and ESLint updates land alongside broader sync-boundary test coverage.
+- **🗂️ Organize notes by creation date**: Synced notes can be filed into created-date paths, with a controlled migration flow for existing folders.
+- **⚠️ Partial failures stay visible**: Runs with per-note failures now show a partial status, counts, and details; legacy success logs containing failures are corrected on load.
+- **🧭 Faster access to sync settings**: The sidebar sync panel now links to the full settings page, with fixes for popout-window selectors and runtime settings state.
+- **📚 More complete knowledge-base sync**: Subscribed-blogger content is included, and the tag cache refreshes correctly after credentials change.
+- **🛡️ Safer file writes**: Sync writes, download paths, and file-type checks are hardened to protect the local vault from malformed paths and invalid objects.
 
-1.4.1 improvements remain live (cleaner note card previews, knowledge-base refreshes, tag normalization, and settings timer cleanup).
+Core improvements from 1.4.2 and earlier remain live, including consistent timestamps, theme compatibility, broader sync-boundary coverage, and refreshed build tooling.
 
 The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 
