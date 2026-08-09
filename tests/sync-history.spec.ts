@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { App, Modal } from 'obsidian';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -53,6 +53,10 @@ afterAll(() => {
     if (descriptor) Object.defineProperty(HTMLElement.prototype, name, descriptor);
     else delete (HTMLElement.prototype as unknown as Record<string, unknown>)[name];
   }
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 function makeResult(overrides: Partial<SyncResult> = {}): SyncResult {
@@ -245,6 +249,36 @@ describe('sync history partial status rendering', () => {
     expect(partial.querySelector('.getnote-history-warning-icon')?.textContent).toBe('⚠');
     expect(partial.querySelector('.getnote-history-status-text')?.textContent).toBe('部分失败');
     expect(failed.querySelector('.getnote-history-warning-icon')?.textContent).toBe('⚠');
+  });
+
+  it('keeps the first successful entry on page two collapsed', () => {
+    initI18n('zh-CN');
+    const openedModals: Modal[] = [];
+    vi.spyOn(Modal.prototype, 'open').mockImplementation(function (this: Modal) {
+      openedModals.push(this);
+      (this as Modal & { onOpen(): void }).onOpen();
+    });
+    const history = Array.from({ length: 6 }, (_, index) => makeEntry({
+      id: `success-${index}`,
+      status: 'success',
+      finishedAt: 1000 + index,
+    }));
+
+    openSyncHistoryModal(new App(), history);
+    const contentEl = openedModals[0].contentEl;
+    contentEl.querySelector<HTMLButtonElement>('.getnote-history-page-button:last-child')!.click();
+
+    const pageTwoEntry = contentEl.querySelector<HTMLDetailsElement>('.getnote-history-entry.is-success')!;
+    expect(pageTwoEntry).toBeTruthy();
+    expect(pageTwoEntry.open).toBe(false);
+  });
+
+  it('defines green, yellow, and red status colors', () => {
+    const css = readFileSync(resolve(process.cwd(), 'styles.css'), 'utf8');
+
+    expect(css).toMatch(/\.getnote-history-status-text\.is-success\s*\{[^}]*color:\s*var\(--text-success\)/);
+    expect(css).toMatch(/\.getnote-history-status-text\.is-partial\s*\{[^}]*color:\s*var\(--text-warning\)/);
+    expect(css).toMatch(/\.getnote-history-status-text\.is-failed\s*\{[^}]*color:\s*var\(--text-error\)/);
   });
 });
 

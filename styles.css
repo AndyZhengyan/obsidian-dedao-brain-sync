@@ -1756,6 +1756,10 @@ button.getnote-settings-link:focus-visible {
   font-weight: 700;
 }
 
+.getnote-history-status-text.is-success {
+  color: var(--text-success);
+}
+
 .getnote-history-status-text.is-partial {
   color: var(--text-warning);
 }

@@ -194,10 +194,10 @@ class SyncHistoryModal extends Modal {
       const totalPages = Math.max(1, Math.ceil(sortedHistory.length / this.pageSize));
       const paginationEl = contentEl.createDiv('getnote-history-pagination');
 
-      const renderEntry = (entry: SyncHistoryEntry, index: number): void => {
+      const renderEntry = (entry: SyncHistoryEntry, isNewest: boolean): void => {
         const entryEl = listEl.createEl('details', { cls: `getnote-history-entry is-${entry.status}` });
         const isWarningStatus = entry.status === 'partial' || entry.status === 'failed';
-        entryEl.open = index === 0 || isWarningStatus;
+        entryEl.open = isNewest || isWarningStatus;
         const headerEl = entryEl
           .createEl('summary', { cls: 'getnote-history-header' });
         const countsText = formatItemCounts(entry);
@@ -285,7 +285,7 @@ class SyncHistoryModal extends Modal {
         const start = (this.currentPage - 1) * this.pageSize;
         sortedHistory
           .slice(start, start + this.pageSize)
-          .forEach((entry, index) => renderEntry(entry, index));
+          .forEach((entry, index) => renderEntry(entry, start + index === 0));
         renderPagination();
       };
 
