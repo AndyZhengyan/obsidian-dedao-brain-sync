@@ -1499,11 +1499,6 @@ body .getnote-tag-select-option input[type="checkbox"] {
   gap: 8px;
 }
 
-.getnote-settings-link-row {
-  display: flex;
-  justify-content: flex-start;
-}
-
 button.getnote-settings-link {
   height: auto;
   padding: 2px 0;

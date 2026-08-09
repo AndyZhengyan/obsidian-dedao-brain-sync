@@ -33,7 +33,7 @@ describe('ManualSyncModal filters', () => {
     expect(container.querySelector('.getnote-settings-link')).toBeNull();
   });
 
-  it('renders the full-settings link on its own row before the footer (#237)', async () => {
+  it('replaces the footer scope label with the full-settings link (#237)', async () => {
     initI18n('en');
     const onConfirm = vi.fn();
     const onOpenSettings = vi.fn();
@@ -50,17 +50,13 @@ describe('ManualSyncModal filters', () => {
     );
 
     const settingsLink = container.querySelector('.getnote-settings-link') as HTMLButtonElement;
-    const settingsRow = settingsLink.parentElement;
-    const body = container.querySelector('.getnote-manual-sync-body')!;
     const footer = container.querySelector('.getnote-picker-footer')!;
     expect(settingsLink).toBeTruthy();
     expect(settingsLink.classList.contains('mod-secondary')).toBe(false);
     expect(settingsLink.textContent).toBe('Open full settings');
-    expect(settingsRow?.classList.contains('getnote-settings-link-row')).toBe(true);
-    expect(settingsRow?.parentElement).toBe(body);
-    expect(settingsRow?.previousElementSibling?.classList.contains('getnote-input-hint')).toBe(true);
-    expect(body.nextElementSibling).toBe(footer);
-    expect(footer.contains(settingsLink)).toBe(false);
+    expect(settingsLink.parentElement).toBe(footer);
+    expect(container.querySelector('.getnote-settings-link-row')).toBeNull();
+    expect(container.querySelector('.getnote-picker-count')).toBeNull();
 
     await act(() => {
       settingsLink.dispatchEvent(new MouseEvent('click', { bubbles: true }));

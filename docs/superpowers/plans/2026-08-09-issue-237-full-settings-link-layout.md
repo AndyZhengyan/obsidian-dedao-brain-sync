@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Move the full-settings shortcut out of the Cancel / Sync action group and into its own utility row below the manual-sync hint.
+**Goal:** Put the full-settings shortcut in the footer's left-side utility position, replacing the transient-scope label.
 
 **Architecture:** Keep the existing `onOpenSettings` callback and runtime settings navigation unchanged. Adjust only the `ManualSyncModal` DOM hierarchy, localized label, and focused CSS so navigation and sync actions are visually separate.
 
@@ -28,24 +28,20 @@
 
 **Interfaces:**
 - Consumes: existing optional `onOpenSettings?: () => void` prop.
-- Produces: `.getnote-settings-link-row` as the final row in `.getnote-manual-sync-body`, immediately after the hint and before the footer, containing `.getnote-settings-link` with localized text and the existing click callback.
+- Produces: `.getnote-settings-link` as the direct left-side child of `.getnote-picker-footer`, with localized text and the existing click callback; removes the old `.getnote-settings-link-row`. When the optional callback is absent, the existing `.getnote-picker-count` remains as a compatibility fallback.
 
 - [ ] **Step 1: Write the failing layout test**
 
-Update the existing #237 component test to assert the navigation link is outside the footer action group, contains no arrow, and sits in its own row immediately before the footer:
+Update the existing #237 component test to assert the navigation link contains no arrow, replaces the old scope label, and is a direct child of the footer:
 
 ```ts
 const settingsLink = container.querySelector('.getnote-settings-link') as HTMLButtonElement;
-const settingsRow = settingsLink.parentElement;
-const body = container.querySelector('.getnote-manual-sync-body')!;
 const footer = container.querySelector('.getnote-picker-footer')!;
 
 expect(settingsLink.textContent).toBe('Open full settings');
-expect(settingsRow?.classList.contains('getnote-settings-link-row')).toBe(true);
-expect(settingsRow?.parentElement).toBe(body);
-expect(settingsRow?.previousElementSibling?.classList.contains('getnote-input-hint')).toBe(true);
-expect(body.nextElementSibling).toBe(footer);
-expect(footer.contains(settingsLink)).toBe(false);
+expect(settingsLink.parentElement).toBe(footer);
+expect(container.querySelector('.getnote-settings-link-row')).toBeNull();
+expect(container.querySelector('.getnote-picker-count')).toBeNull();
 ```
 
 - [ ] **Step 2: Run the focused test and verify the current inline layout fails**
@@ -56,27 +52,27 @@ Run:
 npm test -- tests/manual-sync-modal.spec.ts
 ```
 
-Expected: FAIL because the current link is inside `.getnote-picker-btns` and its label includes `→`.
+Expected: FAIL because the current link is in a dedicated body row and the footer still renders `.getnote-picker-count`.
 
-- [ ] **Step 3: Implement the dedicated utility row**
+- [ ] **Step 3: Implement the footer utility link**
 
-In `src/ui/manual-sync-modal.tsx`, move the existing conditional button into the end of `.getnote-manual-sync-body`, immediately after the hint:
+In `src/ui/manual-sync-modal.tsx`, remove the dedicated body row and replace the footer scope label with the conditional settings button:
 
 ```tsx
-{onOpenSettings && (
-  <div className="getnote-settings-link-row">
-    <button
-      className="getnote-settings-link"
-      type="button"
-      onClick={onOpenSettings}
-    >
-      {t('manualSync.openSettings')}
-    </button>
-  </div>
+{onOpenSettings ? (
+  <button
+    className="getnote-settings-link"
+    type="button"
+    onClick={onOpenSettings}
+  >
+    {t('manualSync.openSettings')}
+  </button>
+) : (
+  <span className="getnote-picker-count">{t('manualSync.once')}</span>
 )}
 ```
 
-Keep `.getnote-picker-btns` limited to Cancel and Sync. Change the localized values to `打开完整设置` and `Open full settings`. Add focused CSS for left alignment, spacing above the footer, link hover, and `:focus-visible` without changing the modal width or button styling.
+Keep `.getnote-picker-btns` limited to Cancel and Sync. Preserve the localized values `打开完整设置` and `Open full settings`. Remove the obsolete row CSS and preserve the count fallback CSS, link hover, and `:focus-visible` behavior without changing the modal width or button styling.
 
 - [ ] **Step 4: Run focused and full verification**
 

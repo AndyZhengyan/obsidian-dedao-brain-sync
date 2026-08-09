@@ -6,11 +6,12 @@ Make the full-settings shortcut in the manual sync modal read as secondary navig
 
 ## Selected Layout
 
-Use a dedicated utility row between the explanatory hint and the footer divider:
+Use the footer's existing left-side utility position:
 
 - Render `打开完整设置` / `Open full settings` as a text link without a directional arrow.
-- Align the link to the left edge of the modal content.
-- Keep the footer limited to `仅本次同步` on the left and Cancel / Sync on the right.
+- Replace the `仅本次同步` / `This sync only` label with the link.
+- Keep Cancel / Sync grouped on the right.
+- Do not render a second settings-link row inside the modal body.
 - Preserve the existing modal width, form layout, colors, button hierarchy, and spacing rhythm.
 
 ## Interaction
@@ -27,9 +28,10 @@ Only change the placement, copy, and presentation of the existing #237 settings 
 
 ## Acceptance
 
-- The full-settings link appears on its own row below the explanatory hint.
+- The full-settings link appears at the left side of the footer in place of the transient-scope label.
 - The link contains no arrow that can visually point at Cancel.
-- The footer contains only the transient-scope label and the Cancel / Sync buttons.
+- The footer contains the full-settings link and the Cancel / Sync buttons.
+- No duplicate settings-link row appears above the footer.
 - Clicking the link closes the modal, opens the plugin settings tab, and does not trigger sync.
 - Chinese and English labels remain localized.
 - Focused tests and the repository's required checks pass.

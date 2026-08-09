@@ -118,20 +118,19 @@ export function ManualSyncModal({ initialOptions, tagOptions = [], onConfirm, on
           </div>
         </div>
         <div className="getnote-input-hint">{t('manualSync.hint')}</div>
-        {onOpenSettings && (
-          <div className="getnote-settings-link-row">
-            <button
-              className="getnote-settings-link"
-              type="button"
-              onClick={onOpenSettings}
-            >
-              {t('manualSync.openSettings')}
-            </button>
-          </div>
-        )}
       </div>
       <div className="getnote-picker-footer">
-        <span className="getnote-picker-count">{t('manualSync.once')}</span>
+        {onOpenSettings ? (
+          <button
+            className="getnote-settings-link"
+            type="button"
+            onClick={onOpenSettings}
+          >
+            {t('manualSync.openSettings')}
+          </button>
+        ) : (
+          <span className="getnote-picker-count">{t('manualSync.once')}</span>
+        )}
         <div className="getnote-picker-btns">
           <button className="mod-cancel" onClick={onCancel}>{t('picker.cancel')}</button>
           <button className="mod-cta" onClick={handleConfirm}>{t('picker.confirm')}</button>
