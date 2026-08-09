@@ -102,7 +102,9 @@ function normalizeSyncHistory(value: unknown): SyncHistoryEntry[] {
               : 'time';
       const status: SyncHistoryEntry['status'] = entry.status === 'partial' || entry.status === 'failed' || entry.status === 'cancelled'
         ? entry.status
-        : 'success';
+        : (result.failed ?? 0) > 0
+          ? 'partial'
+          : 'success';
       const maybeScope = entry.scope;
       return {
         id: typeof entry.id === 'string' ? entry.id : `${timestamp}-${index}`,

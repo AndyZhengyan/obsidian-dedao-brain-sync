@@ -691,6 +691,58 @@ describe('GetNoteSyncPlugin history normalization', () => {
 
     expect(plugin.syncHistory[0]?.status).toBe('partial');
   });
+
+  it('migrates a persisted success with failed items to partial during plugin load', async () => {
+    vi.useFakeTimers();
+    const plugin = new GetNoteSyncPlugin(new App());
+    Object.assign(plugin.app.vault.adapter, {
+      exists: vi.fn().mockResolvedValue(false),
+      mkdir: vi.fn(),
+      copy: vi.fn(),
+    });
+    vi.spyOn(plugin, 'loadData').mockResolvedValue({
+      syncHistory: [{
+        id: 'legacy-success-with-failures',
+        startedAt: 1000,
+        finishedAt: 2000,
+        durationMs: 1000,
+        timestamp: 2000,
+        result: { created: 1, updated: 0, skipped: 0, failed: 1, total: 2, items: [] },
+        type: 'full',
+        status: 'success',
+      }],
+    });
+
+    await plugin.onload();
+
+    expect(plugin.syncHistory[0]?.status).toBe('partial');
+  });
+
+  it('preserves a persisted failed status even when failed items are present', async () => {
+    vi.useFakeTimers();
+    const plugin = new GetNoteSyncPlugin(new App());
+    Object.assign(plugin.app.vault.adapter, {
+      exists: vi.fn().mockResolvedValue(false),
+      mkdir: vi.fn(),
+      copy: vi.fn(),
+    });
+    vi.spyOn(plugin, 'loadData').mockResolvedValue({
+      syncHistory: [{
+        id: 'legacy-failed',
+        startedAt: 1000,
+        finishedAt: 2000,
+        durationMs: 1000,
+        timestamp: 2000,
+        result: { created: 0, updated: 0, skipped: 0, failed: 1, total: 1, items: [] },
+        type: 'full',
+        status: 'failed',
+      }],
+    });
+
+    await plugin.onload();
+
+    expect(plugin.syncHistory[0]?.status).toBe('failed');
+  });
 });
 
 describe('GetNoteSyncPlugin ribbon actions', () => {
