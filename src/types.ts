@@ -261,7 +261,7 @@ export interface SyncHistoryEntry {
   type: 'full' | 'selective' | 'auto' | 'upload';
   mode?: 'time' | 'selected' | 'knowledge-base' | 'auto' | 'local-upload';
   scope?: SyncHistoryScope;
-  status: 'success' | 'failed' | 'cancelled';
+  status: 'success' | 'partial' | 'failed' | 'cancelled';
   error?: string;
 }
 

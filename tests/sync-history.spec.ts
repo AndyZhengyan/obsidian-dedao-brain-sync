@@ -1,9 +1,63 @@
-import { describe, it, expect } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { App, Modal } from 'obsidian';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { SyncHistoryEntry, SyncResult } from '../src/types';
 import { initI18n } from '../src/i18n';
-import { formatHistoryFilter, formatHistoryMode, formatHistoryNoteType, formatHistoryScope, shouldRenderHistoryEntryError } from '../src/ui/sync-history-modal';
+import { formatHistoryFilter, formatHistoryMode, formatHistoryNoteType, formatHistoryScope, openSyncHistoryModal, shouldRenderHistoryEntryError } from '../src/ui/sync-history-modal';
+
+const domExtensionNames = ['empty', 'createEl', 'createDiv', 'createSpan', 'setText'] as const;
+const originalDomExtensions = new Map<string, PropertyDescriptor | undefined>();
+
+beforeAll(() => {
+  for (const name of domExtensionNames) {
+    originalDomExtensions.set(name, Object.getOwnPropertyDescriptor(HTMLElement.prototype, name));
+  }
+  Object.defineProperties(HTMLElement.prototype, {
+    empty: {
+      configurable: true,
+      value(this: HTMLElement) { this.replaceChildren(); },
+    },
+    createEl: {
+      configurable: true,
+      value(this: HTMLElement, tag: string, options: { cls?: string; text?: string } = {}) {
+        const child = document.createElement(tag);
+        if (options.cls) child.className = options.cls;
+        if (options.text !== undefined) child.textContent = options.text;
+        this.appendChild(child);
+        return child;
+      },
+    },
+    createDiv: {
+      configurable: true,
+      value(this: HTMLElement, cls?: string) {
+        return this.createEl('div', { cls });
+      },
+    },
+    createSpan: {
+      configurable: true,
+      value(this: HTMLElement, options: { cls?: string; text?: string } = {}) {
+        return this.createEl('span', options);
+      },
+    },
+    setText: {
+      configurable: true,
+      value(this: HTMLElement, text: string) { this.textContent = text; },
+    },
+  });
+});
+
+afterAll(() => {
+  for (const name of domExtensionNames) {
+    const descriptor = originalDomExtensions.get(name);
+    if (descriptor) Object.defineProperty(HTMLElement.prototype, name, descriptor);
+    else delete (HTMLElement.prototype as unknown as Record<string, unknown>)[name];
+  }
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function makeResult(overrides: Partial<SyncResult> = {}): SyncResult {
   return { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, ...overrides };
@@ -164,6 +218,67 @@ describe('sync history entry error display', () => {
     });
 
     expect(shouldRenderHistoryEntryError(entry)).toBe(true);
+  });
+});
+
+describe('sync history partial status rendering', () => {
+  it('expands partial and failed entries with warning icon and status text', () => {
+    initI18n('zh-CN');
+    const openedModals: Modal[] = [];
+    vi.spyOn(Modal.prototype, 'open').mockImplementation(function (this: Modal) {
+      openedModals.push(this);
+      (this as Modal & { onOpen(): void }).onOpen();
+    });
+
+    openSyncHistoryModal(new App(), [
+      makeEntry({ id: 'success-old', status: 'success', finishedAt: 1000 }),
+      makeEntry({ id: 'partial', status: 'partial', finishedAt: 2000, result: makeResult({ failed: 1 }) }),
+      makeEntry({ id: 'failed', status: 'failed', finishedAt: 3000, result: makeResult({ failed: 1 }) }),
+    ]);
+
+    const contentEl = openedModals[0].contentEl;
+    const partial = contentEl.querySelector<HTMLDetailsElement>('.getnote-history-entry.is-partial')!;
+    const failed = contentEl.querySelector<HTMLDetailsElement>('.getnote-history-entry.is-failed')!;
+    const oldSuccess = contentEl.querySelector<HTMLDetailsElement>('.getnote-history-entry.is-success')!;
+
+    expect(partial).toBeTruthy();
+    expect(failed).toBeTruthy();
+    expect(partial.open).toBe(true);
+    expect(failed.open).toBe(true);
+    expect(oldSuccess.open).toBe(false);
+    expect(partial.querySelector('.getnote-history-warning-icon')?.textContent).toBe('⚠');
+    expect(partial.querySelector('.getnote-history-status-text')?.textContent).toBe('部分失败');
+    expect(failed.querySelector('.getnote-history-warning-icon')?.textContent).toBe('⚠');
+  });
+
+  it('keeps the first successful entry on page two collapsed', () => {
+    initI18n('zh-CN');
+    const openedModals: Modal[] = [];
+    vi.spyOn(Modal.prototype, 'open').mockImplementation(function (this: Modal) {
+      openedModals.push(this);
+      (this as Modal & { onOpen(): void }).onOpen();
+    });
+    const history = Array.from({ length: 6 }, (_, index) => makeEntry({
+      id: `success-${index}`,
+      status: 'success',
+      finishedAt: 1000 + index,
+    }));
+
+    openSyncHistoryModal(new App(), history);
+    const contentEl = openedModals[0].contentEl;
+    contentEl.querySelector<HTMLButtonElement>('.getnote-history-page-button:last-child')!.click();
+
+    const pageTwoEntry = contentEl.querySelector<HTMLDetailsElement>('.getnote-history-entry.is-success')!;
+    expect(pageTwoEntry).toBeTruthy();
+    expect(pageTwoEntry.open).toBe(false);
+  });
+
+  it('defines green, yellow, and red status colors', () => {
+    const css = readFileSync(resolve(process.cwd(), 'styles.css'), 'utf8');
+
+    expect(css).toMatch(/\.getnote-history-status-text\.is-success\s*\{[^}]*color:\s*var\(--text-success\)/);
+    expect(css).toMatch(/\.getnote-history-status-text\.is-partial\s*\{[^}]*color:\s*var\(--text-warning\)/);
+    expect(css).toMatch(/\.getnote-history-status-text\.is-failed\s*\{[^}]*color:\s*var\(--text-error\)/);
   });
 });
 

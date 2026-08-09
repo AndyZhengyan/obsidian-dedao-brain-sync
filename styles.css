@@ -1735,11 +1735,37 @@ button.getnote-settings-link:focus-visible {
   overflow: hidden;
 }
 
+.getnote-history-entry.is-partial {
+  border-color: var(--text-warning);
+}
+
+.getnote-history-entry.is-failed {
+  border-color: var(--text-error);
+}
+
 .getnote-history-header {
   font-weight: 500;
   padding: 12px 14px;
   cursor: pointer;
   background: var(--background-secondary);
+}
+
+.getnote-history-warning-icon {
+  margin-right: 4px;
+  color: var(--text-error);
+  font-weight: 700;
+}
+
+.getnote-history-status-text.is-success {
+  color: var(--text-success);
+}
+
+.getnote-history-status-text.is-partial {
+  color: var(--text-warning);
+}
+
+.getnote-history-status-text.is-failed {
+  color: var(--text-error);
 }
 
 .getnote-history-entry-body {
