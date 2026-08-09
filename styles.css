@@ -1499,9 +1499,14 @@ body .getnote-tag-select-option input[type="checkbox"] {
   gap: 8px;
 }
 
+.getnote-settings-link-row {
+  display: flex;
+  justify-content: flex-start;
+}
+
 button.getnote-settings-link {
   height: auto;
-  padding: 4px 2px;
+  padding: 2px 0;
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -1514,6 +1519,11 @@ button.getnote-settings-link:hover {
   background: transparent;
   color: var(--text-accent-hover);
   text-decoration: underline;
+}
+
+button.getnote-settings-link:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
 }
 
 /* === Loading Modal === */
