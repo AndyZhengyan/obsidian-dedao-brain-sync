@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { App, TFile } from 'obsidian';
+import { TFile, type App } from 'obsidian';
 import { SyncEngine } from '../src/sync';
 import type { Settings, GetNoteNote } from '../src/types';
 import { DEFAULT_SETTINGS } from '../src/types';
@@ -121,6 +121,81 @@ function mockFetchResponse(body: unknown) {
   };
 }
 
+describe('SyncEngine — vault write ownership', () => {
+  it.each([
+    { label: 'has no uid', frontmatter: {} },
+    { label: 'belongs to another uid', frontmatter: { uid: 'another-note' } },
+  ])('preserves a colliding Markdown file that $label', async ({ frontmatter }) => {
+    const app = makeMockApp();
+    const targetPath = '得到大脑/纯文本/冲突标题.md';
+    const originalGet = app.vault.getAbstractFileByPath.bind(app.vault);
+    const existingFile = new TFile(targetPath);
+    app.vault._addFile(targetPath, '用户原始内容', frontmatter);
+    vi.spyOn(app.vault, 'getAbstractFileByPath').mockImplementation((path: string) => (
+      path === targetPath ? existingFile : originalGet(path)
+    ));
+
+    const engine = new SyncEngine(app, makeSettings());
+    // @ts-expect-error private helper is tested through its real vault boundary
+    await engine['writeNote'](
+      makeNote({ note_id: 'remote-note', title: '冲突标题', content: '远端内容' }),
+      new Map<string, TFile>(),
+    );
+
+    expect((originalGet(targetPath) as { content: string }).content).toBe('用户原始内容');
+    expect(app.vault.create).toHaveBeenCalledWith(
+      '得到大脑/纯文本/冲突标题-2.md',
+      expect.stringContaining('远端内容'),
+    );
+  });
+
+  it('does not overwrite an unrelated transcript artifact', async () => {
+    const app = makeMockApp();
+    const targetPath = '得到大脑/录音笔记/asset/录音_collision_audio_transcript.md';
+    const originalGet = app.vault.getAbstractFileByPath.bind(app.vault);
+    const existingFile = new TFile(targetPath);
+    app.vault._addFile(targetPath, '用户自己的附件笔记');
+    vi.spyOn(app.vault, 'getAbstractFileByPath').mockImplementation((path: string) => (
+      path === targetPath ? existingFile : originalGet(path)
+    ));
+
+    const engine = new SyncEngine(app, makeSettings());
+    // @ts-expect-error private helper is tested through its real vault boundary
+    await engine['writeAudioTranscriptAsset'](makeNote({
+      note_id: 'collision_audio',
+      title: '录音',
+      note_type: 'recorder_audio',
+      audio: '远端转写',
+    }));
+
+    expect((originalGet(targetPath) as { content: string }).content).toBe('用户自己的附件笔记');
+    expect(app.vault.modify).not.toHaveBeenCalled();
+  });
+
+  it('does not overwrite an unrelated link-original artifact', async () => {
+    const app = makeMockApp();
+    const targetPath = '得到大脑/链接笔记/asset/链接_collision_link_original.md';
+    const originalGet = app.vault.getAbstractFileByPath.bind(app.vault);
+    const existingFile = new TFile(targetPath);
+    app.vault._addFile(targetPath, '用户自己的链接笔记');
+    vi.spyOn(app.vault, 'getAbstractFileByPath').mockImplementation((path: string) => (
+      path === targetPath ? existingFile : originalGet(path)
+    ));
+
+    const engine = new SyncEngine(app, makeSettings());
+    // @ts-expect-error private helper is tested through its real vault boundary
+    await engine['writeLinkOriginalAsset'](makeNote({
+      note_id: 'collision_link',
+      title: '链接',
+      note_type: 'link',
+      linkOriginal: { content: '远端原文' },
+    }));
+
+    expect((originalGet(targetPath) as { content: string }).content).toBe('用户自己的链接笔记');
+    expect(app.vault.modify).not.toHaveBeenCalled();
+  });
+});
+
 describe('SyncEngine — existing UID precheck before enrichment', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -130,14 +205,14 @@ describe('SyncEngine — existing UID precheck before enrichment', () => {
     {
       label: 'image',
       noteType: 'img_text',
-      detail: { attachments: [{ type: 'image', url: 'https://cdn.example.com/image.png', title: '图片' }] },
+      detail: { attachments: [{ type: 'image', url: 'https://mediacdn.umiwi.com/image.png', title: '图片' }] },
     },
     {
       label: 'audio',
       noteType: 'recorder_audio',
       detail: {
         audio: '转写',
-        attachments: [{ type: 'audio', url: 'https://cdn.example.com/audio.mp3', title: '录音' }],
+        attachments: [{ type: 'audio', url: 'https://mediacdn.umiwi.com/audio.mp3', title: '录音' }],
       },
     },
     {
@@ -150,7 +225,7 @@ describe('SyncEngine — existing UID precheck before enrichment', () => {
     {
       label: 'generic attachment',
       noteType: 'plain_text',
-      detail: { attachments: [{ type: 'document', url: 'https://cdn.example.com/file.pdf', title: '附件' }] },
+      detail: { attachments: [{ type: 'document', url: 'https://mediacdn.umiwi.com/file.pdf', title: '附件' }] },
     },
   ])('does not create orphan date-path assets for an existing $label note', async ({ noteType, detail }) => {
     const note = makeNote({
@@ -212,7 +287,7 @@ describe('SyncEngine — existing UID precheck before enrichment', () => {
       note_type: 'img_text',
       parent_id: parent.note_id,
       is_child_note: true,
-      attachments: [{ type: 'image', url: 'https://cdn.example.com/child.png', title: '图片' }],
+      attachments: [{ type: 'image', url: 'https://mediacdn.umiwi.com/child.png', title: '图片' }],
     });
     const app = makeMockApp();
     app.vault._addFile('得到大脑/纯文本/父.md', '父', { uid: parent.note_id });
@@ -267,7 +342,7 @@ describe('SyncEngine — existing UID precheck before enrichment', () => {
             note: {
               ...parent,
               children_ids: [child.note_id],
-              attachments: [{ type: 'audio', url: 'https://cdn.example.com/parent.mp3', title: '父录音' }],
+              attachments: [{ type: 'audio', url: 'https://mediacdn.umiwi.com/parent.mp3', title: '父录音' }],
               audio: '父转写',
             },
           },
@@ -794,7 +869,7 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
       note_id: noteId,
       title: '历史知识库图片',
       note_type: 'img_text',
-      attachments: [{ type: 'image', url: 'https://cdn.example.com/existing.png', title: 'existing.png' }],
+      attachments: [{ type: 'image', url: 'https://mediacdn.umiwi.com/existing.png', title: 'existing.png' }],
     });
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       const requestUrl = String(url);
@@ -812,7 +887,7 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
       if (requestUrl.includes('/resource/note/detail')) {
         return mockFetchResponse({ data: { note } }) as Response;
       }
-      if (requestUrl.startsWith('https://cdn.example.com/')) {
+      if (requestUrl.startsWith('https://mediacdn.umiwi.com/')) {
         return { status: 200, arrayBuffer: async () => new ArrayBuffer(32) } as Response;
       }
       throw new Error(`Unexpected request: ${requestUrl}`);
@@ -837,7 +912,7 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
     expect(result).toEqual(expect.objectContaining({ total: 1, created: 0, skipped: 1, failed: 0 }));
     const requestedUrls = fetchSpy.mock.calls.map(([url]) => String(url));
     expect(requestedUrls.some(url => url.includes('/resource/note/detail'))).toBe(false);
-    expect(requestedUrls.some(url => url.startsWith('https://cdn.example.com/'))).toBe(false);
+    expect(requestedUrls.some(url => url.startsWith('https://mediacdn.umiwi.com/'))).toBe(false);
     expect(app.vault.createFolder).not.toHaveBeenCalled();
     expect(app.vault.createBinary).not.toHaveBeenCalled();
     expect(app.vault.create).not.toHaveBeenCalled();
@@ -850,7 +925,7 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
       noteId: 'created_image_note',
       title: '知识库图片笔记',
       noteType: 'img_text',
-      attachment: { type: 'image', url: 'https://cdn.example.com/knowledge.png', title: 'knowledge.png' },
+      attachment: { type: 'image', url: 'https://mediacdn.umiwi.com/knowledge.png', title: 'knowledge.png' },
       detailExtra: {},
       expectedAssets: ['得到大脑/知识库/我的知识库/asset/知识库图片笔记_image.png'],
       expectedMarkdown: 'asset/知识库图片笔记_image.png',
@@ -859,7 +934,7 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
       noteId: 'created_audio_note',
       title: '知识库音频笔记',
       noteType: 'recorder_audio',
-      attachment: { type: 'audio', url: 'https://cdn.example.com/knowledge.mp3', title: '' },
+      attachment: { type: 'audio', url: 'https://mediacdn.umiwi.com/knowledge.mp3', title: '' },
       detailExtra: { audio: '知识库音频转写' },
       expectedAssets: [
         '得到大脑/知识库/我的知识库/asset/知识库音频笔记_created_audio_note_audio.mp3',
@@ -918,7 +993,7 @@ describe('SyncEngine — subscribed knowledge selected notes', () => {
           },
         }) as Response;
       }
-      if (requestUrl.startsWith('https://cdn.example.com/')) {
+      if (requestUrl.startsWith('https://mediacdn.umiwi.com/')) {
         return {
           status: 200,
           arrayBuffer: async () => new ArrayBuffer(32),
@@ -2074,7 +2149,7 @@ describe('SyncEngine — writeNote', () => {
     // @ts-expect-error private helper is tested directly
     const path = await engine['downloadImageAsset'](
       note,
-      { type: 'image', url: 'https://example.com/image.png', title: '图片' },
+      { type: 'image', url: 'https://mediacdn.umiwi.com/image.png', title: '图片' },
     );
 
     expect(path).toBe('得到大脑/2026/04/纯文本/asset/日期图片_image.png');
@@ -2308,13 +2383,13 @@ describe('SyncEngine — audio note sync', () => {
           data: {
             note: {
               ...audioNote,
-              attachments: [{ type: 'audio', url: 'https://cdn.example.com/test.mp3', title: '', duration: 883920 }],
+              attachments: [{ type: 'audio', url: 'https://mediacdn.umiwi.com/test.mp3', title: '', duration: 883920 }],
               audio: '🟢 说话人1 [00:00:01]\n转写内容',
             },
           },
         }) as Response);
       }
-      if (new URL(urlStr).hostname === 'cdn.example.com') {
+      if (new URL(urlStr).hostname === 'mediacdn.umiwi.com') {
         return Promise.resolve({
           ok: true,
           status: 200,
@@ -2348,7 +2423,10 @@ describe('SyncEngine — audio note sync', () => {
       expect(createdFiles.some(f => f.includes('/asset/'))).toBe(true);
       expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_1908723638246504120_audio.mp3');
       expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_1908723638246504120_transcript.md');
-      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalledWith('https://cdn.example.com/test.mp3');
+      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalledWith(
+        'https://mediacdn.umiwi.com/test.mp3',
+        { redirect: 'error' },
+      );
       // 验证 md 文件被创建
       expect(createdFiles.some(f => f.endsWith('.md'))).toBe(true);
       expect(result.items).toEqual([
@@ -2534,9 +2612,59 @@ describe('SyncEngine — audio note sync', () => {
     fetchSpy.mockRestore();
   });
 
+  it('拒绝下载指向 HTTPS 回环地址的音频附件', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const mockApp = makeMockApp();
+    const engine = new SyncEngine(mockApp, makeSettings());
+
+    try {
+      // @ts-expect-error accessing private method for security regression coverage
+      const result = await engine['downloadAudioAsset'](audioNote, {
+        type: 'audio',
+        url: 'https://127.0.0.1/private.mp3',
+        title: '',
+        duration: 1000,
+      });
+
+      expect(result).toBeNull();
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(mockApp.vault.createBinary).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it('disables redirects when downloading from the trusted attachment CDN', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      status: 200,
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+    } as Response);
+    const mockApp = makeMockApp();
+    const engine = new SyncEngine(mockApp, makeSettings());
+
+    try {
+      // @ts-expect-error accessing private method for security regression coverage
+      await engine['downloadAudioAsset'](audioNote, {
+        type: 'audio',
+        url: 'https://mediacdn.umiwi.com/voice.mp3',
+        title: '',
+        duration: 1000,
+      });
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://mediacdn.umiwi.com/voice.mp3',
+        { redirect: 'error' },
+      );
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it('音频下载失败日志不泄露附件 URL', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const signedUrl = 'https://cdn.example.com/test.mp3?Expires=1778291785&Signature=secret';
+    const signedUrl = 'https://mediacdn.umiwi.com/test.mp3?Expires=1778291785&Signature=secret';
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: false,
@@ -2583,13 +2711,13 @@ describe('SyncEngine — audio note sync', () => {
           data: {
             note: {
               ...audioNote,
-              attachments: [{ type: 'audio', url: 'https://cdn.example.com/test.mp3', title: '', duration: 883920 }],
+              attachments: [{ type: 'audio', url: 'https://mediacdn.umiwi.com/test.mp3', title: '', duration: 883920 }],
               audio: { original: '🟢 说话人1 [00:00:01]\n转写内容' },
             },
           },
         }) as Response);
       }
-      if (new URL(urlStr).hostname === 'cdn.example.com') {
+      if (new URL(urlStr).hostname === 'mediacdn.umiwi.com') {
         return Promise.resolve({
           ok: true,
           status: 200,
@@ -2934,7 +3062,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         note_type: 'img_text',
         updated_at: '2026-04-28T10:00:00+08:00',
         attachments: [
-          { type: 'image', url: 'https://cdn.example.com/path/photo.jpg', title: 'photo' },
+          { type: 'image', url: 'https://mediacdn.umiwi.com/path/photo.jpg', title: 'photo' },
         ],
       });
       const index = new Map([['image_ready', { path: '得到大脑/图片笔记/test.md' }]]);
@@ -2951,8 +3079,8 @@ describe('SyncEngine — selective sync cancellation', () => {
         title: '测试笔记',
         note_type: 'img_text',
         attachments: [
-          { type: 'image', url: 'https://cdn.example.com/photo-a.jpg', title: 'photo-a' },
-          { type: 'image', url: 'https://cdn.example.com/photo-b.jpg', title: 'photo-b' },
+          { type: 'image', url: 'https://mediacdn.umiwi.com/photo-a.jpg', title: 'photo-a' },
+          { type: 'image', url: 'https://mediacdn.umiwi.com/photo-b.jpg', title: 'photo-b' },
         ],
       });
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({}) as Response);
@@ -2979,8 +3107,8 @@ describe('SyncEngine — selective sync cancellation', () => {
         note_id: 'duplicate_generic_names',
         title: '测试笔记',
         attachments: [
-          { type: 'file', url: 'https://cdn-a.example.com/attachment.pdf', title: 'first' },
-          { type: 'file', url: 'https://cdn-b.example.com/attachment.pdf', title: 'second' },
+          { type: 'file', url: 'https://cdn-a.umiwi.com/attachment.pdf', title: 'first' },
+          { type: 'file', url: 'https://cdn-b.umiwi.com/attachment.pdf', title: 'second' },
         ],
       });
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({}) as Response);
@@ -3007,7 +3135,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         note_id: 'local_fast_path',
         title: '测试笔记',
         attachments: [
-          { type: 'file', url: 'https://cdn.example.com/handout.pdf', title: 'handout' },
+          { type: 'file', url: 'https://mediacdn.umiwi.com/handout.pdf', title: 'handout' },
         ],
       });
       vi.spyOn(globalThis, 'fetch').mockResolvedValue({
@@ -3035,7 +3163,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         note_id: 'fragment_generic_name',
         title: '测试笔记',
         attachments: [
-          { type: 'file', url: 'https://cdn.example.com/clip.mp4#t=10', title: 'clip' },
+          { type: 'file', url: 'https://mediacdn.umiwi.com/clip.mp4#t=10', title: 'clip' },
         ],
       });
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({}) as Response);
@@ -3062,7 +3190,7 @@ describe('SyncEngine — selective sync cancellation', () => {
         note_id: 'web_generic_attachment',
         title: '测试笔记',
         attachments: [
-          { type: 'file', url: 'https://cdn.example.com/handout.pdf', title: 'handout' },
+          { type: 'file', url: 'https://mediacdn.umiwi.com/handout.pdf', title: 'handout' },
         ],
       });
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({}) as Response);
@@ -3094,7 +3222,7 @@ describe('SyncEngine — selective sync cancellation', () => {
           ...note,
           audio: { duration: 10 },
           attachments: [
-            { type: 'audio', url: 'https://cdn.example.com/audio.mp3', title: 'audio' },
+            { type: 'audio', url: 'https://mediacdn.umiwi.com/audio.mp3', title: 'audio' },
           ],
         },
       }) as Response);
@@ -4517,7 +4645,7 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
         created_at: '2026-04-27T22:26:17+08:00',
         updated_at: '2026-04-28T10:00:00+08:00',
         attachments: [
-          { type: 'audio', url: 'https://cdn.example.com/cross-kb.mp3', title: '', duration: 1000 },
+          { type: 'audio', url: 'https://mediacdn.umiwi.com/cross-kb.mp3', title: '', duration: 1000 },
         ],
         audio: '🟢 说话人1 [00:00:01]\n转写',
       },
@@ -4563,7 +4691,7 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
                 content: '跨库正文',
                 note_type: 'recorder_audio',
                 attachments: [
-                  { type: 'audio', url: 'https://cdn.example.com/cross-kb.mp3', title: '', duration: 1000 },
+                  { type: 'audio', url: 'https://mediacdn.umiwi.com/cross-kb.mp3', title: '', duration: 1000 },
                 ],
                 audio: '🟢 说话人1 [00:00:01]\n转写',
                 created_at: '2026-04-27T22:26:17+08:00',
@@ -4572,7 +4700,7 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
             },
           }) as Response;
         }
-        if (new URL(urlStr).hostname === 'cdn.example.com') {
+        if (new URL(urlStr).hostname === 'mediacdn.umiwi.com') {
           return {
             ok: true,
             status: 200,
@@ -4606,7 +4734,7 @@ describe('SyncEngine — 跨库同步 (syncKnowledgeBases)', () => {
       expect(statuses).toEqual(['skipped']);
       // 不应尝试下载音频
       const fetchCalls = vi.mocked(globalThis.fetch).mock.calls.map(call => String(call[0]));
-      expect(fetchCalls.some(url => url === 'https://cdn.example.com/cross-kb.mp3')).toBe(false);
+      expect(fetchCalls.some(url => url === 'https://mediacdn.umiwi.com/cross-kb.mp3')).toBe(false);
     } finally {
       vi.doUnmock('../src/api');
       vi.resetModules();

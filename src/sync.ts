@@ -72,9 +72,20 @@ function isSortedByCreatedDesc(notes: GetNoteNote[]): boolean {
   return true;
 }
 
+const TRUSTED_ATTACHMENT_HOST_SUFFIXES = ['.umiwi.com'];
+
 function isSafeAttachmentUrl(url: string): boolean {
   try {
-    return new URL(url).protocol === 'https:';
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+    const trustedHost = TRUSTED_ATTACHMENT_HOST_SUFFIXES.some(suffix => (
+      hostname === suffix.slice(1) || hostname.endsWith(suffix)
+    ));
+    return parsed.protocol === 'https:'
+      && !parsed.username
+      && !parsed.password
+      && (!parsed.port || parsed.port === '443')
+      && trustedHost;
   } catch {
     return false;
   }
@@ -269,7 +280,7 @@ export class SyncEngine {
       // Skip already-existing files
       if (this.app.vault.getAbstractFileByPath(targetPath)) return targetPath;
 
-      const res = await fetch(attachment.url);
+      const res = await fetch(attachment.url, { redirect: 'error' });
       if (res.status < 200 || res.status >= 300) {
         console.error(`[DedaoBrain] Audio download failed: ${res.status}`);
         return null;
@@ -307,7 +318,7 @@ export class SyncEngine {
 
       if (this.app.vault.getAbstractFileByPath(targetPath)) return targetPath;
 
-      const res = await fetch(attachment.url);
+      const res = await fetch(attachment.url, { redirect: 'error' });
       if (res.status < 200 || res.status >= 300) {
         console.error(`[DedaoBrain] Image download failed: ${res.status}`);
         return null;
@@ -345,7 +356,7 @@ export class SyncEngine {
 
       if (this.app.vault.getAbstractFileByPath(targetPath)) return targetPath;
 
-      const res = await fetch(attachment.url);
+      const res = await fetch(attachment.url, { redirect: 'error' });
       if (res.status < 200 || res.status >= 300) {
         console.error(`[DedaoBrain] Generic asset download failed (${kind}): ${res.status}`);
         return null;
@@ -372,11 +383,8 @@ export class SyncEngine {
       const targetPath = `${assetDir}/${this.getAudioAssetBaseName(note)}_transcript.md`;
       const content = `# ${generateDisplayTitle(note) || t('picker.noTitle')}\n\n${note.audio}`;
       const existing = this.app.vault.getAbstractFileByPath(targetPath);
-      if (existing instanceof TFile) {
-        await this.app.vault.modify(existing, content);
-      } else {
-        await this.app.vault.create(targetPath, content);
-      }
+      if (existing) return targetPath;
+      await this.app.vault.create(targetPath, content);
       return targetPath;
     } catch (err) {
       console.error('[DedaoBrain] Audio transcript write error:', err);
@@ -401,11 +409,8 @@ export class SyncEngine {
       const sourceLine = url ? `来源链接：${url}\n\n` : '';
       const content = `# ${title}\n\n${sourceLine}${originalContent}`;
       const existing = this.app.vault.getAbstractFileByPath(targetPath);
-      if (existing) {
-        await this.app.vault.modify(existing as TFile, content);
-      } else {
-        await this.app.vault.create(targetPath, content);
-      }
+      if (existing) return targetPath;
+      await this.app.vault.create(targetPath, content);
       return targetPath;
     } catch (err) {
       console.error('[DedaoBrain] Link original write error:', err);
@@ -444,6 +449,11 @@ export class SyncEngine {
     } catch {
       return true;
     }
+  }
+
+  private isOwnedByNote(file: TFile, noteId: string): boolean {
+    const cached = this.app.metadataCache.getFileCache(file);
+    return String(cached?.frontmatter?.['uid'] ?? '') === noteId;
   }
 
   private buildUidIndex(): Map<string, TFile> {
@@ -507,18 +517,17 @@ export class SyncEngine {
 
       const categoryDir = await this.ensureNoteCategoryDir(note, categoryOverride ?? getCategoryDir(note.note_type));
       let targetPath = `${categoryDir}/${this.getFileName(note, parentBaseName)}.md`;
-      const existingAtTarget = this.app.vault.getAbstractFileByPath(targetPath);
+      let existingAtTarget = this.app.vault.getAbstractFileByPath(targetPath);
 
-      if (existingAtTarget instanceof TFile) {
-        const cached = this.app.metadataCache.getFileCache(existingAtTarget);
-        const targetUid = cached?.frontmatter?.['uid'] as string | undefined;
-        if (targetUid && targetUid !== note.note_id) {
-          const baseName = this.getFileName(note);
-          targetPath = this.resolveConflict(categoryDir, baseName);
-        }
+      if (
+        existingAtTarget
+        && (!(existingAtTarget instanceof TFile) || !this.isOwnedByNote(existingAtTarget, note.note_id))
+      ) {
+        targetPath = this.resolveConflict(categoryDir, this.getFileName(note, parentBaseName));
+        existingAtTarget = this.app.vault.getAbstractFileByPath(targetPath);
       }
 
-      if (existingAtTarget instanceof TFile) {
+      if (existingAtTarget instanceof TFile && this.isOwnedByNote(existingAtTarget, note.note_id)) {
         const content = renderNote(note, note.assetFileName, parentFileName, childFileNames);
         // File exists at target path but wasn't in uidIndex - check content
         const contentChanged = this.isContentChanged(existingAtTarget, note) || hasImageAssetPaths(note) || Boolean(note.linkOriginalFileName);
@@ -536,14 +545,19 @@ export class SyncEngine {
           return { status: 'created', file: created instanceof TFile ? created : undefined };
         } catch (createErr) {
           // File was created by another process between check and create
-          const existing = this.app.vault.getAbstractFileByPath(targetPath);
-          if (existing instanceof TFile) {
-            const contentChanged = this.isContentChanged(existing, note);
-            await this.app.vault.modify(existing, content);
-            uidIndex.set(note.note_id, existing);
-            return { status: contentChanged ? 'updated' : 'skipped', file: existing };
+          const racedTarget = this.app.vault.getAbstractFileByPath(targetPath);
+          if (!racedTarget) throw createErr;
+          if (racedTarget instanceof TFile && this.isOwnedByNote(racedTarget, note.note_id)) {
+            const contentChanged = this.isContentChanged(racedTarget, note);
+            await this.app.vault.modify(racedTarget, content);
+            uidIndex.set(note.note_id, racedTarget);
+            return { status: contentChanged ? 'updated' : 'skipped', file: racedTarget };
           }
-          throw createErr;
+          const retryPath = this.resolveConflict(categoryDir, this.getFileName(note, parentBaseName));
+          await this.app.vault.create(retryPath, content);
+          const created = this.app.vault.getAbstractFileByPath(retryPath);
+          if (created instanceof TFile) uidIndex.set(note.note_id, created);
+          return { status: 'created', file: created instanceof TFile ? created : undefined };
         }
       }
     } catch (err) {
