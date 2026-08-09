@@ -1495,7 +1495,30 @@ body .getnote-tag-select-option input[type="checkbox"] {
 
 .getnote-picker-btns {
   display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+button.getnote-settings-link {
+  height: auto;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-accent);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+button.getnote-settings-link:hover {
+  background: transparent;
+  color: var(--text-accent-hover);
+  text-decoration: underline;
+}
+
+button.getnote-settings-link:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
 }
 
 /* === Loading Modal === */

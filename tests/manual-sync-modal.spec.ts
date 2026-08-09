@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { h, render } from 'preact';
 import { act } from 'preact/test-utils';
 import { ManualSyncModal } from '../src/ui/manual-sync-modal';
+import { initI18n } from '../src/i18n';
 
 function renderModal(initialOptions: { syncStartDate: string; maxDays: number; enabledNoteTypes?: string[] }, onConfirm = vi.fn()) {
   const container = document.createElement('div');
@@ -18,6 +19,7 @@ function renderModal(initialOptions: { syncStartDate: string; maxDays: number; e
 }
 
 afterEach(() => {
+  initI18n('zh');
   vi.useRealTimers();
   vi.restoreAllMocks();
   render(null, document.body);
@@ -25,6 +27,45 @@ afterEach(() => {
 });
 
 describe('ManualSyncModal filters', () => {
+  it('hides the full-settings link by default (no onOpenSettings prop)', async () => {
+    const { container } = renderModal({ syncStartDate: '', maxDays: 30 });
+
+    expect(container.querySelector('.getnote-settings-link')).toBeNull();
+  });
+
+  it('replaces the footer scope label with the full-settings link (#237)', async () => {
+    initI18n('en');
+    const onConfirm = vi.fn();
+    const onOpenSettings = vi.fn();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    render(
+      h(ManualSyncModal, {
+        initialOptions: { syncStartDate: '', maxDays: 30 },
+        onConfirm,
+        onCancel: vi.fn(),
+        onOpenSettings,
+      }),
+      container
+    );
+
+    const settingsLink = container.querySelector('.getnote-settings-link') as HTMLButtonElement;
+    const footer = container.querySelector('.getnote-picker-footer')!;
+    expect(settingsLink).toBeTruthy();
+    expect(settingsLink.classList.contains('mod-secondary')).toBe(false);
+    expect(settingsLink.textContent).toBe('Open full settings');
+    expect(settingsLink.parentElement).toBe(footer);
+    expect(container.querySelector('.getnote-settings-link-row')).toBeNull();
+    expect(container.querySelector('.getnote-picker-count')).toBeNull();
+
+    await act(() => {
+      settingsLink.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
   it('defaults to days mode and submits maxDays >= 1', async () => {
     const { container, onConfirm } = renderModal({ syncStartDate: '', maxDays: 0 });
 
