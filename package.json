@@ -25,8 +25,8 @@
     "eslint": "^10.8.0",
     "happy-dom": "^20.11.1",
     "obsidian": "^1.13.1",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.65.0",
+    "typescript": "^7.0.2",
+    "typescript-eslint": "^8.66.0",
     "vitest": "^4.1.10"
   },
   "dependencies": {
