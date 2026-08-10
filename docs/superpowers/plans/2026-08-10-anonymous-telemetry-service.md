@@ -299,7 +299,7 @@ git commit -m "feat: persist idempotent telemetry events"
 ### Task 4: Build the Public Ingestion Worker and Cron Maintenance
 
 **Files:**
-- Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/wrangler.jsonc`
+- Modify: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/wrangler.jsonc`
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/src/index.ts`
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/src/geo.ts`
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/src/maintenance.ts`
@@ -310,9 +310,13 @@ git commit -m "feat: persist idempotent telemetry events"
 - Consumes: contracts, sanitizer, and repository from Tasks 1-3.
 - Produces: Worker `fetch(request, env, ctx)` for `POST /v1/events` and `GET /v1/health`, plus `scheduled(controller, env, ctx)`.
 
+Export `resolveAggregateRegion(cf)`, `beijingReportingDate(at)`, `previousBeijingReportingDate(at)`, `reconcileReportingDate(db, reportingDate)`, `flagAnomalies(db, reportingDate)`, and `runMaintenance(db, at)` as focused test seams. Production `fetch` assigns `receivedAt` and its Beijing reporting date from the same `new Date()` value. `scheduled` passes its Promise to `ctx.waitUntil()`.
+
 - [ ] **Step 1: Write failing request tests**
 
 Cover valid `202`, duplicate `202`, invalid JSON `400`, unsupported schema `400`, body over 8 KiB `413`, wrong method `405`, wrong content type `415`, repository failure `503`, and health `200`. Assert response bodies never echo input.
+
+Use JSON responses `{ "outcome": "accepted" }`, `{ "outcome": "duplicate" }`, `{ "status": "ok" }`, and generic errors `{ "error": "INVALID_EVENT" | "PAYLOAD_TOO_LARGE" | "METHOD_NOT_ALLOWED" | "UNSUPPORTED_MEDIA_TYPE" | "NOT_FOUND" | "SERVICE_UNAVAILABLE" }`. Return `404 NOT_FOUND` for unknown paths. Every response sets `content-type: application/json; charset=utf-8`; `405` also sets the route-appropriate `Allow` header. Accept `application/json` with optional parameters and reject every other media type.
 
 - [ ] **Step 2: Write failing geographic tests**
 
@@ -326,6 +330,10 @@ expect(resolveAggregateRegion({ country: 'XX' })).toBe('UNKNOWN');
 
 Test Beijing date calculation across UTC midnight, previous-day reconciliation into `daily_stats` and `daily_errors`, bounded 500-row cleanup, retry idempotency, preservation of detail when reconciliation fails, and deterministic flags for a daily total above both 100 events and five times the prior seven-day average.
 
+Reconciliation is absolute, not additive: for the requested date, aggregate `event_records` into `daily_stats` and `event_errors` joined to `event_records` into `daily_errors`, then upsert every metric using `SET metric = excluded.metric`. This makes retries idempotent and includes late-arriving rows on a later rerun. Do not delete existing aggregate rows for the date. Use prepared statements only.
+
+For anomaly detection, compare each current row with the average metric for the same full primary-key dimensions except `reporting_date` over the preceding seven calendar dates. Compute it as `COALESCE(SUM(metric), 0) / 7.0`, so missing dates count as zero. Use `task_count` for `daily_stats` and `daily_regions`, and `error_count` for `daily_errors`. Set `is_flagged = 1` and `flag_reason = 'volume_gt_100_and_5x_7d_avg'` only when the current metric is strictly greater than 100 and strictly greater than five times that average; otherwise clear both fields. A missing history has average zero. Run this for all three aggregate tables.
+
 - [ ] **Step 4: Run Worker tests and confirm red**
 
 Run: `npm test -- apps/ingest/src/index.test.ts apps/ingest/src/maintenance.test.ts`
@@ -335,6 +343,12 @@ Expected: FAIL because handlers are missing.
 - [ ] **Step 5: Implement fetch and scheduled handlers**
 
 Use `crypto.randomUUID()` for request IDs. Read at most 8 KiB before JSON parsing. Access coarse location from `request.cf`, pass only the aggregate code into the repository, and never put it in operational logs. Schedule daily reconciliation at `20 16 * * *` UTC, which is 00:20 Asia/Shanghai. Reconciliation upserts `daily_stats` and `daily_errors`, then flags a dimension only when its total is above both 100 and five times its prior seven-day average; dashboard trusted totals exclude flagged rows and show them in a separate anomaly indicator.
+
+Implement the body cap with a stream reader: stop and cancel as soon as accumulated bytes exceed 8,192, including when `Content-Length` is absent or false. Do not call `request.text()`, `request.json()`, or unbounded `arrayBuffer()` first. Parse UTF-8 only after the bounded read completes. Feed the parsed value through `parseTelemetryEvent`, then `sanitizeEvent`, before repository storage. On all parse/schema failures return only `INVALID_EVENT`; on repository or unexpected failures return only `SERVICE_UNAVAILABLE` and log metadata through `logOperationalEvent` without the exception message or stack.
+
+`resolveAggregateRegion` returns `CN-<REGION>` only for `country === 'CN'` with an uppercase two-letter `regionCode`; returns the uppercase two-letter country code for non-China countries except `XX` and `T1`; otherwise returns `UNKNOWN`. It never returns city, postal code, coordinates, or the raw `request.cf` object.
+
+`runMaintenance` first reconciles the previous Beijing reporting date and flags all aggregate tables. Only after both succeed does it call `deleteExpiredDetails` once with an ISO cutoff exactly 30 days before `at` and limit `500`. If reconciliation or flagging fails, propagate the error and retain all detail rows.
 
 - [ ] **Step 6: Configure Worker best practices**
 
@@ -347,7 +361,7 @@ Set `compatibility_date`, `nodejs_compat`, D1 binding, Cron Trigger, and:
 }
 ```
 
-Generate types with `npx wrangler types --config apps/ingest/wrangler.jsonc` and commit the generated declarations. Configure edge rate limiting for `/v1/events` during deployment; do not implement an application IP table.
+Add `main: "src/index.ts"`, Cron, and the shown observability fields to the existing local config without replacing its D1 binding. Generate types with `npx wrangler types --config apps/ingest/wrangler.jsonc` and commit `apps/ingest/worker-configuration.d.ts`. Configure edge rate limiting for `/v1/events` during deployment; do not implement an application IP table.
 
 - [ ] **Step 7: Run Worker tests, typecheck, lint, and dry run**
 
