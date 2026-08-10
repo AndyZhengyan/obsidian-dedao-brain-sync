@@ -386,15 +386,36 @@ git commit -m "feat: accept and maintain anonymous telemetry"
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/dashboard/functions/api/errors.ts`
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/dashboard/functions/api/regions.ts`
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/dashboard/functions/api/_shared/query.ts`
+- Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/dashboard/worker-configuration.d.ts`
 - Test: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/dashboard/functions/api/api.test.ts`
 
 **Interfaces:**
 - Consumes: D1 aggregate tables from Task 3.
 - Produces: `GET /api/dashboard`, `GET /api/errors`, and `GET /api/regions` JSON responses.
 
+All three handlers accept an injected `now` only through exported pure/query helpers for tests; production uses the request time. Date queries use Beijing calendar dates. With no date parameters, `range=7` is the default and `range=30` is the only alternative; both end on today's Beijing date. Alternatively, callers may supply `from=YYYY-MM-DD&to=YYYY-MM-DD` together for an inclusive range of 1 through 30 days. Reject mixed `range` plus explicit dates, one-sided dates, invalid/non-canonical calendar dates, `from > to`, spans over 30 days, duplicate parameters, and unknown parameters with `400 { "error": "INVALID_QUERY" }`.
+
+Supported filters are intentionally table-specific:
+
+- `/api/dashboard`: `plugin_version`, `direction`, `mode`, `auth_mode`.
+- `/api/errors`: `plugin_version`, `auth_mode`.
+- `/api/regions`: no dimension filters beyond the date range.
+
+Validate filter values against the shared V1 allow-lists. Reject a filter on an endpoint whose privacy-separated table cannot answer it. Never query raw detail tables from dashboard Functions.
+
+Return these stable shapes (all keys are required):
+
+- `/api/dashboard`: `{ range: { from, to, days }, data_state: 'ready' | 'empty', totals: { tasks, success, created, updated, skipped, failed }, task_health: { success, partial, failed, cancelled, success_rate }, daily: Array<{ date, tasks, success, failed, skipped }>, anomalies: { flagged_rows } }`. Zero-fill each calendar date in `daily`. `success_rate` is successful tasks divided by `success + partial + failed` tasks, excluding cancelled tasks, and is `null` when that denominator is zero.
+- `/api/errors`: `{ range, data_state, items, anomalies: { flagged_rows, occurrences } }`. Each trusted item is `{ code, stage, fingerprint, preview, occurrences, affected_tasks, first_seen, last_seen, plugin_versions: Array<{ version, occurrences }>, auth_modes: Array<{ auth_mode, occurrences }>, daily: Array<{ date, occurrences }> }`. Group across allowed version/auth filters by `code + stage + fingerprint + preview`, zero-fill item trends, sort by occurrences descending then stable keys, and return at most 100 items. `preview` is the already sanitized stored sample or `null`.
+- `/api/regions`: `{ range, data_state, label: 'Synchronization activity, not unique users', items: Array<{ region_code, task_count, success_count, failed_count }>, anomalies: { flagged_rows, task_count } }`. Sum trusted rows over the selected period; any individual region with total `task_count < 5` contributes only to one combined `OTHER` row. Sort by `task_count` descending then `region_code`.
+
+Trusted totals/items use only rows with `is_flagged = 0`. The anomaly objects summarize excluded flagged rows without exposing their dimensions. A successful query with no trusted or flagged rows uses `data_state: 'empty'`; otherwise use `ready`.
+
 - [ ] **Step 1: Write failing API tests**
 
 Test default 7-day range, 30-day range, ISO date validation, plugin/auth/direction/mode filters, no-data responses, and database failure. Assert region responses group total event counts below five into `OTHER`.
+
+Also test rejection of unsupported cross-filters, flagged-row exclusion/anomaly counts, zero-filled dates, null success rate for no task denominator, stable error grouping/sorting, the 100-item cap, and that low-volume region codes never appear anywhere in serialized output.
 
 - [ ] **Step 2: Run API tests and confirm red**
 
@@ -406,9 +427,11 @@ Expected: FAIL because functions are missing.
 
 Build filter clauses only from fixed server-owned fragments; bind all values. Return `503` with `{ "error": "DASHBOARD_UNAVAILABLE" }` on storage failure, never a zeroed dataset.
 
+Return all successful and error payloads as JSON with `content-type: application/json; charset=utf-8`. Handlers support GET only and return `405 { "error": "METHOD_NOT_ALLOWED" }` with `Allow: GET` otherwise. Do not log SQL, bound values, or exception messages.
+
 - [ ] **Step 4: Configure Pages D1 bindings and generated types**
 
-Define matching preview and production D1 bindings in `wrangler.jsonc`, run `npx wrangler types --config apps/dashboard/wrangler.jsonc`, and keep local D1 isolated by default.
+Define a local D1 binding and matching `preview` and `production` environment bindings named `DB` in `wrangler.jsonc`. Until Task 7 creates the real databases, use the explicit non-production `database_id: "local"` sentinel for all three and document it in a JSONC comment; never deploy this placeholder configuration. Run `npx wrangler types --config apps/dashboard/wrangler.jsonc`, commit the generated declaration, and keep local D1 isolated by default.
 
 - [ ] **Step 5: Run API tests and typecheck**
 
