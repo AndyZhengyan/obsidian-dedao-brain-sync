@@ -101,7 +101,12 @@ export function parseTelemetryEvent(input: unknown): TelemetryEventV1 {
 }
 ```
 
-Use `.strict()` at every object level. Define fixed allow-lists for error codes, stages, duration buckets, and published plugin versions.
+Use `.strict()` at every object level. Define these fixed schema V1 allow-lists verbatim:
+
+- Error codes: `NETWORK_TIMEOUT`, `NETWORK_UNREACHABLE`, `HTTP_ERROR`, `AUTH_EXPIRED`, `AUTH_INVALID`, `QUOTA_EXCEEDED`, `API_RESPONSE_INVALID`, `NOTE_PARSE_FAILED`, `VAULT_READ_FAILED`, `VAULT_WRITE_FAILED`, `ATTACHMENT_DOWNLOAD_FAILED`, `UNKNOWN`.
+- Stages: `list_notes`, `fetch_note_detail`, `fetch_relationships`, `download_attachment`, `parse_note`, `read_vault`, `write_vault`, `create_remote_note`, `task_setup`, `unknown`.
+- Duration buckets: `under_1s`, `1s_3s`, `3s_10s`, `10s_30s`, `30s_2m`, `2m_10m`, `over_10m`.
+- Published plugin versions initially accepted: `1.4.4`. Update this allow-list as part of the release process before a telemetry-enabled plugin version is published; do not accept arbitrary semantic versions.
 
 - [ ] **Step 5: Run contract tests and typecheck**
 
