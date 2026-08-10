@@ -455,6 +455,7 @@ git commit -m "feat: expose private telemetry aggregates"
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/dashboard/tsconfig.json`
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/dashboard/vitest.config.ts`
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/dashboard/vite.config.ts`
+- Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/dashboard/index.html`
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/dashboard/src/main.tsx`
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/dashboard/src/api.ts`
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/dashboard/src/pages/dashboard.tsx`
@@ -467,9 +468,25 @@ git commit -m "feat: expose private telemetry aggregates"
 - Consumes: the three read APIs from Task 5.
 - Produces: private `/dashboard`, `/errors`, and `/regions` views.
 
+Use no router or chart dependency. `main.tsx` selects the view from `window.location.pathname`, treats `/` as `/dashboard`, and renders a shared header with ordinary links to all three paths. Unknown paths render a small not-found view. Keep API response types and a replaceable `TelemetryDashboardApi` interface in `api.ts`; its production implementation calls the same-origin endpoints with `range=7|30` and any supported allow-listed filters, requires `response.ok`, and throws a generic `DashboardApiError` without embedding response bodies.
+
+Each page accepts an optional injected API for tests and owns its loading state. On initial failure, render a panel with `role="alert"` and `Data temporarily unavailable`; never render invented zero metrics. After any successful load, keep that last successful data visible when a range/filter refresh fails and show the same unavailable alert alongside stale data. Ignore stale out-of-order responses using a request generation counter or equivalent; do not use mutable state outside components.
+
+The shared header displays `Telemetry health` and navigation labels `Overview`, `Errors`, and `Regions`. Every page has `7 days` and `30 days` buttons using `aria-pressed`; changing range refetches only that page. The Overview additionally exposes `All` plus fixed V1 select options for plugin version (`1.4.4`), direction, mode, and authentication mode. Errors exposes only plugin version and authentication mode. Regions exposes no dimension selector, matching the API privacy boundary.
+
+Render these minimum views:
+
+- Overview: cards for `Successful notes`, `Failed notes`, `Skipped notes`, `Total tasks`, and `Task success rate`; an accessible SVG labelled `Successful, failed, and skipped note trend`; a visible legend for those three series; task-health counts for success/partial/failed/cancelled; and an anomaly notice when `flagged_rows > 0`.
+- Errors: an accessible table with code, stage, occurrences, affected tasks, first/last date, safe preview, plugin-version distribution, and authentication distribution; plus an accessible per-row seven-day trend SVG or text equivalent. Show anomaly counts without exposing flagged dimensions.
+- Regions: the exact heading/label `Synchronization activity, not unique users`, an accessible table for region code, tasks, successful notes, and failed notes, and an anomaly notice. Do not add a map.
+
+Use semantic HTML, visible focus states, sufficient color contrast, and SVG `aria-label`/titles. The production build must contain no external runtime CDN assets and no analytics.
+
 - [ ] **Step 1: Write failing dashboard tests**
 
 Test metric cards, 7/30-day filter changes, successful/failed/skipped trend labels, task-health states, unavailable-panel behavior, error/version details, and the exact label `Synchronization activity, not unique users` on regions.
+
+Also test initial failure without fabricated zero cards, stale-data preservation after a failed refresh, out-of-order response protection, route selection, endpoint-specific filter controls, error table/auth details, anomaly notices, and accessible chart/table names.
 
 - [ ] **Step 2: Run UI tests and confirm red**
 
