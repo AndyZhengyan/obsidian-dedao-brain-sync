@@ -234,16 +234,30 @@ git commit -m "feat: sanitize telemetry at the service boundary"
 
 **Files:**
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/migrations/0001_initial.sql`
+- Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/wrangler.jsonc`
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/src/repository.ts`
 - Test: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/src/repository.test.ts`
+- Modify: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/vitest.config.ts`
 
 **Interfaces:**
 - Consumes: `SanitizedTelemetryEvent` from Task 2 and generated `Env.DB: D1Database`.
-- Produces: `storeEvent(db, event, receivedAt, reportingDate, region): Promise<'inserted' | 'duplicate'>` and `deleteExpiredDetails(db, cutoffIso, limit): Promise<number>`.
+- Produces: `type AggregateRegion = string`, `storeEvent(db, event, receivedAt, reportingDate, region): Promise<'inserted' | 'duplicate'>` and `deleteExpiredDetails(db, cutoffIso, limit): Promise<number>`.
+
+`receivedAt` is an ISO timestamp assigned by the Worker, `reportingDate` is a Beijing `YYYY-MM-DD` date, and `region` is a server-derived aggregate code such as `CN-GD`, `US`, or `UNKNOWN`; none is client input. `storeEvent` computes `message_fingerprint` as lowercase SHA-256 hex of the already server-sanitized preview, or the fixed value `none` when no preview exists.
 
 - [ ] **Step 1: Write the migration with five tables**
 
 Create `event_records`, `event_errors`, `daily_stats`, `daily_errors`, and `daily_regions`. Do not add region or installation columns to the first two tables. Add indexes for reporting date, received time, plugin version, error code/stage, and aggregate keys. Add `is_flagged` and `flag_reason` columns to aggregate tables so anomalous traffic can be excluded from trusted totals without creating another detail table.
+
+Use these columns and keys:
+
+- `event_records`: `event_id TEXT PRIMARY KEY`, `received_at TEXT NOT NULL`, `reporting_date TEXT NOT NULL`, `schema_version INTEGER NOT NULL`, `plugin_version TEXT NOT NULL`, `direction TEXT NOT NULL`, `mode TEXT NOT NULL`, `auth_mode TEXT NOT NULL`, `run_status TEXT NOT NULL`, `created_count INTEGER NOT NULL`, `updated_count INTEGER NOT NULL`, `success_count INTEGER NOT NULL`, `skipped_count INTEGER NOT NULL`, `failed_count INTEGER NOT NULL`, `duration_bucket TEXT NOT NULL`, and the non-location idempotency marker `region_counted INTEGER NOT NULL DEFAULT 0 CHECK (region_counted IN (0, 1))`.
+- `event_errors`: `event_id TEXT NOT NULL`, `error_index INTEGER NOT NULL`, `error_code TEXT NOT NULL`, `error_stage TEXT NOT NULL`, `error_count INTEGER NOT NULL`, `message_preview TEXT`, `message_fingerprint TEXT NOT NULL`, primary key `(event_id, error_index)`, and foreign key to `event_records(event_id)` with cascade delete.
+- `daily_stats`: dimensions `reporting_date`, `plugin_version`, `direction`, `mode`, `auth_mode`, `run_status`; metrics `task_count`, `created_count`, `updated_count`, `success_count`, `skipped_count`, `failed_count`; anomaly fields `is_flagged INTEGER NOT NULL DEFAULT 0 CHECK (is_flagged IN (0, 1))`, `flag_reason TEXT`; primary key across all dimensions.
+- `daily_errors`: dimensions `reporting_date`, `plugin_version`, `auth_mode`, `error_code`, `error_stage`, `message_fingerprint`; optional safe sample `message_preview`; metrics `error_count`, `affected_task_count`; the same anomaly fields; primary key across all dimensions.
+- `daily_regions`: dimensions `reporting_date`, `region_code`; metrics `task_count`, `success_count`, `failed_count`; the same anomaly fields; primary key `(reporting_date, region_code)`.
+
+All aggregate metric columns are `INTEGER NOT NULL DEFAULT 0`. The migration enables foreign keys. Do not add request bodies, IPs, precise geography, install IDs, or any other columns.
 
 - [ ] **Step 2: Write failing repository tests**
 
@@ -259,7 +273,13 @@ Expected: FAIL because the migration/repository is missing.
 
 Use `INSERT ... ON CONFLICT DO NOTHING RETURNING event_id` for the idempotency gate. For a newly inserted ID, use `env.DB.batch([...])` with bound prepared statements for error detail and `daily_regions` upserts. Never interpolate client values into SQL.
 
+The idempotency gate and every dependent write must be in one `db.batch()` so any failed statement rolls back the entire event. Put the gate first. Error inserts use their `(event_id, error_index)` key with `ON CONFLICT DO NOTHING`. Increment `daily_regions` only through an `INSERT ... SELECT ... WHERE` guard that sees `event_records.region_counted = 0`, then set `region_counted = 1` as the last statement. Thus a successful retry changes neither error rows nor region totals, including for events with an empty error array. Determine `inserted` versus `duplicate` from the gate statement's `RETURNING` result. Do not perform a non-atomic gate query before the batch.
+
+`deleteExpiredDetails` validates `limit` as an integer from 1 through 500, then atomically deletes `event_errors` and at most that many matching `event_records`, oldest first, using bound `cutoffIso` and `limit`; return the deleted event-record count. It never modifies aggregate tables.
+
 - [ ] **Step 5: Run migration locally and rerun tests**
+
+Create the initial `wrangler.jsonc` now with `name: "dedao-brain-sync-telemetry-ingest"`, `compatibility_date: "2026-08-10"`, `compatibility_flags: ["nodejs_compat"]`, and `d1_databases: [{ "binding": "DB", "database_name": "telemetry-local", "database_id": "local", "migrations_dir": "migrations" }]`. Here `local` is an explicit local-development sentinel, not a production database ID. Task 4 will extend this same file with the entry point, Cron, generated types, and observability.
 
 Run: `npx wrangler d1 migrations apply telemetry-local --local --config apps/ingest/wrangler.jsonc`
 
