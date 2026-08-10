@@ -256,7 +256,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   }
 
   private registerRibbonActions(): void {
-    this.syncRibbonEl = this.addRibbonIcon('book-lock', t('ribbon.tooltip'), () => this.openManualSyncModal());
+    this.syncRibbonEl = this.addRibbonIcon('book-lock', t('ribbon.tooltip'), () => this.openManualSyncModal(true));
     this.searchRibbonEl = this.addRibbonIcon('brain-circuit', t('ribbon.searchTooltip'), () => void this.openSearchView());
     this.refreshRibbonActions();
   }
@@ -623,10 +623,10 @@ export default class GetNoteSyncPlugin extends Plugin {
     }
   }
 
-  openManualSyncModal(): void {
+  openManualSyncModal(showOpenSettings = false): void {
     if (this.isDatePathMigrationRunning) return;
     closeFloatingSelects();
-    const wrapper = new ManualSyncModalWrapper(this.app, this);
+    const wrapper = new ManualSyncModalWrapper(this.app, this, showOpenSettings);
     wrapper.open();
   }
 
@@ -927,7 +927,11 @@ class GetNoteSearchModal extends Modal {
 }
 
 class ManualSyncModalWrapper extends Modal {
-  constructor(app: App, private plugin: GetNoteSyncPlugin) {
+  constructor(
+    app: App,
+    private plugin: GetNoteSyncPlugin,
+    private showOpenSettings: boolean,
+  ) {
     super(app);
     this.titleEl.setText(t('manualSync.title'));
   }
@@ -941,10 +945,12 @@ class ManualSyncModalWrapper extends Modal {
           syncTags: this.plugin.settings.syncTags,
         }}
         tagOptions={this.plugin.settings.tagCache?.tags ?? []}
-        onOpenSettings={() => {
-          this.close();
-          this.plugin.openSettingsTab();
-        }}
+        {...(this.showOpenSettings ? {
+          onOpenSettings: () => {
+            this.close();
+            this.plugin.openSettingsTab();
+          },
+        } : {})}
         onConfirm={(options) => {
           this.close();
           this.plugin.startSync(options);

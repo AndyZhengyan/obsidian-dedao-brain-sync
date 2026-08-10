@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'preact/test-utils';
-import { App } from 'obsidian';
+import { App, Modal } from 'obsidian';
 import GetNoteSyncPlugin from '../src/main';
 import { GetNoteSettingsTab } from '../src/settings-tab';
 import { initI18n } from '../src/i18n';
@@ -28,9 +28,40 @@ afterEach(() => {
   vi.restoreAllMocks();
   initI18n('zh-CN');
   document.body.innerHTML = '';
+  delete (HTMLElement.prototype as typeof HTMLElement.prototype & { setText?: (text: string) => void }).setText;
 });
 
 describe('GetNoteSettingsTab runtime updates', () => {
+  it('opens the manual sync modal without a full-settings link from settings', async () => {
+    const plugin = makePlugin();
+    plugin.settings.openApiToken = 'token';
+    plugin.settings.openApiClientId = 'client-id';
+    const tab = new GetNoteSettingsTab(plugin.app, plugin);
+    const openedModals: Modal[] = [];
+    Object.defineProperty(HTMLElement.prototype, 'setText', {
+      configurable: true,
+      value(this: HTMLElement, text: string) {
+        this.textContent = text;
+      },
+    });
+    vi.spyOn(Modal.prototype, 'open').mockImplementation(function (this: Modal) {
+      openedModals.push(this);
+      (this as Modal & { onOpen(): void }).onOpen();
+    });
+
+    await act(() => {
+      tab.display();
+    });
+    const syncButton = tab.containerEl.querySelector<HTMLButtonElement>('.getnote-sync-action-button')!;
+
+    await act(() => {
+      click(syncButton);
+    });
+
+    expect(openedModals).toHaveLength(1);
+    expect(openedModals[0].contentEl.querySelector('.getnote-settings-link')).toBeNull();
+  });
+
   it('mounts once per display lifecycle and remounts after hide', async () => {
     const plugin = makePlugin();
     const tab = new GetNoteSettingsTab(plugin.app, plugin);

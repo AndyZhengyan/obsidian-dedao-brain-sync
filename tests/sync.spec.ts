@@ -776,7 +776,7 @@ describe('GetNoteSyncPlugin ribbon actions', () => {
     syncRibbon![2]();
     searchRibbon![2]();
 
-    expect(openManualSyncModal).toHaveBeenCalledOnce();
+    expect(openManualSyncModal).toHaveBeenCalledWith(true);
     expect(openSearchView).toHaveBeenCalledOnce();
   });
 
