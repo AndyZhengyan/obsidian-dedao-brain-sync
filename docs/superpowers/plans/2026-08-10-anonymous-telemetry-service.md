@@ -162,6 +162,22 @@ git commit -m "chore: scaffold telemetry service contracts"
 - Consumes: `TelemetryEventV1` from `@telemetry/contracts`.
 - Produces: `sanitizeEvent(event: TelemetryEventV1): SanitizedTelemetryEvent`, `sanitizeMessage(value: string): string | null`, and `logOperationalEvent(entry: OperationalLog): void`.
 
+`SanitizedTelemetryEvent` has the same shape as `TelemetryEventV1`; construct a fresh object field-by-field and never mutate or spread the input event or error groups. For each error group, preserve only `code`, `stage`, and `count`. Set `message_preview` to the fixed template below for every known non-`UNKNOWN` code, regardless of client input. For `UNKNOWN`, include `message_preview` only when `sanitizeMessage` returns a non-null value.
+
+Fixed templates:
+
+- `NETWORK_TIMEOUT`: `Network request timed out`
+- `NETWORK_UNREACHABLE`: `Network unreachable`
+- `HTTP_ERROR`: `HTTP request failed`
+- `AUTH_EXPIRED`: `Authentication expired`
+- `AUTH_INVALID`: `Authentication invalid`
+- `QUOTA_EXCEEDED`: `Quota exceeded`
+- `API_RESPONSE_INVALID`: `API response invalid`
+- `NOTE_PARSE_FAILED`: `Note parsing failed`
+- `VAULT_READ_FAILED`: `Vault read failed`
+- `VAULT_WRITE_FAILED`: `Vault write failed`
+- `ATTACHMENT_DOWNLOAD_FAILED`: `Attachment download failed`
+
 - [ ] **Step 1: Write failing table-driven sanitizer tests**
 
 Test Bearer tokens, cookies, email addresses, query strings, HTTP URLs, POSIX paths, Windows paths, 16+ digit identifiers, 20+ character random strings, quoted note-like content, and a fully safe timeout template. Add a generated-property loop that creates 100 secret-like strings and asserts none survive.
@@ -181,6 +197,8 @@ Expected: FAIL because the sanitizer does not exist.
 
 Known error codes return fixed templates. Unknown previews pass through ordered replacement rules, a final dangerous-pattern detector, and a 200-character cap. Return `null` when safety cannot be proven. Never throw an error that embeds the source string.
 
+For unknown previews, normalize milliseconds/seconds/minutes duration expressions to `<duration>` before the final check. Reject instead of retaining or partially redacting any value that contains a Bearer/Authorization/Cookie/CSRF/token/key/password marker, email address, URL or query string, POSIX/Windows/vault path, 16-or-more-digit identifier, 20-or-more-character random-looking alphanumeric string, JSON/request-body fragment, control character, or quoted content. After normalization, accept only non-empty strings of at most 200 characters composed of letters, numbers, spaces, and the punctuation `.,:;_()[]<>/-`; otherwise return `null`. Tests must verify that `sanitizeEvent` does not mutate its input and that no original preview survives for known codes.
+
 - [ ] **Step 4: Implement metadata-only structured logging**
 
 ```ts
@@ -194,6 +212,8 @@ type OperationalLog = {
 ```
 
 The logger accepts no request, payload, headers, IP, exception message, or stack.
+
+`logOperationalEvent` must build a new log record field-by-field in exactly the order shown above and call `console.log(JSON.stringify(record))`. It must not spread or serialize the supplied object. Add a focused test that passes an object with an extra runtime property and proves the property and its value are absent from emitted output.
 
 - [ ] **Step 5: Run sanitizer tests and typecheck**
 
