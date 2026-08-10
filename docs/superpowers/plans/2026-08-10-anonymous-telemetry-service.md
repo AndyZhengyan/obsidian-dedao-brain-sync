@@ -54,7 +54,7 @@ Create the directory with `mkdir`, initialize Git with default branch `main`, an
     "@testing-library/preact": "3.2.4",
     "eslint": "10.8.1",
     "happy-dom": "20.11.2",
-    "typescript": "7.0.2",
+    "typescript": "6.0.3",
     "typescript-eslint": "8.66.0",
     "vite": "8.2.1",
     "vitest": "4.1.10",
