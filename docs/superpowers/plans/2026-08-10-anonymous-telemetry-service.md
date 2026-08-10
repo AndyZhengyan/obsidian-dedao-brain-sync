@@ -92,6 +92,32 @@ export type TelemetryMode = 'time' | 'selected' | 'knowledge_base' | 'auto' | 'l
 export type TelemetryAuthMode = 'openapi' | 'web';
 export type TelemetryRunStatus = 'success' | 'partial' | 'failed' | 'cancelled';
 
+export interface TelemetryErrorGroup {
+  code: TelemetryErrorCode;
+  stage: TelemetryErrorStage;
+  count: number;
+  message_preview?: string;
+}
+
+export interface TelemetryEventV1 {
+  schema_version: 1;
+  event_id: string;
+  plugin_version: PublishedPluginVersion;
+  direction: TelemetryDirection;
+  mode: TelemetryMode;
+  auth_mode: TelemetryAuthMode;
+  run_status: TelemetryRunStatus;
+  counts: {
+    success: number;
+    created: number;
+    updated: number;
+    skipped: number;
+    failed: number;
+  };
+  duration_bucket: TelemetryDurationBucket;
+  errors: TelemetryErrorGroup[];
+}
+
 export function parseTelemetryEvent(input: unknown): TelemetryEventV1 {
   const event = telemetryEventSchema.parse(input);
   if (event.counts.success !== event.counts.created + event.counts.updated) {
@@ -107,6 +133,8 @@ Use `.strict()` at every object level. Define these fixed schema V1 allow-lists 
 - Stages: `list_notes`, `fetch_note_detail`, `fetch_relationships`, `download_attachment`, `parse_note`, `read_vault`, `write_vault`, `create_remote_note`, `task_setup`, `unknown`.
 - Duration buckets: `under_1s`, `1s_3s`, `3s_10s`, `10s_30s`, `30s_2m`, `2m_10m`, `over_10m`.
 - Published plugin versions initially accepted: `1.4.4`. Update this allow-list as part of the release process before a telemetry-enabled plugin version is published; do not accept arbitrary semantic versions.
+
+Every listed event field is required, including `errors` (use an empty array when there are none). `message_preview` is the only optional field and must be omitted, not set to `null`, when no safe preview exists. `event_id` must be a UUID. Every note counter is an integer from 0 through 100,000. Each error-group `count` is an integer from 1 through 100,000; `errors` contains at most ten groups; `message_preview`, when present, contains 1 through 200 characters. In addition to `success = created + updated`, enforce `run_status = success` only when `counts.failed = 0`, and `run_status = partial` only when `counts.failed > 0`. A `failed` task is a task-level termination and may have zero note failures; a `cancelled` task has no extra count relationship. Do not infer or add any other fields or cross-field rules in schema V1.
 
 - [ ] **Step 5: Run contract tests and typecheck**
 
