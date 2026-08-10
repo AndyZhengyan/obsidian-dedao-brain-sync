@@ -14,15 +14,11 @@ For the project background and origin story, see this Chinese article: [Project 
 
 * * *
 
-## 🎉 1.4.3 — Latest Update
+## 🎉 1.4.4 — Latest Update
 
-- **🗂️ Organize notes by creation date**: Synced notes can be filed into created-date paths, with a controlled migration flow for existing folders.
-- **⚠️ Partial failures stay visible**: Runs with per-note failures now show a partial status, counts, and details; legacy success logs containing failures are corrected on load.
-- **🧭 Faster access to sync settings**: The sidebar sync panel now links to the full settings page, with fixes for popout-window selectors and runtime settings state.
-- **📚 More complete knowledge-base sync**: Subscribed-blogger content is included, and the tag cache refreshes correctly after credentials change.
-- **🛡️ Safer file writes**: Sync writes, download paths, and file-type checks are hardened to protect the local vault from malformed paths and invalid objects.
+- **🧭 Context-aware full-settings link**: The full-settings shortcut appears only when the time-based sync panel is opened from the left ribbon. It stays hidden when the same panel is opened from Settings or the command palette.
 
-Core improvements from 1.4.2 and earlier remain live, including consistent timestamps, theme compatibility, broader sync-boundary coverage, and refreshed build tooling.
+Core improvements from 1.4.3 and earlier remain live, including created-date organization, partial-failure status, knowledge-base sync, and safer file writes.
 
 The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 
