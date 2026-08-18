@@ -535,7 +535,7 @@ Expected: all commands PASS.
 
 - [ ] **Step 2: Create the private GitHub repository and push a feature branch**
 
-Create `AndyZhengyan/dedao-brain-sync-telemetry` as private, push `codex/initial-telemetry-service`, and open a PR against `main`. Do not push directly to `main`.
+Create `AndyZhengyan/dedao-brain-sync-telemetry` as private with GitHub's initial README so remote `main` exists without a direct local push. Add the remote, fetch it, merge `origin/main` into `codex/initial-telemetry-service` with `--allow-unrelated-histories`, resolve only the bootstrap README if necessary, then push that feature branch and open a PR against `main`. Do not force-push or push directly to `main`.
 
 - [ ] **Step 3: Create one D1 database in `apac` and apply migrations**
 
