@@ -300,6 +300,8 @@ git commit -m "feat: persist idempotent telemetry events"
 
 **Files:**
 - Modify: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/wrangler.jsonc`
+- Modify: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/src/index.ts`
+- Modify: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/src/index.test.ts`
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/src/index.ts`
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/src/geo.ts`
 - Create: `/Users/zhengyan/Projects/ai-project/dedao-brain-sync-telemetry/apps/ingest/src/maintenance.ts`
@@ -541,7 +543,7 @@ Use the Cloudflare binding MCP or Wrangler after resolving the exact database na
 
 - [ ] **Step 4: Deploy staging Worker and Pages projects**
 
-Deploy the ingest Worker first, then the dashboard. Configure an edge rate-limiting rule for `POST /v1/events`. Do not deploy a production plugin endpoint yet.
+Deploy the ingest Worker first, then the dashboard. This account has no Cloudflare Zone, so a zone WAF rate-limiting rule cannot apply to `workers.dev`. Replace that unavailable control with the official Worker Rate Limiting binding: configure `INGEST_RATE_LIMITER` with `namespace_id: "20260818"`, `limit: 500`, and `period: 60`; call it only for `POST /v1/events` with the fixed key `v1-events`; on exhaustion return `429 { "error": "RATE_LIMITED" }` without reading the body or using an IP, location, or persistent identifier as a key. Add a focused regression test for this path and regenerate Worker binding types. This counter is per Cloudflare location, so it is an abuse brake rather than an authenticity guarantee. Do not deploy a production plugin endpoint yet.
 
 - [ ] **Step 5: Configure Cloudflare Access**
 
