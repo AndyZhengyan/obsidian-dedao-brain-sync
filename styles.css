@@ -2,8 +2,6 @@
 
 /* === Settings Panel === */
 .getnote-settings-react {
-  display: flex;
-  flex-direction: column;
   padding: 0;
   --getnote-primary-input-width: 360px;
   --getnote-primary-input-min-width: 220px;
@@ -11,15 +9,6 @@
   --getnote-secondary-input-min-width: 120px;
   --getnote-nested-setting-gap: 12px;
 }
-
-.getnote-settings-header { order: 1; }
-.getnote-settings-status-bar { order: 2; }
-.getnote-settings-sync-status { order: 3; }
-.getnote-settings-common { order: 4; }
-.getnote-settings-common-continuation { order: 5; }
-.getnote-settings-advanced { order: 6; }
-.getnote-settings-manual { order: 7; }
-.getnote-settings-history { order: 8; }
 
 .getnote-settings-status-bar {
   display: flex;

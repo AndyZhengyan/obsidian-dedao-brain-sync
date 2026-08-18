@@ -188,10 +188,18 @@ describe('SettingsComponent information architecture (#257)', () => {
     const sections = Array.from(container.querySelectorAll<HTMLElement>('[data-settings-section]'))
       .map(section => section.dataset.settingsSection);
     expect(sections).toEqual(['common', 'advanced', 'manual', 'history']);
+
+    const scheduled = container.querySelector('[data-scheduled-settings]')!;
+    const attachments = container.querySelector('[data-attachment-settings]')!;
+    const advanced = container.querySelector('[data-settings-section="advanced"]')!;
+    expect(scheduled.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(attachments.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('keeps low-frequency settings behind one accessible advanced disclosure', async () => {
-    const { container } = renderSettings(makeSettings());
+    const { container } = renderSettings(makeSettings({
+      lastSyncEndTimestamp: '2026-06-12T15:30:00Z',
+    }));
     const disclosure = container.querySelector<HTMLButtonElement>('[data-advanced-disclosure]');
     const details = container.querySelector<HTMLElement>('[data-advanced-settings]');
 
@@ -212,6 +220,52 @@ describe('SettingsComponent information architecture (#257)', () => {
 
     expect(disclosure!.getAttribute('aria-expanded')).toBe('true');
     expect(details!.classList.contains('getnote-hidden')).toBe(false);
+  });
+
+  it('labels the first-import date as a sync start date before a checkpoint exists', () => {
+    const { container } = renderSettings(makeSettings({
+      syncStartDate: '2026-01-01',
+      lastSyncEndTimestamp: '',
+    }));
+    const details = container.querySelector<HTMLElement>('[data-advanced-settings]');
+
+    expect(details?.textContent).toContain('同步起始日期');
+    expect(details?.textContent).not.toContain('上次同步断点');
+  });
+
+  it('keeps connection-test feedback visible while credentials stay collapsed', async () => {
+    vi.mocked(fetchNotes).mockResolvedValue({ notes: [], hasMore: false });
+    const { container } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'token',
+      openApiClientId: 'client-id',
+    }));
+
+    await act(async () => {
+      getTestConnectionButton(container).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(container.querySelector('[data-credential-details]')?.classList.contains('getnote-hidden')).toBe(true);
+    expect(container.querySelector('[data-settings-status]')?.textContent).toContain('连接成功');
+  });
+
+  it('hides expanded scheduled details when scheduled sync is disabled', async () => {
+    const { container } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
+    }));
+    const disclosure = container.querySelector<HTMLButtonElement>('.getnote-scheduled-master-row .getnote-inline-disclosure')!;
+    const details = container.querySelector<HTMLElement>('#getnote-scheduled-details')!;
+
+    await act(() => disclosure.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(details.classList.contains('getnote-hidden')).toBe(false);
+
+    const enabledToggle = container.querySelector<HTMLInputElement>('input[aria-label="启用定时同步"]')!;
+    await act(() => enabledToggle.closest('.checkbox-container')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true })));
+
+    expect(container.querySelector('#getnote-scheduled-details')?.classList.contains('getnote-hidden')).toBe(true);
+    expect(container.querySelector('.getnote-scheduled-master-row .getnote-inline-disclosure')).toBeNull();
   });
 
   it('shows collapsed summaries and accessible names for common setting toggles', () => {

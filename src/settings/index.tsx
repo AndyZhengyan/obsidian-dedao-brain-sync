@@ -414,13 +414,14 @@ export function SettingsComponent({
   };
 
   const handleScheduledEnabled = (checked: boolean) => {
-    setScheduledEnabled(checked);
     updateSetting('scheduledSync', {
       ...settings.scheduledSync,
       enabledNoteTypes: scheduledNoteTypes,
       syncKnowledgeBases: scheduledKnowledgeBases,
       enabled: checked,
     });
+    setScheduledEnabled(checked);
+    if (!checked) setScheduledDetailsOpen(false);
     if (checked) {
       startAutoSync();
     } else {
@@ -671,6 +672,18 @@ export function SettingsComponent({
             {t('settings.credentials.change')}
           </button>
         </div>
+        {connectionStatus === 'success' && (
+          <span className="getnote-connection-success" role="status">
+            {connectionExpiryMin !== null
+              ? t('settings.connectionSuccessWithExpiry', { minutes: connectionExpiryMin })
+              : t('settings.connectionSuccess')}
+          </span>
+        )}
+        {connectionStatus === 'error' && (
+          <span className="getnote-connection-error" role="alert">
+            {t('settings.connectionError')}{connectionErrorMsg ? `: ${connectionErrorMsg}` : ''}
+          </span>
+        )}
       </div>
 
       {/* 同步进度紧跟状态，避免进行中的任务藏在页面底部。 */}
@@ -835,18 +848,6 @@ export function SettingsComponent({
               </>
             )}
           </div>
-          {connectionStatus === 'success' && (
-            <span className="getnote-connection-success">
-              {connectionExpiryMin !== null
-                ? t('settings.connectionSuccessWithExpiry', { minutes: connectionExpiryMin })
-                : t('settings.connectionSuccess')}
-            </span>
-          )}
-          {connectionStatus === 'error' && (
-            <span className="getnote-connection-error">
-              {t('settings.connectionError')}{connectionErrorMsg ? `: ${connectionErrorMsg}` : ''}
-            </span>
-          )}
         </div>
       </SettingItem>
       </div>
@@ -868,6 +869,8 @@ export function SettingsComponent({
       </section>
 
       {/* 文件名前缀 */}
+      {(() => {
+        const advancedSettings = (
       <section className="getnote-settings-section getnote-settings-advanced" data-settings-section="advanced">
         <button
           type="button"
@@ -1035,7 +1038,9 @@ export function SettingsComponent({
           <span className="getnote-scheduled-row-label">
             {resetDialogOpen
               ? t('settings.scheduled.resetStartDate')
-              : t('settings.syncStartDate.lastSyncedTo')}
+              : lastSyncedTo
+                ? t('settings.syncStartDate.lastSyncedTo')
+                : t('settings.syncStartDate.label')}
           </span>
           <span className="getnote-scheduled-row-control getnote-checkpoint-control">
             {resetDialogOpen ? (
@@ -1080,6 +1085,8 @@ export function SettingsComponent({
         </div>
       </section>
 
+        );
+        const commonSettingsContinuation = (
       <div className="getnote-settings-common-continuation">
 
       <div data-scheduled-settings>
@@ -1093,7 +1100,7 @@ export function SettingsComponent({
                 value={scheduledEnabled}
                 onChange={handleScheduledEnabled}
               />
-              {scheduledEnabled && (
+              {scheduledEnabled && settings.scheduledSync.enabled && (
                 <button
                   type="button"
                   className="getnote-inline-disclosure"
@@ -1109,7 +1116,7 @@ export function SettingsComponent({
           <small className="getnote-setting-summary">{scheduledSummary}</small>
           <div
             id={scheduledDetailsId}
-            className={`getnote-scheduled-rows${scheduledDetailsOpen ? '' : ' getnote-hidden'}`}
+            className={`getnote-scheduled-rows${scheduledEnabled && settings.scheduledSync.enabled && scheduledDetailsOpen ? '' : ' getnote-hidden'}`}
           >
             <div className="getnote-scheduled-row">
               <span className="getnote-scheduled-row-label">{t('settings.scheduled.interval')}</span>
@@ -1235,6 +1242,14 @@ export function SettingsComponent({
       </SettingItem>
       </div>
       </div>
+        );
+        return (
+          <>
+            {commonSettingsContinuation}
+            {advancedSettings}
+          </>
+        );
+      })()}
 
       <section className="getnote-settings-section getnote-settings-manual" data-settings-section="manual">
       <SettingItem name={t('settings.manualSync')}>
