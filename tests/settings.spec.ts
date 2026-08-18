@@ -190,10 +190,8 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(sections).toEqual(['common', 'advanced', 'manual', 'history']);
 
     const scheduled = container.querySelector('[data-scheduled-settings]')!;
-    const attachments = container.querySelector('[data-attachment-settings]')!;
     const advanced = container.querySelector('[data-settings-section="advanced"]')!;
     expect(scheduled.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(attachments.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('keeps low-frequency settings behind one accessible advanced disclosure', async () => {
@@ -213,6 +211,9 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(details!.textContent).toContain('模板文件路径');
     expect(details!.textContent).toContain('侧栏入口');
     expect(details!.textContent).toContain('上次同步断点');
+    expect(details!.textContent).toContain('附件下载配置');
+    expect(container.querySelector('[data-settings-section="common"] [data-attachment-settings]')).toBeNull();
+    expect(details!.querySelector('[data-attachment-settings]')).toBeTruthy();
 
     await act(() => {
       disclosure!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -268,7 +269,7 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(container.querySelector('.getnote-scheduled-master-row .getnote-inline-disclosure')).toBeNull();
   });
 
-  it('shows collapsed summaries and accessible names for common setting toggles', () => {
+  it('shows collapsed summaries and accessible names for setting toggles', () => {
     const { container } = renderSettings(makeSettings({
       scheduledSync: {
         ...DEFAULT_SETTINGS.scheduledSync,
@@ -306,6 +307,12 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(details!.classList.contains('getnote-hidden')).toBe(true);
     expect(changeButton!.getAttribute('aria-expanded')).toBe('false');
     expect(changeButton!.getAttribute('aria-controls')).toBe(details!.id);
+    expect(changeButton!.textContent).toBe('更改凭证');
+
+    const status = container.querySelector('[data-settings-status]')!;
+    const common = container.querySelector('[data-settings-section="common"]')!;
+    expect(status.compareDocumentPosition(details!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(details!.compareDocumentPosition(common) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     await act(() => {
       changeButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -313,6 +320,7 @@ describe('SettingsComponent information architecture (#257)', () => {
 
     expect(details!.classList.contains('getnote-hidden')).toBe(false);
     expect(changeButton!.getAttribute('aria-expanded')).toBe('true');
+    expect(changeButton!.textContent).toBe('收起凭证');
   });
 
   it('opens credential guidance by default before credentials are configured', () => {
