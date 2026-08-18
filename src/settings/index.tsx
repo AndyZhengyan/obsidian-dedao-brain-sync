@@ -93,6 +93,9 @@ interface SettingsComponentProps {
   initialKnowledgeBaseCache?: { entries: Array<{ topicId: string; name: string; source?: 'subscribed' | 'created' }>; cacheUpdatedAt?: number };
   applyDatePathSettings?: (target: DatePathMigrationTarget) => Promise<DatePathMigrationResult>;
   confirmDatePathMigration?: (request: DatePathConfirmationRequest) => Promise<boolean>;
+  desktopWebAuthAvailable?: boolean;
+  startDesktopWebAuth?: () => Promise<string>;
+  clearDesktopWebAuth?: () => Promise<void>;
 }
 
 export function SettingsComponent({
@@ -113,6 +116,9 @@ export function SettingsComponent({
   initialKnowledgeBaseCache,
   applyDatePathSettings,
   confirmDatePathMigration,
+  desktopWebAuthAvailable = false,
+  startDesktopWebAuth,
+  clearDesktopWebAuth,
 }: SettingsComponentProps) {
   const [authMode, setAuthMode] = useState<AuthMode>(settings.authMode);
   const initialOpenApiToken = settings.openApiToken || (settings.authMode === 'openapi' ? settings.apiToken : '');
@@ -143,6 +149,7 @@ export function SettingsComponent({
   const [scheduledKnowledgeBases, setScheduledKnowledgeBases] = useState<string[]>(settings.scheduledSync.syncKnowledgeBases ?? []);
   const [attachmentDetailsOpen, setAttachmentDetailsOpen] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
+  const [desktopWebAuthBusy, setDesktopWebAuthBusy] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [connectionErrorMsg, setConnectionErrorMsg] = useState('');
   const [connectionExpiryMin, setConnectionExpiryMin] = useState<number | null>(null);
@@ -517,6 +524,39 @@ export function SettingsComponent({
     }
   };
 
+  const handleDesktopWebAuth = async () => {
+    if (!startDesktopWebAuth) return;
+    setDesktopWebAuthBusy(true);
+    setConnectionStatus('idle');
+    setConnectionErrorMsg('');
+    try {
+      const token = await startDesktopWebAuth();
+      handleApiTokenWebChange(token);
+      setConnectionStatus('success');
+    } catch (error) {
+      setConnectionStatus('error');
+      setConnectionErrorMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setDesktopWebAuthBusy(false);
+    }
+  };
+
+  const handleDesktopWebLogout = async () => {
+    handleApiTokenWebChange('');
+    setConnectionStatus('idle');
+    setConnectionErrorMsg('');
+    if (!clearDesktopWebAuth) return;
+    setDesktopWebAuthBusy(true);
+    try {
+      await clearDesktopWebAuth();
+    } catch (error) {
+      setConnectionStatus('error');
+      setConnectionErrorMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setDesktopWebAuthBusy(false);
+    }
+  };
+
   useEffect(() => () => {
     if (intervalWarningTimeoutRef.current !== null) {
       window.clearTimeout(intervalWarningTimeoutRef.current);
@@ -686,6 +726,26 @@ export function SettingsComponent({
                   }
                 }}
               />
+            )}
+            {authMode === 'web' && desktopWebAuthAvailable && (
+              <>
+                <button
+                  type="button"
+                  className="mod-cta getnote-credential-action-button"
+                  disabled={desktopWebAuthBusy}
+                  onClick={() => { void handleDesktopWebAuth(); }}
+                >
+                  {desktopWebAuthBusy ? t('settings.webAuth.waiting') : t('settings.webAuth.login')}
+                </button>
+                <button
+                  type="button"
+                  className="mod-secondary getnote-credential-action-button"
+                  disabled={desktopWebAuthBusy}
+                  onClick={() => { void handleDesktopWebLogout(); }}
+                >
+                  {t('settings.webAuth.logout')}
+                </button>
+              </>
             )}
             <button
               className="mod-secondary getnote-credential-action-button"

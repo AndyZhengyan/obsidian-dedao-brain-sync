@@ -100,13 +100,13 @@ OpenAPI 搜索侧边栏：在 Obsidian 侧边栏直接搜索得到大脑笔记�
 4. 在 `设置 -> 得到大脑（原Get笔记）Sync` 中选择 `OpenAPI鉴权（会员）`，粘贴两个值。
 5. 也可以使用设置页的 OAuth 按钮自动获取凭证。
 
-### Web 模式（手动 Token）
+### Web 模式（桌面端自动登录，移动端手动 Token）
 
-如果你的账号无法使用 OpenAPI，可以选择 `临时鉴权`。这个模式复用浏览器里已经登录的得到大脑网页版会话，不需要 `Client ID`。
+如果你的账号无法使用 OpenAPI，可以选择 `临时鉴权`，不需要 `Client ID`。
 
-独立图文步骤见：[Web 模式手动 Token 指南](docs/web-mode-manual-token_zh.md)。
+桌面版 Obsidian 点击 `网页登录并自动获取 Token`，在插件打开的独立登录窗口中完成登录即可。插件只监听得到大脑 Web API 请求中的 `Authorization`，验证成功后自动保存 Token；登录会话保存在专用隔离分区，后续可直接刷新。点击 `退出并清除登录` 会同时删除已保存 Token 和该隔离登录会话。
 
-复制 Token 的步骤：
+移动端继续手动粘贴 Token。独立图文步骤见：[Web 模式 Token 指南](docs/web-mode-manual-token_zh.md)。手动复制步骤：
 
 1. 用 Chrome 或 Edge 打开 `https://www.biji.com/note` 并登录。
 2. 打开浏览器开发者工具：Windows/Linux 按 `F12` 或 `Ctrl + Shift + I`；Mac 按 `Command + Option + I`。

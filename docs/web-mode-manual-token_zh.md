@@ -1,4 +1,4 @@
-# Web 模式手动 Token 指南
+# Web 模式 Token 指南
 
 Web 模式适合无法使用 得到大脑 OpenAPI 的用户。它复用浏览器里已经登录的 得到大脑网页版会话，所以只需要浏览器请求里的 `Authorization` header，不需要 `Client ID`。
 
@@ -12,7 +12,17 @@ Web 模式适合无法使用 得到大脑 OpenAPI 的用户。它复用浏览器
 
 如果你已经有可用的 `gk_...` OpenAPI Token 和 `Client ID`，优先使用 OpenAPI 模式。
 
-## 复制 Authorization Header
+## 桌面端自动获取（推荐）
+
+1. 打开 `设置 -> 得到大脑（原Get笔记）Sync`。
+2. 选择 `临时鉴权`，点击 `网页登录并自动获取 Token`。
+3. 在插件打开的独立窗口中完成得到大脑登录；Token 验证成功后会自动保存并关闭窗口。
+4. 登录会话保存在插件专用的隔离分区，后续刷新 Token 通常不必重复登录。
+5. 如需彻底退出，点击 `退出并清除登录`，插件会删除保存的 Token、Cookie、缓存和该隔离会话数据。
+
+插件不会读取密码或短信验证码，也不会把 Cookie 写入插件设置。请只在该窗口中自行完成登录。
+
+## 移动端手动复制 Authorization Header
 
 1. 用 Chrome 或 Edge 打开 `https://www.biji.com/note` 并登录。
 2. 打开浏览器开发者工具：
@@ -29,7 +39,7 @@ Web 模式适合无法使用 得到大脑 OpenAPI 的用户。它复用浏览器
 
 这个值通常以 `Bearer eyJ...` 开头。如果复制时带了 `Bearer ` 前缀，可以直接一起粘贴；插件也支持只粘贴后面的 JWT token。
 
-## 粘贴到 Obsidian
+## 在移动端粘贴到 Obsidian
 
 1. 打开 `设置 -> 得到大脑（原Get笔记）Sync`。
 2. 选择 `临时鉴权（Free）`。

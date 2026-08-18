@@ -100,13 +100,13 @@ Credentials are stored only in your local Obsidian plugin data, and are used to 
 4. In `Settings -> Dedao Brain Sync`, choose `OpenAPI auth (members)` and paste both values.
 5. You can also use the OAuth button on the settings page to fetch credentials automatically.
 
-### Web mode (manual token)
+### Web mode (automatic on desktop, manual token on mobile)
 
-If your account cannot use OpenAPI, choose `Temporary auth`. This mode reuses your existing Dedao Brain web session in the browser and does not require a `Client ID`.
+If your account cannot use OpenAPI, choose `Temporary auth`. It does not require a `Client ID`.
 
-Step-by-step English guide: [Web Mode Manual Token Guide](docs/web-mode-manual-token.md).
+On Obsidian Desktop, click `Sign in on the web and get Token automatically`, then finish signing in inside the dedicated window opened by the plugin. The plugin only observes `Authorization` on Dedao Brain Web API requests and saves the token after validation. The sign-in state uses a dedicated persistent partition, so it can be reused later. `Sign out and clear login` removes both the saved token and that isolated session.
 
-To copy the token:
+Mobile remains manual. See the [Web Mode Token Guide](docs/web-mode-manual-token.md). To copy the token manually:
 
 1. Open `https://www.biji.com/note` in Chrome or Edge and sign in.
 2. Open browser DevTools: `F12` or `Ctrl + Shift + I` on Windows / Linux; `Command + Option + I` on Mac.
