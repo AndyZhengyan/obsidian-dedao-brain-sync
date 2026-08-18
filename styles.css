@@ -10,6 +10,88 @@
   --getnote-nested-setting-gap: 12px;
 }
 
+.getnote-settings-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+}
+
+.getnote-settings-status-copy,
+.getnote-settings-status-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.getnote-settings-status-copy span {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.getnote-settings-status-actions {
+  justify-content: flex-end;
+}
+
+.getnote-settings-section,
+.getnote-settings-common-continuation {
+  width: 100%;
+}
+
+.getnote-settings-section > h3 {
+  margin: 8px 0 14px;
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+}
+
+.getnote-settings-advanced {
+  margin: 8px 0 16px;
+  border-top: 1px solid var(--background-modifier-border);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.getnote-settings-advanced .getnote-section-disclosure {
+  min-height: 58px;
+  padding: 10px 12px;
+  border-left: 0;
+}
+
+.getnote-section-disclosure-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.getnote-section-disclosure-copy strong {
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+}
+
+.getnote-section-disclosure-copy small,
+.getnote-setting-summary {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: 400;
+}
+
+.getnote-setting-summary {
+  display: block;
+  margin-top: 3px;
+}
+
+.getnote-checkpoint-control {
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .setting-item {
   display: flex;
   align-items: flex-start;
@@ -734,6 +816,22 @@
   .getnote-actions-row,
   .getnote-credentials-actions {
     justify-content: flex-start;
+  }
+
+  .getnote-settings-status-bar,
+  .getnote-settings-status-copy {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .getnote-settings-status-actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .getnote-scheduled-master-row,
+  .getnote-attachment-master-row {
+    align-items: flex-start;
   }
 }
 
