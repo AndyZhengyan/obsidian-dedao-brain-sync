@@ -165,6 +165,116 @@ afterEach(() => {
   delete (window as Window & { require?: unknown }).require;
 });
 
+describe('SettingsComponent information architecture (#257)', () => {
+  it('keeps the page configuration-first and leaves manual sync after common and advanced settings', () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'token',
+      openApiClientId: 'client-id',
+      scheduledSync: {
+        ...DEFAULT_SETTINGS.scheduledSync,
+        enabled: true,
+        intervalMinutes: 30,
+        syncOnStart: true,
+      },
+    }));
+
+    const status = container.querySelector<HTMLElement>('[data-settings-status]');
+    expect(status).toBeTruthy();
+    expect(status!.textContent).toContain('OpenAPI');
+    expect(status!.textContent).toContain('当前状态');
+    expect(status!.textContent).not.toContain('按时间同步');
+
+    const sections = Array.from(container.querySelectorAll<HTMLElement>('[data-settings-section]'))
+      .map(section => section.dataset.settingsSection);
+    expect(sections).toEqual(['common', 'advanced', 'manual', 'history']);
+  });
+
+  it('keeps low-frequency settings behind one accessible advanced disclosure', async () => {
+    const { container } = renderSettings(makeSettings());
+    const disclosure = container.querySelector<HTMLButtonElement>('[data-advanced-disclosure]');
+    const details = container.querySelector<HTMLElement>('[data-advanced-settings]');
+
+    expect(disclosure).toBeTruthy();
+    expect(details).toBeTruthy();
+    expect(disclosure!.getAttribute('aria-controls')).toBe(details!.id);
+    expect(disclosure!.getAttribute('aria-expanded')).toBe('false');
+    expect(details!.classList.contains('getnote-hidden')).toBe(true);
+    expect(details!.textContent).toContain('文件名前缀');
+    expect(details!.textContent).toContain('按创建日期整理路径');
+    expect(details!.textContent).toContain('模板文件路径');
+    expect(details!.textContent).toContain('侧栏入口');
+    expect(details!.textContent).toContain('上次同步断点');
+
+    await act(() => {
+      disclosure!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(disclosure!.getAttribute('aria-expanded')).toBe('true');
+    expect(details!.classList.contains('getnote-hidden')).toBe(false);
+  });
+
+  it('shows collapsed summaries and accessible names for common setting toggles', () => {
+    const { container } = renderSettings(makeSettings({
+      scheduledSync: {
+        ...DEFAULT_SETTINGS.scheduledSync,
+        enabled: true,
+        intervalMinutes: 30,
+        syncOnStart: true,
+      },
+      attachmentImport: { image: true, audio: true, video: true, document: true },
+    }));
+
+    const scheduled = container.querySelector<HTMLElement>('[data-scheduled-settings]');
+    const attachments = container.querySelector<HTMLElement>('[data-attachment-settings]');
+    expect(scheduled?.textContent).toContain('每 30 分钟');
+    expect(scheduled?.textContent).toContain('启动时');
+    expect(scheduled?.textContent).toContain('全部笔记');
+    expect(attachments?.textContent).toContain('全部附件');
+
+    expect(scheduled?.querySelector<HTMLInputElement>('input[type="checkbox"]')?.getAttribute('aria-label'))
+      .toBe('启用定时同步');
+    expect(attachments?.querySelector<HTMLInputElement>('input[type="checkbox"]')?.getAttribute('aria-label'))
+      .toBe('下载附件');
+  });
+
+  it('collapses configured credentials and reveals them through the status actions', async () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'token',
+      openApiClientId: 'client-id',
+    }));
+    const details = container.querySelector<HTMLElement>('[data-credential-details]');
+    const changeButton = container.querySelector<HTMLButtonElement>('[data-change-credentials]');
+
+    expect(details).toBeTruthy();
+    expect(changeButton).toBeTruthy();
+    expect(details!.classList.contains('getnote-hidden')).toBe(true);
+    expect(changeButton!.getAttribute('aria-expanded')).toBe('false');
+    expect(changeButton!.getAttribute('aria-controls')).toBe(details!.id);
+
+    await act(() => {
+      changeButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(details!.classList.contains('getnote-hidden')).toBe(false);
+    expect(changeButton!.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('opens credential guidance by default before credentials are configured', () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: '',
+      openApiClientId: '',
+      apiToken: '',
+      clientId: '',
+    }));
+
+    expect(container.querySelector('[data-credential-details]')?.classList.contains('getnote-hidden')).toBe(false);
+    expect(container.querySelector('[data-credential-guidance]')?.textContent).toContain('请先选择认证方式');
+  });
+});
+
 describe('created-date path settings', () => {
   function settingItem(container: HTMLElement, label: string): HTMLElement {
     const item = Array.from(container.querySelectorAll<HTMLElement>('.setting-item'))
