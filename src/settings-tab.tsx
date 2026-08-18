@@ -63,6 +63,9 @@ function MountedSettings({
       syncHistory={plugin.syncHistory}
       applyDatePathSettings={applyDatePathSettings}
       confirmDatePathMigration={confirmDatePathMigrationProp}
+      desktopWebAuthAvailable={plugin.isDesktopWebAuthAvailable()}
+      startDesktopWebAuth={() => plugin.captureDesktopWebToken()}
+      clearDesktopWebAuth={() => plugin.clearDesktopWebAuthSession()}
     />
   );
 }

@@ -1,4 +1,4 @@
-import { App, Modal, Notice, Plugin, getLanguage, type DataAdapter, type Editor, type Menu, type TFile } from 'obsidian';
+import { App, Modal, Notice, Platform, Plugin, getLanguage, type DataAdapter, type Editor, type Menu, type TFile } from 'obsidian';
 import ReactDOM from 'react-dom';
 import { DEFAULT_SETTINGS, getAuthCredentials, migrateEnabledNoteTypes, type RecallSearchResult, type Settings, type SyncHistoryScope, type SyncProgressDetail, type SyncHistoryEntry, type SyncResult, type SyncScopeOptions } from './types';
 import { GetNoteSettingsTab } from './settings-tab';
@@ -12,7 +12,7 @@ import { initI18n, t } from './i18n';
 import { ReverseSyncEngine, type ReverseSyncResult } from './reverse-sync';
 import { migrateSyncedNoteTags } from './tag-migration';
 import { getLastQuotaState, resetQuotaState } from './api-clients/openapi-client';
-import { fetchRecallSearch } from './api';
+import { fetchNotes, fetchRecallSearch } from './api';
 import { mergeTagCache } from './utils/tag-aggregator';
 import { SearchPanel, findSyncedNoteFile } from './ui/search-view';
 import {
@@ -21,6 +21,7 @@ import {
   type DatePathMigrationTarget,
 } from './date-path-migration';
 import { validateDatePathFormat } from './date-paths';
+import { createDesktopWebAuthManager, type DesktopWebAuthManager } from './desktop-web-auth';
 
 const MAX_SYNC_HISTORY = 20;
 const TAG_MIGRATION_VERSION = 2;
@@ -155,6 +156,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   private searchRibbonEl?: HTMLElement;
   private lastProgressUpdate = 0;
   private autoSyncFailCount = 0;
+  private desktopWebAuthManager: DesktopWebAuthManager | null = null;
 
   async onload(): Promise<void> {
     initI18n(getLanguage());
@@ -194,6 +196,9 @@ export default class GetNoteSyncPlugin extends Plugin {
     };
     this.syncHistory = this.settings.syncHistory;
     this.lastSyncResult = this.syncHistory.at(-1) ?? null;
+    this.desktopWebAuthManager = createDesktopWebAuthManager({
+      isDesktopApp: Platform.isDesktopApp,
+    });
 
     this.app.workspace.onLayoutReady(() => {
       void this.migrateExistingTags();
@@ -253,6 +258,28 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   onunload(): void {
     this.stopAutoSync();
+    this.desktopWebAuthManager?.dispose();
+  }
+
+  isDesktopWebAuthAvailable(): boolean {
+    return this.desktopWebAuthManager !== null;
+  }
+
+  async captureDesktopWebToken(): Promise<string> {
+    if (!this.desktopWebAuthManager) throw new Error(t('settings.webAuth.desktopOnly'));
+    return this.desktopWebAuthManager.captureToken(async token => {
+      await fetchNotes({
+        token,
+        clientId: '',
+        authMode: 'web',
+        sinceId: '0',
+        limit: 1,
+      });
+    });
+  }
+
+  async clearDesktopWebAuthSession(): Promise<void> {
+    await this.desktopWebAuthManager?.clearSession();
   }
 
   private registerRibbonActions(): void {

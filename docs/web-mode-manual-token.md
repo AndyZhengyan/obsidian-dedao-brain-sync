@@ -1,4 +1,4 @@
-# Web Mode Manual Token Guide
+# Web Mode Token Guide
 
 Web mode is for users who cannot use Dedao Brain OpenAPI. It reuses the signed-in Dedao Brain Web session from your browser, so it only needs the browser session `Authorization` header and does not need `Client ID`.
 
@@ -12,7 +12,17 @@ Use Web mode when:
 
 Use OpenAPI mode instead if you already have a working `gk_...` OpenAPI token and `Client ID`.
 
-## Copy The Authorization Header
+## Automatic Token Capture On Desktop (Recommended)
+
+1. Open `Settings -> Dedao Brain Sync`.
+2. Select `Temporary auth`, then click `Sign in on the web and get Token automatically`.
+3. Finish signing in inside the dedicated window opened by the plugin. The window closes after the captured token passes validation and is saved.
+4. The login state is stored in a plugin-specific isolated partition, so later token refreshes can usually reuse it.
+5. To sign out completely, click `Sign out and clear login`. This removes the saved token, cookies, cache, and the isolated session data.
+
+The plugin does not read your password or SMS code and does not store cookies in plugin settings. Enter sign-in details only inside that dedicated window.
+
+## Manually Copy The Authorization Header On Mobile
 
 1. Open `https://www.biji.com/note` in Chrome or Edge and sign in.
 2. Open browser DevTools:
@@ -29,7 +39,7 @@ Use OpenAPI mode instead if you already have a working `gk_...` OpenAPI token an
 
 The value usually starts with `Bearer eyJ...`. Keep the `Bearer ` prefix if it is copied with the token; the plugin also accepts the JWT token without the prefix.
 
-## Paste It In Obsidian
+## Paste It In Obsidian Mobile
 
 1. Open `Settings -> 得到大脑（原Get笔记）Sync`.
 2. Select `Temp Auth (Free)`.
