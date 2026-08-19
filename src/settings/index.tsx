@@ -645,7 +645,7 @@ export function SettingsComponent({
         </p>
       </div>
 
-      <div className="getnote-settings-status-bar" data-settings-status>
+      <div className={`getnote-settings-status-bar${credentialsDetailsOpen ? ' is-credentials-open' : ''}`} data-settings-status>
         <div className="getnote-settings-status-copy">
           <strong>{t(`settings.authMode.${authMode}`)}</strong>
           <span>{hasCredentials ? t('settings.credentials.connected') : t('settings.credentials.notConfigured')}</span>
@@ -669,7 +669,7 @@ export function SettingsComponent({
             aria-controls={credentialDetailsId}
             onClick={() => setCredentialsDetailsOpen(prev => !prev)}
           >
-            {t('settings.credentials.change')}
+            {credentialsDetailsOpen ? t('settings.credentials.collapse') : t('settings.credentials.change')}
           </button>
         </div>
         {connectionStatus === 'success' && (
@@ -705,18 +705,15 @@ export function SettingsComponent({
         </div>
       )}
 
-      <section className="getnote-settings-section getnote-settings-common" data-settings-section="common">
-        <h3>{t('settings.common.section')}</h3>
+      <div
+        id={credentialDetailsId}
+        data-credential-details
+        className={`getnote-credential-panel${credentialsDetailsOpen ? '' : ' getnote-hidden'}`}
+      >
 
       {!hasCredentials && (
         <div className="getnote-onboarding" data-credential-guidance>{t('settings.onboarding')}</div>
       )}
-
-      <div
-        id={credentialDetailsId}
-        data-credential-details
-        className={credentialsDetailsOpen ? '' : 'getnote-hidden'}
-      >
 
       {/* 凭证设置 */}
       <SettingItem
@@ -851,6 +848,9 @@ export function SettingsComponent({
         </div>
       </SettingItem>
       </div>
+
+      <section className="getnote-settings-section getnote-settings-common" data-settings-section="common">
+        <h3>{t('settings.common.section')}</h3>
 
       {/* 目标文件夹 */}
       <SettingItem
@@ -1082,6 +1082,46 @@ export function SettingsComponent({
               ? t('settings.syncStartDate.lastSyncedToDesc')
               : t('settings.syncStartDate.desc')}
         </div>
+
+        <div data-attachment-settings>
+        <SettingItem name={t('settings.attachment.section')}>
+          <div className="getnote-scheduled-options">
+            <div className="getnote-scheduled-row getnote-attachment-master-row">
+              <span className="getnote-scheduled-row-label">
+                <span>{t('settings.attachment.master')}</span>
+                <small className="getnote-setting-summary">{attachmentSummary}</small>
+              </span>
+              <span className="getnote-scheduled-row-control">
+                <Toggle ariaLabel={t('settings.attachment.master')} value={allAttachmentsOn} onChange={handleMasterAttachmentChange} />
+                <button
+                  type="button"
+                  className="getnote-inline-disclosure"
+                  aria-expanded={attachmentDetailsOpen}
+                  aria-controls={attachmentDetailsId}
+                  onClick={() => setAttachmentDetailsOpen(prev => !prev)}
+                >
+                  {attachmentDetailsOpen ? t('settings.collapse') : t('settings.expand')}
+                </button>
+              </span>
+            </div>
+            <div id={attachmentDetailsId} className={`getnote-scheduled-options-detail getnote-attachment-options${attachmentDetailsOpen ? '' : ' getnote-hidden'}`}>
+              {attachmentKinds.map(kind => (
+                <div className="getnote-scheduled-row getnote-nested-row getnote-attachment-option" key={kind}>
+                  <span className="getnote-scheduled-row-label">{t(`settings.attachment.${kind}`)}</span>
+                  <span className="getnote-scheduled-row-control">
+                    <Toggle
+                      ariaLabel={t(`settings.attachment.${kind}`)}
+                      value={allAttachmentsOn ? attachmentImport[kind] !== false : false}
+                      disabled={!allAttachmentsOn}
+                      onChange={(value) => handleChildAttachmentChange(kind, value)}
+                    />
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </SettingItem>
+        </div>
         </div>
       </section>
 
@@ -1202,45 +1242,6 @@ export function SettingsComponent({
       </SettingItem>
       </div>
 
-      <div data-attachment-settings>
-      <SettingItem name={t('settings.attachment.section')}>
-        <div className="getnote-scheduled-options">
-          <div className="getnote-scheduled-row getnote-attachment-master-row">
-            <span className="getnote-scheduled-row-label">
-              <span>{t('settings.attachment.master')}</span>
-              <small className="getnote-setting-summary">{attachmentSummary}</small>
-            </span>
-            <span className="getnote-scheduled-row-control">
-              <Toggle ariaLabel={t('settings.attachment.master')} value={allAttachmentsOn} onChange={handleMasterAttachmentChange} />
-              <button
-                type="button"
-                className="getnote-inline-disclosure"
-                aria-expanded={attachmentDetailsOpen}
-                aria-controls={attachmentDetailsId}
-                onClick={() => setAttachmentDetailsOpen(prev => !prev)}
-              >
-                {attachmentDetailsOpen ? t('settings.collapse') : t('settings.expand')}
-              </button>
-            </span>
-          </div>
-          <div id={attachmentDetailsId} className={`getnote-scheduled-options-detail getnote-attachment-options${attachmentDetailsOpen ? '' : ' getnote-hidden'}`}>
-            {attachmentKinds.map(kind => (
-              <div className="getnote-scheduled-row getnote-nested-row getnote-attachment-option" key={kind}>
-                <span className="getnote-scheduled-row-label">{t(`settings.attachment.${kind}`)}</span>
-                <span className="getnote-scheduled-row-control">
-                  <Toggle
-                    ariaLabel={t(`settings.attachment.${kind}`)}
-                    value={allAttachmentsOn ? attachmentImport[kind] !== false : false}
-                    disabled={!allAttachmentsOn}
-                    onChange={(value) => handleChildAttachmentChange(kind, value)}
-                  />
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </SettingItem>
-      </div>
       </div>
         );
         return (

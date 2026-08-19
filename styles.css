@@ -40,6 +40,24 @@
   justify-content: flex-end;
 }
 
+.getnote-settings-status-bar.is-credentials-open {
+  margin-bottom: 0;
+  border-radius: var(--radius-m) var(--radius-m) 0 0;
+}
+
+.getnote-credential-panel {
+  margin: 0 0 20px;
+  padding: 14px;
+  border: 1px solid var(--background-modifier-border);
+  border-top: 0;
+  border-radius: 0 0 var(--radius-m) var(--radius-m);
+  background: var(--background-secondary);
+}
+
+.getnote-credential-panel .setting-item {
+  margin-bottom: 0;
+}
+
 .getnote-settings-section,
 .getnote-settings-common-continuation {
   width: 100%;
