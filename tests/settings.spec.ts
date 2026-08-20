@@ -166,7 +166,7 @@ afterEach(() => {
 });
 
 describe('SettingsComponent information architecture (#257)', () => {
-  it('keeps the page configuration-first and leaves manual sync after common and advanced settings', () => {
+  it('groups automatic sync, manual sync, and history before the final advanced settings section', () => {
     const { container } = renderSettings(makeSettings({
       authMode: 'openapi',
       openApiToken: 'token',
@@ -187,11 +187,15 @@ describe('SettingsComponent information architecture (#257)', () => {
 
     const sections = Array.from(container.querySelectorAll<HTMLElement>('[data-settings-section]'))
       .map(section => section.dataset.settingsSection);
-    expect(sections).toEqual(['common', 'advanced', 'manual', 'history']);
+    expect(sections).toEqual(['common', 'sync', 'advanced']);
 
+    const syncSection = container.querySelector('[data-settings-section="sync"]')!;
     const scheduled = container.querySelector('[data-scheduled-settings]')!;
     const advanced = container.querySelector('[data-settings-section="advanced"]')!;
-    expect(scheduled.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(syncSection.contains(scheduled)).toBe(true);
+    expect(syncSection.textContent).toContain('手动同步');
+    expect(syncSection.textContent).toContain('同步日志');
+    expect(syncSection.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('keeps low-frequency settings behind one accessible advanced disclosure', async () => {
@@ -210,7 +214,7 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(details!.textContent).toContain('按创建日期整理路径');
     expect(details!.textContent).toContain('模板文件路径');
     expect(details!.textContent).toContain('侧栏入口');
-    expect(details!.textContent).toContain('上次同步断点');
+    expect(details!.textContent).not.toContain('上次同步断点');
     expect(details!.textContent).toContain('附件下载配置');
     expect(container.querySelector('[data-settings-section="common"] [data-attachment-settings]')).toBeNull();
     expect(details!.querySelector('[data-attachment-settings]')).toBeTruthy();
@@ -228,10 +232,23 @@ describe('SettingsComponent information architecture (#257)', () => {
       syncStartDate: '2026-01-01',
       lastSyncEndTimestamp: '',
     }));
-    const details = container.querySelector<HTMLElement>('[data-advanced-settings]');
+    const details = container.querySelector<HTMLElement>('#getnote-scheduled-details');
 
     expect(details?.textContent).toContain('同步起始日期');
     expect(details?.textContent).not.toContain('上次同步断点');
+  });
+
+  it('keeps the last sync checkpoint inside expanded scheduled-sync details', () => {
+    const { container } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
+      lastSyncEndTimestamp: '2026-06-12T15:30:00Z',
+    }));
+
+    const scheduledDetails = container.querySelector<HTMLElement>('#getnote-scheduled-details');
+    const advancedDetails = container.querySelector<HTMLElement>('[data-advanced-settings]');
+
+    expect(scheduledDetails?.textContent).toContain('上次同步断点');
+    expect(advancedDetails?.textContent).not.toContain('上次同步断点');
   });
 
   it('keeps connection-test feedback visible while credentials stay collapsed', async () => {
