@@ -1,4 +1,4 @@
-# 最好用的 【得到大脑 🔄 Obsidian】 插件
+# 最好用的 【得到大脑/Get笔记 🔄 Obsidian】 插件（永久免费）
 
 [中文](./README.md) | [English](./README_EN.md)
 
