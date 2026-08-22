@@ -2,6 +2,7 @@ const WEB_LOGIN_URL = 'https://www.biji.com/note';
 const WEB_API_URL_PREFIX = 'https://get-notes.luojilab.com/';
 const WEB_AUTH_PARTITION = 'persist:dedao-brain-web-auth';
 const DEFAULT_CAPTURE_TIMEOUT_MS = 2 * 60 * 1000;
+const DEFAULT_SILENT_CAPTURE_TIMEOUT_MS = 15 * 1000;
 
 export interface DesktopWebAuthRequestDetails {
   url: string;
@@ -46,9 +47,16 @@ export interface DesktopWebAuthElectron {
 }
 
 export interface DesktopWebAuthManager {
-  captureToken(validate: (token: string) => Promise<void>): Promise<string>;
+  captureToken(
+    validate: (token: string) => Promise<void>,
+    options?: DesktopWebAuthCaptureOptions,
+  ): Promise<string>;
   clearSession(): Promise<void>;
   dispose(): void;
+}
+
+export interface DesktopWebAuthCaptureOptions {
+  interactive?: boolean;
 }
 
 type ElectronRequire = (moduleName: string) => unknown;
@@ -107,22 +115,29 @@ class ElectronDesktopWebAuthManager implements DesktopWebAuthManager {
   private readonly authSession: DesktopWebAuthSession;
   private activeWindow: DesktopWebAuthWindow | null = null;
   private activeCapture: Promise<string> | null = null;
+  private activeCaptureInteractive = false;
   private rejectActiveCapture: ((error: Error) => void) | null = null;
   private captureTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly electron: DesktopWebAuthElectron,
     private readonly timeoutMs: number,
+    private readonly silentTimeoutMs: number,
   ) {
     this.authSession = electron.session.fromPartition(WEB_AUTH_PARTITION);
   }
 
-  captureToken(validate: (token: string) => Promise<void>): Promise<string> {
+  captureToken(
+    validate: (token: string) => Promise<void>,
+    options: DesktopWebAuthCaptureOptions = {},
+  ): Promise<string> {
+    const interactive = options.interactive ?? true;
     if (this.activeCapture) {
-      this.activeWindow?.focus();
+      if (interactive) this.revealActiveWindow();
       return this.activeCapture;
     }
 
+    this.activeCaptureInteractive = interactive;
     const validatingTokens = new Set<string>();
     let settled = false;
 
@@ -176,7 +191,11 @@ class ElectronDesktopWebAuthManager implements DesktopWebAuthManager {
       });
       this.activeWindow = loginWindow;
       loginWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-      loginWindow.once('ready-to-show', () => loginWindow.show());
+      loginWindow.once('ready-to-show', () => {
+        if (this.activeCaptureInteractive && !loginWindow.isDestroyed()) {
+          loginWindow.show();
+        }
+      });
       loginWindow.on('closed', () => {
         this.activeWindow = null;
         if (!settled) fail(new Error('Desktop Web authentication window closed'));
@@ -184,7 +203,7 @@ class ElectronDesktopWebAuthManager implements DesktopWebAuthManager {
 
       this.captureTimeout = setTimeout(() => {
         fail(new Error('Desktop Web authentication timed out'));
-      }, this.timeoutMs);
+      }, interactive ? this.timeoutMs : this.silentTimeoutMs);
 
       void loginWindow.loadURL(WEB_LOGIN_URL).catch(error => {
         fail(error instanceof Error ? error : new Error(String(error)));
@@ -230,9 +249,16 @@ class ElectronDesktopWebAuthManager implements DesktopWebAuthManager {
     this.authSession.webRequest.onBeforeSendHeaders(null);
     const loginWindow = this.activeWindow;
     this.activeWindow = null;
+    this.activeCaptureInteractive = false;
     if (closeWindow && loginWindow && !loginWindow.isDestroyed()) {
       loginWindow.close();
     }
+  }
+
+  private revealActiveWindow(): void {
+    this.activeCaptureInteractive = true;
+    this.activeWindow?.show();
+    this.activeWindow?.focus();
   }
 }
 
@@ -240,12 +266,16 @@ export function createDesktopWebAuthManager({
   isDesktopApp,
   loadElectron = defaultElectronLoader,
   timeoutMs = DEFAULT_CAPTURE_TIMEOUT_MS,
+  silentTimeoutMs = DEFAULT_SILENT_CAPTURE_TIMEOUT_MS,
 }: {
   isDesktopApp: boolean;
   loadElectron?: () => DesktopWebAuthElectron | null | undefined;
   timeoutMs?: number;
+  silentTimeoutMs?: number;
 }): DesktopWebAuthManager | null {
   if (!isDesktopApp) return null;
   const electron = loadElectron();
-  return electron ? new ElectronDesktopWebAuthManager(electron, timeoutMs) : null;
+  return electron
+    ? new ElectronDesktopWebAuthManager(electron, timeoutMs, silentTimeoutMs)
+    : null;
 }

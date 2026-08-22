@@ -380,6 +380,7 @@ export const translations: Record<string, Record<string, string>> = {
     'error.rateLimited': 'API 调用频率过高，请稍后再试',
     'error.webApiLoginRequired': 'Web Token 已过期，请刷新登录后重新复制 Token',
     'error.webApiForbidden': 'Web Token 无效，请检查设置',
+    'error.webApiSessionExpired': '网页登录状态已失效，请重新登录',
     'error.reverseSyncOpenApiOnly': '反向写回仅支持 OpenAPI，请填写会员 OpenAPI Token 和 Client ID',
     'error.createNoteFailed': '创建得到大脑笔记失败',
 
@@ -777,6 +778,7 @@ export const translations: Record<string, Record<string, string>> = {
     'error.rateLimited': 'API rate limit exceeded, please try again later',
     'error.webApiLoginRequired': 'Web Token expired, please refresh login and copy a new Token',
     'error.webApiForbidden': 'Web Token invalid, please check settings',
+    'error.webApiSessionExpired': 'Web login session expired, please sign in again',
     'error.reverseSyncOpenApiOnly': 'Reverse write-back only supports OpenAPI. Please enter a PRO OpenAPI Token and Client ID.',
     'error.createNoteFailed': 'Failed to create Dedao Brain note',
 

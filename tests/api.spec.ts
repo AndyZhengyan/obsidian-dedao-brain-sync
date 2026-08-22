@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createNote, fetchNoteChildren, fetchNotes, fetchNoteDetail, fetchNoteOriginal, fetchRecallSearch, fetchSubscribedTopics, fetchTopicContentPreviewPage } from '../src/api';
+import { createNote, fetchNoteChildren, fetchNotes, fetchNoteDetail, fetchNoteOriginal, fetchRecallSearch, fetchSubscribedTopics, fetchTopicContentPreviewPage, setWebTokenRefreshHandler } from '../src/api';
 
 // Extract the internal safeJsonParse for direct testing
 function safeJsonParse(text: string): unknown {
@@ -477,6 +477,86 @@ describe('web auth mode', () => {
         })
       );
     } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('silently renews an expired Web Token once and retries the original request with the replacement token', async () => {
+    const refresh = vi.fn().mockResolvedValue('Bearer renewed-token');
+    setWebTokenRefreshHandler({
+      getToken: () => 'Bearer expired-token',
+      refresh,
+    });
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(mockFetchResponse({ message: 'LoginRequired' }, 401) as Response)
+      .mockResolvedValueOnce(mockFetchResponse({ h: {}, c: { list: [], has_more: false } }) as Response);
+
+    try {
+      await expect(fetchNotes({
+        token: 'Bearer expired-token',
+        clientId: '',
+        authMode: 'web',
+      })).resolves.toEqual({ notes: [], hasMore: false });
+
+      expect(refresh).toHaveBeenCalledOnce();
+      expect(globalThis.fetch).toHaveBeenNthCalledWith(
+        2,
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: 'Bearer renewed-token' }),
+        }),
+      );
+    } finally {
+      setWebTokenRefreshHandler(null);
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('does not trigger session renewal for a non-auth Web API failure', async () => {
+    const refresh = vi.fn().mockResolvedValue('Bearer should-not-be-used');
+    setWebTokenRefreshHandler({
+      getToken: () => 'Bearer existing-token',
+      refresh,
+    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ message: 'upstream validation failure' }, 400) as Response,
+    );
+
+    try {
+      await expect(fetchNotes({
+        token: 'Bearer existing-token',
+        clientId: '',
+        authMode: 'web',
+      })).rejects.toThrow('400');
+
+      expect(refresh).not.toHaveBeenCalled();
+    } finally {
+      setWebTokenRefreshHandler(null);
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
+  it('does not renew again when the one allowed retry still receives an authentication failure', async () => {
+    const refresh = vi.fn().mockResolvedValue('Bearer renewed-token');
+    setWebTokenRefreshHandler({
+      getToken: () => 'Bearer expired-token',
+      refresh,
+    });
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(mockFetchResponse({ message: 'LoginRequired' }, 401) as Response)
+      .mockResolvedValueOnce(mockFetchResponse({ message: 'LoginRequired' }, 401) as Response);
+
+    try {
+      await expect(fetchNotes({
+        token: 'Bearer expired-token',
+        clientId: '',
+        authMode: 'web',
+      })).rejects.toThrow('Web Token 已过期');
+
+      expect(refresh).toHaveBeenCalledOnce();
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      setWebTokenRefreshHandler(null);
       vi.mocked(globalThis.fetch).mockRestore();
     }
   });

@@ -162,6 +162,35 @@ describe('desktop Web auth', () => {
     expect(fixture.session.webRequest.onBeforeSendHeaders).toHaveBeenLastCalledWith(null);
   });
 
+  it('keeps a session-reuse token capture completely hidden until an interactive caller joins it', async () => {
+    const fixture = makeElectron();
+    const manager = createDesktopWebAuthManager({
+      isDesktopApp: true,
+      loadElectron: () => fixture.electron,
+    })!;
+    const validate = vi.fn().mockResolvedValue(undefined);
+
+    const silentCapture = manager.captureToken(validate, { interactive: false });
+    const windowInstance = fixture.FakeBrowserWindow.instances[0];
+    windowInstance.events.get('ready-to-show')?.();
+    expect(windowInstance.show).not.toHaveBeenCalled();
+
+    const interactiveCapture = manager.captureToken(validate);
+    expect(interactiveCapture).toBe(silentCapture);
+    expect(windowInstance.show).toHaveBeenCalledOnce();
+    expect(windowInstance.focus).toHaveBeenCalledOnce();
+
+    fixture.getRequestListener()!(
+      {
+        url: 'https://get-notes.luojilab.com/voicenotes/web/notes',
+        requestHeaders: { authorization: 'Bearer renewed-token' },
+      },
+      vi.fn(),
+    );
+
+    await expect(silentCapture).resolves.toBe('Bearer renewed-token');
+  });
+
   it('keeps waiting when a stale captured token fails validation', async () => {
     const fixture = makeElectron();
     const manager = createDesktopWebAuthManager({
@@ -267,6 +296,28 @@ describe('desktop Web auth', () => {
       })!;
 
       const capture = manager.captureToken(vi.fn());
+      const rejection = expect(capture).rejects.toThrow('timed out');
+      await vi.advanceTimersByTimeAsync(25);
+
+      await rejection;
+      expect(fixture.FakeBrowserWindow.instances[0].close).toHaveBeenCalledWith();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('uses a shorter timeout for hidden session-reuse capture than for interactive login', async () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = makeElectron();
+      const manager = createDesktopWebAuthManager({
+        isDesktopApp: true,
+        loadElectron: () => fixture.electron,
+        timeoutMs: 2_000,
+        silentTimeoutMs: 25,
+      })!;
+
+      const capture = manager.captureToken(vi.fn(), { interactive: false });
       const rejection = expect(capture).rejects.toThrow('timed out');
       await vi.advanceTimersByTimeAsync(25);
 
