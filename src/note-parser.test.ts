@@ -67,6 +67,20 @@ describe('getCategoryDir', () => {
 });
 
 describe('source-body rendering', () => {
+  it.each([
+    '- parent\n  1. child\n     - nested',
+    '| a | b |\n| --- | --- |\n| 1 | 2 |',
+    '> quote\n>\n> - [x] task',
+    '```ts\nconst value = `code`;\n```\n\n$E=mc^2$',
+    '中文、emoji 🚀、**bold**、==highlight==、~~gone~~',
+    '[link](https://example.com/a%20b)\n\n![image](https://example.com/image.png)',
+    '\n\nleading\n\ntrailing\n\n',
+  ])('preserves a representative Markdown source fixture: %s', (content) => {
+    const result = renderNote(makeNote({ content }));
+
+    expect(parseSourceBody(result)).toEqual({ kind: 'valid', body: content.replace(/\r\n?/g, '\n') });
+  });
+
   it('writes one source-body boundary and portable baseline fields', () => {
     const result = renderNote(makeNote({ content: '\r\n# source\r\n\r\nbody\r\n' }));
 
