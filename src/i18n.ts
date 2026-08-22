@@ -176,7 +176,7 @@ export const translations: Record<string, Record<string, string>> = {
     'manualSync.once': '仅本次同步',
     'manualSync.mode.date': '按日期',
     'manualSync.mode.days': '按天数',
-    'manualSync.openSettings': '打开完整设置',
+    'manualSync.openSettings': '打开完整设置，开启自动同步',
 
     // === Sync Button ===
     'sync.syncing': '同步中...',
@@ -579,7 +579,7 @@ export const translations: Record<string, Record<string, string>> = {
     'manualSync.once': 'This sync only',
     'manualSync.mode.date': 'By Date',
     'manualSync.mode.days': 'By Days',
-    'manualSync.openSettings': 'Open full settings',
+    'manualSync.openSettings': 'Open full settings to enable automatic sync',
 
     // === Sync Button ===
     'sync.syncing': 'Syncing...',
