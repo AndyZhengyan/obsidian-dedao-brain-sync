@@ -243,27 +243,42 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(caret.classList.contains('is-open')).toBe(true);
   });
 
-  it('labels the first-import date as a sync start date before a checkpoint exists', () => {
-    const { container } = renderSettings(makeSettings({
+  it('keeps the initial sync date editable while scheduled sync is disabled', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
       syncStartDate: '2026-01-01',
       lastSyncEndTimestamp: '',
     }));
-    const details = container.querySelector<HTMLElement>('#getnote-scheduled-details');
+    const scheduledDetails = container.querySelector<HTMLElement>('#getnote-scheduled-details');
+    const checkpoint = container.querySelector<HTMLElement>('[data-scheduled-checkpoint]');
+    const dateInput = checkpoint?.querySelector<HTMLInputElement>('input[type="date"]');
 
-    expect(details?.textContent).toContain('同步起始日期');
-    expect(details?.textContent).not.toContain('上次同步断点');
+    expect(scheduledDetails?.classList.contains('getnote-hidden')).toBe(true);
+    expect(checkpoint?.textContent).toContain('同步起始日期');
+    expect(checkpoint).toBeTruthy();
+    expect(scheduledDetails?.contains(checkpoint!)).toBe(false);
+    expect(dateInput?.value).toBe('2026-01-01');
+
+    await act(() => {
+      dateInput!.value = '2025-08-01';
+      dateInput!.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('syncStartDate', '2025-08-01');
   });
 
-  it('keeps the last sync checkpoint inside expanded scheduled-sync details', () => {
+  it('keeps the last sync checkpoint in the scheduled-sync section', () => {
     const { container } = renderSettings(makeSettings({
-      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
       lastSyncEndTimestamp: '2026-06-12T15:30:00Z',
     }));
 
+    const syncSection = container.querySelector<HTMLElement>('[data-settings-section="sync"]');
     const scheduledDetails = container.querySelector<HTMLElement>('#getnote-scheduled-details');
     const advancedDetails = container.querySelector<HTMLElement>('[data-advanced-settings]');
+    const checkpoint = container.querySelector<HTMLElement>('[data-scheduled-checkpoint]');
 
-    expect(scheduledDetails?.textContent).toContain('上次同步断点');
+    expect(syncSection?.contains(checkpoint!)).toBe(true);
+    expect(checkpoint?.textContent).toContain('上次同步断点');
+    expect(scheduledDetails?.contains(checkpoint!)).toBe(false);
     expect(advancedDetails?.textContent).not.toContain('上次同步断点');
   });
 

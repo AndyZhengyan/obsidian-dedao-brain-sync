@@ -1182,6 +1182,8 @@ export function SettingsComponent({
               </span>
             </div>
             <div className="getnote-input-hint">{t('settings.scheduled.syncKnowledgeBases.hint')}</div>
+          </div>
+          <div className="getnote-scheduled-checkpoint" data-scheduled-checkpoint>
             <div className="getnote-scheduled-row getnote-scheduled-date-row">
               <span className="getnote-scheduled-row-label">
                 {resetDialogOpen
