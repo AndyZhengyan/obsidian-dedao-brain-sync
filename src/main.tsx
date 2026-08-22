@@ -25,7 +25,8 @@ import { validateDatePathFormat } from './date-paths';
 import { createDesktopWebAuthManager, type DesktopWebAuthManager } from './desktop-web-auth';
 import { WebTokenRefreshCoordinator } from './web-token-refresh';
 
-const MAX_SYNC_HISTORY = 20;
+const SYNC_HISTORY_RETENTION_DAYS = 30;
+const SYNC_HISTORY_RETENTION_MS = SYNC_HISTORY_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 const TAG_MIGRATION_VERSION = 2;
 const LEGACY_PLUGIN_IDS = ['obsidian-getnote-importer', 'getnote-importer'] as const;
 const PLUGIN_DATA_FILE = 'data.json';
@@ -76,6 +77,11 @@ async function findExistingLegacyDataPath(adapter: PluginDataMigrationAdapter): 
 
 function emptySyncResult(): SyncResult {
   return { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
+}
+
+function retainRecentSyncHistory(entries: SyncHistoryEntry[], now = Date.now()): SyncHistoryEntry[] {
+  const cutoff = now - SYNC_HISTORY_RETENTION_MS;
+  return entries.filter(entry => entry.timestamp >= cutoff);
 }
 
 function normalizeSyncHistory(value: unknown): SyncHistoryEntry[] {
@@ -140,7 +146,7 @@ function normalizeSyncHistory(value: unknown): SyncHistoryEntry[] {
         error: typeof entry.error === 'string' ? entry.error : undefined,
       };
     })
-    .slice(-MAX_SYNC_HISTORY);
+    .filter(entry => entry.timestamp >= Date.now() - SYNC_HISTORY_RETENTION_MS);
 }
 
 export default class GetNoteSyncPlugin extends Plugin {
@@ -517,7 +523,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       error,
     };
     this.syncHistory.push(entry);
-    this.syncHistory = this.syncHistory.slice(-MAX_SYNC_HISTORY);
+    this.syncHistory = retainRecentSyncHistory(this.syncHistory);
     this.settings.syncHistory = this.syncHistory;
 
     // Incrementally merge newly observed tag names into the local cache.

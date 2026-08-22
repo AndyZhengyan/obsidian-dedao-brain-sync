@@ -1632,6 +1632,16 @@ describe('SettingsComponent auth credentials', () => {
     expect(button).toBeTruthy();
     expect(button!.classList.contains('getnote-view-history-btn')).toBe(true);
   });
+
+  it('keeps sync history as a lightweight entry without repeating the top status summary', () => {
+    const { container } = renderSettings(makeSettings());
+    const history = container.querySelector<HTMLElement>('.getnote-sync-log-section');
+
+    expect(history?.textContent).toContain('查看日志');
+    expect(history?.textContent).not.toContain('上次同步');
+    expect(history?.textContent).not.toContain('当前状态');
+    expect(container.textContent).toContain('保留最近 20 次同步记录');
+  });
 });
 
 describe('SettingsComponent — tag cache lazy seed (#238)', () => {

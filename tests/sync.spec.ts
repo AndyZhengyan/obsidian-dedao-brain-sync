@@ -674,6 +674,7 @@ describe('GetNoteSyncPlugin history normalization', () => {
 
   it('preserves a persisted partial status during plugin load', async () => {
     vi.useFakeTimers();
+    vi.setSystemTime(3000);
     const plugin = new GetNoteSyncPlugin(new App());
     Object.assign(plugin.app.vault.adapter, {
       exists: vi.fn().mockResolvedValue(false),
@@ -698,8 +699,43 @@ describe('GetNoteSyncPlugin history normalization', () => {
     expect(plugin.syncHistory[0]?.status).toBe('partial');
   });
 
+  it('drops persisted history older than 30 days during plugin load', async () => {
+    vi.useFakeTimers();
+    const now = new Date('2026-08-22T12:00:00Z').getTime();
+    vi.setSystemTime(now);
+    const plugin = new GetNoteSyncPlugin(new App());
+    Object.assign(plugin.app.vault.adapter, {
+      exists: vi.fn().mockResolvedValue(false),
+      mkdir: vi.fn(),
+      copy: vi.fn(),
+    });
+    vi.spyOn(plugin, 'loadData').mockResolvedValue({
+      syncHistory: [
+        {
+          id: 'expired', startedAt: now - 31 * 24 * 60 * 60 * 1000,
+          finishedAt: now - 31 * 24 * 60 * 60 * 1000,
+          durationMs: 0, timestamp: now - 31 * 24 * 60 * 60 * 1000,
+          result: { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] },
+          type: 'full', status: 'success',
+        },
+        {
+          id: 'recent', startedAt: now - 29 * 24 * 60 * 60 * 1000,
+          finishedAt: now - 29 * 24 * 60 * 60 * 1000,
+          durationMs: 0, timestamp: now - 29 * 24 * 60 * 60 * 1000,
+          result: { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] },
+          type: 'full', status: 'success',
+        },
+      ],
+    });
+
+    await plugin.onload();
+
+    expect(plugin.syncHistory.map(entry => entry.id)).toEqual(['recent']);
+  });
+
   it('migrates a persisted success with failed items to partial during plugin load', async () => {
     vi.useFakeTimers();
+    vi.setSystemTime(3000);
     const plugin = new GetNoteSyncPlugin(new App());
     Object.assign(plugin.app.vault.adapter, {
       exists: vi.fn().mockResolvedValue(false),
@@ -726,6 +762,7 @@ describe('GetNoteSyncPlugin history normalization', () => {
 
   it('preserves a persisted failed status even when failed items are present', async () => {
     vi.useFakeTimers();
+    vi.setSystemTime(3000);
     const plugin = new GetNoteSyncPlugin(new App());
     Object.assign(plugin.app.vault.adapter, {
       exists: vi.fn().mockResolvedValue(false),

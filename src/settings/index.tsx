@@ -1320,21 +1320,9 @@ export function SettingsComponent({
         </div>
       </SettingItem>
 
-      {/* 同步日志 */}
-      <SettingItem name={t('syncHistory.title')}>
+      {/* 顶部状态条已展示本次状态和上次同步，这里只保留历史入口。 */}
+      <SettingItem name={t('syncHistory.title')} description={t('syncHistory.desc')}>
         <div className="getnote-sync-log-section">
-          <div className="getnote-scheduled-row">
-            <span className="getnote-scheduled-row-label">{t('settings.lastSync')}</span>
-            <span className="getnote-scheduled-row-control getnote-muted-text">
-              {formatLastSync(lastSyncTime)}
-            </span>
-          </div>
-          <div className="getnote-scheduled-row">
-            <span className="getnote-scheduled-row-label">{t('settings.syncStatus')}</span>
-            <span className={`getnote-scheduled-row-control${isSyncing ? ' getnote-accent-text' : ' getnote-muted-text'}`}>
-              {isSyncing ? t('syncHistory.status.syncing') : t('syncHistory.status.idle')}
-            </span>
-          </div>
           <button
             className="mod-secondary getnote-view-history-btn"
             onClick={() => openSyncHistoryModal(app, currentSyncHistory)}
