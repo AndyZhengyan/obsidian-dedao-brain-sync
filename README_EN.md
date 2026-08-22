@@ -14,11 +14,17 @@ For the project background and origin story, see this Chinese article: [Project 
 
 * * *
 
-## 🎉 1.4.4 — Latest Update
+## 🎉 1.5.0 — Latest Update
 
-- **🧭 Context-aware full-settings link**: The full-settings shortcut appears only when the time-based sync panel is opened from the left ribbon. It stays hidden when the same panel is opened from Settings or the command palette.
+**Fewer interruptions. More knowledge that stays with you.** This release moves Dedao Brain Sync from simply working to working well over time. Login, renewal, organization, and diagnostics demand less attention, so ideas captured in Dedao Brain can settle into Obsidian quietly and reliably.
 
-Core improvements from 1.4.3 and earlier remain live, including created-date organization, partial-failure status, knowledge-base sync, and safer file writes.
+- **🪄 Easier sign-in**: On desktop, sign in from a dedicated window and let the plugin capture the Web Token. When the isolated session is still valid, an expired token can be renewed in the background and the failed request retried once.
+- **🧬 Higher-fidelity round trips**: Newly synced notes preserve a portable boundary around the remote source body. Reverse creation uploads only marked source text, keeping templates and local enhancements from leaking into the original content.
+- **🗂️ Safer cleanup for older notes**: Rebuild legacy date folders into canonical paths. Older duplicate-UID copies and unclaimed legacy attachments are archived, while existing target conflicts are skipped without overwrite. Detailed diagnostics stay in sync history.
+- **🧭 A clearer settings and sync flow**: Connection status, common settings, scheduled and manual sync, and history are regrouped around everyday tasks, while infrequent controls move into Advanced Settings.
+- **📊 Progress and logs you can trust**: Active, completed, failed, and cancelled runs now share a consistent presentation. Paged fetching stays indeterminate when the total is unknown, and sync history is retained for 30 days.
+
+The created-date organization, partial-failure reporting, knowledge-base sync, and safer file writes introduced throughout 1.4.x remain available.
 
 The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 
