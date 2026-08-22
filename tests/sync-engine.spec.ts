@@ -121,6 +121,29 @@ function mockFetchResponse(body: unknown) {
   };
 }
 
+describe('SyncEngine progress reporting', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('does not report a numeric percentage while fetching an unknown number of pages', async () => {
+    const note = makeNote({
+      note_id: 'progress-page',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse({
+      data: { notes: [note], has_more: false, next_cursor: '' },
+    }) as Response);
+    const progress = vi.fn();
+    const engine = new SyncEngine(makeMockApp(), makeSettings({ maxDays: 0 }), progress);
+
+    await engine.sync();
+
+    expect(progress).toHaveBeenCalledWith({ page: 1 });
+  });
+});
+
 describe('SyncEngine — vault write ownership', () => {
   it.each([
     { label: 'has no uid', frontmatter: {} },

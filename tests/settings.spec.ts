@@ -1640,7 +1640,7 @@ describe('SettingsComponent auth credentials', () => {
     expect(history?.textContent).toContain('查看日志');
     expect(history?.textContent).not.toContain('上次同步');
     expect(history?.textContent).not.toContain('当前状态');
-    expect(container.textContent).toContain('保留最近 20 次同步记录');
+    expect(container.textContent).toContain('保留最近 30 天同步记录');
   });
 });
 
