@@ -259,7 +259,7 @@ export interface SyncHistoryEntry {
   timestamp: number;
   result: SyncResult;
   type: 'full' | 'selective' | 'auto' | 'upload';
-  mode?: 'time' | 'selected' | 'knowledge-base' | 'auto' | 'local-upload';
+  mode?: 'time' | 'selected' | 'knowledge-base' | 'auto' | 'local-upload' | 'date-path';
   scope?: SyncHistoryScope;
   status: 'success' | 'partial' | 'failed' | 'cancelled';
   error?: string;

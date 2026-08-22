@@ -17,6 +17,7 @@ import { mergeTagCache } from './utils/tag-aggregator';
 import { SearchPanel, findSyncedNoteFile } from './ui/search-view';
 import {
   migrateDatePaths,
+  type DatePathMigrationOptions,
   type DatePathMigrationResult,
   type DatePathMigrationTarget,
 } from './date-path-migration';
@@ -92,7 +93,7 @@ function normalizeSyncHistory(value: unknown): SyncHistoryEntry[] {
       const type: SyncHistoryEntry['type'] =
         entry.type === 'selective' || entry.type === 'auto' || entry.type === 'upload' ? entry.type : 'full';
       const mode: SyncHistoryEntry['mode'] =
-        entry.mode === 'selected' || entry.mode === 'knowledge-base' || entry.mode === 'auto' || entry.mode === 'time' || entry.mode === 'local-upload'
+        entry.mode === 'selected' || entry.mode === 'knowledge-base' || entry.mode === 'auto' || entry.mode === 'time' || entry.mode === 'local-upload' || entry.mode === 'date-path'
           ? entry.mode
           : type === 'upload'
             ? 'local-upload'
@@ -195,7 +196,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       syncHistory: normalizeSyncHistory(loaded?.syncHistory),
     };
     this.syncHistory = this.settings.syncHistory;
-    this.lastSyncResult = this.syncHistory.at(-1) ?? null;
+    this.lastSyncResult = this.syncHistory.filter(entry => entry.mode !== 'date-path').at(-1) ?? null;
     this.desktopWebAuthManager = createDesktopWebAuthManager({
       isDesktopApp: Platform.isDesktopApp,
     });
@@ -297,7 +298,10 @@ export default class GetNoteSyncPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
-  async applyDatePathSettings(target: DatePathMigrationTarget): Promise<DatePathMigrationResult> {
+  async applyDatePathSettings(
+    target: DatePathMigrationTarget,
+    options: DatePathMigrationOptions = {},
+  ): Promise<DatePathMigrationResult> {
     if (this.isSyncing) throw new Error('Cannot reorganize date paths while sync is running');
     if (this.isDatePathMigrationRunning) throw new Error('Date-path migration is already running');
     const format = target.format.trim();
@@ -315,7 +319,8 @@ export default class GetNoteSyncPlugin extends Plugin {
       this.settings.datePathEnabled = target.enabled;
       this.settings.datePathFormat = format;
       try {
-        return await migrateDatePaths(
+        const startedAt = Date.now();
+        const result = await migrateDatePaths(
           this.app,
           this.settings.folderName,
           { enabled: target.enabled, format },
@@ -323,6 +328,7 @@ export default class GetNoteSyncPlugin extends Plugin {
             source: { enabled: previous.enabled, format: previous.format },
             categoryOrigins: previous.categoryOrigins,
             assetMoveEvidence: previous.assetMoveEvidence,
+            rebuildCategories: options.rebuildCategories,
             beforeExecute: async (categoryOrigins, assetMoveEvidence) => {
               this.settings.datePathCategoryOrigins = categoryOrigins;
               this.settings.datePathAssetMoveEvidence = assetMoveEvidence;
@@ -331,6 +337,8 @@ export default class GetNoteSyncPlugin extends Plugin {
             },
           },
         );
+        await this.recordDatePathMigrationHistory(result, startedAt);
+        return result;
       } catch (error) {
         if (!targetPersisted) {
           this.settings.datePathEnabled = previous.enabled;
@@ -343,6 +351,33 @@ export default class GetNoteSyncPlugin extends Plugin {
     } finally {
       this.isDatePathMigrationRunning = false;
     }
+  }
+
+  async previewDatePathSettings(
+    target: DatePathMigrationTarget,
+    options: DatePathMigrationOptions = {},
+  ): Promise<DatePathMigrationResult> {
+    if (this.isSyncing) throw new Error('Cannot reorganize date paths while sync is running');
+    if (this.isDatePathMigrationRunning) throw new Error('Date-path migration is already running');
+    const format = target.format.trim();
+    if (!validateDatePathFormat(format)) throw new Error('Invalid date path format');
+
+    return migrateDatePaths(
+      this.app,
+      this.settings.folderName,
+      { enabled: target.enabled, format },
+      {
+        source: {
+          enabled: this.settings.datePathEnabled,
+          format: this.settings.datePathFormat,
+        },
+        categoryOrigins: this.settings.datePathCategoryOrigins,
+        assetMoveEvidence: this.settings.datePathAssetMoveEvidence,
+        rebuildCategories: options.rebuildCategories,
+        dryRun: true,
+        beforeExecute: async () => {},
+      },
+    );
   }
 
   /**
@@ -427,7 +462,8 @@ export default class GetNoteSyncPlugin extends Plugin {
     scope: SyncHistoryScope,
     status: SyncHistoryEntry['status'] = 'success',
     error?: string,
-    mode?: SyncHistoryEntry['mode']
+    mode?: SyncHistoryEntry['mode'],
+    updateLastSyncResult = true,
   ): Promise<void> {
     const finishedAt = Date.now();
     const entry: SyncHistoryEntry = {
@@ -466,8 +502,42 @@ export default class GetNoteSyncPlugin extends Plugin {
       this.settings.lastSyncEndTimestamp = result.lastNoteTimestamp ?? new Date(finishedAt).toISOString();
     }
 
-    this.lastSyncResult = entry;
+    if (updateLastSyncResult) this.lastSyncResult = entry;
     await this.saveSettings();
+  }
+
+  private async recordDatePathMigrationHistory(
+    result: DatePathMigrationResult,
+    startedAt: number,
+  ): Promise<void> {
+    const items = result.issues.map(migrationIssue => ({
+      noteId: migrationIssue.uid ?? migrationIssue.path,
+      title: migrationIssue.path,
+      noteType: 'plain_text',
+      updatedAt: new Date().toISOString(),
+      status: migrationIssue.code === 'rename-failed' || migrationIssue.code === 'rollback-failed'
+        ? 'failed' as const
+        : 'skipped' as const,
+      error: migrationIssue.message,
+    }));
+    await this.recordSyncHistory(
+      {
+        created: result.moved,
+        updated: 0,
+        skipped: result.skipped,
+        failed: result.failed,
+        total: result.scanned,
+        items,
+      },
+      'full',
+      startedAt,
+      { maxDays: 0, syncStartDate: '' },
+      result.failed > 0 ? 'partial' : 'success',
+      undefined,
+      'date-path',
+      false,
+    );
+    this.updateSettingsRuntimeState();
   }
 
   private async runSync(

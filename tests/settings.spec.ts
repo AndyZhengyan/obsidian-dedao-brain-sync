@@ -40,6 +40,15 @@ function renderSettings(
     startSubscribedKnowledgeSync?: () => void;
     initialKnowledgeBaseCache?: { entries: Array<{ topicId: string; name: string }>; cacheUpdatedAt?: number };
     app?: App;
+    previewDatePathSettings?: (target: { enabled: boolean; format: string }) => Promise<{
+      scanned: number;
+      planned?: number;
+      moved: number;
+      unchanged: number;
+      skipped: number;
+      failed: number;
+      issues: Array<{ code: string; path: string; message: string }>;
+    }>;
     applyDatePathSettings?: (target: { enabled: boolean; format: string }) => Promise<{
       scanned: number;
       moved: number;
@@ -76,6 +85,7 @@ function renderSettings(
       syncProgress: options.syncProgress,
       initialKnowledgeBaseCache: options.initialKnowledgeBaseCache,
       applyDatePathSettings: options.applyDatePathSettings,
+      previewDatePathSettings: options.previewDatePathSettings,
       confirmDatePathMigration: options.confirmDatePathMigration,
       desktopWebAuthAvailable: options.desktopWebAuthAvailable,
       startDesktopWebAuth: options.startDesktopWebAuth,
@@ -376,9 +386,13 @@ describe('created-date path settings', () => {
   it('cancels an enable confirmation without saving or migrating', async () => {
     const updateSetting = vi.fn();
     const applyDatePathSettings = vi.fn();
+    const previewDatePathSettings = vi.fn().mockResolvedValue({
+      scanned: 3, planned: 2, moved: 0, unchanged: 1, skipped: 0, failed: 0, issues: [],
+    });
     const confirmDatePathMigration = vi.fn().mockResolvedValue(false);
     const { container } = renderSettings(makeSettings(), updateSetting, vi.fn(), {
       applyDatePathSettings,
+      previewDatePathSettings,
       confirmDatePathMigration,
     });
     const dateItem = settingItem(container, '按创建日期整理路径');
@@ -398,6 +412,7 @@ describe('created-date path settings', () => {
       mode: 'apply',
       current: { enabled: false, format: 'YYYY/MM' },
       target: { enabled: true, format: 'YYYY/MM' },
+      preview: expect.objectContaining({ scanned: 3, planned: 2 }),
     });
     expect(container.querySelector('[role="dialog"]')).toBeNull();
     expect(applyDatePathSettings).not.toHaveBeenCalled();
@@ -405,6 +420,9 @@ describe('created-date path settings', () => {
   });
 
   it('confirms a format change, reports the result, and supports an unchanged reconcile', async () => {
+    const previewDatePathSettings = vi.fn().mockResolvedValue({
+      scanned: 5, planned: 2, moved: 0, unchanged: 1, skipped: 1, failed: 1, issues: [],
+    });
     const applyDatePathSettings = vi.fn().mockResolvedValue({
       scanned: 5,
       moved: 2,
@@ -417,7 +435,7 @@ describe('created-date path settings', () => {
     const { container } = renderSettings(makeSettings({
       datePathEnabled: true,
       datePathFormat: 'YYYY/MM',
-    }), vi.fn(), vi.fn(), { applyDatePathSettings, confirmDatePathMigration });
+    }), vi.fn(), vi.fn(), { applyDatePathSettings, previewDatePathSettings, confirmDatePathMigration });
     const dateItem = settingItem(container, '按创建日期整理路径');
     await act(() => inputValue(dateItem.querySelector<HTMLInputElement>('input[type="text"]')!, 'YYYY/MM/DD'));
 
@@ -431,17 +449,19 @@ describe('created-date path settings', () => {
       mode: 'apply',
       current: { enabled: true, format: 'YYYY/MM' },
       target: { enabled: true, format: 'YYYY/MM/DD' },
+      preview: expect.objectContaining({ scanned: 5, planned: 2 }),
     });
-    expect(applyDatePathSettings).toHaveBeenLastCalledWith({ enabled: true, format: 'YYYY/MM/DD' });
+    expect(applyDatePathSettings).toHaveBeenLastCalledWith({ enabled: true, format: 'YYYY/MM/DD' }, undefined);
     const result = dateItem.querySelector<HTMLElement>('[data-date-path-result]');
     expect(result?.textContent).toContain('扫描 5');
     expect(result?.textContent).toContain('移动 2');
     expect(result?.textContent).toContain('未变化 1');
     expect(result?.textContent).toContain('跳过 1');
     expect(result?.textContent).toContain('失败 1');
-    expect(result?.textContent).toContain('得到大脑/2026/07/纯文本/a.md');
     expect(result?.textContent).toContain('目标路径已存在');
     expect(result?.textContent).not.toContain('Target exists');
+    expect(result?.textContent).toContain('查看日志');
+    expect(result?.textContent).not.toContain('得到大脑/2026/07/纯文本/a.md');
 
     await act(async () => {
       clickButton(dateItem, '重新整理现有文件');
@@ -452,11 +472,15 @@ describe('created-date path settings', () => {
       mode: 'reconcile',
       current: { enabled: true, format: 'YYYY/MM/DD' },
       target: { enabled: true, format: 'YYYY/MM/DD' },
+      preview: expect.objectContaining({ scanned: 5, planned: 2 }),
     });
-    expect(applyDatePathSettings).toHaveBeenLastCalledWith({ enabled: true, format: 'YYYY/MM/DD' });
+    expect(applyDatePathSettings).toHaveBeenLastCalledWith(
+      { enabled: true, format: 'YYYY/MM/DD' },
+      { rebuildCategories: true },
+    );
   });
 
-  it('localizes migration failures and limits issue details to the first 20', async () => {
+  it('localizes migration failures and keeps detailed issue paths out of the settings page', async () => {
     const rawIssues = Array.from({ length: 22 }, (_, index) => ({
       code: 'invalid-metadata',
       path: `得到大脑/纯文本/${index}.md`,
@@ -470,6 +494,9 @@ describe('created-date path settings', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { container } = renderSettings(makeSettings(), vi.fn(), vi.fn(), {
       applyDatePathSettings,
+      previewDatePathSettings: vi.fn().mockResolvedValue({
+        scanned: 22, planned: 0, moved: 0, unchanged: 0, skipped: 22, failed: 0, issues: rawIssues,
+      }),
       confirmDatePathMigration: vi.fn().mockResolvedValue(true),
     });
     const dateItem = settingItem(container, '按创建日期整理路径');
@@ -496,9 +523,8 @@ describe('created-date path settings', () => {
     const result = dateItem.querySelector<HTMLElement>('[data-date-path-result]')!;
     expect(result.textContent).toContain('缺少有效的笔记元数据');
     expect(result.textContent).not.toContain('raw error 0');
-    expect(result.textContent).toContain('另有 2 条问题未展开');
-    expect(result.textContent).toContain('19.md');
-    expect(result.textContent).not.toContain('20.md');
+    expect(result.textContent).toContain('查看日志');
+    expect(result.textContent).not.toContain('19.md');
   });
 });
 
