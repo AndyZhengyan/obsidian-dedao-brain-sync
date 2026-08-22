@@ -645,12 +645,9 @@ export function SettingsComponent({
     return date.toLocaleString(undefined, { timeZoneName: 'short' });
   };
 
-  // Progress bar with # characters
-  const renderProgressBar = (percent: number): string => {
-    const total = 16;
-    const filled = Math.round((percent / 100) * total);
-    return '[' + '#'.repeat(filled) + '░'.repeat(total - filled) + ']';
-  };
+  const progressPhase = syncProgress?.phase ?? 'active';
+  const progressIsDeterminate = typeof syncProgress?.percent === 'number';
+  const showSyncProgress = isSyncing || progressPhase !== 'active';
 
   return (
     <div className="getnote-settings-react">
@@ -703,17 +700,36 @@ export function SettingsComponent({
       </div>
 
       {/* 同步进度紧跟状态，避免进行中的任务藏在页面底部。 */}
-      {isSyncing && (
-        <div className="getnote-settings-sync-status">
+      {showSyncProgress && (
+        <div
+          className={`getnote-settings-sync-status getnote-settings-sync-status-${progressPhase}`}
+          data-sync-progress
+          data-sync-progress-phase={progressPhase}
+          role="status"
+          aria-live="polite"
+        >
           <div className="getnote-settings-sync-status-header">
             <span className="getnote-mono-text">{syncProgress?.message || t('sync.syncing')}</span>
-            <button className="mod-warning getnote-settings-cancel-button" onClick={cancelSync}>
-              {t('modal.cancel')}
-            </button>
+            {isSyncing && (
+              <button className="mod-warning getnote-settings-cancel-button" onClick={cancelSync}>
+                {t('modal.cancel')}
+              </button>
+            )}
           </div>
           <div className="getnote-settings-progress-line">
-            <span className="getnote-accent-text">{renderProgressBar(syncProgress?.percent ?? 0)}</span>
-            <span className="getnote-settings-progress-percent">{syncProgress?.percent ?? 0}%</span>
+            <div
+              className={`getnote-settings-progress-track${progressIsDeterminate ? '' : ' is-indeterminate'}`}
+              data-sync-progress-track
+              aria-label={progressIsDeterminate ? `${syncProgress?.percent}%` : syncProgress?.message || t('sync.syncing')}
+            >
+              <div
+                className="getnote-settings-progress-fill"
+                style={progressIsDeterminate ? { width: `${syncProgress?.percent}%` } : undefined}
+              />
+            </div>
+            {progressIsDeterminate && (
+              <span className="getnote-settings-progress-percent">{syncProgress?.percent}%</span>
+            )}
           </div>
           {syncProgress?.count && (
             <div className="getnote-settings-progress-count">{syncProgress.count}</div>
@@ -1109,23 +1125,21 @@ export function SettingsComponent({
                 value={scheduledEnabled}
                 onChange={handleScheduledEnabled}
               />
-              {scheduledEnabled && settings.scheduledSync.enabled && (
-                <button
-                  type="button"
-                  className="getnote-inline-disclosure"
-                  aria-expanded={scheduledDetailsOpen}
-                  aria-controls={scheduledDetailsId}
-                  onClick={() => setScheduledDetailsOpen(prev => !prev)}
-                >
-                  {scheduledDetailsOpen ? t('settings.collapse') : t('settings.expand')}
-                </button>
-              )}
+              <button
+                type="button"
+                className="getnote-inline-disclosure"
+                aria-expanded={scheduledDetailsOpen}
+                aria-controls={scheduledDetailsId}
+                onClick={() => setScheduledDetailsOpen(prev => !prev)}
+              >
+                {scheduledDetailsOpen ? t('settings.collapse') : t('settings.expand')}
+              </button>
             </span>
           </div>
           <small className="getnote-setting-summary">{scheduledSummary}</small>
           <div
             id={scheduledDetailsId}
-            className={`getnote-scheduled-rows${scheduledEnabled && settings.scheduledSync.enabled && scheduledDetailsOpen ? '' : ' getnote-hidden'}`}
+            className={`getnote-scheduled-rows${scheduledDetailsOpen ? '' : ' getnote-hidden'}`}
           >
             <div className="getnote-scheduled-row">
               <span className="getnote-scheduled-row-label">{t('settings.scheduled.interval')}</span>
@@ -1196,7 +1210,6 @@ export function SettingsComponent({
               </span>
             </div>
             <div className="getnote-input-hint">{t('settings.scheduled.syncKnowledgeBases.hint')}</div>
-          </div>
           <div className="getnote-scheduled-checkpoint" data-scheduled-checkpoint>
             <div className="getnote-scheduled-row getnote-scheduled-date-row">
               <span className="getnote-scheduled-row-label">
@@ -1247,6 +1260,7 @@ export function SettingsComponent({
                   : t('settings.syncStartDate.desc')}
             </div>
           </div>
+          </div>
           {settings.lastQuotaState?.exhausted && (
             <div className="getnote-quota-banner">
               <div className="getnote-quota-banner-title">
@@ -1278,14 +1292,16 @@ export function SettingsComponent({
               >
                 {t('settings.syncPicker.button')}
               </button>
-              {authMode === 'openapi' && (
-                <button
-                  className="mod-secondary getnote-sync-action-button"
-                  disabled={!hasCredentials || isSyncing}
-                  onClick={startSubscribedKnowledgeSync}
-                >
-                  {t('settings.subscribedKnowledge.button')}
-                </button>
+              <button
+                className="mod-secondary getnote-sync-action-button"
+                disabled={authMode !== 'openapi' || !hasCredentials || isSyncing}
+                title={authMode === 'openapi' ? undefined : t('settings.subscribedKnowledge.openApiRequired')}
+                onClick={startSubscribedKnowledgeSync}
+              >
+                {t('settings.subscribedKnowledge.button')}
+              </button>
+              {authMode !== 'openapi' && (
+                <span className="getnote-action-requirement">{t('settings.subscribedKnowledge.openApiRequired')}</span>
               )}
             </div>
           </div>

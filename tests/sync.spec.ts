@@ -80,6 +80,8 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
 
     const syncPromise = plugin['runSync']('full', { maxDays: 0, syncStartDate: '' });
     expect(updateRuntimeState).toHaveBeenCalledTimes(1);
+    expect(plugin.syncProgress.percent).toBeUndefined();
+    expect(plugin.syncProgress.phase).toBe('active');
 
     resolveSync({ created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] });
     await syncPromise;
@@ -168,7 +170,8 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     expect(plugin.syncProgress.message).toContain('已取消');
   });
 
-  it('manual sync success clears syncing state immediately', async () => {
+  it('keeps a successful manual sync result visible for three seconds', async () => {
+    vi.useFakeTimers();
     vi.spyOn(SyncEngine.prototype, 'sync').mockResolvedValue({
       created: 1,
       updated: 0,
@@ -183,7 +186,10 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
 
     expect(plugin.isSyncing).toBe(false);
     expect(plugin.currentSyncEngine).toBe(null);
-    expect(plugin.syncProgress).toEqual({ message: '', count: '', percent: 0 });
+    expect(plugin.syncProgress).toMatchObject({ percent: 100, phase: 'success' });
+
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(plugin.syncProgress).toEqual({ message: '', count: '', percent: undefined, phase: 'active' });
   });
 
   it('records knowledge-base sync mode and selected count', async () => {

@@ -268,7 +268,9 @@ export interface SyncHistoryEntry {
 export interface SyncProgressDetail {
   message: string;
   count: string;
-  percent: number;
+  /** Undefined while the remote service has not reported a total yet. */
+  percent?: number;
+  phase?: 'active' | 'success' | 'failed' | 'cancelled';
 }
 
 export interface SyncResult {

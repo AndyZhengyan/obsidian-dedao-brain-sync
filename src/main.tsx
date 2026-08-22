@@ -147,7 +147,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   declare settings: Settings;
   isSyncing = false;
   isDatePathMigrationRunning = false;
-  syncProgress: SyncProgressDetail = { message: '', count: '', percent: 0 };
+  syncProgress: SyncProgressDetail = { message: '', count: '', percent: undefined, phase: 'active' };
   syncHistory: SyncHistoryEntry[] = [];
   lastSyncResult: SyncHistoryEntry | null = null;
   private currentSyncEngine: { cancel(): void } | null = null;
@@ -157,6 +157,7 @@ export default class GetNoteSyncPlugin extends Plugin {
   private syncRibbonEl?: HTMLElement;
   private searchRibbonEl?: HTMLElement;
   private lastProgressUpdate = 0;
+  private syncProgressResultTimer: ReturnType<typeof setTimeout> | null = null;
   private autoSyncFailCount = 0;
   private desktopWebAuthManager: DesktopWebAuthManager | null = null;
   private webTokenRefreshCoordinator: WebTokenRefreshCoordinator | null = null;
@@ -291,6 +292,7 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   onunload(): void {
     this.stopAutoSync();
+    if (this.syncProgressResultTimer) clearTimeout(this.syncProgressResultTimer);
     setWebTokenRefreshHandler(null);
     this.webTokenRefreshCoordinator = null;
     this.desktopWebAuthManager?.dispose();
@@ -600,7 +602,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       selectedIds,
     };
     this.isSyncing = true;
-    this.syncProgress = { message: t('sync.fetching', { page: 1 }), count: '', percent: 0 };
+    this.syncProgress = { message: t('sync.fetching', { page: 1 }), count: '', percent: undefined, phase: 'active' };
     this.currentSyncEngine = null;
     this.updateSettingsRuntimeState();
     showNotice(t('sync.started'));
@@ -653,19 +655,44 @@ export default class GetNoteSyncPlugin extends Plugin {
             failed: '',
           }), 8000);
         }
-        this.syncProgress = { message: '', count: '', percent: 0 };
-        this.isSyncing = false;
-        this.currentSyncEngine = null;
-        this.updateSettingsRuntimeState();
+        this.finishSyncProgress(
+          status === 'partial' ? 'failed' : 'success',
+          status === 'partial'
+            ? t('notice.syncPartial', {
+              created: result.created,
+              updated: result.updated,
+              skipped: result.skipped,
+              failed: result.failed,
+            })
+            : t('notice.syncComplete', {
+              created: result.created,
+              updated: result.updated,
+              skipped: result.skipped,
+              failed: '',
+            }),
+        );
         return;
       }
+      this.finishSyncProgress(
+        status === 'partial' ? 'failed' : 'success',
+        status === 'partial' ? t('notice.syncPartial', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: result.failed,
+        }) : t('notice.syncComplete', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: '',
+        }),
+      );
+      shouldResetSyncState = false;
     } catch (err) {
       if (err instanceof SyncCancelledError) {
         await this.recordSyncHistory(emptySyncResult(), type, startedAt, resolvedScope, 'cancelled');
-        if (type !== 'auto') {
-          this.syncProgress = { message: t('modal.cancelled'), count: '', percent: 0 };
-          shouldResetSyncState = true;
-        }
+        this.finishSyncProgress('cancelled', t('modal.cancelled'));
+        shouldResetSyncState = false;
       } else {
         const error = err instanceof Error ? err.message : String(err);
         await this.recordSyncHistory(emptySyncResult(), type, startedAt, resolvedScope, 'failed', error);
@@ -688,10 +715,12 @@ export default class GetNoteSyncPlugin extends Plugin {
           } else {
             showError(t('notice.autoSyncFailedWithMsg', { msg: error }));
           }
+          this.finishSyncProgress('failed', t('notice.syncFailed', { msg: error }));
+          shouldResetSyncState = false;
         } else {
-          this.syncProgress = { message: t('notice.syncFailed', { msg: error }), count: '', percent: 0 };
+          this.finishSyncProgress('failed', t('notice.syncFailed', { msg: error }));
           console.error(t('console.syncError'), err);
-          shouldResetSyncState = true;
+          shouldResetSyncState = false;
         }
       }
     } finally {
@@ -699,7 +728,7 @@ export default class GetNoteSyncPlugin extends Plugin {
         this.isSyncing = false;
         this.currentSyncEngine = null;
         if (type === 'auto') {
-          this.syncProgress = { message: '', count: '', percent: 0 };
+          this.syncProgress = { message: '', count: '', percent: undefined, phase: 'active' };
         }
         this.updateSettingsRuntimeState();
       }
@@ -746,13 +775,33 @@ export default class GetNoteSyncPlugin extends Plugin {
       count: info.processed && info.total
         ? t('sync.processingCount', { current: info.processed, total: info.total })
         : '',
-      percent: info.percent ?? 0,
+      percent: info.percent,
+      phase: 'active',
     };
     const now = Date.now();
     if (now - this.lastProgressUpdate > 300) {
       this.lastProgressUpdate = now;
       this.updateSettingsRuntimeState();
     }
+  }
+
+  private finishSyncProgress(phase: 'success' | 'failed' | 'cancelled', message: string): void {
+    this.isSyncing = false;
+    this.currentSyncEngine = null;
+    this.syncProgress = {
+      message,
+      count: '',
+      percent: phase === 'success' ? 100 : undefined,
+      phase,
+    };
+    this.updateSettingsRuntimeState();
+    if (this.syncProgressResultTimer) clearTimeout(this.syncProgressResultTimer);
+    this.syncProgressResultTimer = setTimeout(() => {
+      if (this.syncProgress.phase !== phase || this.syncProgress.message !== message) return;
+      this.syncProgress = { message: '', count: '', percent: undefined, phase: 'active' };
+      this.syncProgressResultTimer = null;
+      this.updateSettingsRuntimeState();
+    }, 3000);
   }
 
   openManualSyncModal(showOpenSettings = false): void {
@@ -847,7 +896,7 @@ export default class GetNoteSyncPlugin extends Plugin {
 
     const startedAt = Date.now();
     this.isSyncing = true;
-    this.syncProgress = { message: t('sync.subscribedKnowledge.fetching'), count: '', percent: 0 };
+    this.syncProgress = { message: t('sync.subscribedKnowledge.fetching'), count: '', percent: undefined, phase: 'active' };
     this.currentSyncEngine = null;
     this.updateSettingsRuntimeState();
     showNotice(t('sync.subscribedKnowledge.started'));
@@ -858,6 +907,7 @@ export default class GetNoteSyncPlugin extends Plugin {
     this.currentSyncEngine = engine;
     engine.setOnCancel(() => this.cancelSync());
 
+    let progressFinished = false;
     try {
       const result = await engine.syncSubscribedKnowledge(undefined, syncOptions);
       await this.recordSyncHistory(result, 'full', startedAt, {
@@ -881,6 +931,21 @@ export default class GetNoteSyncPlugin extends Plugin {
           failed: '',
         }), 8000);
       }
+      this.finishSyncProgress(
+        result.failed > 0 ? 'failed' : 'success',
+        result.failed > 0 ? t('notice.syncPartial', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: result.failed,
+        }) : t('notice.syncComplete', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: '',
+        }),
+      );
+      progressFinished = true;
     } catch (err) {
       if (err instanceof SyncCancelledError) {
         await this.recordSyncHistory(emptySyncResult(), 'full', startedAt, {
@@ -889,7 +954,8 @@ export default class GetNoteSyncPlugin extends Plugin {
           selectedCount: syncOptions?.selectedNoteIds?.length,
           selectedIds: syncOptions?.selectedNoteIds,
         }, 'cancelled', undefined, 'knowledge-base');
-        this.syncProgress = { message: t('modal.cancelled'), count: '', percent: 0 };
+        this.finishSyncProgress('cancelled', t('modal.cancelled'));
+        progressFinished = true;
         return;
       }
       const error = err instanceof Error ? err.message : String(err);
@@ -899,14 +965,17 @@ export default class GetNoteSyncPlugin extends Plugin {
         selectedCount: syncOptions?.selectedNoteIds?.length,
         selectedIds: syncOptions?.selectedNoteIds,
       }, 'failed', error, 'knowledge-base');
-      this.syncProgress = { message: t('notice.syncFailed', { msg: error }), count: '', percent: 0 };
+      this.finishSyncProgress('failed', t('notice.syncFailed', { msg: error }));
+      progressFinished = true;
       console.error(t('console.syncError'), err);
       showError(t('notice.syncFailed', { msg: error }));
     } finally {
-      this.isSyncing = false;
-      this.currentSyncEngine = null;
-      this.syncProgress = { message: '', count: '', percent: 0 };
-      this.updateSettingsRuntimeState();
+      if (!progressFinished) {
+        this.isSyncing = false;
+        this.currentSyncEngine = null;
+        this.syncProgress = { message: '', count: '', percent: undefined, phase: 'active' };
+        this.updateSettingsRuntimeState();
+      }
     }
   }
 
@@ -930,16 +999,18 @@ export default class GetNoteSyncPlugin extends Plugin {
     if (this.isSyncing || this.isDatePathMigrationRunning) return;
     const startedAt = Date.now();
     this.isSyncing = true;
-    this.syncProgress = { message: t('reverseSync.running'), count: '', percent: 0 };
+    this.syncProgress = { message: t('reverseSync.running'), count: '', percent: undefined, phase: 'active' };
     this.updateSettingsRuntimeState();
 
+    let progressFinished = false;
     try {
       const engine = new ReverseSyncEngine(this.app, this.settings, (progress) => {
-        const percent = progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0;
+        const percent = progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : undefined;
         this.syncProgress = {
           message: t('reverseSync.running'),
           count: `${t('modal.countProgress', { processed: progress.processed })} ${progress.title}`,
           percent,
+          phase: 'active',
         };
         this.updateSettingsRuntimeState();
       });
@@ -960,6 +1031,20 @@ export default class GetNoteSyncPlugin extends Plugin {
           failed: result.failed,
         }), 8000);
       }
+      this.finishSyncProgress(
+        result.failed > 0 ? 'failed' : 'success',
+        result.failed > 0 ? t('notice.syncPartial', {
+          created: result.created,
+          updated: 0,
+          skipped: result.skipped,
+          failed: result.failed,
+        }) : t('reverseSync.complete', {
+          created: result.created,
+          skipped: result.skipped,
+          failed: result.failed,
+        }),
+      );
+      progressFinished = true;
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         await this.recordUploadHistory({
@@ -969,7 +1054,8 @@ export default class GetNoteSyncPlugin extends Plugin {
           total: files?.length ?? 0,
           items: [],
         }, startedAt, files?.map(file => file.path), t('modal.cancelled'), 'cancelled');
-        this.syncProgress = { message: t('modal.cancelled'), count: '', percent: 0 };
+        this.finishSyncProgress('cancelled', t('modal.cancelled'));
+        progressFinished = true;
         return;
       }
       const message = err instanceof Error ? err.message : String(err);
@@ -987,14 +1073,17 @@ export default class GetNoteSyncPlugin extends Plugin {
           error: message,
         })),
       }, startedAt, files?.map(file => file.path), message);
-      this.syncProgress = { message: t('reverseSync.failed', { msg: message }), count: '', percent: 0 };
+      this.finishSyncProgress('failed', t('reverseSync.failed', { msg: message }));
+      progressFinished = true;
       showError(t('reverseSync.failed', { msg: message }));
       return;
     } finally {
-      this.isSyncing = false;
-      this.currentSyncEngine = null;
-      this.syncProgress = { message: '', count: '', percent: 0 };
-      this.updateSettingsRuntimeState();
+      if (!progressFinished) {
+        this.isSyncing = false;
+        this.currentSyncEngine = null;
+        this.syncProgress = { message: '', count: '', percent: undefined, phase: 'active' };
+        this.updateSettingsRuntimeState();
+      }
     }
   }
 
