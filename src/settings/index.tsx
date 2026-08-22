@@ -884,7 +884,10 @@ export function SettingsComponent({
             <strong>{t('settings.advanced.section')}</strong>
             <small>{t('settings.advanced.summary')}</small>
           </span>
-          <span className="getnote-disclosure-caret" aria-hidden="true">▾</span>
+          <span
+            className={`getnote-disclosure-caret${advancedDetailsOpen ? ' is-open' : ''}`}
+            aria-hidden="true"
+          />
         </button>
         <div
           id={advancedDetailsId}
@@ -1034,55 +1037,6 @@ export function SettingsComponent({
           </div>
         </div>
       </SettingItem>
-        <div className="getnote-scheduled-row getnote-scheduled-date-row">
-          <span className="getnote-scheduled-row-label">
-            {resetDialogOpen
-              ? t('settings.scheduled.resetStartDate')
-              : lastSyncedTo
-                ? t('settings.syncStartDate.lastSyncedTo')
-                : t('settings.syncStartDate.label')}
-          </span>
-          <span className="getnote-scheduled-row-control getnote-checkpoint-control">
-            {resetDialogOpen ? (
-              <>
-                <input
-                  type="date"
-                  className="getnote-input getnote-date-input"
-                  value={pendingStartDate}
-                  onChange={(e) => setPendingStartDate((e.target as HTMLInputElement).value)}
-                />
-                <button type="button" className="getnote-button getnote-button-secondary" onClick={handleResetCancel}>
-                  {t('settings.scheduled.resetCancel')}
-                </button>
-                <button type="button" className="getnote-button getnote-button-primary" onClick={handleResetSave} disabled={isSyncing}>
-                  {t('settings.scheduled.resetSave')}
-                </button>
-              </>
-            ) : lastSyncedTo ? (
-              <>
-                <span className="getnote-muted-text">{formatCheckpoint(lastSyncedTo)}</span>
-                <button type="button" className="getnote-button getnote-button-secondary" onClick={handleResetCheckpointClick} disabled={isSyncing}>
-                  {t('settings.scheduled.resetButton')}
-                </button>
-              </>
-            ) : (
-              <input
-                type="date"
-                className="getnote-input getnote-date-input"
-                value={settings.syncStartDate}
-                onChange={(e) => handleSyncStartDateChange((e.target as HTMLInputElement).value)}
-              />
-            )}
-          </span>
-        </div>
-        <div className="getnote-input-hint">
-          {resetDialogOpen
-            ? t('settings.scheduled.resetStartDateDesc')
-            : lastSyncedTo
-              ? t('settings.syncStartDate.lastSyncedToDesc')
-              : t('settings.syncStartDate.desc')}
-        </div>
-
         <div data-attachment-settings>
         <SettingItem name={t('settings.attachment.section')}>
           <div className="getnote-scheduled-options">
@@ -1126,8 +1080,9 @@ export function SettingsComponent({
       </section>
 
         );
-        const commonSettingsContinuation = (
-      <div className="getnote-settings-common-continuation">
+        const syncSettings = (
+      <section className="getnote-settings-section getnote-settings-sync" data-settings-section="sync">
+      <h3>{t('settings.sync.section')}</h3>
 
       <div data-scheduled-settings>
       <SettingItem name={t('settings.scheduled.label')} description={t('settings.scheduled.desc')}>
@@ -1228,6 +1183,56 @@ export function SettingsComponent({
             </div>
             <div className="getnote-input-hint">{t('settings.scheduled.syncKnowledgeBases.hint')}</div>
           </div>
+          <div className="getnote-scheduled-checkpoint" data-scheduled-checkpoint>
+            <div className="getnote-scheduled-row getnote-scheduled-date-row">
+              <span className="getnote-scheduled-row-label">
+                {resetDialogOpen
+                  ? t('settings.scheduled.resetStartDate')
+                  : lastSyncedTo
+                    ? t('settings.syncStartDate.lastSyncedTo')
+                    : t('settings.syncStartDate.label')}
+              </span>
+              <span className="getnote-scheduled-row-control getnote-checkpoint-control">
+                {resetDialogOpen ? (
+                  <>
+                    <input
+                      type="date"
+                      className="getnote-input getnote-date-input"
+                      value={pendingStartDate}
+                      onChange={(e) => setPendingStartDate((e.target as HTMLInputElement).value)}
+                    />
+                    <button type="button" className="getnote-button getnote-button-secondary" onClick={handleResetCancel}>
+                      {t('settings.scheduled.resetCancel')}
+                    </button>
+                    <button type="button" className="getnote-button getnote-button-primary" onClick={handleResetSave} disabled={isSyncing}>
+                      {t('settings.scheduled.resetSave')}
+                    </button>
+                  </>
+                ) : lastSyncedTo ? (
+                  <>
+                    <span className="getnote-muted-text">{formatCheckpoint(lastSyncedTo)}</span>
+                    <button type="button" className="getnote-button getnote-button-secondary" onClick={handleResetCheckpointClick} disabled={isSyncing}>
+                      {t('settings.scheduled.resetButton')}
+                    </button>
+                  </>
+                ) : (
+                  <input
+                    type="date"
+                    className="getnote-input getnote-date-input"
+                    value={settings.syncStartDate}
+                    onChange={(e) => handleSyncStartDateChange((e.target as HTMLInputElement).value)}
+                  />
+                )}
+              </span>
+            </div>
+            <div className="getnote-input-hint">
+              {resetDialogOpen
+                ? t('settings.scheduled.resetStartDateDesc')
+                : lastSyncedTo
+                  ? t('settings.syncStartDate.lastSyncedToDesc')
+                  : t('settings.syncStartDate.desc')}
+            </div>
+          </div>
           {settings.lastQuotaState?.exhausted && (
             <div className="getnote-quota-banner">
               <div className="getnote-quota-banner-title">
@@ -1242,17 +1247,6 @@ export function SettingsComponent({
       </SettingItem>
       </div>
 
-      </div>
-        );
-        return (
-          <>
-            {commonSettingsContinuation}
-            {advancedSettings}
-          </>
-        );
-      })()}
-
-      <section className="getnote-settings-section getnote-settings-manual" data-settings-section="manual">
       <SettingItem name={t('settings.manualSync')}>
         <div className="getnote-manual-actions">
           <div className="getnote-manual-action-group">
@@ -1295,10 +1289,8 @@ export function SettingsComponent({
           </div>
         </div>
       </SettingItem>
-      </section>
 
       {/* 同步日志 */}
-      <section className="getnote-settings-section getnote-settings-history" data-settings-section="history">
       <SettingItem name={t('syncHistory.title')}>
         <div className="getnote-sync-log-section">
           <div className="getnote-scheduled-row">
@@ -1322,6 +1314,15 @@ export function SettingsComponent({
         </div>
       </SettingItem>
       </section>
+
+        );
+        return (
+          <>
+            {syncSettings}
+            {advancedSettings}
+          </>
+        );
+      })()}
 
     </div>
   );

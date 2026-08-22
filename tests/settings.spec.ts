@@ -166,7 +166,7 @@ afterEach(() => {
 });
 
 describe('SettingsComponent information architecture (#257)', () => {
-  it('keeps the page configuration-first and leaves manual sync after common and advanced settings', () => {
+  it('groups automatic sync, manual sync, and history before the final advanced settings section', () => {
     const { container } = renderSettings(makeSettings({
       authMode: 'openapi',
       openApiToken: 'token',
@@ -187,11 +187,15 @@ describe('SettingsComponent information architecture (#257)', () => {
 
     const sections = Array.from(container.querySelectorAll<HTMLElement>('[data-settings-section]'))
       .map(section => section.dataset.settingsSection);
-    expect(sections).toEqual(['common', 'advanced', 'manual', 'history']);
+    expect(sections).toEqual(['common', 'sync', 'advanced']);
 
+    const syncSection = container.querySelector('[data-settings-section="sync"]')!;
     const scheduled = container.querySelector('[data-scheduled-settings]')!;
     const advanced = container.querySelector('[data-settings-section="advanced"]')!;
-    expect(scheduled.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(syncSection.contains(scheduled)).toBe(true);
+    expect(syncSection.textContent).toContain('手动同步');
+    expect(syncSection.textContent).toContain('同步日志');
+    expect(syncSection.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('keeps low-frequency settings behind one accessible advanced disclosure', async () => {
@@ -210,7 +214,7 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(details!.textContent).toContain('按创建日期整理路径');
     expect(details!.textContent).toContain('模板文件路径');
     expect(details!.textContent).toContain('侧栏入口');
-    expect(details!.textContent).toContain('上次同步断点');
+    expect(details!.textContent).not.toContain('上次同步断点');
     expect(details!.textContent).toContain('附件下载配置');
     expect(container.querySelector('[data-settings-section="common"] [data-attachment-settings]')).toBeNull();
     expect(details!.querySelector('[data-attachment-settings]')).toBeTruthy();
@@ -223,15 +227,59 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(details!.classList.contains('getnote-hidden')).toBe(false);
   });
 
-  it('labels the first-import date as a sync start date before a checkpoint exists', () => {
-    const { container } = renderSettings(makeSettings({
+  it('turns the advanced-settings caret upward when the section expands', async () => {
+    const { container } = renderSettings(makeSettings());
+    const disclosure = container.querySelector<HTMLButtonElement>('[data-advanced-disclosure]')!;
+    const caret = disclosure.querySelector<HTMLElement>('.getnote-disclosure-caret')!;
+
+    expect(caret.classList.contains('is-open')).toBe(false);
+    expect(caret.textContent).toBe('');
+
+    await act(() => {
+      disclosure.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(disclosure.getAttribute('aria-expanded')).toBe('true');
+    expect(caret.classList.contains('is-open')).toBe(true);
+  });
+
+  it('keeps the initial sync date editable while scheduled sync is disabled', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
       syncStartDate: '2026-01-01',
       lastSyncEndTimestamp: '',
     }));
-    const details = container.querySelector<HTMLElement>('[data-advanced-settings]');
+    const scheduledDetails = container.querySelector<HTMLElement>('#getnote-scheduled-details');
+    const checkpoint = container.querySelector<HTMLElement>('[data-scheduled-checkpoint]');
+    const dateInput = checkpoint?.querySelector<HTMLInputElement>('input[type="date"]');
 
-    expect(details?.textContent).toContain('同步起始日期');
-    expect(details?.textContent).not.toContain('上次同步断点');
+    expect(scheduledDetails?.classList.contains('getnote-hidden')).toBe(true);
+    expect(checkpoint?.textContent).toContain('同步起始日期');
+    expect(checkpoint).toBeTruthy();
+    expect(scheduledDetails?.contains(checkpoint!)).toBe(false);
+    expect(dateInput?.value).toBe('2026-01-01');
+
+    await act(() => {
+      dateInput!.value = '2025-08-01';
+      dateInput!.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('syncStartDate', '2025-08-01');
+  });
+
+  it('keeps the last sync checkpoint in the scheduled-sync section', () => {
+    const { container } = renderSettings(makeSettings({
+      lastSyncEndTimestamp: '2026-06-12T15:30:00Z',
+    }));
+
+    const syncSection = container.querySelector<HTMLElement>('[data-settings-section="sync"]');
+    const scheduledDetails = container.querySelector<HTMLElement>('#getnote-scheduled-details');
+    const advancedDetails = container.querySelector<HTMLElement>('[data-advanced-settings]');
+    const checkpoint = container.querySelector<HTMLElement>('[data-scheduled-checkpoint]');
+
+    expect(syncSection?.contains(checkpoint!)).toBe(true);
+    expect(checkpoint?.textContent).toContain('上次同步断点');
+    expect(scheduledDetails?.contains(checkpoint!)).toBe(false);
+    expect(advancedDetails?.textContent).not.toContain('上次同步断点');
   });
 
   it('keeps connection-test feedback visible while credentials stay collapsed', async () => {
