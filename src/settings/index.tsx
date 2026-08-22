@@ -16,6 +16,7 @@ import { getLocalDateInputValue } from '../ui/date-input';
 import { validateDatePathFormat } from '../date-paths';
 import type {
   DatePathMigrationIssueCode,
+  DatePathMigrationOptions,
   DatePathMigrationResult,
   DatePathMigrationTarget,
 } from '../date-path-migration';
@@ -91,7 +92,8 @@ interface SettingsComponentProps {
   lastSyncTime?: number;
   syncHistory?: SyncHistoryEntry[];
   initialKnowledgeBaseCache?: { entries: Array<{ topicId: string; name: string; source?: 'subscribed' | 'created' }>; cacheUpdatedAt?: number };
-  applyDatePathSettings?: (target: DatePathMigrationTarget) => Promise<DatePathMigrationResult>;
+  applyDatePathSettings?: (target: DatePathMigrationTarget, options?: DatePathMigrationOptions) => Promise<DatePathMigrationResult>;
+  previewDatePathSettings?: (target: DatePathMigrationTarget, options?: DatePathMigrationOptions) => Promise<DatePathMigrationResult>;
   confirmDatePathMigration?: (request: DatePathConfirmationRequest) => Promise<boolean>;
   desktopWebAuthAvailable?: boolean;
   startDesktopWebAuth?: () => Promise<string>;
@@ -115,6 +117,7 @@ export function SettingsComponent({
   syncHistory = [],
   initialKnowledgeBaseCache,
   applyDatePathSettings,
+  previewDatePathSettings,
   confirmDatePathMigration,
   desktopWebAuthAvailable = false,
   startDesktopWebAuth,
@@ -327,9 +330,11 @@ export function SettingsComponent({
       enabled: datePathEnabled,
       format: normalizedDatePathFormat,
     };
+    const options = mode === 'reconcile' ? { rebuildCategories: true } : undefined;
     setDatePathMigrationBusy(true);
     setDatePathMigrationFailed(false);
     try {
+      const preview = await previewDatePathSettings?.(target, options);
       const confirmed = await confirmDatePathMigration?.({
         mode,
         current: {
@@ -337,9 +342,10 @@ export function SettingsComponent({
           format: appliedDatePathFormat,
         },
         target,
+        preview,
       });
       if (!confirmed || !applyDatePathSettings) return;
-      const result = await applyDatePathSettings(target);
+      const result = await applyDatePathSettings(target, options);
       setAppliedDatePathEnabled(target.enabled);
       setAppliedDatePathFormat(target.format);
       setDatePathFormat(target.format);
@@ -365,6 +371,16 @@ export function SettingsComponent({
       case 'rollback-failed': return t('settings.datePath.issue.rollbackFailed');
       default: return t('settings.datePath.issue.unknown');
     }
+  };
+
+  const datePathIssueSummary = (issues: DatePathMigrationResult['issues']): string => {
+    const counts = new Map<DatePathMigrationIssueCode, number>();
+    for (const migrationIssue of issues) {
+      counts.set(migrationIssue.code, (counts.get(migrationIssue.code) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([code, count]) => `${datePathIssueLabel(code)} ${count}`)
+      .join(' · ');
   };
 
   const handleTemplateFilePathChange = useCallback(
@@ -971,20 +987,18 @@ export function SettingsComponent({
                 })}
               </div>
               {datePathMigrationResult.issues.length > 0 && (
-                <ul>
-                  {datePathMigrationResult.issues.slice(0, 20).map((migrationIssue, index) => (
-                    <li key={`${migrationIssue.code}-${migrationIssue.path}-${index}`}>
-                      {migrationIssue.path}: {datePathIssueLabel(migrationIssue.code)}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {datePathMigrationResult.issues.length > 20 && (
-                <div>
-                  {t('settings.datePath.issuesRemaining', {
-                    count: datePathMigrationResult.issues.length - 20,
-                  })}
+                <div className="getnote-date-path-issue-summary">
+                  {datePathIssueSummary(datePathMigrationResult.issues)}
                 </div>
+              )}
+              {datePathMigrationResult.issues.length > 0 && (
+                <button
+                  type="button"
+                  className="mod-secondary getnote-view-history-btn"
+                  onClick={() => openSyncHistoryModal(app, currentSyncHistory)}
+                >
+                  {t('syncHistory.view')}
+                </button>
               )}
             </div>
           )}
