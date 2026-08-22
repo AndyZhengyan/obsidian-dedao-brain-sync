@@ -67,6 +67,13 @@ describe('getCategoryDir', () => {
 });
 
 describe('source-body rendering', () => {
+  it('uses one escaped frontmatter title for a multiline fallback title', () => {
+    const result = renderNote(makeNote({ title: '', content: 'first line\nsecond line' }));
+
+    expect(result).toContain('title: "first line second line"');
+    expect(result).not.toContain('title: "first line\nsecond line"');
+  });
+
   it.each([
     '- parent\n  1. child\n     - nested',
     '| a | b |\n| --- | --- |\n| 1 | 2 |',

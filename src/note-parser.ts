@@ -100,7 +100,7 @@ function frontmatterTags(note: GetNoteNote): string[] {
 }
 
 function frontmatterTitle(note: GetNoteNote): string {
-  return sanitizeTitle(note.title) || sanitizeTitle(note.content || '');
+  return escapeYamlDoubleQuoted(sanitizeTitle(note.title) || sanitizeTitle(note.content || ''));
 }
 
 function buildFrontmatter(note: GetNoteNote, extraLines: string[] = [], sourceBody: string = note.content || ''): string {
