@@ -183,7 +183,7 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(container.textContent).toContain('手动同步（双向：得到 ↔ OB）');
   });
 
-  it('groups automatic sync, manual sync, and history before the final advanced settings section', () => {
+  it('groups automatic sync, manual sync, and history before the final advanced settings section', async () => {
     const { container } = renderSettings(makeSettings({
       authMode: 'openapi',
       openApiToken: 'token',
@@ -204,15 +204,28 @@ describe('SettingsComponent information architecture (#257)', () => {
 
     const sections = Array.from(container.querySelectorAll<HTMLElement>('[data-settings-section]'))
       .map(section => section.dataset.settingsSection);
-    expect(sections).toEqual(['common', 'sync', 'advanced']);
+    expect(sections).toEqual(['sync', 'advanced']);
 
     const syncSection = container.querySelector('[data-settings-section="sync"]')!;
+    const syncDisclosure = container.querySelector<HTMLButtonElement>('[data-sync-disclosure]')!;
+    const syncDetails = container.querySelector<HTMLElement>('[data-sync-settings]')!;
     const scheduled = container.querySelector('[data-scheduled-settings]')!;
     const advanced = container.querySelector('[data-settings-section="advanced"]')!;
     expect(syncSection.contains(scheduled)).toBe(true);
+    expect(syncDisclosure.getAttribute('aria-expanded')).toBe('true');
+    expect(syncDisclosure.getAttribute('aria-controls')).toBe(syncDetails.id);
+    expect(syncDetails.classList.contains('getnote-hidden')).toBe(false);
+    expect(syncSection.textContent!.indexOf('目标文件夹')).toBeLessThan(syncSection.textContent!.indexOf('定时自动同步'));
     expect(syncSection.textContent).toContain('手动同步');
     expect(syncSection.textContent).toContain('同步日志');
     expect(syncSection.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await act(() => {
+      syncDisclosure.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(syncDisclosure.getAttribute('aria-expanded')).toBe('false');
+    expect(syncDetails.classList.contains('getnote-hidden')).toBe(true);
   });
 
   it('keeps low-frequency settings behind one accessible advanced disclosure', async () => {
@@ -233,7 +246,6 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(details!.textContent).toContain('侧栏入口');
     expect(details!.textContent).not.toContain('上次同步断点');
     expect(details!.textContent).toContain('附件下载配置');
-    expect(container.querySelector('[data-settings-section="common"] [data-attachment-settings]')).toBeNull();
     expect(details!.querySelector('[data-attachment-settings]')).toBeTruthy();
 
     await act(() => {
@@ -385,9 +397,9 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(changeButton!.textContent).toBe('更改凭证');
 
     const status = container.querySelector('[data-settings-status]')!;
-    const common = container.querySelector('[data-settings-section="common"]')!;
+    const sync = container.querySelector('[data-settings-section="sync"]')!;
     expect(status.compareDocumentPosition(details!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(details!.compareDocumentPosition(common) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(details!.compareDocumentPosition(sync) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     await act(() => {
       changeButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));

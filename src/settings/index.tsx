@@ -155,6 +155,7 @@ export function SettingsComponent({
   const [scheduledKnowledgeBases, setScheduledKnowledgeBases] = useState<string[]>(settings.scheduledSync.syncKnowledgeBases ?? []);
   const [attachmentDetailsOpen, setAttachmentDetailsOpen] = useState(false);
   const [credentialsDetailsOpen, setCredentialsDetailsOpen] = useState(!initiallyHasCredentials);
+  const [syncDetailsOpen, setSyncDetailsOpen] = useState(true);
   const [advancedDetailsOpen, setAdvancedDetailsOpen] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [desktopWebAuthBusy, setDesktopWebAuthBusy] = useState(false);
@@ -601,6 +602,7 @@ export function SettingsComponent({
   const credentialDetailsId = 'getnote-credential-details';
   const scheduledDetailsId = 'getnote-scheduled-details';
   const attachmentDetailsId = 'getnote-attachment-details';
+  const syncDetailsId = 'getnote-sync-settings';
   const advancedDetailsId = 'getnote-advanced-settings';
 
   const noteTypesSummary = !scheduledNoteTypes || scheduledNoteTypes.length === 0
@@ -881,25 +883,6 @@ export function SettingsComponent({
       </SettingItem>
       </div>
 
-      <section className="getnote-settings-section getnote-settings-common" data-settings-section="common">
-        <h3>{t('settings.common.section')}</h3>
-
-      {/* 目标文件夹 */}
-      <SettingItem
-        name={t('settings.folder.label')}
-        description={t('settings.folder.desc')}
-      >
-        <input
-          ref={folderInputRef}
-          type="text"
-          className="getnote-input"
-          placeholder={t('settings.folder.placeholder')}
-          value={folderName}
-          onInput={(e) => handleFolderChange((e.target as HTMLInputElement).value)}
-        />
-      </SettingItem>
-      </section>
-
       {/* 文件名前缀 */}
       {(() => {
         const advancedSettings = (
@@ -1112,7 +1095,39 @@ export function SettingsComponent({
         );
         const syncSettings = (
       <section className="getnote-settings-section getnote-settings-sync" data-settings-section="sync">
-      <h3>{t('settings.sync.section')}</h3>
+      <button
+        type="button"
+        className="getnote-section-disclosure"
+        data-sync-disclosure
+        aria-expanded={syncDetailsOpen}
+        aria-controls={syncDetailsId}
+        onClick={() => setSyncDetailsOpen(prev => !prev)}
+      >
+        <span className="getnote-section-disclosure-copy">
+          <strong>{t('settings.sync.section')}</strong>
+          <small>{t('settings.sync.summary')}</small>
+        </span>
+        <span
+          className={`getnote-disclosure-caret${syncDetailsOpen ? ' is-open' : ''}`}
+          aria-hidden="true"
+        />
+      </button>
+      <div id={syncDetailsId} data-sync-settings className={syncDetailsOpen ? '' : 'getnote-hidden'}>
+
+      {/* 目标文件夹是同步的基础配置，放在首项以便首次设置。 */}
+      <SettingItem
+        name={t('settings.folder.label')}
+        description={t('settings.folder.desc')}
+      >
+        <input
+          ref={folderInputRef}
+          type="text"
+          className="getnote-input"
+          placeholder={t('settings.folder.placeholder')}
+          value={folderName}
+          onInput={(e) => handleFolderChange((e.target as HTMLInputElement).value)}
+        />
+      </SettingItem>
 
       <div data-scheduled-settings>
       <SettingItem name={t('settings.scheduled.label')} description={t('settings.scheduled.desc')}>
@@ -1331,6 +1346,7 @@ export function SettingsComponent({
           </button>
         </div>
       </SettingItem>
+      </div>
       </section>
 
         );

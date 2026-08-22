@@ -6,32 +6,32 @@ import { join } from 'path';
 describe('initI18n', () => {
   it('sets locale to zh for zh-CN', () => {
     i18n.initI18n('zh-CN');
-    expect(i18n.t('settings.title')).toBe('⏪ 得到大脑（原Get笔记）Sync');
+    expect(i18n.t('settings.title')).toBe('🔄 得到大脑（原Get笔记）Sync');
   });
 
   it('sets locale to zh for zh-TW', () => {
     i18n.initI18n('zh-TW');
-    expect(i18n.t('settings.title')).toBe('⏪ 得到大脑（原Get笔记）Sync');
+    expect(i18n.t('settings.title')).toBe('🔄 得到大脑（原Get笔记）Sync');
   });
 
   it('sets locale to zh for Chinese locale string', () => {
     i18n.initI18n('简体中文');
-    expect(i18n.t('settings.title')).toBe('⏪ 得到大脑（原Get笔记）Sync');
+    expect(i18n.t('settings.title')).toBe('🔄 得到大脑（原Get笔记）Sync');
   });
 
   it('sets locale to en for en', () => {
     i18n.initI18n('en');
-    expect(i18n.t('settings.title')).toBe('⏪ 得到大脑（原Get笔记）Sync');
+    expect(i18n.t('settings.title')).toBe('🔄 得到大脑（原Get笔记）Sync');
   });
 
   it('sets locale to en for en-US', () => {
     i18n.initI18n('en-US');
-    expect(i18n.t('settings.title')).toBe('⏪ 得到大脑（原Get笔记）Sync');
+    expect(i18n.t('settings.title')).toBe('🔄 得到大脑（原Get笔记）Sync');
   });
 
   it('sets locale to en for unknown locale', () => {
     i18n.initI18n('fr-FR');
-    expect(i18n.t('settings.title')).toBe('⏪ 得到大脑（原Get笔记）Sync');
+    expect(i18n.t('settings.title')).toBe('🔄 得到大脑（原Get笔记）Sync');
   });
 });
 
@@ -41,7 +41,7 @@ describe('t() - Chinese translations', () => {
   });
 
   it('returns Chinese for settings.title', () => {
-    expect(i18n.t('settings.title')).toBe('⏪ 得到大脑（原Get笔记）Sync');
+    expect(i18n.t('settings.title')).toBe('🔄 得到大脑（原Get笔记）Sync');
   });
 
   it('returns Chinese for settings.desc', () => {

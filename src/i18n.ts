@@ -1,12 +1,12 @@
 export const translations: Record<string, Record<string, string>> = {
   zh: {
     // === Settings ===
-    'settings.title': '⏪ 得到大脑（原Get笔记）Sync',
+    'settings.title': '🔄 得到大脑（原Get笔记）Sync',
     'settings.desc': '得到大脑（原Get笔记） ↔ Obsidian，一键同步无负担，',
     'settings.community': '欢迎交流、留下star',
     'settings.communityUrl': 'https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/blob/main/README.md#关于作者',
-    'settings.common.section': '常用设置',
     'settings.sync.section': '同步',
+    'settings.sync.summary': '目标文件夹、定时自动同步、手动同步与日志',
     'settings.advanced.section': '高级设置',
     'settings.advanced.summary': '附件、文件命名、日期路径、模板与侧栏入口',
     'settings.credentials.connected': '已配置',
@@ -404,12 +404,12 @@ export const translations: Record<string, Record<string, string>> = {
 
   en: {
     // === Settings ===
-    'settings.title': '⏪ 得到大脑（原Get笔记）Sync',
+    'settings.title': '🔄 得到大脑（原Get笔记）Sync',
     'settings.desc': '得到大脑（原Get笔记） ↔ Obsidian, one-click sync',
     'settings.community': 'Welcome, leave a star',
     'settings.communityUrl': 'https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/blob/main/README_EN.md#about-the-author',
-    'settings.common.section': 'Common Settings',
     'settings.sync.section': 'Sync',
+    'settings.sync.summary': 'Folder, scheduled sync, manual sync, and logs',
     'settings.advanced.section': 'Advanced Settings',
     'settings.advanced.summary': 'Attachments, file naming, date paths, templates, and ribbon actions',
     'settings.credentials.connected': 'Configured',
