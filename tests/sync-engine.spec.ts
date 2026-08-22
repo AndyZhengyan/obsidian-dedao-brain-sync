@@ -501,7 +501,9 @@ describe('SyncEngine — template file rendering', () => {
       expect(created).not.toContain('template-uid-should-not-win');
       expect(created).toContain('tags: ["远端", "模板"]');
       expect(created).toContain('# 模板笔记');
-      expect(created).toContain('模板头\n\n远端正文\n\n模板尾');
+      expect(created).toContain(
+        '模板头\n\n<!-- dedao-brain-sync:source-body:start -->\n远端正文\n<!-- dedao-brain-sync:source-body:end -->\n\n模板尾'
+      );
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
     }
@@ -528,7 +530,9 @@ describe('SyncEngine — template file rendering', () => {
       await engine.syncNoteIds(['append_content']);
 
       const created = vi.mocked(app.vault.create).mock.calls[0]?.[1] as string;
-      expect(created).toContain('固定模板块\n\n得到正文');
+      expect(created).toContain(
+        '固定模板块\n\n<!-- dedao-brain-sync:source-body:start -->\n得到正文\n<!-- dedao-brain-sync:source-body:end -->'
+      );
     } finally {
       vi.mocked(globalThis.fetch).mockRestore();
     }
