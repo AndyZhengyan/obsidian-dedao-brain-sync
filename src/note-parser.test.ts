@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { renderNote, getNoteTitle } from './note-parser';
+import { renderNote, renderNoteWithTemplate, getNoteTitle } from './note-parser';
+import { parseSourceBody } from './source-body';
 import { getCategoryDir } from './types';
 import type { GetNoteNote } from './types';
 
@@ -62,5 +63,40 @@ describe('getCategoryDir', () => {
 
   it('returns 其他 for unknown types', () => {
     expect(getCategoryDir('unknown_type')).toBe('其他');
+  });
+});
+
+describe('source-body rendering', () => {
+  it('writes one source-body boundary and portable baseline fields', () => {
+    const result = renderNote(makeNote({ content: '\r\n# source\r\n\r\nbody\r\n' }));
+
+    expect(result).toContain('dedao_sync_schema: 1');
+    expect(result).toMatch(/dedao_source_hash: "sha256:[a-f0-9]{64}"/);
+    expect(parseSourceBody(result)).toEqual({ kind: 'valid', body: '\n# source\n\nbody\n' });
+  });
+
+  it('keeps audio and transcript blocks outside the source-body boundary', () => {
+    const result = renderNote(makeNote({
+      content: 'remote text',
+      audio: 'transcript text',
+      assetPaths: ['得到大脑/录音笔记/asset/test_audio.mp3'],
+    }));
+
+    expect(parseSourceBody(result)).toEqual({ kind: 'valid', body: 'remote text' });
+    expect(result).toContain('> 🔊 录音');
+    expect(result).toContain('### 原始录音转写');
+  });
+
+  it('uses exactly one content placeholder as the source-body insertion point', () => {
+    const result = renderNoteWithTemplate(makeNote({ content: 'remote text' }), 'before\n\n{{content}}\n\nafter');
+
+    expect(parseSourceBody(result)).toEqual({ kind: 'valid', body: 'remote text' });
+    expect(result).toContain('before');
+    expect(result).toContain('after');
+  });
+
+  it('rejects duplicate or frontmatter content placeholders', () => {
+    expect(() => renderNoteWithTemplate(makeNote(), '{{content}}\n{{content}}')).toThrow(/content placeholder/i);
+    expect(() => renderNoteWithTemplate(makeNote(), '---\nsummary: "{{content}}"\n---\nbody')).toThrow(/frontmatter/i);
   });
 });
