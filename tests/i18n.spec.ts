@@ -45,7 +45,7 @@ describe('t() - Chinese translations', () => {
   });
 
   it('returns Chinese for settings.desc', () => {
-    expect(i18n.t('settings.desc')).toBe('得到大脑（原Get笔记） ↔ Obsidian，一键同步无负担，');
+    expect(i18n.t('settings.desc')).toBe('得到大脑（原Get笔记） ↔ Obsidian，双向同步，自动整理，永久免费，');
   });
 
   it('returns Chinese for settings.community', () => {

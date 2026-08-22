@@ -2,7 +2,7 @@ export const translations: Record<string, Record<string, string>> = {
   zh: {
     // === Settings ===
     'settings.title': '🔄 得到大脑（原Get笔记）Sync',
-    'settings.desc': '得到大脑（原Get笔记） ↔ Obsidian，一键同步无负担，',
+    'settings.desc': '得到大脑（原Get笔记） ↔ Obsidian，双向同步，自动整理，永久免费，',
     'settings.community': '欢迎交流、留下star',
     'settings.communityUrl': 'https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/blob/main/README.md#关于作者',
     'settings.sync.section': '同步',
