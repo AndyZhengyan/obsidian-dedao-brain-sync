@@ -884,7 +884,10 @@ export function SettingsComponent({
             <strong>{t('settings.advanced.section')}</strong>
             <small>{t('settings.advanced.summary')}</small>
           </span>
-          <span className="getnote-disclosure-caret" aria-hidden="true">▾</span>
+          <span
+            className={`getnote-disclosure-caret${advancedDetailsOpen ? ' is-open' : ''}`}
+            aria-hidden="true"
+          />
         </button>
         <div
           id={advancedDetailsId}

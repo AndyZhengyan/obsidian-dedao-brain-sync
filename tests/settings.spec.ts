@@ -227,6 +227,22 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(details!.classList.contains('getnote-hidden')).toBe(false);
   });
 
+  it('turns the advanced-settings caret upward when the section expands', async () => {
+    const { container } = renderSettings(makeSettings());
+    const disclosure = container.querySelector<HTMLButtonElement>('[data-advanced-disclosure]')!;
+    const caret = disclosure.querySelector<HTMLElement>('.getnote-disclosure-caret')!;
+
+    expect(caret.classList.contains('is-open')).toBe(false);
+    expect(caret.textContent).toBe('');
+
+    await act(() => {
+      disclosure.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(disclosure.getAttribute('aria-expanded')).toBe('true');
+    expect(caret.classList.contains('is-open')).toBe(true);
+  });
+
   it('labels the first-import date as a sync start date before a checkpoint exists', () => {
     const { container } = renderSettings(makeSettings({
       syncStartDate: '2026-01-01',
