@@ -102,6 +102,55 @@ afterEach(() => {
 });
 
 describe('ReverseSyncEngine', () => {
+  it('creates a remote note from only the marked source body', async () => {
+    const app = makeMockApp();
+    app.vault._addFile('得到大脑/marked.md', [
+      '---',
+      'title: "Marked"',
+      'note_type: plain_text',
+      '---',
+      'local template text',
+      '<!-- dedao-brain-sync:source-body:start -->',
+      'remote source',
+      '<!-- dedao-brain-sync:source-body:end -->',
+      '> 📎 local attachment',
+    ].join('\n'));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchResponse({ success: true, data: { note: { note_id: 'created-marked' } } })
+    );
+
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
+
+    expect(result).toEqual(expect.objectContaining({ created: 1, failed: 0 }));
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'https://openapi.biji.com/open/api/v1/resource/note/save',
+      expect.objectContaining({ body: expect.stringContaining('"content":"remote source"') })
+    );
+    expect(globalThis.fetch).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ body: expect.stringContaining('local attachment') })
+    );
+  });
+
+  it('skips a malformed marked file without sending a create request', async () => {
+    const app = makeMockApp();
+    app.vault._addFile('得到大脑/broken.md', [
+      '---',
+      'title: "Broken"',
+      'note_type: plain_text',
+      '---',
+      '<!-- dedao-brain-sync:source-body:start -->',
+      'remote source',
+    ].join('\n'));
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    const result = await new ReverseSyncEngine(toObsidianApp(app), makeSettings()).syncBack();
+
+    expect(result).toEqual(expect.objectContaining({ created: 0, skipped: 1, failed: 0 }));
+    expect(result.items[0]?.error).toMatch(/source-body/i);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it('ignores markdown files outside the configured Dedao Brain folder', async () => {
     const app = makeMockApp();
     app.vault._addFile('Inbox/local.md', [
