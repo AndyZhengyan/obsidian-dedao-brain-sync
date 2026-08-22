@@ -12,6 +12,20 @@ function ruleFor(selector: string): string {
 }
 
 describe('settings layout CSS', () => {
+  it('gives sync and advanced disclosures the same full-height frame', () => {
+    const sectionDisclosure = ruleFor(`.getnote-settings-sync .getnote-section-disclosure,
+.getnote-settings-advanced .getnote-section-disclosure`);
+
+    expect(sectionDisclosure).toContain('min-height: 58px');
+    expect(sectionDisclosure).toContain('padding: 10px 12px');
+    expect(sectionDisclosure).toContain('border-left: 0');
+  });
+
+  it('keeps completion and error progress cards on the same visual frame as active progress', () => {
+    expect(css).not.toMatch(/\.getnote-settings-sync-status-success\s*\{[^}]*border-left/);
+    expect(css).not.toMatch(/\.getnote-settings-sync-status-failed[\s,]*\n?\.getnote-settings-sync-status-cancelled\s*\{[^}]*border-left/);
+  });
+
   it('styles scheduled knowledge-base selection as a dropdown', () => {
     const root = ruleFor('.getnote-knowledge-base-select');
     const trigger = ruleFor('.getnote-knowledge-base-select-trigger');

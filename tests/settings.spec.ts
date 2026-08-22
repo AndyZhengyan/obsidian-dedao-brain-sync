@@ -36,7 +36,7 @@ function renderSettings(
   openLocalUpload = vi.fn(),
   options: {
     isSyncing?: boolean;
-    syncProgress?: { message: string; count: string; percent: number };
+    syncProgress?: { message: string; count: string; percent?: number; phase?: 'active' | 'success' | 'failed' | 'cancelled' };
     startSubscribedKnowledgeSync?: () => void;
     initialKnowledgeBaseCache?: { entries: Array<{ topicId: string; name: string }>; cacheUpdatedAt?: number };
     app?: App;
@@ -176,7 +176,14 @@ afterEach(() => {
 });
 
 describe('SettingsComponent information architecture (#257)', () => {
-  it('groups automatic sync, manual sync, and history before the final advanced settings section', () => {
+  it('labels scheduled sync as one-way and manual sync as two-way', () => {
+    const { container } = renderSettings(makeSettings());
+
+    expect(container.textContent).toContain('定时自动同步（单向：得到 → OB）');
+    expect(container.textContent).toContain('手动同步（双向：得到 ↔ OB）');
+  });
+
+  it('groups automatic sync, manual sync, and history before the final advanced settings section', async () => {
     const { container } = renderSettings(makeSettings({
       authMode: 'openapi',
       openApiToken: 'token',
@@ -197,15 +204,28 @@ describe('SettingsComponent information architecture (#257)', () => {
 
     const sections = Array.from(container.querySelectorAll<HTMLElement>('[data-settings-section]'))
       .map(section => section.dataset.settingsSection);
-    expect(sections).toEqual(['common', 'sync', 'advanced']);
+    expect(sections).toEqual(['sync', 'advanced']);
 
     const syncSection = container.querySelector('[data-settings-section="sync"]')!;
+    const syncDisclosure = container.querySelector<HTMLButtonElement>('[data-sync-disclosure]')!;
+    const syncDetails = container.querySelector<HTMLElement>('[data-sync-settings]')!;
     const scheduled = container.querySelector('[data-scheduled-settings]')!;
     const advanced = container.querySelector('[data-settings-section="advanced"]')!;
     expect(syncSection.contains(scheduled)).toBe(true);
+    expect(syncDisclosure.getAttribute('aria-expanded')).toBe('true');
+    expect(syncDisclosure.getAttribute('aria-controls')).toBe(syncDetails.id);
+    expect(syncDetails.classList.contains('getnote-hidden')).toBe(false);
+    expect(syncSection.textContent!.indexOf('目标文件夹')).toBeLessThan(syncSection.textContent!.indexOf('定时自动同步'));
     expect(syncSection.textContent).toContain('手动同步');
     expect(syncSection.textContent).toContain('同步日志');
     expect(syncSection.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await act(() => {
+      syncDisclosure.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(syncDisclosure.getAttribute('aria-expanded')).toBe('false');
+    expect(syncDetails.classList.contains('getnote-hidden')).toBe(true);
   });
 
   it('keeps low-frequency settings behind one accessible advanced disclosure', async () => {
@@ -226,7 +246,6 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(details!.textContent).toContain('侧栏入口');
     expect(details!.textContent).not.toContain('上次同步断点');
     expect(details!.textContent).toContain('附件下载配置');
-    expect(container.querySelector('[data-settings-section="common"] [data-attachment-settings]')).toBeNull();
     expect(details!.querySelector('[data-attachment-settings]')).toBeTruthy();
 
     await act(() => {
@@ -253,19 +272,25 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(caret.classList.contains('is-open')).toBe(true);
   });
 
-  it('keeps the initial sync date editable while scheduled sync is disabled', async () => {
+  it('keeps the initial sync date inside expandable scheduled details while scheduled sync is disabled', async () => {
     const { container, updateSetting } = renderSettings(makeSettings({
       syncStartDate: '2026-01-01',
       lastSyncEndTimestamp: '',
     }));
     const scheduledDetails = container.querySelector<HTMLElement>('#getnote-scheduled-details');
     const checkpoint = container.querySelector<HTMLElement>('[data-scheduled-checkpoint]');
-    const dateInput = checkpoint?.querySelector<HTMLInputElement>('input[type="date"]');
+    const disclosure = container.querySelector<HTMLButtonElement>('.getnote-scheduled-master-row .getnote-inline-disclosure');
 
     expect(scheduledDetails?.classList.contains('getnote-hidden')).toBe(true);
-    expect(checkpoint?.textContent).toContain('同步起始日期');
     expect(checkpoint).toBeTruthy();
-    expect(scheduledDetails?.contains(checkpoint!)).toBe(false);
+    expect(scheduledDetails?.contains(checkpoint!)).toBe(true);
+    expect(disclosure).toBeTruthy();
+
+    await act(() => disclosure!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+
+    const dateInput = checkpoint?.querySelector<HTMLInputElement>('input[type="date"]');
+    expect(scheduledDetails?.classList.contains('getnote-hidden')).toBe(false);
+    expect(checkpoint?.textContent).toContain('同步起始日期');
     expect(dateInput?.value).toBe('2026-01-01');
 
     await act(() => {
@@ -288,7 +313,7 @@ describe('SettingsComponent information architecture (#257)', () => {
 
     expect(syncSection?.contains(checkpoint!)).toBe(true);
     expect(checkpoint?.textContent).toContain('上次同步断点');
-    expect(scheduledDetails?.contains(checkpoint!)).toBe(false);
+    expect(scheduledDetails?.contains(checkpoint!)).toBe(true);
     expect(advancedDetails?.textContent).not.toContain('上次同步断点');
   });
 
@@ -309,7 +334,7 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(container.querySelector('[data-settings-status]')?.textContent).toContain('连接成功');
   });
 
-  it('hides expanded scheduled details when scheduled sync is disabled', async () => {
+  it('keeps the scheduled disclosure available when scheduled sync is disabled', async () => {
     const { container } = renderSettings(makeSettings({
       scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
     }));
@@ -323,8 +348,12 @@ describe('SettingsComponent information architecture (#257)', () => {
     await act(() => enabledToggle.closest('.checkbox-container')!
       .dispatchEvent(new MouseEvent('click', { bubbles: true })));
 
+    const retainedDisclosure = container.querySelector<HTMLButtonElement>('.getnote-scheduled-master-row .getnote-inline-disclosure');
     expect(container.querySelector('#getnote-scheduled-details')?.classList.contains('getnote-hidden')).toBe(true);
-    expect(container.querySelector('.getnote-scheduled-master-row .getnote-inline-disclosure')).toBeNull();
+    expect(retainedDisclosure).not.toBeNull();
+
+    await act(() => retainedDisclosure!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(container.querySelector('#getnote-scheduled-details')?.classList.contains('getnote-hidden')).toBe(false);
   });
 
   it('shows collapsed summaries and accessible names for setting toggles', () => {
@@ -368,9 +397,9 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(changeButton!.textContent).toBe('更改凭证');
 
     const status = container.querySelector('[data-settings-status]')!;
-    const common = container.querySelector('[data-settings-section="common"]')!;
+    const sync = container.querySelector('[data-settings-section="sync"]')!;
     expect(status.compareDocumentPosition(details!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(details!.compareDocumentPosition(common) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(details!.compareDocumentPosition(sync) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     await act(() => {
       changeButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -739,14 +768,18 @@ describe('SettingsComponent auth credentials', () => {
     expect(rendered.updateSetting).toHaveBeenCalledWith('templateFilePath', 'Templates/reading-note');
   });
 
-  it('hides knowledge-base sync in Web API mode', () => {
+  it('keeps knowledge-base sync visible but unavailable in Web API mode', () => {
     const { container } = renderSettings(makeSettings({
       authMode: 'web',
       webApiToken: 'web-token',
       apiToken: 'web-token',
     }));
 
-    expect(container.textContent).not.toContain('按知识库同步');
+    const button = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '按知识库同步');
+    expect(button).toBeTruthy();
+    expect(button!.disabled).toBe(true);
+    expect(container.textContent).toContain('需 OpenAPI 鉴权（会员）');
   });
 
   it('does not render a separate upload permission switch', () => {
@@ -851,6 +884,31 @@ describe('SettingsComponent auth credentials', () => {
     } finally {
       Element.prototype.scrollIntoView = originalScrollIntoView;
     }
+  });
+
+  it('shows an indeterminate progress track while the download total is unknown', () => {
+    const { container } = renderSettings(makeSettings(), vi.fn(), vi.fn(), {
+      isSyncing: true,
+      syncProgress: { message: '正在获取第 3 页...', count: '', percent: undefined, phase: 'active' },
+    });
+
+    const track = container.querySelector<HTMLElement>('[data-sync-progress-track]');
+    expect(track?.classList.contains('is-indeterminate')).toBe(true);
+    expect(container.textContent).not.toContain('0%');
+  });
+
+  it('keeps a completed sync result visible after active syncing ends', () => {
+    const { container } = renderSettings(makeSettings(), vi.fn(), vi.fn(), {
+      isSyncing: false,
+      syncProgress: { message: '同步完成', count: '已处理 62 / 100', percent: 100, phase: 'success' },
+    });
+
+    const status = container.querySelector<HTMLElement>('[data-sync-progress]');
+    expect(status).toBeTruthy();
+    expect(status?.dataset.syncProgressPhase).toBe('success');
+    expect(status?.textContent).toContain('同步完成');
+    expect(status?.textContent).toContain('100%');
+    expect(status?.querySelector('button')).toBeNull();
   });
 
   it('writes the visible mode token back when switching auth modes', async () => {
@@ -1586,6 +1644,16 @@ describe('SettingsComponent auth credentials', () => {
     expect(button).toBeTruthy();
     expect(button!.classList.contains('getnote-view-history-btn')).toBe(true);
   });
+
+  it('keeps sync history as a lightweight entry without repeating the top status summary', () => {
+    const { container } = renderSettings(makeSettings());
+    const history = container.querySelector<HTMLElement>('.getnote-sync-log-section');
+
+    expect(history?.textContent).toContain('查看日志');
+    expect(history?.textContent).not.toContain('上次同步');
+    expect(history?.textContent).not.toContain('当前状态');
+    expect(container.textContent).toContain('保留最近 30 天同步记录');
+  });
 });
 
 describe('SettingsComponent — tag cache lazy seed (#238)', () => {
@@ -1677,7 +1745,7 @@ describe('SettingsComponent — tag cache lazy seed (#238)', () => {
 describe('SettingsComponent scheduled sync toggles (#136)', () => {
   function findScheduledEnabledRow(container: HTMLElement): HTMLElement {
     const rows = container.querySelectorAll('.getnote-scheduled-row');
-    const row = Array.from(rows).find((el) => el.textContent === '启用定时同步');
+    const row = Array.from(rows).find((el) => el.textContent?.includes('启用定时同步'));
     expect(row).toBeTruthy();
     return row!;
   }
