@@ -2,6 +2,27 @@ import type { GetNoteNote, Attachment, LinkOriginal, SubscribedTopic } from '../
 import { t } from '../i18n';
 import { isRecord, normalizeBearerToken, parseJsonObjectOrEmpty, parseJsonPreservingIds, waitForRetryDelay } from './api-client-utils';
 
+export class WebApiAuthenticationError extends Error {
+  constructor(
+    readonly reason: 'expired' | 'forbidden',
+    message: string,
+  ) {
+    super(message);
+    this.name = 'WebApiAuthenticationError';
+  }
+}
+
+export function isWebApiAuthenticationError(error: unknown): error is WebApiAuthenticationError {
+  return error instanceof WebApiAuthenticationError;
+}
+
+function createWebApiAuthenticationError(message: string): WebApiAuthenticationError {
+  return new WebApiAuthenticationError(
+    message === 'LoginRequired' ? 'expired' : 'forbidden',
+    message === 'LoginRequired' ? t('error.webApiLoginRequired') : t('error.webApiForbidden'),
+  );
+}
+
 function buildHeaders(token: string): Record<string, string> {
   return {
     Authorization: normalizeBearerToken(token),
@@ -122,8 +143,7 @@ async function apiRequest<T>(url: string, options: RequestInit, retries = 1, sig
     const text = await res.text().catch(() => '');
     const json = tryParseJsonObject(text);
     const msg = (json.message as string) ?? '';
-    if (msg === 'LoginRequired') throw new Error(t('error.webApiLoginRequired'));
-    throw new Error(t('error.webApiForbidden'));
+    throw createWebApiAuthenticationError(msg);
   }
   if (res.status === 429) return handleRateLimit<T>(url, options, res, retries, signal);
   if (res.status < 200 || res.status >= 300) {
@@ -139,6 +159,7 @@ async function apiRequest<T>(url: string, options: RequestInit, retries = 1, sig
   if (json.success === false) {
     const err = (json.error ?? json) as Record<string, unknown>;
     const errMsg = (err?.message as string) ?? (json.message as string) ?? '';
+    if (errMsg === 'LoginRequired') throw createWebApiAuthenticationError(errMsg);
     throw new Error(errMsg ? t('error.apiGenericWithMsg', { msg: errMsg }) : t('error.apiGeneric'));
   }
   return json as T;
@@ -420,7 +441,7 @@ export async function fetchNoteDetail(
   }, 2, signal);
   // Web API detail: data is in .c, not .data
   if (data.message) {
-    if (data.message === 'LoginRequired') throw new Error(t('error.webApiLoginRequired'));
+    if (data.message === 'LoginRequired') throw createWebApiAuthenticationError(data.message);
     throw new Error(data.message ? t('error.apiGenericWithMsg', { msg: data.message }) : t('error.apiGeneric'));
   }
   const c = data.c;
@@ -442,7 +463,7 @@ export async function fetchNoteOriginal(
     headers: buildHeaders(token),
   }, 2, signal);
   if (data.message) {
-    if (data.message === 'LoginRequired') throw new Error(t('error.webApiLoginRequired'));
+    if (data.message === 'LoginRequired') throw createWebApiAuthenticationError(data.message);
     throw new Error(data.message ? t('error.apiGenericWithMsg', { msg: data.message }) : t('error.apiGeneric'));
   }
   return normalizeLinkOriginal(data);
