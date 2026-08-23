@@ -14,8 +14,9 @@ For the project background and origin story, see this Chinese article: [Project 
 
 * * *
 
-## 🎉 1.4.4 — Latest Update
+## 🎉 1.4.5 — Latest Update
 
+- **🛡️ Stable baseline maintenance release**: 1.4.5 is rebuilt from the verified 1.4.4 baseline. It introduces no new sync behavior or data migration.
 - **🧭 Context-aware full-settings link**: The full-settings shortcut appears only when the time-based sync panel is opened from the left ribbon. It stays hidden when the same panel is opened from Settings or the command palette.
 
 Core improvements from 1.4.3 and earlier remain live, including created-date organization, partial-failure status, knowledge-base sync, and safer file writes.
