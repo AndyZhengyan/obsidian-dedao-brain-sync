@@ -12,17 +12,11 @@ Use Web mode when:
 
 Use OpenAPI mode instead if you already have a working `gk_...` OpenAPI token and `Client ID`.
 
-## Automatic Token Capture On Desktop (Recommended)
+## Note for This Version
 
-1. Open `Settings -> Dedao Brain Sync`.
-2. Select `Temporary auth`, then click `Sign in on the web and get Token automatically`.
-3. Finish signing in inside the dedicated window opened by the plugin. The window closes after the captured token passes validation and is saved.
-4. The login state is stored in a plugin-specific isolated partition, so later token refreshes can usually reuse it.
-5. To sign out completely, click `Sign out and clear login`. This removes the saved token, cookies, cache, and the isolated session data.
+The "one-click desktop capture" entry has been temporarily disabled in 1.5.1 because it directly used Electron APIs (`require('electron')`, `BrowserWindow`, partition `webRequest`) that conflict with Obsidian's community-plugin review when `isDesktopOnly` is `false`. The flow below is the supported one until an Obsidian-native OAuth callback lands in a future release.
 
-The plugin does not read your password or SMS code and does not store cookies in plugin settings. Enter sign-in details only inside that dedicated window.
-
-## Manually Copy The Authorization Header On Mobile
+## Manually Copy The Authorization Header
 
 1. Open `https://www.biji.com/note` in Chrome or Edge and sign in.
 2. Open browser DevTools:

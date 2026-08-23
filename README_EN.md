@@ -14,17 +14,18 @@ For the project background and origin story, see this Chinese article: [Project 
 
 * * *
 
-## 🎉 1.5.0 — Latest Update
+## 🎉 1.5.1 — Latest Update
 
-**Fewer interruptions. More knowledge that stays with you.** This release moves Dedao Brain Sync from simply working to working well over time. Login, renewal, organization, and diagnostics demand less attention, so ideas captured in Dedao Brain can settle into Obsidian quietly and reliably.
+**Same long-term direction, one desktop-only experiment pulled back.** This release keeps every 1.5.0 data-integrity and settings improvement, but rolls back the dedicated-window Web Token auto-capture. That feature depends on direct Electron APIs (`require('electron')`, `BrowserWindow`, partition `webRequest`), which conflicts with Obsidian's community-plugin review when `isDesktopOnly` is `false`. It will return either as a desktop-only build or as an Obsidian-native OAuth flow in a later release.
 
-- **🪄 Easier sign-in**: On desktop, sign in from a dedicated window and let the plugin capture the Web Token. When the isolated session is still valid, an expired token can be renewed in the background and the failed request retried once.
 - **🧬 Higher-fidelity round trips**: Newly synced notes preserve a portable boundary around the remote source body. Reverse creation uploads only marked source text, keeping templates and local enhancements from leaking into the original content.
 - **🗂️ Safer cleanup for older notes**: Rebuild legacy date folders into canonical paths. Older duplicate-UID copies and unclaimed legacy attachments are archived, while existing target conflicts are skipped without overwrite. Detailed diagnostics stay in sync history.
 - **🧭 A clearer settings and sync flow**: Connection status, common settings, scheduled and manual sync, and history are regrouped around everyday tasks, while infrequent controls move into Advanced Settings.
 - **📊 Progress and logs you can trust**: Active, completed, failed, and cancelled runs now share a consistent presentation. Paged fetching stays indeterminate when the total is unknown, and sync history is retained for 30 days.
 
 The created-date organization, partial-failure reporting, knowledge-base sync, and safer file writes introduced throughout 1.4.x remain available.
+
+> **About Web auth**: The desktop "one-click token" entry is temporarily offline. The Temporary Auth flow keeps working exactly as in 1.4.x — paste the `Authorization` header manually after signing in on the web.
 
 The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 
@@ -106,13 +107,11 @@ Credentials are stored only in your local Obsidian plugin data, and are used to 
 4. In `Settings -> Dedao Brain Sync`, choose `OpenAPI auth (members)` and paste both values.
 5. You can also use the OAuth button on the settings page to fetch credentials automatically.
 
-### Web mode (automatic on desktop, manual token on mobile)
+### Web mode (manual token)
 
 If your account cannot use OpenAPI, choose `Temporary auth`. It does not require a `Client ID`.
 
-On Obsidian Desktop, click `Sign in on the web and get Token automatically`, then finish signing in inside the dedicated window opened by the plugin. The plugin only observes `Authorization` on Dedao Brain Web API requests and saves the token after validation. The sign-in state uses a dedicated persistent partition, so it can be reused later. `Sign out and clear login` removes both the saved token and that isolated session.
-
-Mobile remains manual. See the [Web Mode Token Guide](docs/web-mode-manual-token.md). To copy the token manually:
+Both desktop and mobile Obsidian copy the Web Token manually after signing in on the web. See the [Web Mode Token Guide](docs/web-mode-manual-token.md). To copy the token manually:
 
 1. Open `https://www.biji.com/note` in Chrome or Edge and sign in.
 2. Open browser DevTools: `F12` or `Ctrl + Shift + I` on Windows / Linux; `Command + Option + I` on Mac.

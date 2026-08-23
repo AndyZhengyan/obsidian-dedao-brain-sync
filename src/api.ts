@@ -1,22 +1,11 @@
 // Central API entry point - delegates to client implementations based on authMode
 import { createNote as openapiCreateNote, fetchNotes as openapiFetchNotes, fetchNoteDetail as openapiFetchNoteDetail, fetchRecallSearch as openapiFetchRecallSearch, fetchSubscribedKnowledgeNotes as openapiFetchSubscribedKnowledgeNotes, fetchTopicBloggers as openapiFetchTopicBloggers, fetchTopicContentPreviewPage as openapiFetchTopicContentPreviewPage, fetchTopicContentPreviews as openapiFetchTopicContentPreviews, fetchSubscribedTopics as openapiFetchSubscribedTopics } from './api-clients/openapi-client';
-import { createNote as webapiCreateNote, fetchNotes as webapiFetchNotes, fetchNoteChildren as webapiFetchNoteChildren, fetchNoteDetail as webapiFetchNoteDetail, fetchNoteOriginal as webapiFetchNoteOriginal, fetchSubscribedKnowledgeNotes as webapiFetchSubscribedKnowledgeNotes, fetchTopicContentPreviewPage as webapiFetchTopicContentPreviewPage, fetchTopicContentPreviews as webapiFetchTopicContentPreviews, fetchSubscribedTopics as webapiFetchSubscribedTopics, isWebApiAuthenticationError } from './api-clients/webapi-client';
+import { createNote as webapiCreateNote, fetchNotes as webapiFetchNotes, fetchNoteChildren as webapiFetchNoteChildren, fetchNoteDetail as webapiFetchNoteDetail, fetchNoteOriginal as webapiFetchNoteOriginal, fetchSubscribedKnowledgeNotes as webapiFetchSubscribedKnowledgeNotes, fetchTopicContentPreviewPage as webapiFetchTopicContentPreviewPage, fetchTopicContentPreviews as webapiFetchTopicContentPreviews, fetchSubscribedTopics as webapiFetchSubscribedTopics } from './api-clients/webapi-client';
 import type { GetNoteNote, AuthMode, LinkOriginal, RecallSearchResult, SubscribedTopic } from './types';
 import type { Blogger } from './api-clients/openapi-client';
 import { t } from './i18n';
 
 export const GETNOTE_LIST_LIMIT = 20;
-
-export interface WebTokenRefreshHandler {
-  getToken(): string;
-  refresh(): Promise<string>;
-}
-
-let webTokenRefreshHandler: WebTokenRefreshHandler | null = null;
-
-export function setWebTokenRefreshHandler(handler: WebTokenRefreshHandler | null): void {
-  webTokenRefreshHandler = handler;
-}
 
 export interface FetchNotesOptions {
   token: string;
@@ -30,34 +19,6 @@ export interface FetchNotesOptions {
   createdTopicIds?: string[];
   bloggerIds?: string[];
   selectedNoteIds?: string[];
-  skipWebTokenRefresh?: boolean;
-}
-
-type WebTokenRequestOptions = Pick<FetchNotesOptions, 'token' | 'signal' | 'skipWebTokenRefresh'>;
-
-async function requestWithWebTokenRefresh<T>(
-  options: WebTokenRequestOptions,
-  request: (token: string) => Promise<T>,
-): Promise<T> {
-  const handler = webTokenRefreshHandler;
-  const configuredToken = options.skipWebTokenRefresh ? '' : handler?.getToken().trim() ?? '';
-  const token = configuredToken || options.token;
-
-  try {
-    return await request(token);
-  } catch (error) {
-    if (
-      options.skipWebTokenRefresh
-      || options.signal?.aborted
-      || !handler
-      || !isWebApiAuthenticationError(error)
-    ) {
-      throw error;
-    }
-    const renewedToken = (await handler.refresh()).trim();
-    if (!renewedToken) throw error;
-    return request(renewedToken);
-  }
 }
 
 export async function fetchNotes(options: FetchNotesOptions): Promise<{
@@ -66,12 +27,7 @@ export async function fetchNotes(options: FetchNotesOptions): Promise<{
 }> {
   const { token, clientId, authMode } = options;
   if (authMode === 'web') {
-    return requestWithWebTokenRefresh(options, refreshedToken => webapiFetchNotes({
-      token: refreshedToken,
-      sinceId: options.sinceId,
-      limit: options.limit,
-      signal: options.signal,
-    }));
+    return webapiFetchNotes({ token, sinceId: options.sinceId, limit: options.limit, signal: options.signal });
   }
   return openapiFetchNotes({ token, clientId, sinceId: options.sinceId, limit: options.limit, signal: options.signal });
 }
@@ -105,7 +61,7 @@ export async function fetchNoteDetail(
   _csrfToken?: string // kept for API compatibility, unused
 ): Promise<Partial<GetNoteNote>> {
   if (authMode === 'web') {
-    return requestWithWebTokenRefresh({ token, signal }, refreshedToken => webapiFetchNoteDetail(id, refreshedToken, signal));
+    return webapiFetchNoteDetail(id, token, signal);
   }
   return openapiFetchNoteDetail(id, token, clientId, signal);
 }
@@ -117,7 +73,7 @@ export async function fetchNoteOriginal(
   authMode?: AuthMode
 ): Promise<LinkOriginal | null> {
   if (authMode !== 'web') return null;
-  return requestWithWebTokenRefresh({ token, signal }, refreshedToken => webapiFetchNoteOriginal(id, refreshedToken, signal));
+  return webapiFetchNoteOriginal(id, token, signal);
 }
 
 export async function fetchNoteChildren(
@@ -127,26 +83,26 @@ export async function fetchNoteChildren(
   authMode?: AuthMode
 ): Promise<GetNoteNote[]> {
   if (authMode !== 'web') return [];
-  return requestWithWebTokenRefresh({ token, signal }, refreshedToken => webapiFetchNoteChildren(parentPrimeId, refreshedToken, signal));
+  return webapiFetchNoteChildren(parentPrimeId, token, signal);
 }
 
 export async function fetchSubscribedTopics(options: { token: string; clientId: string; authMode?: AuthMode; signal?: AbortSignal }): Promise<SubscribedTopic[]> {
   if (options.authMode === 'web') {
-    return requestWithWebTokenRefresh(options, refreshedToken => webapiFetchSubscribedTopics(refreshedToken, options.signal));
+    return webapiFetchSubscribedTopics(options.token, options.signal);
   }
   return openapiFetchSubscribedTopics(options.token, options.clientId, options.signal);
 }
 
 export async function fetchSubscribedKnowledgeNotes(options: FetchNotesOptions): Promise<GetNoteNote[]> {
   if (options.authMode === 'web') {
-    return requestWithWebTokenRefresh(options, refreshedToken => webapiFetchSubscribedKnowledgeNotes({
-      token: refreshedToken,
+    return webapiFetchSubscribedKnowledgeNotes({
+      token: options.token,
       sinceId: options.sinceId,
       limit: options.limit,
       signal: options.signal,
       topicIds: options.topicIds,
       selectedNoteIds: options.selectedNoteIds,
-    }));
+    });
   }
   return openapiFetchSubscribedKnowledgeNotes({
     token: options.token,
@@ -209,7 +165,7 @@ export async function fetchTopicContentPreviews(
   options?: TopicContentPreviewOptions
 ): Promise<ContentPreview[]> {
   if (authMode === 'web') {
-    return requestWithWebTokenRefresh({ token, signal }, refreshedToken => webapiFetchTopicContentPreviews(topicId, refreshedToken, signal, options));
+    return webapiFetchTopicContentPreviews(topicId, token, signal, options);
   }
   return openapiFetchTopicContentPreviews(topicId, topicName, token, clientId, signal, options);
 }
@@ -225,7 +181,7 @@ export async function fetchTopicContentPreviewPage(
   topicSource?: SubscribedTopic['source']
 ): Promise<TopicContentPreviewPage> {
   if (authMode === 'web') {
-    return requestWithWebTokenRefresh({ token, signal }, refreshedToken => webapiFetchTopicContentPreviewPage(topicId, refreshedToken, signal, cursor));
+    return webapiFetchTopicContentPreviewPage(topicId, token, signal, cursor);
   }
   return openapiFetchTopicContentPreviewPage(topicId, topicName, token, clientId, signal, cursor, topicSource);
 }
@@ -249,14 +205,14 @@ export interface CreateNoteResult {
 
 export async function createNote(options: CreateNoteOptions): Promise<CreateNoteResult> {
   if (options.authMode === 'web') {
-    return requestWithWebTokenRefresh(options, refreshedToken => webapiCreateNote({
-      token: refreshedToken,
+    return webapiCreateNote({
+      token: options.token,
       title: options.title,
       content: options.content,
       noteType: options.noteType,
       tags: options.tags,
       signal: options.signal,
-    }));
+    });
   }
   return openapiCreateNote({
     token: options.token,
