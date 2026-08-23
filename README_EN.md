@@ -14,9 +14,9 @@ For the project background and origin story, see this Chinese article: [Project 
 
 * * *
 
-## 🎉 1.5.3 — Latest Update
+## 🎉 1.5.4 — Latest Update
 
-- **Baseline reset**: This release ships code identical to `1.4.4`, with only the version number advanced to `1.5.3` and the repository's main branch reset onto this stable baseline. All feature changes from `1.5.0` / `1.5.1` have been withdrawn; their source is preserved on the `archive/release-1.5.0-snapshot` and `archive/release-1.5.1-snapshot` branches.
+- **Version-number bump**: Built on the stable `1.4.4` baseline, this release only advances the `manifest.json` / `package.json` version to `1.5.4`; plugin behavior is identical to `1.4.4`. Versions `1.5.0` – `1.5.3` differed only in version numbers and documentation notes, with no new features or fixes.
 
 Core improvements from 1.4.3 and earlier remain live, including created-date organization, partial-failure status, knowledge-base sync, and safer file writes.
 
