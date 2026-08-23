@@ -67,9 +67,6 @@ function MountedSettings({
       applyDatePathSettings={applyDatePathSettings}
       previewDatePathSettings={previewDatePathSettings}
       confirmDatePathMigration={confirmDatePathMigrationProp}
-      desktopWebAuthAvailable={plugin.isDesktopWebAuthAvailable()}
-      startDesktopWebAuth={() => plugin.captureDesktopWebToken()}
-      clearDesktopWebAuth={() => plugin.clearDesktopWebAuthSession()}
     />
   );
 }

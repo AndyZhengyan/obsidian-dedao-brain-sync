@@ -62,9 +62,6 @@ function renderSettings(
       current: { enabled: boolean; format: string };
       target: { enabled: boolean; format: string };
     }) => Promise<boolean>;
-    desktopWebAuthAvailable?: boolean;
-    startDesktopWebAuth?: () => Promise<string>;
-    clearDesktopWebAuth?: () => Promise<void>;
   } = {}
 ) {
   const container = document.createElement('div');
@@ -87,9 +84,6 @@ function renderSettings(
       applyDatePathSettings: options.applyDatePathSettings,
       previewDatePathSettings: options.previewDatePathSettings,
       confirmDatePathMigration: options.confirmDatePathMigration,
-      desktopWebAuthAvailable: options.desktopWebAuthAvailable,
-      startDesktopWebAuth: options.startDesktopWebAuth,
-      clearDesktopWebAuth: options.clearDesktopWebAuth,
     }),
     container
   );
@@ -1038,85 +1032,6 @@ describe('SettingsComponent auth credentials', () => {
       sinceId: '0',
       limit: 1,
     }));
-  });
-
-  it('automatically saves a validated desktop Web token without requiring DevTools', async () => {
-    const startDesktopWebAuth = vi.fn().mockResolvedValue('Bearer desktop-token');
-    const { container, updateSetting } = renderSettings(makeSettings({
-      authMode: 'web',
-      webApiToken: 'Bearer old-token',
-    }), vi.fn(), vi.fn(), {
-      desktopWebAuthAvailable: true,
-      startDesktopWebAuth,
-    });
-
-    const loginButton = Array.from(container.querySelectorAll('button'))
-      .find((button): button is HTMLButtonElement => button.textContent === '网页登录并自动获取 Token');
-    expect(loginButton).toBeTruthy();
-
-    await act(async () => {
-      loginButton!.click();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(startDesktopWebAuth).toHaveBeenCalledOnce();
-    expect(updateSetting).toHaveBeenCalledWith('webApiToken', 'Bearer desktop-token');
-    expect(updateSetting).toHaveBeenCalledWith('apiToken', 'Bearer desktop-token');
-    expect((container.querySelector('input[type="password"]') as HTMLInputElement).value).toBe('Bearer desktop-token');
-  });
-
-  it('keeps the manual Web Token flow unchanged when desktop auth is unavailable', () => {
-    const { container } = renderSettings(makeSettings({
-      authMode: 'web',
-      webApiToken: '',
-    }), vi.fn(), vi.fn(), {
-      desktopWebAuthAvailable: false,
-    });
-
-    expect(container.querySelector('input[placeholder*="Authorization header"]')).not.toBeNull();
-    expect(container.textContent).not.toContain('网页登录并自动获取 Token');
-  });
-
-  it('clears the saved token even when clearing the desktop login session fails', async () => {
-    const clearDesktopWebAuth = vi.fn().mockRejectedValue(new Error('session cleanup failed'));
-    const { container, updateSetting } = renderSettings(makeSettings({
-      authMode: 'web',
-      apiToken: 'Bearer saved-token',
-      webApiToken: 'Bearer saved-token',
-    }), vi.fn(), vi.fn(), {
-      desktopWebAuthAvailable: true,
-      clearDesktopWebAuth,
-    });
-
-    const logoutButton = Array.from(container.querySelectorAll('button'))
-      .find((button): button is HTMLButtonElement => button.textContent === '退出并清除登录');
-    expect(logoutButton).toBeTruthy();
-
-    await act(async () => {
-      logoutButton!.click();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(updateSetting).toHaveBeenCalledWith('webApiToken', '');
-    expect(updateSetting).toHaveBeenCalledWith('apiToken', '');
-    expect(clearDesktopWebAuth).toHaveBeenCalledOnce();
-  });
-
-  it('allows clearing an isolated desktop session even when no token was captured', () => {
-    const { container } = renderSettings(makeSettings({
-      authMode: 'web',
-      apiToken: '',
-      webApiToken: '',
-    }), vi.fn(), vi.fn(), {
-      desktopWebAuthAvailable: true,
-      clearDesktopWebAuth: vi.fn().mockResolvedValue(undefined),
-    });
-
-    const logoutButton = Array.from(container.querySelectorAll('button'))
-      .find(button => button.textContent === '退出并清除登录');
-    expect(logoutButton).toBeTruthy();
   });
 
   it('shows concise temporary-auth guidance in Web auth mode', () => {
