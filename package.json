@@ -1,6 +1,6 @@
 {
   "name": "obsidian-dedao-brain-sync",
-  "version": "1.4.4",
+  "version": "1.5.2",
   "description": "Dedao Brain Sync for Obsidian",
   "main": "main.js",
   "scripts": {
