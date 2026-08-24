@@ -14,11 +14,11 @@ For the project background and origin story, see this Chinese article: [Project 
 
 * * *
 
-## 🎉 1.4.4 — Latest Update
+## 🎉 1.5.5 — Latest Update
 
-- **🧭 Context-aware full-settings link**: The full-settings shortcut appears only when the time-based sync panel is opened from the left ribbon. It stays hidden when the same panel is opened from Settings or the command palette.
+- **🧭 Return to the verified sync baseline**: Version 1.5.5 is released from the 1.4.4 code baseline, retaining its verified sync, knowledge-base organization, and safe-write behavior.
 
-Core improvements from 1.4.3 and earlier remain live, including created-date organization, partial-failure status, knowledge-base sync, and safer file writes.
+This release introduces no new sync logic, migration rules, or configuration requirements. You can continue using the plugin as before.
 
 The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 
