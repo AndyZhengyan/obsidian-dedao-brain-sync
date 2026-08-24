@@ -52,12 +52,12 @@ jobs:
             echo "package.json version ($PACKAGE_VERSION) != tag version ($TAG_VERSION)"
             exit 1
           fi
-          if ! grep -Fq "## 🎉 $TAG_VERSION 最新更新" README.md; then
+          if ! grep -Fq "## 🎉 $TAG_VERSION — Latest Update" README.md; then
             echo "README.md latest-update heading does not match tag version ($TAG_VERSION)"
             exit 1
           fi
-          if ! grep -Fq "## 🎉 $TAG_VERSION — Latest Update" README_EN.md; then
-            echo "README_EN.md latest-update heading does not match tag version ($TAG_VERSION)"
+          if ! grep -Fq "## 🎉 $TAG_VERSION 最新更新" README_zh.md; then
+            echo "README_zh.md latest-update heading does not match tag version ($TAG_VERSION)"
             exit 1
           fi
           echo "version=$TAG_VERSION" >> "$GITHUB_OUTPUT"
