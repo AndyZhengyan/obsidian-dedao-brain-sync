@@ -8,7 +8,7 @@ const OLD_REPO = 'obsidian-getnote-importer';
 
 describe('plugin manifest', () => {
   it('uses sync wording for the bidirectional plugin name', () => {
-    expect(manifest.name).toBe('Dedao Brain Sync');
+    expect(manifest.name).toBe('Dedao Brain Sync1');
     expect(manifest.name).not.toContain('Importer');
     expect(manifest.name).toMatch(/^[\x20-\x7E]+$/);
   });
