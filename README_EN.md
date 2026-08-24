@@ -14,11 +14,11 @@ For the project background and origin story, see this Chinese article: [Project 
 
 * * *
 
-## 🎉 1.5.5 — Latest Update
+## 🎉 1.5.6 — Latest Update
 
-- **🧭 Return to the verified sync baseline**: Version 1.5.5 is released from the 1.4.4 code baseline, retaining its verified sync, knowledge-base organization, and safe-write behavior.
+- **✨ Unified plugin display name**: Obsidian, the installation guides, and package metadata now consistently use `Dedao Brain Sync1`, making the plugin easier to identify.
 
-This release introduces no new sync logic, migration rules, or configuration requirements. You can continue using the plugin as before.
+This release does not change sync logic, migration rules, or configuration requirements. You can continue using the plugin as before.
 
 The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 
