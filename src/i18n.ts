@@ -383,7 +383,7 @@ export const translations: Record<string, Record<string, string>> = {
     'settings.title': '⏪ 得到大脑（原Get笔记）Sync',
     'settings.desc': '得到大脑（原Get笔记） ↔ Obsidian, one-click sync',
     'settings.community': 'Welcome, leave a star',
-    'settings.communityUrl': 'https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/blob/main/README_EN.md#about-the-author',
+    'settings.communityUrl': 'https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/blob/main/README.md#about-the-author',
     'settings.apiToken.label': 'API Token',
     'settings.apiToken.desc': 'Dedao Brain Open Platform Authorization Token (gk_live_xxx)',
     'settings.apiToken.placeholder': 'App Key: gk_xxx',

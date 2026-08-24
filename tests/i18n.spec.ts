@@ -104,7 +104,7 @@ describe('t() - English translations', () => {
   });
 
   it('returns English GitHub documentation links', () => {
-    expect(i18n.t('settings.communityUrl')).toContain('README_EN.md');
+    expect(i18n.t('settings.communityUrl')).toContain('README.md');
     expect(i18n.t('settings.webTipHelpUrl')).toContain('docs/web-mode-manual-token.md');
     expect(i18n.t('settings.credentials.webTip')).toContain('Temporary Auth');
     expect(i18n.t('settings.credentials.webTip')).toContain('about 30 minutes');

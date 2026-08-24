@@ -790,7 +790,7 @@ describe('SettingsComponent auth credentials', () => {
     }));
 
     const links = Array.from(container.querySelectorAll('a')).map((link) => link.href);
-    expect(links.some((href) => href.includes('README_EN.md#about-the-author'))).toBe(true);
+    expect(links.some((href) => href.includes('README.md#about-the-author'))).toBe(true);
     expect(links.some((href) => href.includes('docs/web-mode-manual-token.md'))).toBe(true);
   });
 
