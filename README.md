@@ -1,4 +1,4 @@
-# Dedao Brain Sync
+# Dedao Brain Sync1
 
 [English](./README.md) | [中文](./README_zh.md)
 
@@ -98,7 +98,7 @@ Credentials are stored only in your local Obsidian plugin data, and are used to 
 1. Open the Dedao Brain app.
 2. Go to `Settings -> Open Platform`.
 3. Create an application, then copy the `Token` and `Client ID`.
-4. In `Settings -> Dedao Brain Sync`, choose `OpenAPI auth (members)` and paste both values.
+4. In `Settings -> Dedao Brain Sync1`, choose `OpenAPI auth (members)` and paste both values.
 5. You can also use the OAuth button on the settings page to fetch credentials automatically.
 
 ### Web mode (manual token)
@@ -115,7 +115,7 @@ To copy the token:
 4. Reload the web app, or open the note list / any note, to trigger API requests.
 5. In the request list, open one whose name looks like `notes?...` or `list?...`; the `Host` in the right-hand Headers is usually `get-notes.luojilab.com`.
 6. Under `Request Headers`, copy the full `Authorization` value.
-7. Paste it into the Token field under `Settings -> Dedao Brain Sync -> Temporary auth`.
+7. Paste it into the Token field under `Settings -> Dedao Brain Sync1 -> Temporary auth`.
 8. Click `Test connection`, then run `Sync by date` or `Sync by note` once it succeeds.
 
 The value usually starts with `Bearer eyJ...`. The plugin accepts a full `Bearer ...` string, or just the JWT token. Do not paste an OpenAPI `gk_...` token into Temporary auth. A Web token is a browser session credential and can expire; if you see `401`, `403`, or `Web Token expired`, refresh the web app and re-copy the `Authorization` header.

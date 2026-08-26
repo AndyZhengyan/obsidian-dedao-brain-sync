@@ -16,7 +16,7 @@
 
 ## 🎉 1.6.0 最新更新
 
-- **🛡️ 适配 Obsidian 社区插件审核**：默认 README 现在使用英文，H1 为插件的展示名 "Dedao Brain Sync"（与 `manifest.json` 的 `name` 一致），中文版本移到 [`README_zh.md`](./README_zh.md)。这解决了之前默认中文 README 触发的社区插件审核告警。
+- **🛡️ 适配 Obsidian 社区插件审核**：默认 README 现在使用英文，H1 为插件的展示名 "Dedao Brain Sync1"（与 `manifest.json` 的 `name` 一致），中文版本移到 [`README_zh.md`](./README_zh.md)。这解决了之前默认中文 README 触发的社区插件审核告警。
 - **📝 文档准确性**：「移动端兼容」一项现在与实际实现一致（使用浏览器 `fetch`，桌面端和移动端 Obsidian 均可使用）。
 
 1.4.4 及更早版本的核心改进仍在生效（按创建日期整理、部分失败状态、知识库同步和安全写入等）。
@@ -71,7 +71,7 @@ OpenAPI 搜索侧边栏：在 Obsidian 侧边栏直接搜索得到大脑笔记�
 [![Available on Obsidian](https://img.shields.io/badge/Obsidian-Community%20Plugin-7c3aed?style=flat-square&logo=obsidian)](https://community.obsidian.md/plugins/dedao-brain-sync)
 
 1. 打开 `设置 -> 第三方插件 -> 浏览`。
-2. 搜索 `Dedao Brain Sync`、`得到大脑` 或原名 `GetNote` / `Get笔记`。
+2. 搜索 `Dedao Brain Sync1`、`得到大脑` 或原名 `GetNote` / `Get笔记`。
 3. 安装并启用插件。
 
 ### 手动安装
@@ -83,7 +83,7 @@ OpenAPI 搜索侧边栏：在 Obsidian 侧边栏直接搜索得到大脑笔记�
 <your-vault>/.obsidian/plugins/dedao-brain-sync/
 ```
 
-3. 重启 Obsidian 并启用 `Dedao Brain Sync`。
+3. 重启 Obsidian 并启用 `Dedao Brain Sync1`。
 
 > 插件目录名为 `getnote-importer`（与 `manifest.json` 中的 `id` 一致，保持与历史 listing 的兼容性），仓库本身已重命名为 `obsidian-dedao-brain-sync`。旧版 GetNote Importer 的本地 `data.json` 会在首次启动时自动迁移。
 
@@ -127,7 +127,7 @@ OpenAPI 搜索侧边栏：在 Obsidian 侧边栏直接搜索得到大脑笔记�
 在设置页点击 `按时间同步`，或在命令面板运行：
 
 ```text
-Dedao Brain Sync: 同步笔记
+Dedao Brain Sync1: 同步笔记
 ```
 
 下载同步默认采用保守策略：如果本地已经存在同一篇笔记，插件会跳过它，不覆盖你在 Obsidian 里的内容。需要重新拉取某篇远端笔记时，直接删除本地对应文件后重新同步；只要远端笔记仍存在，插件会把它作为本地缺失笔记重新创建。
