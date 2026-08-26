@@ -53,7 +53,7 @@ describe('t() - Chinese translations', () => {
   });
 
   it('returns Chinese GitHub documentation links', () => {
-    expect(i18n.t('settings.communityUrl')).toContain('README.md');
+    expect(i18n.t('settings.communityUrl')).toContain('README_zh.md#关于作者');
     expect(i18n.t('settings.webTipHelpUrl')).toContain('docs/web-mode-manual-token_zh.md');
     expect(i18n.t('settings.credentials.webTip')).toContain('临时鉴权');
     expect(i18n.t('settings.credentials.webTip')).toContain('约 30 分钟');

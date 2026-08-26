@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import manifest from '../manifest.json';
 import packageJson from '../package.json';
+import packageLock from '../package-lock.json';
 
 const NEW_REPO = 'obsidian-dedao-brain-sync';
 const OLD_REPO = 'obsidian-getnote-importer';
@@ -24,6 +25,11 @@ describe('plugin manifest', () => {
 
   it('uses the renamed project package name', () => {
     expect(packageJson.name).toBe(NEW_REPO);
+  });
+
+  it('keeps the lockfile root version aligned with release metadata', () => {
+    expect(packageLock.version).toBe(packageJson.version);
+    expect(packageLock.packages[''].version).toBe(manifest.version);
   });
 
   it('points project documentation and settings links at the renamed GitHub repository', () => {
