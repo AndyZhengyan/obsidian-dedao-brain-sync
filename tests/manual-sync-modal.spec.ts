@@ -53,7 +53,7 @@ describe('ManualSyncModal filters', () => {
     const footer = container.querySelector('.getnote-picker-footer')!;
     expect(settingsLink).toBeTruthy();
     expect(settingsLink.classList.contains('mod-secondary')).toBe(false);
-    expect(settingsLink.textContent).toBe('Open full settings');
+    expect(settingsLink.textContent).toBe('Open full settings to enable automatic sync');
     expect(settingsLink.parentElement).toBe(footer);
     expect(container.querySelector('.getnote-settings-link-row')).toBeNull();
     expect(container.querySelector('.getnote-picker-count')).toBeNull();
@@ -64,6 +64,24 @@ describe('ManualSyncModal filters', () => {
 
     expect(onOpenSettings).toHaveBeenCalledTimes(1);
     expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('explains in Chinese that full settings can enable automatic sync', () => {
+    initI18n('zh');
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    render(
+      h(ManualSyncModal, {
+        initialOptions: { syncStartDate: '', maxDays: 30 },
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+        onOpenSettings: vi.fn(),
+      }),
+      container
+    );
+
+    expect(container.querySelector('.getnote-settings-link')?.textContent)
+      .toBe('打开完整设置，开启自动同步');
   });
 
   it('defaults to days mode and submits maxDays >= 1', async () => {

@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 interface ToggleProps {
   value: boolean;
   onChange: (value: boolean) => void;
+  ariaLabel: string;
   disabled?: boolean;
 }
 
@@ -19,7 +20,7 @@ interface ToggleProps {
  * `new ToggleComponent(hostEl)`; here we just inline the resulting
  * structure so the visual treatment stays identical.
  */
-export function Toggle({ value, onChange, disabled }: ToggleProps) {
+export function Toggle({ value, onChange, ariaLabel, disabled }: ToggleProps) {
   const [currentValue, setCurrentValue] = useState(value);
   const currentValueRef = useRef(value);
   const onChangeRef = useRef(onChange);
@@ -64,6 +65,7 @@ export function Toggle({ value, onChange, disabled }: ToggleProps) {
     >
       <input
         type="checkbox"
+        aria-label={ariaLabel}
         checked={currentValue}
         disabled={disabled}
         onChange={handleChange}

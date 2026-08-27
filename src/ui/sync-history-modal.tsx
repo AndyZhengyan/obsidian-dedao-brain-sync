@@ -47,6 +47,7 @@ export function formatHistoryFilter(entry: SyncHistoryEntry): string {
 }
 
 export function formatHistoryMode(entry: SyncHistoryEntry): string {
+  if (entry.mode === 'date-path') return t('syncHistory.mode.datePath');
   if (entry.mode === 'local-upload' || entry.type === 'upload') return t('syncHistory.mode.upload');
   if (entry.mode === 'auto' || entry.type === 'auto') return t('syncHistory.mode.auto');
   if (entry.mode === 'knowledge-base') return t('syncHistory.mode.knowledgeBase');
