@@ -70,7 +70,7 @@ OpenAPI 搜索侧边栏：在 Obsidian 侧边栏直接搜索得到大脑笔记�
 [![Available on Obsidian](https://img.shields.io/badge/Obsidian-Community%20Plugin-7c3aed?style=flat-square&logo=obsidian)](https://community.obsidian.md/plugins/dedao-brain-sync)
 
 1. 打开 `设置 -> 第三方插件 -> 浏览`。
-2. 搜索 `Dedao Brain Sync1`、`得到大脑` 或原名 `GetNote` / `Get笔记`。
+2. 搜索 `Dedao Brain Sync`、`得到大脑` 或原名 `GetNote` / `Get笔记`。
 3. 安装并启用插件。
 
 ### 手动安装
@@ -82,7 +82,7 @@ OpenAPI 搜索侧边栏：在 Obsidian 侧边栏直接搜索得到大脑笔记�
 <your-vault>/.obsidian/plugins/dedao-brain-sync/
 ```
 
-3. 重启 Obsidian 并启用 `Dedao Brain Sync1`。
+3. 重启 Obsidian 并启用 `Dedao Brain Sync`。
 
 > 插件目录名为 `getnote-importer`（与 `manifest.json` 中的 `id` 一致，保持与历史 listing 的兼容性），仓库本身已重命名为 `obsidian-dedao-brain-sync`。旧版 GetNote Importer 的本地 `data.json` 会在首次启动时自动迁移。
 
@@ -97,7 +97,7 @@ OpenAPI 搜索侧边栏：在 Obsidian 侧边栏直接搜索得到大脑笔记�
 1. 打开得到大脑应用。
 2. 进入 `设置 -> 开放平台`。
 3. 创建应用，复制 `Token` 和 `Client ID`。
-4. 在 `设置 -> 得到大脑（原Get笔记）Sync` 中选择 `OpenAPI鉴权（会员）`，粘贴两个值。
+4. 在 `设置 -> Dedao Brain Sync` 中选择 `OpenAPI鉴权（会员）`，粘贴两个值。
 5. 也可以使用设置页的 OAuth 按钮自动获取凭证。
 
 ### Web 模式（手动 Token）
@@ -114,7 +114,7 @@ OpenAPI 搜索侧边栏：在 Obsidian 侧边栏直接搜索得到大脑笔记�
 4. 刷新网页版，或打开笔记列表 / 任意一篇笔记，让页面发起接口请求。
 5. 在请求列表里点开名称类似 `notes?...` 或 `list?...` 的请求；右侧 Headers 里的 `Host` 通常是 `get-notes.luojilab.com`。
 6. 在 `Request Headers` 下复制完整的 `Authorization` 值。
-7. 粘贴到 `设置 -> 得到大脑（原Get笔记）Sync -> 临时鉴权` 的 Token 输入框。
+7. 粘贴到 `设置 -> Dedao Brain Sync -> 临时鉴权` 的 Token 输入框。
 8. 点击 `测试连接`，成功后再执行 `按时间同步` 或 `按笔记同步`。
 
 这个值通常以 `Bearer eyJ...` 开头；插件支持粘贴完整 `Bearer ...`，也支持只粘贴 JWT token。不要把 OpenAPI 的 `gk_...` Token 粘贴到临时鉴权里。Web Token 是浏览器会话凭证，可能过期；如果返回 `401`、`403` 或 `Web Token 已过期`，请刷新网页版并重新复制 `Authorization` header。
@@ -126,7 +126,7 @@ OpenAPI 搜索侧边栏：在 Obsidian 侧边栏直接搜索得到大脑笔记�
 在设置页点击 `按时间同步`，或在命令面板运行：
 
 ```text
-Dedao Brain Sync1: 同步笔记
+Dedao Brain Sync: 同步笔记
 ```
 
 下载同步默认采用保守策略：如果本地已经存在同一篇笔记，插件会跳过它，不覆盖你在 Obsidian 里的内容。需要重新拉取某篇远端笔记时，直接删除本地对应文件后重新同步；只要远端笔记仍存在，插件会把它作为本地缺失笔记重新创建。
