@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createNote, fetchNoteChildren, fetchNotes, fetchNoteDetail, fetchNoteOriginal, fetchRecallSearch, fetchSubscribedTopics, fetchTopicContentPreviewPage, setWebTokenRefreshHandler } from '../src/api';
+import { createNote, fetchNoteChildren, fetchNotes, fetchNoteDetail, fetchNoteOriginal, fetchRecallSearch, fetchSubscribedKnowledgeNotes, fetchSubscribedTopics, fetchTopicContentPreviewPage, setWebTokenRefreshHandler } from '../src/api';
 
 // Extract the internal safeJsonParse for direct testing
 function safeJsonParse(text: string): unknown {
@@ -762,6 +762,45 @@ describe('web auth mode', () => {
 });
 
 describe('OpenAPI knowledge previews', () => {
+  it('follows has_next while discovering every subscribed blogger before syncing their content', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(mockFetchResponse({
+        data: { topics: [{ topic_id: 'finance', name: '金融' }], has_next: false },
+      }) as Response)
+      .mockResolvedValueOnce(mockFetchResponse({
+        data: { bloggers: [{ follow_id: 'blogger-1', account_name: '博主一' }], has_next: true },
+      }) as Response)
+      .mockResolvedValueOnce(mockFetchResponse({
+        data: { bloggers: [{ follow_id: 'blogger-34', account_name: '博主三十四' }], has_next: false },
+      }) as Response)
+      .mockResolvedValueOnce(mockFetchResponse({
+        data: { contents: [{ post_id_alias: 'post-1', title: '第一页', content: '正文一' }], has_next: false },
+      }) as Response)
+      .mockResolvedValueOnce(mockFetchResponse({
+        data: { post_id_alias: 'post-1', title: '第一页', content: '正文一' },
+      }) as Response)
+      .mockResolvedValueOnce(mockFetchResponse({
+        data: { contents: [{ post_id_alias: 'post-34', title: '第二页', content: '正文三十四' }], has_next: false },
+      }) as Response)
+      .mockResolvedValueOnce(mockFetchResponse({
+        data: { post_id_alias: 'post-34', title: '第二页', content: '正文三十四' },
+      }) as Response);
+
+    try {
+      const notes = await fetchSubscribedKnowledgeNotes({
+        token: 'token',
+        clientId: 'client',
+        authMode: 'openapi',
+        topicIds: ['finance'],
+      });
+
+      expect(notes.map(note => note.note_id)).toEqual(['blogger_post-1', 'blogger_post-34']);
+      expect(globalThis.fetch).toHaveBeenCalledWith(expect.stringContaining('bloggers?topic_id=finance&page=2'), expect.anything());
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
   it('merges created and subscribed knowledge bases', async () => {
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(mockFetchResponse({
