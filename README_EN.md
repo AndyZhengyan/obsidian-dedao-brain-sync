@@ -14,11 +14,13 @@ For the project background and origin story, see this Chinese article: [Project 
 
 * * *
 
-## 🎉 1.5.6 — Latest Update
+## 🎉 1.5.7 — Latest Update
 
-- **✨ Unified plugin display name**: Obsidian, the installation guides, and package metadata now consistently use `Dedao Brain Sync1`, making the plugin easier to identify.
+- **🧠 Core sync capabilities restored**: desktop Web login with silent renewal, source-body-preserving reverse sync, date-path and attachment migration, plus the refined settings and sync-progress experience are back.
+- **🛡️ Safer local knowledge management**: reverse sync uses only protected remote source bodies; malformed markers are safely skipped, while migration retains diagnostic and rollback boundaries.
+- **✨ Display name restored**: Obsidian, installation guides, and package metadata consistently use `Dedao Brain Sync`.
 
-This release does not change sync logic, migration rules, or configuration requirements. You can continue using the plugin as before.
+This is a feature-restoration release. Existing configuration and local data remain supported; review the preflight result in the confirmation dialog before running date-path migration.
 
 The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 
