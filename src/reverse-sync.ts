@@ -237,23 +237,12 @@ export class ReverseSyncEngine {
       };
     }
 
-    const sourceBody = parseSourceBody(body);
-    if (sourceBody.kind === 'invalid') {
-      return {
-        skippedItem: this.createLocalItem(file, 'skipped', {
-          title,
-          noteType,
-          error: `Invalid source-body markers: ${sourceBody.reason}`,
-        }),
-      };
-    }
-
     return {
       note: {
         file,
         content,
         frontmatter,
-        body: sourceBody.kind === 'valid' ? sourceBody.body : body,
+        body,
         uid: readString(frontmatter, 'uid') || undefined,
         primeId: readString(frontmatter, 'prime_id') || undefined,
         title,
