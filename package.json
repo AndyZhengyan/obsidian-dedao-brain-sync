@@ -1,7 +1,7 @@
 {
   "name": "obsidian-dedao-brain-sync",
   "version": "1.5.6",
-  "description": "Dedao Brain Sync1 for Obsidian",
+  "description": "Dedao Brain Sync for Obsidian",
   "main": "main.js",
   "scripts": {
     "build": "node esbuild.config.mjs",

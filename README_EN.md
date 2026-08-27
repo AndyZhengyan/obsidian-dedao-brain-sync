@@ -1,4 +1,4 @@
-# Dedao Brain Sync1
+# Dedao Brain Sync
 
 [中文](./README.md) | [English](./README_EN.md)
 
@@ -70,7 +70,7 @@ OpenAPI search sidebar: search Dedao Brain notes from the Obsidian sidebar and o
 [![Available on Obsidian](https://img.shields.io/badge/Obsidian-Community%20Plugin-7c3aed?style=flat-square&logo=obsidian)](https://community.obsidian.md/plugins/dedao-brain-sync)
 
 1. Open `Settings -> Third-party plugin -> Browse`.
-2. Search for `Dedao Brain Sync1`, `得到大脑`, or the legacy name `GetNote` / `Get笔记`.
+2. Search for `Dedao Brain Sync`, `得到大脑`, or the legacy name `GetNote` / `Get笔记`.
 3. Install and enable the plugin.
 
 ### Manual installation
@@ -82,7 +82,7 @@ OpenAPI search sidebar: search Dedao Brain notes from the Obsidian sidebar and o
 <your-vault>/.obsidian/plugins/dedao-brain-sync/
 ```
 
-3. Restart Obsidian and enable `Dedao Brain Sync1`.
+3. Restart Obsidian and enable `Dedao Brain Sync`.
 
 > The plugin folder name is `getnote-importer` (matching the `id` in `manifest.json` for backward compatibility with the existing listing); the repository itself has been renamed to `obsidian-dedao-brain-sync`. Legacy GetNote Importer `data.json` is migrated automatically on first startup.
 
@@ -97,7 +97,7 @@ Credentials are stored only in your local Obsidian plugin data, and are used to 
 1. Open the Dedao Brain app.
 2. Go to `Settings -> Open Platform`.
 3. Create an application, then copy the `Token` and `Client ID`.
-4. In `Settings -> Dedao Brain Sync1`, choose `OpenAPI auth (members)` and paste both values.
+4. In `Settings -> Dedao Brain Sync`, choose `OpenAPI auth (members)` and paste both values.
 5. You can also use the OAuth button on the settings page to fetch credentials automatically.
 
 ### Web mode (manual token)
@@ -114,7 +114,7 @@ To copy the token:
 4. Reload the web app, or open the note list / any note, to trigger API requests.
 5. In the request list, open one whose name looks like `notes?...` or `list?...`; the `Host` in the right-hand Headers is usually `get-notes.luojilab.com`.
 6. Under `Request Headers`, copy the full `Authorization` value.
-7. Paste it into the Token field under `Settings -> Dedao Brain Sync1 -> Temporary auth`.
+7. Paste it into the Token field under `Settings -> Dedao Brain Sync -> Temporary auth`.
 8. Click `Test connection`, then run `Sync by date` or `Sync by note` once it succeeds.
 
 The value usually starts with `Bearer eyJ...`. The plugin accepts a full `Bearer ...` string, or just the JWT token. Do not paste an OpenAPI `gk_...` token into Temporary auth. A Web token is a browser session credential and can expire; if you see `401`, `403`, or `Web Token expired`, refresh the web app and re-copy the `Authorization` header.
@@ -126,7 +126,7 @@ The value usually starts with `Bearer eyJ...`. The plugin accepts a full `Bearer
 Click `Sync by date` on the settings page, or run the command:
 
 ```text
-Dedao Brain Sync1: Sync notes
+Dedao Brain Sync: Sync notes
 ```
 
 Download sync uses a conservative default: if the same note already exists locally, the plugin skips it and does not overwrite your Obsidian content. To pull a remote note again, delete the corresponding local file and run sync again; as long as the remote note still exists, the plugin recreates it as a locally missing note.
