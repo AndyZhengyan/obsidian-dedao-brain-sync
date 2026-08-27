@@ -1,6 +1,7 @@
 import type { App, TFile } from 'obsidian';
 import { createNote, fetchNoteDetail, type CreateNoteResult } from './api';
 import { t } from './i18n';
+import { parseSourceBody } from './source-body';
 import { getAuthCredentials, type AuthCredentials, type Settings, type SyncResultItem } from './types';
 
 export interface ReverseSyncResult {
@@ -225,12 +226,23 @@ export class ReverseSyncEngine {
       };
     }
 
+    const sourceBody = parseSourceBody(body);
+    if (sourceBody.kind === 'invalid') {
+      return {
+        skippedItem: this.createLocalItem(file, 'skipped', {
+          title,
+          noteType,
+          error: `Invalid source-body markers: ${sourceBody.reason}`,
+        }),
+      };
+    }
+
     return {
       note: {
         file,
         content,
         frontmatter,
-        body,
+        body: sourceBody.kind === 'valid' ? sourceBody.body : body,
         uid: readString(frontmatter, 'uid') || undefined,
         primeId: readString(frontmatter, 'prime_id') || undefined,
         title,
