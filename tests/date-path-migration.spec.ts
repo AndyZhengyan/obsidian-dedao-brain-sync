@@ -66,6 +66,8 @@ function makeApp(): MigrationApp {
       [...files.values()]
         .filter(({ file }) => file.extension === 'md')
         .map(({ file }) => file),
+    getFiles: () => [...files.values()].map(({ file }) => file),
+    getAllFolders: () => [...folders].map(path => ({ path })),
     getAbstractFileByPath: (path: string) =>
       files.get(path)?.file ?? (folders.has(path) ? { path } : null),
     createFolder: vi.fn(async (path: string) => {
@@ -92,6 +94,9 @@ function makeApp(): MigrationApp {
       file.name = targetPath.split('/').pop() ?? '';
       file.basename = file.name.replace(/\.[^.]+$/, '');
       file.extension = file.name.includes('.') ? file.name.split('.').pop() ?? '' : '';
+    }),
+    delete: vi.fn(async (folder: { path: string }) => {
+      folders.delete(folder.path);
     }),
   };
 
@@ -133,7 +138,7 @@ function makeApp(): MigrationApp {
 }
 
 function pluginCache(
-  overrides: Partial<Record<'uid' | 'created' | 'note_type' | 'source', unknown>> = {},
+  overrides: Partial<Record<'uid' | 'created' | 'modified' | 'note_type' | 'source', unknown>> = {},
   links: Cache = {},
 ): Cache {
   return {
@@ -271,6 +276,187 @@ describe('migrateDatePaths', () => {
     expect(app.vault.paths()).toEqual([originalPath]);
   });
 
+  it('rebuilds every synced note below the configured root from its note type, ignoring prior paths and origins', async () => {
+    const root = 'notes/Get笔记';
+    app.vault.addFile(
+      `${root}/旧层级/客户甲/文字.md`,
+      'plain',
+      pluginCache({ uid: 'rebuild-plain', note_type: 'plain_text' }),
+    );
+    app.vault.addFile(
+      `${root}/2025/12/任意目录/录音.md`,
+      'audio',
+      pluginCache({ uid: 'rebuild-audio', note_type: 'local_audio' }),
+    );
+
+    const result = await migrateDatePaths(app, root, { enabled: true, format: 'YYYY/MM' }, {
+      source: { enabled: true, format: 'YYYY/MM' },
+      categoryOrigins: {
+        'rebuild-plain': { path: `${root}/旧层级/客户甲/文字.md`, category: '旧层级/客户甲' },
+        'rebuild-audio': { path: `${root}/2025/12/任意目录/录音.md`, category: '任意目录' },
+      },
+      assetMoveEvidence: {},
+      rebuildCategories: true,
+      beforeExecute: async () => {},
+    } as Parameters<typeof migrateDatePaths>[3]);
+
+    expect(result).toMatchObject({ scanned: 2, moved: 2, skipped: 0, failed: 0 });
+    expect(app.vault.paths()).toEqual([
+      `${root}/2026/07/录音笔记/录音.md`,
+      `${root}/2026/07/纯文本/文字.md`,
+    ]);
+  });
+
+  it('keeps the newest duplicate UID in the canonical category and moves the other copy to the conflict archive', async () => {
+    const root = 'notes/得到大脑';
+    const uid = 'duplicate-uid';
+    app.vault.addFile(
+      `${root}/录音笔记/重复.md`,
+      'old body',
+      pluginCache({ uid, note_type: 'audio', modified: '2026-06-02 10:00:00' }),
+    );
+    app.vault.addFile(
+      `${root}/其他/重复.md`,
+      'new body',
+      pluginCache({ uid, note_type: 'audio', modified: '2026-06-03 10:00:00' }),
+    );
+
+    const result = await migrateDatePaths(app, root, { enabled: true, format: 'YYYY/MM' }, {
+      source: { enabled: true, format: 'YYYY/MM' },
+      categoryOrigins: {},
+      assetMoveEvidence: {},
+      rebuildCategories: true,
+      beforeExecute: async () => {},
+    });
+
+    expect(result).toMatchObject({ scanned: 2, moved: 2, skipped: 0, failed: 0 });
+    expect(app.vault.paths()).toEqual([
+      `${root}/2026/07/录音笔记/重复.md`,
+      `${root}/重复冲突/${uid}/录音笔记/重复.md`,
+    ]);
+    expect(app.vault.content(`${root}/2026/07/录音笔记/重复.md`)).toBe('new body');
+    expect(app.vault.content(`${root}/重复冲突/${uid}/录音笔记/重复.md`)).toBe('old body');
+  });
+
+  it('moves an archived duplicate note together with its referenced attachment', async () => {
+    const root = 'notes/得到大脑';
+    const uid = 'duplicate-with-asset';
+    app.vault.addFile(
+      `${root}/录音笔记/重复.md`,
+      '![[asset/重复_audio.mp3]]',
+      pluginCache(
+        { uid, note_type: 'audio', modified: '2026-06-02 10:00:00' },
+        { embeds: [{ link: 'asset/重复_audio.mp3' }] },
+      ),
+    );
+    app.vault.addFile(`${root}/录音笔记/asset/重复_audio.mp3`, 'audio');
+    app.vault.addFile(
+      `${root}/其他/重复.md`,
+      'new body',
+      pluginCache({ uid, note_type: 'audio', modified: '2026-06-03 10:00:00' }),
+    );
+
+    await migrateDatePaths(app, root, { enabled: true, format: 'YYYY/MM' }, {
+      source: { enabled: true, format: 'YYYY/MM' },
+      categoryOrigins: {},
+      assetMoveEvidence: {},
+      rebuildCategories: true,
+      beforeExecute: async () => {},
+    });
+
+    expect(app.vault.paths()).toContain(`${root}/重复冲突/${uid}/录音笔记/asset/重复_audio.mp3`);
+  });
+
+  it('keeps a shared attachment with the duplicate UID keeper instead of blocking both notes', async () => {
+    const root = 'notes/得到大脑';
+    const uid = 'duplicate-shared-asset';
+    const link = 'asset/共享_audio.mp3';
+    app.vault.addFile(
+      `${root}/其他/旧副本.md`,
+      `![[${link}]]`,
+      pluginCache(
+        { uid, note_type: 'audio', modified: '2026-06-02 10:00:00' },
+        { embeds: [{ link }] },
+      ),
+    );
+    app.vault.addFile(
+      `${root}/录音笔记/新副本.md`,
+      `![[${link}]]`,
+      pluginCache(
+        { uid, note_type: 'audio', modified: '2026-06-03 10:00:00' },
+        { embeds: [{ link }] },
+      ),
+    );
+    app.vault.addFile(`${root}/录音笔记/asset/共享_audio.mp3`, 'audio');
+
+    const result = await migrateDatePaths(app, root, { enabled: true, format: 'YYYY/MM' }, {
+      source: { enabled: true, format: 'YYYY/MM' },
+      categoryOrigins: {},
+      assetMoveEvidence: {},
+      rebuildCategories: true,
+      beforeExecute: async () => {},
+    });
+
+    expect(result).toMatchObject({ scanned: 2, moved: 2, skipped: 0, failed: 0 });
+    expect(app.vault.paths()).toEqual([
+      `${root}/2026/07/录音笔记/asset/共享_audio.mp3`,
+      `${root}/2026/07/录音笔记/新副本.md`,
+      `${root}/重复冲突/${uid}/其他/旧副本.md`,
+    ]);
+  });
+
+  it('removes empty legacy folders below the sync root after a rebuild', async () => {
+    const root = 'notes/得到大脑';
+    app.vault.addFile(`${root}/旧分类/待整理.md`, 'body', pluginCache({ uid: 'empty-folder-cleanup' }));
+
+    await migrateDatePaths(app, root, { enabled: true, format: 'YYYY/MM' }, {
+      source: { enabled: true, format: 'YYYY/MM' },
+      categoryOrigins: {},
+      assetMoveEvidence: {},
+      rebuildCategories: true,
+      beforeExecute: async () => {},
+    });
+
+    expect(app.vault.delete).toHaveBeenCalledWith(expect.objectContaining({ path: `${root}/旧分类` }), true);
+    expect(app.vault.getAllFolders().map(folder => folder.path)).not.toContain(`${root}/旧分类`);
+  });
+
+  it('does not rescan notes already archived in the duplicate-conflict folder', async () => {
+    const root = 'notes/得到大脑';
+    const archived = `${root}/重复冲突/duplicate-uid/旧分类/重复.md`;
+    app.vault.addFile(archived, 'duplicate', pluginCache({ uid: 'duplicate-uid' }));
+
+    const result = await migrateDatePaths(app, root, { enabled: true, format: 'YYYY/MM' }, {
+      source: { enabled: true, format: 'YYYY/MM' },
+      categoryOrigins: {},
+      assetMoveEvidence: {},
+      rebuildCategories: true,
+      beforeExecute: async () => {},
+    });
+
+    expect(result).toMatchObject({ scanned: 0, moved: 0, skipped: 0, failed: 0 });
+    expect(app.vault.paths()).toEqual([archived]);
+  });
+
+  it('archives an unclaimed legacy asset instead of leaving it in an old category', async () => {
+    const root = 'notes/得到大脑';
+    const source = `${root}/录音长录/asset/历史孤儿_audio.mp3`;
+    app.vault.addFile(source, 'audio');
+
+    const result = await migrateDatePaths(app, root, { enabled: true, format: 'YYYY/MM' }, {
+      source: { enabled: true, format: 'YYYY/MM' },
+      categoryOrigins: {},
+      assetMoveEvidence: {},
+      rebuildCategories: true,
+      beforeExecute: async () => {},
+    });
+
+    expect(result).toMatchObject({ scanned: 0, moved: 0, skipped: 0, failed: 0 });
+    expect(app.vault.paths()).toEqual([
+      `${root}/未归属附件/录音长录/asset/历史孤儿_audio.mp3`,
+    ]);
+  });
+
   it('replaces the entire prior date layer when changing to a shorter format', async () => {
     app.vault.addFile(
       '得到大脑/项目/历史.md',
@@ -316,7 +502,7 @@ describe('migrateDatePaths', () => {
     expect(app.vault.paths()).toEqual([target]);
   });
 
-  it('skips a move that would break an external path-qualified inbound link', async () => {
+  it('moves a note and updates an external path-qualified inbound link', async () => {
     const source = '得到大脑/纯文本/被引用.md';
     app.vault.addFile(source, 'synced', pluginCache({ uid: 'inbound-target' }));
     app.vault.addFile(
@@ -327,14 +513,13 @@ describe('migrateDatePaths', () => {
 
     const result = await migrate({ enabled: true, format: 'YYYY/MM' });
 
-    expect(result).toMatchObject({ moved: 0, skipped: 1, failed: 0 });
-    expect(issueCodes(result)).toContain('inbound-link');
-    expect(app.vault.paths()).toContain(source);
-    expect(app.vault.content('个人笔记/索引.md')).toBe('[[得到大脑/纯文本/被引用]]');
-    expect(app.fileManager.renameFile).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ moved: 1, skipped: 0, failed: 0 });
+    expect(app.vault.paths()).toContain('得到大脑/2026/07/纯文本/被引用.md');
+    expect(app.vault.content('个人笔记/索引.md')).toBe('[[得到大脑/2026/07/纯文本/被引用]]');
+    expect(app.fileManager.renameFile).toHaveBeenCalledOnce();
   });
 
-  it('skips a moving note whose same-directory Markdown link would resolve elsewhere', async () => {
+  it('moves a note with a same-directory Markdown link through Obsidian file management', async () => {
     const source = '得到大脑/纯文本/含相对链接.md';
     const stationary = '得到大脑/纯文本/用户笔记.md';
     app.vault.addFile(
@@ -349,13 +534,13 @@ describe('migrateDatePaths', () => {
 
     const result = await migrate({ enabled: true, format: 'YYYY/MM' });
 
-    expect(result).toMatchObject({ moved: 0, skipped: 1, failed: 0 });
-    expect(issueCodes(result)).toContain('inbound-link');
-    expect(app.vault.paths()).toEqual([source, stationary]);
-    expect(app.vault.content(source)).toBe('[用户笔记](用户笔记.md)');
+    expect(result).toMatchObject({ moved: 1, skipped: 0, failed: 0 });
+    expect(app.vault.paths()).toContain('得到大脑/2026/07/纯文本/含相对链接.md');
+    expect(app.vault.paths()).toContain(stationary);
+    expect(app.fileManager.renameFile).toHaveBeenCalledOnce();
   });
 
-  it('skips a target whose stationary same-directory Markdown link would stop resolving', async () => {
+  it('moves a target with a stationary same-directory Markdown link through Obsidian file management', async () => {
     const source = '得到大脑/纯文本/被引用.md';
     const stationary = '得到大脑/纯文本/用户索引.md';
     app.vault.addFile(source, 'synced', pluginCache({ uid: 'same-dir-inbound' }));
@@ -367,13 +552,13 @@ describe('migrateDatePaths', () => {
 
     const result = await migrate({ enabled: true, format: 'YYYY/MM' });
 
-    expect(result).toMatchObject({ moved: 0, skipped: 1, failed: 0 });
-    expect(issueCodes(result)).toContain('inbound-link');
-    expect(app.vault.paths()).toEqual([stationary, source]);
-    expect(app.vault.content(stationary)).toBe('[同步笔记](被引用.md)');
+    expect(result).toMatchObject({ moved: 1, skipped: 0, failed: 0 });
+    expect(app.vault.paths()).toContain('得到大脑/2026/07/纯文本/被引用.md');
+    expect(app.vault.paths()).toContain(stationary);
+    expect(app.fileManager.renameFile).toHaveBeenCalledOnce();
   });
 
-  it('skips the whole note when an external path-qualified link targets its asset', async () => {
+  it('moves a note and its asset when an external path-qualified link targets the asset', async () => {
     const notePath = '得到大脑/图片笔记/带外链附件.md';
     const assetPath = '得到大脑/图片笔记/asset/带外链附件_image.png';
     const noteContent = '![[asset/带外链附件_image.png]]';
@@ -391,16 +576,11 @@ describe('migrateDatePaths', () => {
 
     const result = await migrate({ enabled: true, format: 'YYYY/MM' });
 
-    expect(result).toMatchObject({ moved: 0, skipped: 1, failed: 0 });
-    expect(issueCodes(result)).toContain('inbound-link');
-    expect(app.vault.paths()).toEqual([
-      '个人笔记/附件索引.md',
-      assetPath,
-      notePath,
-    ]);
-    expect(app.vault.content(notePath)).toBe(noteContent);
-    expect(app.vault.content('个人笔记/附件索引.md')).toBe(indexContent);
-    expect(app.vault.rename).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ moved: 1, skipped: 0, failed: 0 });
+    expect(app.vault.paths()).toContain('得到大脑/2026/07/图片笔记/带外链附件.md');
+    expect(app.vault.paths()).toContain('得到大脑/2026/07/图片笔记/asset/带外链附件_image.png');
+    expect(app.vault.content('个人笔记/附件索引.md')).toBe('![[得到大脑/2026/07/图片笔记/asset/带外链附件_image.png]]');
+    expect(app.fileManager.renameFile).toHaveBeenCalledTimes(2);
   });
 
   it('moves only exact referenced adjacent assets and leaves unreferenced siblings in place', async () => {
@@ -418,6 +598,95 @@ describe('migrateDatePaths', () => {
       '得到大脑/2026/07/图片笔记/asset/带图_image.png',
       '得到大脑/2026/07/图片笔记/带图.md',
       '得到大脑/图片笔记/asset/未引用.png',
+    ]);
+  });
+
+  it('moves an extensionless adjacent asset when Obsidian metadata cannot resolve its link', async () => {
+    const root = 'notes/得到大脑';
+    const notePath = `${root}/链接笔记/带网页附件.md`;
+    const assetPath = `${root}/链接笔记/asset/带网页附件_0123456789abcdef01234567`;
+    app.vault.addFile(notePath, '![[asset/带网页附件_0123456789abcdef01234567]]', pluginCache(
+      { uid: 'extensionless-asset', note_type: 'link' },
+      { embeds: [{ link: 'asset/带网页附件_0123456789abcdef01234567' }] },
+    ));
+    app.vault.addFile(assetPath, '<html>saved page</html>');
+    vi.spyOn(app.metadataCache, 'getFirstLinkpathDest').mockReturnValue(null);
+
+    const result = await migrateDatePaths(app, root, { enabled: true, format: 'YYYY/MM' }, {
+      source: { enabled: true, format: 'YYYY/MM' },
+      categoryOrigins: {},
+      assetMoveEvidence: {},
+      rebuildCategories: true,
+      beforeExecute: async () => {},
+    });
+
+    expect(result).toMatchObject({ scanned: 1, moved: 1, skipped: 0, failed: 0 });
+    expect(app.vault.paths()).toEqual([
+      `${root}/2026/07/链接笔记/asset/带网页附件_0123456789abcdef01234567`,
+      `${root}/2026/07/链接笔记/带网页附件.md`,
+    ]);
+  });
+
+  it('recovers a uniquely named legacy image asset after its note already reached the monthly folder', async () => {
+    const root = 'notes/得到大脑';
+    const name = '阿里云会议_image.jpeg';
+    app.vault.addFile(
+      `${root}/2026/08/图片笔记/阿里云会议.md`,
+      `![[asset/${name}]]`,
+      pluginCache(
+        { uid: 'legacy-image', note_type: 'img_text', created: '2026-08-12T19:34:37+08:00' },
+        { embeds: [{ link: `asset/${name}` }] },
+      ),
+    );
+    app.vault.addFile(`${root}/图片笔记/asset/${name}`, 'image');
+
+    const result = await migrateDatePaths(app, root, { enabled: true, format: 'YYYY/MM' }, {
+      source: { enabled: true, format: 'YYYY/MM' },
+      categoryOrigins: {},
+      assetMoveEvidence: {},
+      rebuildCategories: true,
+      beforeExecute: async () => {},
+    });
+
+    expect(result).toMatchObject({ scanned: 1, moved: 1, skipped: 0, failed: 0 });
+    expect(app.vault.paths()).toEqual([
+      `${root}/2026/08/图片笔记/asset/${name}`,
+      `${root}/2026/08/图片笔记/阿里云会议.md`,
+    ]);
+  });
+
+  it('recovers UID-suffixed audio assets from a legacy category when the note links use shorter names', async () => {
+    const root = 'notes/得到大脑';
+    const uid = '1911665846536430016';
+    const title = '当前国内通缩';
+    app.vault.addFile(`${root}/其他/${title}.md`, [
+      `![[${title}_audio.mp3]]`,
+      `![[${title}_transcript]]`,
+    ].join('\n'), pluginCache(
+      { uid, note_type: 'audio' },
+      {
+        embeds: [
+          { link: `${title}_audio.mp3` },
+          { link: `${title}_transcript` },
+        ],
+      },
+    ));
+    app.vault.addFile(`${root}/录音笔记/asset/20260602131856_${title}_${uid}_audio.mp3`, 'audio');
+    app.vault.addFile(`${root}/录音笔记/asset/20260602131856_${title}_${uid}_transcript.md`, 'transcript');
+
+    const result = await migrateDatePaths(app, root, { enabled: true, format: 'YYYY/MM' }, {
+      source: { enabled: true, format: 'YYYY/MM' },
+      categoryOrigins: {},
+      assetMoveEvidence: {},
+      rebuildCategories: true,
+      beforeExecute: async () => {},
+    });
+
+    expect(result).toMatchObject({ scanned: 1, moved: 1, skipped: 0, failed: 0 });
+    expect(app.vault.paths()).toEqual([
+      `${root}/2026/07/录音笔记/asset/20260602131856_${title}_${uid}_audio.mp3`,
+      `${root}/2026/07/录音笔记/asset/20260602131856_${title}_${uid}_transcript.md`,
+      `${root}/2026/07/录音笔记/${title}.md`,
     ]);
   });
 
@@ -439,6 +708,32 @@ describe('migrateDatePaths', () => {
     expect(app.vault.paths()).toContain('得到大脑/2026/07/纯文本/普通断链.md');
     expect(app.vault.paths()).toContain('得到大脑/纯文本/缺元数据.md');
     expect(app.vault.paths()).toContain('得到大脑/纯文本/缺附件.md');
+  });
+
+  it('recovers a legacy numeric UID from raw frontmatter without stringifying the lossy cache value', async () => {
+    const exactUid = '1909999999999999999';
+    const source = '得到大脑/纯文本/旧 UID.md';
+    app.vault.addFile(source, [
+      '---',
+      `uid: ${exactUid}`,
+      'created: 2026-07-03T10:20:30+08:00',
+      'source: Get笔记',
+      'note_type: plain_text',
+      '---',
+      '正文',
+    ].join('\n'), pluginCache({
+      uid: Number(exactUid),
+      source: 'Get笔记',
+    }));
+
+    const result = await migrate({ enabled: true, format: 'YYYY/MM' });
+
+    expect(result).toMatchObject({ scanned: 1, moved: 1, skipped: 0, failed: 0 });
+    expect(categoryOrigins[exactUid]).toEqual({
+      path: source,
+      category: '纯文本',
+    });
+    expect(categoryOrigins[String(Number(exactUid))]).toBeUndefined();
   });
 
   it('globally preflights existing targets and shared assets without moving affected notes', async () => {

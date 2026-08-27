@@ -16,6 +16,7 @@ import { getLocalDateInputValue } from '../ui/date-input';
 import { validateDatePathFormat } from '../date-paths';
 import type {
   DatePathMigrationIssueCode,
+  DatePathMigrationOptions,
   DatePathMigrationResult,
   DatePathMigrationTarget,
 } from '../date-path-migration';
@@ -91,8 +92,12 @@ interface SettingsComponentProps {
   lastSyncTime?: number;
   syncHistory?: SyncHistoryEntry[];
   initialKnowledgeBaseCache?: { entries: Array<{ topicId: string; name: string; source?: 'subscribed' | 'created' }>; cacheUpdatedAt?: number };
-  applyDatePathSettings?: (target: DatePathMigrationTarget) => Promise<DatePathMigrationResult>;
+  applyDatePathSettings?: (target: DatePathMigrationTarget, options?: DatePathMigrationOptions) => Promise<DatePathMigrationResult>;
+  previewDatePathSettings?: (target: DatePathMigrationTarget, options?: DatePathMigrationOptions) => Promise<DatePathMigrationResult>;
   confirmDatePathMigration?: (request: DatePathConfirmationRequest) => Promise<boolean>;
+  desktopWebAuthAvailable?: boolean;
+  startDesktopWebAuth?: () => Promise<string>;
+  clearDesktopWebAuth?: () => Promise<void>;
 }
 
 export function SettingsComponent({
@@ -112,12 +117,19 @@ export function SettingsComponent({
   syncHistory = [],
   initialKnowledgeBaseCache,
   applyDatePathSettings,
+  previewDatePathSettings,
   confirmDatePathMigration,
+  desktopWebAuthAvailable = false,
+  startDesktopWebAuth,
+  clearDesktopWebAuth,
 }: SettingsComponentProps) {
   const [authMode, setAuthMode] = useState<AuthMode>(settings.authMode);
   const initialOpenApiToken = settings.openApiToken || (settings.authMode === 'openapi' ? settings.apiToken : '');
   const initialOpenApiClientId = settings.openApiClientId || settings.clientId;
   const initialWebApiToken = settings.webApiToken || (settings.authMode === 'web' ? settings.apiToken : '');
+  const initiallyHasCredentials = settings.authMode === 'web'
+    ? Boolean(initialWebApiToken.trim())
+    : Boolean(initialOpenApiToken.trim() && initialOpenApiClientId.trim());
   const [apiTokenOpenapi, setApiTokenOpenapi] = useState(initialOpenApiToken);
   const [clientIdOpenapi, setClientIdOpenapi] = useState(initialOpenApiClientId);
   const [apiTokenWeb, setApiTokenWeb] = useState(initialWebApiToken);
@@ -142,7 +154,11 @@ export function SettingsComponent({
   const [syncTags, setSyncTags] = useState<string[]>(settings.syncTags ?? []);
   const [scheduledKnowledgeBases, setScheduledKnowledgeBases] = useState<string[]>(settings.scheduledSync.syncKnowledgeBases ?? []);
   const [attachmentDetailsOpen, setAttachmentDetailsOpen] = useState(false);
+  const [credentialsDetailsOpen, setCredentialsDetailsOpen] = useState(!initiallyHasCredentials);
+  const [syncDetailsOpen, setSyncDetailsOpen] = useState(true);
+  const [advancedDetailsOpen, setAdvancedDetailsOpen] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
+  const [desktopWebAuthBusy, setDesktopWebAuthBusy] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [connectionErrorMsg, setConnectionErrorMsg] = useState('');
   const [connectionExpiryMin, setConnectionExpiryMin] = useState<number | null>(null);
@@ -315,9 +331,11 @@ export function SettingsComponent({
       enabled: datePathEnabled,
       format: normalizedDatePathFormat,
     };
+    const options = mode === 'reconcile' ? { rebuildCategories: true } : undefined;
     setDatePathMigrationBusy(true);
     setDatePathMigrationFailed(false);
     try {
+      const preview = await previewDatePathSettings?.(target, options);
       const confirmed = await confirmDatePathMigration?.({
         mode,
         current: {
@@ -325,9 +343,10 @@ export function SettingsComponent({
           format: appliedDatePathFormat,
         },
         target,
+        preview,
       });
       if (!confirmed || !applyDatePathSettings) return;
-      const result = await applyDatePathSettings(target);
+      const result = await applyDatePathSettings(target, options);
       setAppliedDatePathEnabled(target.enabled);
       setAppliedDatePathFormat(target.format);
       setDatePathFormat(target.format);
@@ -353,6 +372,16 @@ export function SettingsComponent({
       case 'rollback-failed': return t('settings.datePath.issue.rollbackFailed');
       default: return t('settings.datePath.issue.unknown');
     }
+  };
+
+  const datePathIssueSummary = (issues: DatePathMigrationResult['issues']): string => {
+    const counts = new Map<DatePathMigrationIssueCode, number>();
+    for (const migrationIssue of issues) {
+      counts.set(migrationIssue.code, (counts.get(migrationIssue.code) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([code, count]) => `${datePathIssueLabel(code)} ${count}`)
+      .join(' · ');
   };
 
   const handleTemplateFilePathChange = useCallback(
@@ -402,13 +431,14 @@ export function SettingsComponent({
   };
 
   const handleScheduledEnabled = (checked: boolean) => {
-    setScheduledEnabled(checked);
     updateSetting('scheduledSync', {
       ...settings.scheduledSync,
       enabledNoteTypes: scheduledNoteTypes,
       syncKnowledgeBases: scheduledKnowledgeBases,
       enabled: checked,
     });
+    setScheduledEnabled(checked);
+    if (!checked) setScheduledDetailsOpen(false);
     if (checked) {
       startAutoSync();
     } else {
@@ -517,6 +547,39 @@ export function SettingsComponent({
     }
   };
 
+  const handleDesktopWebAuth = async () => {
+    if (!startDesktopWebAuth) return;
+    setDesktopWebAuthBusy(true);
+    setConnectionStatus('idle');
+    setConnectionErrorMsg('');
+    try {
+      const token = await startDesktopWebAuth();
+      handleApiTokenWebChange(token);
+      setConnectionStatus('success');
+    } catch (error) {
+      setConnectionStatus('error');
+      setConnectionErrorMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setDesktopWebAuthBusy(false);
+    }
+  };
+
+  const handleDesktopWebLogout = async () => {
+    handleApiTokenWebChange('');
+    setConnectionStatus('idle');
+    setConnectionErrorMsg('');
+    if (!clearDesktopWebAuth) return;
+    setDesktopWebAuthBusy(true);
+    try {
+      await clearDesktopWebAuth();
+    } catch (error) {
+      setConnectionStatus('error');
+      setConnectionErrorMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setDesktopWebAuthBusy(false);
+    }
+  };
+
   useEffect(() => () => {
     if (intervalWarningTimeoutRef.current !== null) {
       window.clearTimeout(intervalWarningTimeoutRef.current);
@@ -536,6 +599,28 @@ export function SettingsComponent({
     : Boolean(apiTokenOpenapi.trim() && clientIdOpenapi.trim());
   const { scheduledSync } = settings;
   const currentSyncHistory = syncHistory.length > 0 ? syncHistory : settings.syncHistory;
+  const credentialDetailsId = 'getnote-credential-details';
+  const scheduledDetailsId = 'getnote-scheduled-details';
+  const attachmentDetailsId = 'getnote-attachment-details';
+  const syncDetailsId = 'getnote-sync-settings';
+  const advancedDetailsId = 'getnote-advanced-settings';
+
+  const noteTypesSummary = !scheduledNoteTypes || scheduledNoteTypes.length === 0
+    ? t('noteTypes.all')
+    : t('noteTypes.selected', { count: scheduledNoteTypes.length });
+  const scheduledSummary = scheduledEnabled
+    ? t('settings.scheduled.summary', {
+      minutes: scheduledSync.intervalMinutes,
+      startup: scheduledSync.syncOnStart ? t('settings.summary.onStart') : t('settings.summary.noOnStart'),
+      noteTypes: noteTypesSummary,
+    })
+    : t('settings.summary.disabled');
+  const enabledAttachmentKinds = attachmentKinds.filter(kind => attachmentImport[kind] !== false);
+  const attachmentSummary = enabledAttachmentKinds.length === attachmentKinds.length
+    ? t('settings.attachment.summary.all')
+    : enabledAttachmentKinds.length === 0
+      ? t('settings.attachment.summary.none')
+      : enabledAttachmentKinds.map(kind => t(`settings.attachment.${kind}`)).join(t('settings.summary.separator'));
 
   // Format last sync time
   const formatLastSync = (timestamp?: number): string => {
@@ -562,12 +647,9 @@ export function SettingsComponent({
     return date.toLocaleString(undefined, { timeZoneName: 'short' });
   };
 
-  // Progress bar with # characters
-  const renderProgressBar = (percent: number): string => {
-    const total = 16;
-    const filled = Math.round((percent / 100) * total);
-    return '[' + '#'.repeat(filled) + '░'.repeat(total - filled) + ']';
-  };
+  const progressPhase = syncProgress?.phase ?? 'active';
+  const progressIsDeterminate = typeof syncProgress?.percent === 'number';
+  const showSyncProgress = isSyncing || progressPhase !== 'active';
 
   return (
     <div className="getnote-settings-react">
@@ -578,7 +660,94 @@ export function SettingsComponent({
         </p>
       </div>
 
-      <div className="getnote-onboarding">{t('settings.onboarding')}</div>
+      <div className={`getnote-settings-status-bar${credentialsDetailsOpen ? ' is-credentials-open' : ''}`} data-settings-status>
+        <div className="getnote-settings-status-copy">
+          <strong>{t(`settings.authMode.${authMode}`)}</strong>
+          <span>{hasCredentials ? t('settings.credentials.connected') : t('settings.credentials.notConfigured')}</span>
+          <span>{t('settings.syncStatus')}: {isSyncing ? t('syncHistory.status.syncing') : t('syncHistory.status.idle')}</span>
+          <span>{t('settings.lastSync')}: {formatLastSync(lastSyncTime)}</span>
+        </div>
+        <div className="getnote-settings-status-actions">
+          <button
+            type="button"
+            className="mod-secondary"
+            disabled={testingConnection || !hasCredentials}
+            onClick={() => void handleTestConnection()}
+          >
+            {testingConnection ? t('settings.testingConnection') : t('settings.testConnection')}
+          </button>
+          <button
+            type="button"
+            className="mod-secondary"
+            data-change-credentials
+            aria-expanded={credentialsDetailsOpen}
+            aria-controls={credentialDetailsId}
+            onClick={() => setCredentialsDetailsOpen(prev => !prev)}
+          >
+            {credentialsDetailsOpen ? t('settings.credentials.collapse') : t('settings.credentials.change')}
+          </button>
+        </div>
+        {connectionStatus === 'success' && (
+          <span className="getnote-connection-success" role="status">
+            {connectionExpiryMin !== null
+              ? t('settings.connectionSuccessWithExpiry', { minutes: connectionExpiryMin })
+              : t('settings.connectionSuccess')}
+          </span>
+        )}
+        {connectionStatus === 'error' && (
+          <span className="getnote-connection-error" role="alert">
+            {t('settings.connectionError')}{connectionErrorMsg ? `: ${connectionErrorMsg}` : ''}
+          </span>
+        )}
+      </div>
+
+      {/* 同步进度紧跟状态，避免进行中的任务藏在页面底部。 */}
+      {showSyncProgress && (
+        <div
+          className={`getnote-settings-sync-status getnote-settings-sync-status-${progressPhase}`}
+          data-sync-progress
+          data-sync-progress-phase={progressPhase}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="getnote-settings-sync-status-header">
+            <span className="getnote-mono-text">{syncProgress?.message || t('sync.syncing')}</span>
+            {isSyncing && (
+              <button className="mod-warning getnote-settings-cancel-button" onClick={cancelSync}>
+                {t('modal.cancel')}
+              </button>
+            )}
+          </div>
+          <div className="getnote-settings-progress-line">
+            <div
+              className={`getnote-settings-progress-track${progressIsDeterminate ? '' : ' is-indeterminate'}`}
+              data-sync-progress-track
+              aria-label={progressIsDeterminate ? `${syncProgress?.percent}%` : syncProgress?.message || t('sync.syncing')}
+            >
+              <div
+                className="getnote-settings-progress-fill"
+                style={progressIsDeterminate ? { width: `${syncProgress?.percent}%` } : undefined}
+              />
+            </div>
+            {progressIsDeterminate && (
+              <span className="getnote-settings-progress-percent">{syncProgress?.percent}%</span>
+            )}
+          </div>
+          {syncProgress?.count && (
+            <div className="getnote-settings-progress-count">{syncProgress.count}</div>
+          )}
+        </div>
+      )}
+
+      <div
+        id={credentialDetailsId}
+        data-credential-details
+        className={`getnote-credential-panel${credentialsDetailsOpen ? '' : ' getnote-hidden'}`}
+      >
+
+      {!hasCredentials && (
+        <div className="getnote-onboarding" data-credential-guidance>{t('settings.onboarding')}</div>
+      )}
 
       {/* 凭证设置 */}
       <SettingItem
@@ -635,6 +804,7 @@ export function SettingsComponent({
                     className="getnote-input-toggle"
                     onClick={() => setShowApiToken(!showApiToken)}
                     title={showApiToken ? t('settings.hideToken') : t('settings.showToken')}
+                    aria-label={showApiToken ? t('settings.hideToken') : t('settings.showToken')}
                   >
                     {showApiToken ? '🔒' : '👁'}
                   </button>
@@ -656,6 +826,7 @@ export function SettingsComponent({
                     className="getnote-input-toggle"
                     onClick={() => setShowApiToken(!showApiToken)}
                     title={showApiToken ? t('settings.hideToken') : t('settings.showToken')}
+                    aria-label={showApiToken ? t('settings.hideToken') : t('settings.showToken')}
                   >
                     {showApiToken ? '🔒' : '👁'}
                   </button>
@@ -687,47 +858,57 @@ export function SettingsComponent({
                 }}
               />
             )}
-            <button
-              className="mod-secondary getnote-credential-action-button"
-              disabled={testingConnection}
-              onClick={() => {
-                void handleTestConnection();
-              }}
-            >
-              {testingConnection ? t('settings.testingConnection') : t('settings.testConnection')}
-            </button>
+            {authMode === 'web' && desktopWebAuthAvailable && (
+              <>
+                <button
+                  type="button"
+                  className="mod-cta getnote-credential-action-button"
+                  disabled={desktopWebAuthBusy}
+                  onClick={() => { void handleDesktopWebAuth(); }}
+                >
+                  {desktopWebAuthBusy ? t('settings.webAuth.waiting') : t('settings.webAuth.login')}
+                </button>
+                <button
+                  type="button"
+                  className="mod-secondary getnote-credential-action-button"
+                  disabled={desktopWebAuthBusy}
+                  onClick={() => { void handleDesktopWebLogout(); }}
+                >
+                  {t('settings.webAuth.logout')}
+                </button>
+              </>
+            )}
           </div>
-          {connectionStatus === 'success' && (
-            <span className="getnote-connection-success">
-              {connectionExpiryMin !== null
-                ? t('settings.connectionSuccessWithExpiry', { minutes: connectionExpiryMin })
-                : t('settings.connectionSuccess')}
-            </span>
-          )}
-          {connectionStatus === 'error' && (
-            <span className="getnote-connection-error">
-              {t('settings.connectionError')}{connectionErrorMsg ? `: ${connectionErrorMsg}` : ''}
-            </span>
-          )}
         </div>
       </SettingItem>
-
-      {/* 目标文件夹 */}
-      <SettingItem
-        name={t('settings.folder.label')}
-        description={t('settings.folder.desc')}
-      >
-        <input
-          ref={folderInputRef}
-          type="text"
-          className="getnote-input"
-          placeholder={t('settings.folder.placeholder')}
-          value={folderName}
-          onInput={(e) => handleFolderChange((e.target as HTMLInputElement).value)}
-        />
-      </SettingItem>
+      </div>
 
       {/* 文件名前缀 */}
+      {(() => {
+        const advancedSettings = (
+      <section className="getnote-settings-section getnote-settings-advanced" data-settings-section="advanced">
+        <button
+          type="button"
+          className="getnote-section-disclosure"
+          data-advanced-disclosure
+          aria-expanded={advancedDetailsOpen}
+          aria-controls={advancedDetailsId}
+          onClick={() => setAdvancedDetailsOpen(prev => !prev)}
+        >
+          <span className="getnote-section-disclosure-copy">
+            <strong>{t('settings.advanced.section')}</strong>
+            <small>{t('settings.advanced.summary')}</small>
+          </span>
+          <span
+            className={`getnote-disclosure-caret${advancedDetailsOpen ? ' is-open' : ''}`}
+            aria-hidden="true"
+          />
+        </button>
+        <div
+          id={advancedDetailsId}
+          data-advanced-settings
+          className={advancedDetailsOpen ? '' : 'getnote-hidden'}
+        >
       <SettingItem
         name={t('settings.prefix.label')}
         description={(
@@ -753,6 +934,7 @@ export function SettingsComponent({
         <div className="getnote-date-path-settings">
           <div className="getnote-date-path-toggle-row">
             <Toggle
+              ariaLabel={t('settings.datePath.label')}
               value={datePathEnabled}
               onChange={setDatePathEnabled}
               disabled={isSyncing || datePathMigrationBusy}
@@ -804,20 +986,18 @@ export function SettingsComponent({
                 })}
               </div>
               {datePathMigrationResult.issues.length > 0 && (
-                <ul>
-                  {datePathMigrationResult.issues.slice(0, 20).map((migrationIssue, index) => (
-                    <li key={`${migrationIssue.code}-${migrationIssue.path}-${index}`}>
-                      {migrationIssue.path}: {datePathIssueLabel(migrationIssue.code)}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {datePathMigrationResult.issues.length > 20 && (
-                <div>
-                  {t('settings.datePath.issuesRemaining', {
-                    count: datePathMigrationResult.issues.length - 20,
-                  })}
+                <div className="getnote-date-path-issue-summary">
+                  {datePathIssueSummary(datePathMigrationResult.issues)}
                 </div>
+              )}
+              {datePathMigrationResult.issues.length > 0 && (
+                <button
+                  type="button"
+                  className="mod-secondary getnote-view-history-btn"
+                  onClick={() => openSyncHistoryModal(app, currentSyncHistory)}
+                >
+                  {t('syncHistory.view')}
+                </button>
               )}
             </div>
           )}
@@ -852,6 +1032,7 @@ export function SettingsComponent({
             <span className="getnote-scheduled-row-label">{t('settings.ribbon.sync')}</span>
             <span className="getnote-scheduled-row-control">
               <Toggle
+                ariaLabel={t('settings.ribbon.sync')}
                 value={settings.ribbonActions.sync}
                 onChange={(value) => handleRibbonActionChange('sync', value)}
               />
@@ -861,6 +1042,7 @@ export function SettingsComponent({
             <span className="getnote-scheduled-row-label">{t('settings.ribbon.search')}</span>
             <span className="getnote-scheduled-row-control">
               <Toggle
+                ariaLabel={t('settings.ribbon.search')}
                 value={settings.ribbonActions.search}
                 onChange={(value) => handleRibbonActionChange('search', value)}
               />
@@ -868,35 +1050,111 @@ export function SettingsComponent({
           </div>
         </div>
       </SettingItem>
+        <div data-attachment-settings>
+        <SettingItem name={t('settings.attachment.section')}>
+          <div className="getnote-scheduled-options">
+            <div className="getnote-scheduled-row getnote-attachment-master-row">
+              <span className="getnote-scheduled-row-label">
+                <span>{t('settings.attachment.master')}</span>
+                <small className="getnote-setting-summary">{attachmentSummary}</small>
+              </span>
+              <span className="getnote-scheduled-row-control">
+                <Toggle ariaLabel={t('settings.attachment.master')} value={allAttachmentsOn} onChange={handleMasterAttachmentChange} />
+                <button
+                  type="button"
+                  className="getnote-inline-disclosure"
+                  aria-expanded={attachmentDetailsOpen}
+                  aria-controls={attachmentDetailsId}
+                  onClick={() => setAttachmentDetailsOpen(prev => !prev)}
+                >
+                  {attachmentDetailsOpen ? t('settings.collapse') : t('settings.expand')}
+                </button>
+              </span>
+            </div>
+            <div id={attachmentDetailsId} className={`getnote-scheduled-options-detail getnote-attachment-options${attachmentDetailsOpen ? '' : ' getnote-hidden'}`}>
+              {attachmentKinds.map(kind => (
+                <div className="getnote-scheduled-row getnote-nested-row getnote-attachment-option" key={kind}>
+                  <span className="getnote-scheduled-row-label">{t(`settings.attachment.${kind}`)}</span>
+                  <span className="getnote-scheduled-row-control">
+                    <Toggle
+                      ariaLabel={t(`settings.attachment.${kind}`)}
+                      value={allAttachmentsOn ? attachmentImport[kind] !== false : false}
+                      disabled={!allAttachmentsOn}
+                      onChange={(value) => handleChildAttachmentChange(kind, value)}
+                    />
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </SettingItem>
+        </div>
+        </div>
+      </section>
 
-      <div className="getnote-settings-divider" />
-
-      <SettingItem
-        name={t('settings.scheduled.label')}
-        description={t('settings.scheduled.desc')}
+        );
+        const syncSettings = (
+      <section className="getnote-settings-section getnote-settings-sync" data-settings-section="sync">
+      <button
+        type="button"
+        className="getnote-section-disclosure"
+        data-sync-disclosure
+        aria-expanded={syncDetailsOpen}
+        aria-controls={syncDetailsId}
+        onClick={() => setSyncDetailsOpen(prev => !prev)}
       >
+        <span className="getnote-section-disclosure-copy">
+          <strong>{t('settings.sync.section')}</strong>
+          <small>{t('settings.sync.summary')}</small>
+        </span>
+        <span
+          className={`getnote-disclosure-caret${syncDetailsOpen ? ' is-open' : ''}`}
+          aria-hidden="true"
+        />
+      </button>
+      <div id={syncDetailsId} data-sync-settings className={syncDetailsOpen ? '' : 'getnote-hidden'}>
+
+      {/* 目标文件夹是同步的基础配置，放在首项以便首次设置。 */}
+      <SettingItem
+        name={t('settings.folder.label')}
+        description={t('settings.folder.desc')}
+      >
+        <input
+          ref={folderInputRef}
+          type="text"
+          className="getnote-input"
+          placeholder={t('settings.folder.placeholder')}
+          value={folderName}
+          onInput={(e) => handleFolderChange((e.target as HTMLInputElement).value)}
+        />
+      </SettingItem>
+
+      <div data-scheduled-settings>
+      <SettingItem name={t('settings.scheduled.label')} description={t('settings.scheduled.desc')}>
         <div className="getnote-scheduled-control">
           <div className="getnote-scheduled-row getnote-scheduled-master-row">
             <span className="getnote-scheduled-row-label">{t('settings.scheduled.enabled')}</span>
             <span className="getnote-scheduled-row-control">
               <Toggle
+                ariaLabel={t('settings.scheduled.enabled')}
                 value={scheduledEnabled}
                 onChange={handleScheduledEnabled}
               />
-              {scheduledEnabled && (
-                <button
-                  type="button"
-                  className="getnote-inline-disclosure"
-                  aria-expanded={scheduledDetailsOpen}
-                  onClick={() => setScheduledDetailsOpen(prev => !prev)}
-                >
-                  {scheduledDetailsOpen ? t('settings.collapse') : t('settings.expand')}
-                </button>
-              )}
+              <button
+                type="button"
+                className="getnote-inline-disclosure"
+                aria-expanded={scheduledDetailsOpen}
+                aria-controls={scheduledDetailsId}
+                onClick={() => setScheduledDetailsOpen(prev => !prev)}
+              >
+                {scheduledDetailsOpen ? t('settings.collapse') : t('settings.expand')}
+              </button>
             </span>
           </div>
+          <small className="getnote-setting-summary">{scheduledSummary}</small>
           <div
-            className={`getnote-scheduled-rows${scheduledEnabled && scheduledDetailsOpen ? '' : ' getnote-hidden'}`}
+            id={scheduledDetailsId}
+            className={`getnote-scheduled-rows${scheduledDetailsOpen ? '' : ' getnote-hidden'}`}
           >
             <div className="getnote-scheduled-row">
               <span className="getnote-scheduled-row-label">{t('settings.scheduled.interval')}</span>
@@ -918,6 +1176,7 @@ export function SettingsComponent({
               <span className="getnote-scheduled-row-label">{t('settings.scheduled.onStart')}</span>
               <span className="getnote-scheduled-row-control">
                 <Toggle
+                  ariaLabel={t('settings.scheduled.onStart')}
                   value={scheduledSync.syncOnStart}
                   onChange={handleScheduledOnStart}
                 />
@@ -966,13 +1225,16 @@ export function SettingsComponent({
               </span>
             </div>
             <div className="getnote-input-hint">{t('settings.scheduled.syncKnowledgeBases.hint')}</div>
+          <div className="getnote-scheduled-checkpoint" data-scheduled-checkpoint>
             <div className="getnote-scheduled-row getnote-scheduled-date-row">
               <span className="getnote-scheduled-row-label">
                 {resetDialogOpen
                   ? t('settings.scheduled.resetStartDate')
-                  : (lastSyncedTo ? t('settings.syncStartDate.lastSyncedTo') : t('settings.syncStartDate.label'))}
+                  : lastSyncedTo
+                    ? t('settings.syncStartDate.lastSyncedTo')
+                    : t('settings.syncStartDate.label')}
               </span>
-              <span className="getnote-scheduled-row-control">
+              <span className="getnote-scheduled-row-control getnote-checkpoint-control">
                 {resetDialogOpen ? (
                   <>
                     <input
@@ -981,31 +1243,17 @@ export function SettingsComponent({
                       value={pendingStartDate}
                       onChange={(e) => setPendingStartDate((e.target as HTMLInputElement).value)}
                     />
-                    <button
-                      type="button"
-                      className="getnote-button getnote-button-secondary"
-                      onClick={handleResetCancel}
-                    >
+                    <button type="button" className="getnote-button getnote-button-secondary" onClick={handleResetCancel}>
                       {t('settings.scheduled.resetCancel')}
                     </button>
-                    <button
-                      type="button"
-                      className="getnote-button getnote-button-primary"
-                      onClick={handleResetSave}
-                      disabled={isSyncing}
-                    >
+                    <button type="button" className="getnote-button getnote-button-primary" onClick={handleResetSave} disabled={isSyncing}>
                       {t('settings.scheduled.resetSave')}
                     </button>
                   </>
                 ) : lastSyncedTo ? (
                   <>
                     <span className="getnote-muted-text">{formatCheckpoint(lastSyncedTo)}</span>
-                    <button
-                      type="button"
-                      className="getnote-button getnote-button-secondary"
-                      onClick={handleResetCheckpointClick}
-                      disabled={isSyncing}
-                    >
+                    <button type="button" className="getnote-button getnote-button-secondary" onClick={handleResetCheckpointClick} disabled={isSyncing}>
                       {t('settings.scheduled.resetButton')}
                     </button>
                   </>
@@ -1019,13 +1267,14 @@ export function SettingsComponent({
                 )}
               </span>
             </div>
-            {resetDialogOpen ? (
-              <div className="getnote-input-hint">{t('settings.scheduled.resetStartDateDesc')}</div>
-            ) : lastSyncedTo ? (
-              <div className="getnote-input-hint">{t('settings.syncStartDate.lastSyncedToDesc')}</div>
-            ) : (
-              <div className="getnote-input-hint">{t('settings.syncStartDate.desc')}</div>
-            )}
+            <div className="getnote-input-hint">
+              {resetDialogOpen
+                ? t('settings.scheduled.resetStartDateDesc')
+                : lastSyncedTo
+                  ? t('settings.syncStartDate.lastSyncedToDesc')
+                  : t('settings.syncStartDate.desc')}
+            </div>
+          </div>
           </div>
           {settings.lastQuotaState?.exhausted && (
             <div className="getnote-quota-banner">
@@ -1039,39 +1288,7 @@ export function SettingsComponent({
           )}
         </div>
       </SettingItem>
-
-      <SettingItem name={t('settings.attachment.section')}>
-        <div className="getnote-scheduled-options">
-          <div className="getnote-scheduled-row getnote-attachment-master-row">
-            <span className="getnote-scheduled-row-label">{t('settings.attachment.master')}</span>
-            <span className="getnote-scheduled-row-control">
-              <Toggle value={allAttachmentsOn} onChange={handleMasterAttachmentChange} />
-              <button
-                type="button"
-                className="getnote-inline-disclosure"
-                aria-expanded={attachmentDetailsOpen}
-                onClick={() => setAttachmentDetailsOpen(prev => !prev)}
-              >
-                {attachmentDetailsOpen ? t('settings.collapse') : t('settings.expand')}
-              </button>
-            </span>
-          </div>
-          <div className={`getnote-scheduled-options-detail getnote-attachment-options${attachmentDetailsOpen ? '' : ' getnote-hidden'}`}>
-            {attachmentKinds.map(kind => (
-              <div className="getnote-scheduled-row getnote-nested-row getnote-attachment-option" key={kind}>
-                <span className="getnote-scheduled-row-label">{t(`settings.attachment.${kind}`)}</span>
-                <span className="getnote-scheduled-row-control">
-                  <Toggle
-                    value={allAttachmentsOn ? attachmentImport[kind] !== false : false}
-                    disabled={!allAttachmentsOn}
-                    onChange={(value) => handleChildAttachmentChange(kind, value)}
-                  />
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </SettingItem>
+      </div>
 
       <SettingItem name={t('settings.manualSync')}>
         <div className="getnote-manual-actions">
@@ -1090,14 +1307,16 @@ export function SettingsComponent({
               >
                 {t('settings.syncPicker.button')}
               </button>
-              {authMode === 'openapi' && (
-                <button
-                  className="mod-secondary getnote-sync-action-button"
-                  disabled={!hasCredentials || isSyncing}
-                  onClick={startSubscribedKnowledgeSync}
-                >
-                  {t('settings.subscribedKnowledge.button')}
-                </button>
+              <button
+                className="mod-secondary getnote-sync-action-button"
+                disabled={authMode !== 'openapi' || !hasCredentials || isSyncing}
+                title={authMode === 'openapi' ? undefined : t('settings.subscribedKnowledge.openApiRequired')}
+                onClick={startSubscribedKnowledgeSync}
+              >
+                {t('settings.subscribedKnowledge.button')}
+              </button>
+              {authMode !== 'openapi' && (
+                <span className="getnote-action-requirement">{t('settings.subscribedKnowledge.openApiRequired')}</span>
               )}
             </div>
           </div>
@@ -1116,21 +1335,9 @@ export function SettingsComponent({
         </div>
       </SettingItem>
 
-      {/* 同步日志 */}
-      <SettingItem name={t('syncHistory.title')}>
+      {/* 顶部状态条已展示本次状态和上次同步，这里只保留历史入口。 */}
+      <SettingItem name={t('syncHistory.title')} description={t('syncHistory.desc')}>
         <div className="getnote-sync-log-section">
-          <div className="getnote-scheduled-row">
-            <span className="getnote-scheduled-row-label">{t('settings.lastSync')}</span>
-            <span className="getnote-scheduled-row-control getnote-muted-text">
-              {formatLastSync(lastSyncTime)}
-            </span>
-          </div>
-          <div className="getnote-scheduled-row">
-            <span className="getnote-scheduled-row-label">{t('settings.syncStatus')}</span>
-            <span className={`getnote-scheduled-row-control${isSyncing ? ' getnote-accent-text' : ' getnote-muted-text'}`}>
-              {isSyncing ? t('syncHistory.status.syncing') : t('syncHistory.status.idle')}
-            </span>
-          </div>
           <button
             className="mod-secondary getnote-view-history-btn"
             onClick={() => openSyncHistoryModal(app, currentSyncHistory)}
@@ -1139,25 +1346,17 @@ export function SettingsComponent({
           </button>
         </div>
       </SettingItem>
+      </div>
+      </section>
 
-      {/* 同步进度条 */}
-      {isSyncing && (
-        <div className="getnote-settings-sync-status">
-          <div className="getnote-settings-sync-status-header">
-            <span className="getnote-mono-text">{syncProgress?.message || t('sync.syncing')}</span>
-            <button className="mod-warning getnote-settings-cancel-button" onClick={cancelSync}>
-              {t('modal.cancel')}
-            </button>
-          </div>
-          <div className="getnote-settings-progress-line">
-            <span className="getnote-accent-text">{renderProgressBar(syncProgress?.percent ?? 0)}</span>
-            <span className="getnote-settings-progress-percent">{syncProgress?.percent ?? 0}%</span>
-          </div>
-          {syncProgress?.count && (
-            <div className="getnote-settings-progress-count">{syncProgress.count}</div>
-          )}
-        </div>
-      )}
+        );
+        return (
+          <>
+            {syncSettings}
+            {advancedSettings}
+          </>
+        );
+      })()}
 
     </div>
   );

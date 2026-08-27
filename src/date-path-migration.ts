@@ -7,6 +7,10 @@ export interface DatePathMigrationTarget {
   format: string;
 }
 
+export interface DatePathMigrationOptions {
+  rebuildCategories?: boolean;
+}
+
 export interface DatePathCategoryOrigin {
   path: string;
   category: string;
@@ -22,6 +26,10 @@ export interface DatePathMigrationContext {
   source: DatePathMigrationTarget;
   categoryOrigins: Record<string, DatePathCategoryOrigin>;
   assetMoveEvidence: Record<string, DatePathAssetMoveEvidence>;
+  /** Ignore historical folders and derive the canonical category from note_type. */
+  rebuildCategories?: boolean;
+  /** Build the complete migration plan without persisting settings or renaming files. */
+  dryRun?: boolean;
   beforeExecute: (
     categoryOrigins: Record<string, DatePathCategoryOrigin>,
     assetMoveEvidence: Record<string, DatePathAssetMoveEvidence>,
@@ -48,6 +56,7 @@ export interface DatePathMigrationIssue {
 
 export interface DatePathMigrationResult {
   scanned: number;
+  planned?: number;
   moved: number;
   unchanged: number;
   skipped: number;
@@ -55,7 +64,7 @@ export interface DatePathMigrationResult {
   issues: DatePathMigrationIssue[];
 }
 
-type MigrationApp = Pick<App, 'vault' | 'metadataCache'>;
+type MigrationApp = Pick<App, 'vault' | 'metadataCache' | 'fileManager'>;
 
 interface PlannedMove {
   file: TFile;
@@ -65,8 +74,11 @@ interface PlannedMove {
 
 interface NoteCandidate {
   file: TFile;
+  links: LinkResolution[];
   pluginOwned: boolean;
   uid?: string;
+  category?: string;
+  modified?: string;
   targetPath?: string;
   assets: PlannedMove[];
   assetClaims: Set<string>;
@@ -89,28 +101,6 @@ function basename(path: string): string {
   return separator < 0 ? path : path.slice(separator + 1);
 }
 
-function normalizeVaultPath(path: string): string | null {
-  const segments: string[] = [];
-  for (const segment of path.split('/')) {
-    if (!segment || segment === '.') continue;
-    if (segment === '..') {
-      if (segments.length === 0) return null;
-      segments.pop();
-      continue;
-    }
-    segments.push(segment);
-  }
-  return segments.join('/');
-}
-
-function pathMatchesFile(path: string | null, filePath: string): boolean {
-  return path === filePath || (
-    Boolean(path)
-    && !basename(path as string).includes('.')
-    && `${path}.md` === filePath
-  );
-}
-
 function isSafeSegment(segment: string): boolean {
   return Boolean(segment)
     && segment !== '.'
@@ -119,7 +109,9 @@ function isSafeSegment(segment: string): boolean {
 }
 
 function isInsideRoot(path: string, rootFolder: string): boolean {
-  return path.startsWith(`${rootFolder}/`) && !path.includes('/asset/');
+  return path.startsWith(`${rootFolder}/`)
+    && !path.includes('/asset/')
+    && !path.startsWith(`${rootFolder}/重复冲突/`);
 }
 
 function readRequiredString(
@@ -128,6 +120,14 @@ function readRequiredString(
 ): string | null {
   const value = frontmatter?.[key];
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+async function readLegacyNumericUid(app: MigrationApp, file: TFile): Promise<string | null> {
+  const content = await app.vault.read(file);
+  const frontmatter = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  if (!frontmatter) return null;
+  const uid = frontmatter[1].match(/^\s*uid\s*:\s*([0-9]+)\s*$/m)?.[1];
+  return uid || null;
 }
 
 function existingCategoryDir(
@@ -167,6 +167,14 @@ function desiredNotePath(
     ? buildCanonicalCategoryDir(rootFolder, categoryDir, created, target.format)
     : `${rootFolder}/${categoryDir}`;
   return `${desiredDir}/${basename(file.path)}`;
+}
+
+function desiredConflictPath(file: TFile, rootFolder: string, uid: string): string {
+  const relativeDir = dirname(file.path).slice(rootFolder.length + 1);
+  if (!uid || !isSafeSegment(uid) || !relativeDir.split('/').every(isSafeSegment)) {
+    throw new Error('Unsafe duplicate conflict path');
+  }
+  return `${rootFolder}/重复冲突/${uid}/${relativeDir}/${basename(file.path)}`;
 }
 
 function referencedLinks(cache: CachedMetadata): string[] {
@@ -228,6 +236,30 @@ interface LinkResolution {
   resolved: TFile | null;
 }
 
+function fileAtPath(app: MigrationApp, path: string): TFile | null {
+  const candidate = app.vault.getAbstractFileByPath(path);
+  return candidate
+    && typeof candidate === 'object'
+    && 'path' in candidate
+    && 'extension' in candidate
+    ? candidate as TFile
+    : null;
+}
+
+function sourceAssetForLink(app: MigrationApp, file: TFile, link: string): TFile | null {
+  if (!GENERATED_ASSET_PATTERN.test(link)) return null;
+  const linkPath = link.split('#', 1)[0].replace(/^\.\//, '');
+  if (!linkPath || !linkPath.split('/').every(isSafeSegment)) return null;
+  for (const candidatePath of [
+    `${dirname(file.path)}/${linkPath}`,
+    `${dirname(file.path)}/${linkPath}.md`,
+  ]) {
+    const candidate = fileAtPath(app, candidatePath);
+    if (candidate) return candidate;
+  }
+  return null;
+}
+
 function resolveLinks(
   app: MigrationApp,
   file: TFile,
@@ -235,7 +267,8 @@ function resolveLinks(
 ): LinkResolution[] {
   return referencedLinks(cache).map(link => ({
     link,
-    resolved: app.metadataCache.getFirstLinkpathDest(link, file.path),
+    resolved: app.metadataCache.getFirstLinkpathDest(link, file.path)
+      ?? sourceAssetForLink(app, file, link),
   }));
 }
 
@@ -249,21 +282,62 @@ function targetAssetForLink(
   if (!name || !isSafeSegment(name)) return null;
   const targetAssetDir = `${dirname(targetPath)}/asset`;
   for (const candidatePath of [`${targetAssetDir}/${name}`, `${targetAssetDir}/${name}.md`]) {
-    const candidate = app.vault.getAbstractFileByPath(candidatePath);
-    if (
-      candidate
-      && typeof candidate === 'object'
-      && 'path' in candidate
-      && 'extension' in candidate
-    ) {
-      return candidate as TFile;
-    }
+    const candidate = fileAtPath(app, candidatePath);
+    if (candidate) return candidate;
   }
   return null;
 }
 
+function uidSuffixedAssetForLink(
+  app: MigrationApp,
+  rootFolder: string,
+  uid: string,
+  link: string,
+): TFile | null {
+  const linkPath = link.split('#', 1)[0].replace(/^\.\//, '');
+  const name = basename(linkPath);
+  const suffixStart = name.lastIndexOf('_');
+  if (!name || suffixStart < 1 || !isSafeSegment(uid)) return null;
+  const suffix = name.slice(suffixStart);
+  const suffixMatch = suffix.match(/^_(audio|transcript)(?:\.([^.]+))?$/i);
+  if (!suffixMatch) return null;
+  const suffixes = suffixMatch[2]
+    ? [suffix]
+    : suffixMatch[1].toLowerCase() === 'audio'
+      ? [suffix, `${suffix}.mp3`]
+      : [suffix, `${suffix}.md`];
+
+  const matches = app.vault.getFiles().filter(file => (
+    file.path.startsWith(`${rootFolder}/`)
+    && file.path.includes('/asset/')
+    && suffixes.some(candidateSuffix => file.name.endsWith(`_${uid}${candidateSuffix}`))
+  ));
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function uniquelyNamedAssetForLink(
+  app: MigrationApp,
+  rootFolder: string,
+  targetPath: string,
+  link: string,
+): TFile | null {
+  if (!GENERATED_ASSET_PATTERN.test(link)) return null;
+  const linkPath = link.split('#', 1)[0].replace(/^\.\//, '');
+  const name = basename(linkPath);
+  if (!name || !isSafeSegment(name)) return null;
+  const matches = app.vault.getFiles().filter(file => (
+    file.path.startsWith(`${rootFolder}/`)
+    && file.path.includes('/asset/')
+    && !file.path.startsWith(`${rootFolder}/重复冲突/`)
+    && file.path !== `${dirname(targetPath)}/asset/${name}`
+    && file.name === name
+  ));
+  return matches.length === 1 ? matches[0] : null;
+}
+
 function planCandidateAssets(
   app: MigrationApp,
+  rootFolder: string,
   candidate: NoteCandidate,
   links: LinkResolution[],
   result: DatePathMigrationResult,
@@ -280,6 +354,32 @@ function planCandidateAssets(
       assets.set(targetAssetPath, {
         file: resolved,
         sourcePath: resolved.path,
+        targetPath: targetAssetPath,
+      });
+      continue;
+    }
+
+    const nameRecovered = uniquelyNamedAssetForLink(app, rootFolder, targetPath, link);
+    if (nameRecovered) {
+      const targetAssetPath = `${dirname(targetPath)}/asset/${basename(nameRecovered.path)}`;
+      candidate.assetClaims.add(nameRecovered.path);
+      assets.set(targetAssetPath, {
+        file: nameRecovered,
+        sourcePath: nameRecovered.path,
+        targetPath: targetAssetPath,
+      });
+      continue;
+    }
+
+    const uidRecovered = candidate.uid
+      ? uidSuffixedAssetForLink(app, rootFolder, candidate.uid, link)
+      : null;
+    if (uidRecovered) {
+      const targetAssetPath = `${dirname(targetPath)}/asset/${basename(uidRecovered.path)}`;
+      candidate.assetClaims.add(uidRecovered.path);
+      assets.set(targetAssetPath, {
+        file: uidRecovered,
+        sourcePath: uidRecovered.path,
         targetPath: targetAssetPath,
       });
       continue;
@@ -339,10 +439,81 @@ async function ensureFolder(app: MigrationApp, folderPath: string): Promise<void
   }
 }
 
+async function removeEmptySubfolders(app: MigrationApp, rootFolder: string): Promise<void> {
+  const folders = app.vault.getAllFolders()
+    .filter(folder => folder.path.startsWith(`${rootFolder}/`))
+    .sort((left, right) => right.path.split('/').length - left.path.split('/').length);
+  for (const folder of folders) {
+    const hasFiles = app.vault.getFiles().some(file => file.path.startsWith(`${folder.path}/`));
+    const hasFolders = app.vault.getAllFolders().some(other => (
+      other.path !== folder.path && other.path.startsWith(`${folder.path}/`)
+    ));
+    if (!hasFiles && !hasFolders) await app.vault.delete(folder, true);
+  }
+}
+
+function unclaimedAssetPlans(
+  app: MigrationApp,
+  rootFolder: string,
+  candidates: NoteCandidate[],
+  result: DatePathMigrationResult,
+): PlannedMove[] {
+  const claimedPaths = new Set<string>();
+  for (const candidate of candidates) {
+    for (const path of candidate.assetClaims) claimedPaths.add(path);
+    for (const asset of candidate.assets) {
+      claimedPaths.add(asset.sourcePath);
+      claimedPaths.add(asset.targetPath);
+    }
+  }
+
+  const archiveRoot = `${rootFolder}/未归属附件/`;
+  const plans: PlannedMove[] = [];
+  for (const file of app.vault.getFiles()) {
+    if (
+      !file.path.startsWith(`${rootFolder}/`)
+      || !file.path.includes('/asset/')
+      || file.path.startsWith(`${rootFolder}/重复冲突/`)
+      || file.path.startsWith(archiveRoot)
+      || claimedPaths.has(file.path)
+    ) continue;
+
+    const relativeDir = dirname(file.path).slice(rootFolder.length + 1);
+    if (!relativeDir || !relativeDir.split('/').every(isSafeSegment)) continue;
+    const targetPath = `${archiveRoot}${relativeDir}/${basename(file.path)}`;
+    if (app.vault.getAbstractFileByPath(targetPath)) {
+      issue(result, 'target-conflict', targetPath, `Unclaimed asset archive target already exists: ${targetPath}`);
+      continue;
+    }
+    plans.push({ file, sourcePath: file.path, targetPath });
+  }
+  return plans.sort((left, right) => left.sourcePath.localeCompare(right.sourcePath));
+}
+
+async function executeUnclaimedAssetPlan(
+  app: MigrationApp,
+  plan: PlannedMove,
+  result: DatePathMigrationResult,
+): Promise<void> {
+  try {
+    await ensureFolder(app, dirname(plan.targetPath));
+    await app.fileManager.renameFile(plan.file, plan.targetPath);
+  } catch (error) {
+    result.failed++;
+    issue(
+      result,
+      'rename-failed',
+      plan.sourcePath,
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+}
+
 function preflightPlans(
   app: MigrationApp,
   candidates: NoteCandidate[],
   result: DatePathMigrationResult,
+  context: DatePathMigrationContext,
 ): void {
   const uidOwners = new Map<string, Set<NoteCandidate>>();
   const assetOwners = new Map<string, Set<NoteCandidate>>();
@@ -385,6 +556,7 @@ function preflightPlans(
 
   for (const [uid, owners] of uidOwners) {
     if (owners.size < 2) continue;
+    if (context.rebuildCategories) continue;
     for (const owner of owners) {
       block(owner, result, 'duplicate-uid', owner.file.path, `UID appears in multiple notes: ${uid}`);
     }
@@ -407,103 +579,55 @@ function preflightPlans(
   }
 }
 
-function hasPlannedMove(candidate: NoteCandidate): boolean {
-  return Boolean(
-    candidate.targetPath
-    && (
-      candidate.file.path !== candidate.targetPath
-      || candidate.assets.some(asset => asset.sourcePath !== asset.targetPath)
-    )
-  );
+function modifiedTimestamp(value: string | undefined): number {
+  const timestamp = value ? Date.parse(value) : Number.NaN;
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
-function preflightInboundLinks(
+async function resolveDuplicateUids(
   app: MigrationApp,
-  allMarkdownFiles: TFile[],
+  rootFolder: string,
   candidates: NoteCandidate[],
   result: DatePathMigrationResult,
-): void {
-  const noteOwners = new Map(candidates.map(candidate => [candidate.file.path, candidate]));
-  const moveOwners = new Map<string, { owner: NoteCandidate; targetPath: string }>();
+  context: DatePathMigrationContext,
+): Promise<void> {
+  if (!context.rebuildCategories) return;
+  const byUid = new Map<string, NoteCandidate[]>();
   for (const candidate of candidates) {
-    if (!candidate.pluginOwned || !hasPlannedMove(candidate)) continue;
-    if (candidate.targetPath && candidate.file.path !== candidate.targetPath) {
-      moveOwners.set(candidate.file.path, { owner: candidate, targetPath: candidate.targetPath });
-    }
-    for (const asset of candidate.assets) {
-      if (asset.sourcePath !== asset.targetPath) {
-        moveOwners.set(asset.sourcePath, { owner: candidate, targetPath: asset.targetPath });
-      }
-    }
+    if (!candidate.pluginOwned || candidate.skipped || !candidate.uid) continue;
+    const group = byUid.get(candidate.uid) ?? [];
+    group.push(candidate);
+    byUid.set(candidate.uid, group);
   }
 
-  const futurePath = (path: string): string => {
-    const move = moveOwners.get(path);
-    return move && !move.owner.blocked ? move.targetPath : path;
-  };
-  const remainsResolved = (
-    link: string,
-    sourceBefore: string,
-    sourceAfter: string,
-    targetBefore: string,
-    targetAfter: string,
-  ): boolean => {
-    const linkPath = link.split('#', 1)[0].trim();
-    if (!linkPath) return true;
-    const relativeBefore = normalizeVaultPath(`${dirname(sourceBefore)}/${linkPath}`);
-    if (pathMatchesFile(relativeBefore, targetBefore)) {
-      return pathMatchesFile(
-        normalizeVaultPath(`${dirname(sourceAfter)}/${linkPath}`),
-        targetAfter,
-      );
-    }
-    const rootBefore = normalizeVaultPath(linkPath.replace(/^\/+/, ''));
-    if (pathMatchesFile(rootBefore, targetBefore)) {
-      return pathMatchesFile(rootBefore, targetAfter);
-    }
-    // A basename-only Obsidian link cannot be proven stable when either side
-    // moves because source proximity can change which duplicate is selected.
-    return sourceBefore === sourceAfter && targetBefore === targetAfter;
-  };
-
-  const reported = new Set<string>();
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const sourceFile of allMarkdownFiles) {
-      const cache = app.metadataCache.getFileCache(sourceFile);
-      for (const { link, resolved } of resolveLinks(app, sourceFile, cache ?? {})) {
-        if (!resolved) continue;
-        const sourceOwner = noteOwners.get(sourceFile.path);
-        const targetMove = moveOwners.get(resolved.path);
-        const sourceMoves = Boolean(sourceOwner?.pluginOwned && !sourceOwner.blocked
-          && futurePath(sourceFile.path) !== sourceFile.path);
-        const targetMoves = Boolean(targetMove && !targetMove.owner.blocked);
-        if (!sourceMoves && !targetMoves) continue;
-
-        const sourceAfter = futurePath(sourceFile.path);
-        const targetAfter = futurePath(resolved.path);
-        if (remainsResolved(link, sourceFile.path, sourceAfter, resolved.path, targetAfter)) {
-          continue;
-        }
-
-        const relation = `${sourceFile.path}\0${resolved.path}\0${link}`;
-        if (reported.has(relation)) continue;
-        reported.add(relation);
-        const owners = new Set<NoteCandidate>();
-        if (sourceMoves && sourceOwner) owners.add(sourceOwner);
-        if (targetMoves && targetMove) owners.add(targetMove.owner);
-        for (const owner of owners) {
-          if (owner.blocked) continue;
-          block(
-            owner,
-            result,
-            'inbound-link',
-            owner.file.path,
-            `Link would resolve differently after migration (${sourceFile.path}): ${link}`,
-          );
-          changed = true;
-        }
+  for (const [uid, group] of byUid) {
+    if (group.length < 2) continue;
+    const contentLengths = new Map<NoteCandidate, number>();
+    await Promise.all(group.map(async candidate => {
+      contentLengths.set(candidate, (await app.vault.read(candidate.file)).length);
+    }));
+    group.sort((left, right) => (
+      modifiedTimestamp(right.modified) - modifiedTimestamp(left.modified)
+      || (contentLengths.get(right) ?? 0) - (contentLengths.get(left) ?? 0)
+      || left.file.path.localeCompare(right.file.path)
+    ));
+    const keeperAssetPaths = new Set(group[0].assets.map(asset => asset.sourcePath));
+    for (const candidate of group.slice(1)) {
+      try {
+        candidate.targetPath = desiredConflictPath(candidate.file, rootFolder, uid);
+        candidate.assets = [];
+        candidate.assetClaims.clear();
+        planCandidateAssets(app, rootFolder, candidate, candidate.links, result, context.assetMoveEvidence);
+        candidate.assets = candidate.assets.filter(asset => !keeperAssetPaths.has(asset.sourcePath));
+        for (const assetPath of keeperAssetPaths) candidate.assetClaims.delete(assetPath);
+      } catch (error) {
+        skipCandidate(
+          candidate,
+          result,
+          'unsafe-path',
+          candidate.file.path,
+          error instanceof Error ? error.message : String(error),
+        );
       }
     }
   }
@@ -532,7 +656,7 @@ async function executePlan(
       await ensureFolder(app, `${dirname(plan.targetPath)}/asset`);
     }
     for (const move of moves) {
-      await app.vault.rename(move.file, move.targetPath);
+      await app.fileManager.renameFile(move.file, move.targetPath);
       completed.push(move);
     }
     result.moved++;
@@ -547,7 +671,7 @@ async function executePlan(
     );
     for (const move of completed.reverse()) {
       try {
-        await app.vault.rename(move.file, move.sourcePath);
+        await app.fileManager.renameFile(move.file, move.sourcePath);
       } catch (rollbackError) {
         issue(
           result,
@@ -573,6 +697,7 @@ export async function migrateDatePaths(
 ): Promise<DatePathMigrationResult> {
   const result: DatePathMigrationResult = {
     scanned: 0,
+    planned: 0,
     moved: 0,
     unchanged: 0,
     skipped: 0,
@@ -595,6 +720,7 @@ export async function migrateDatePaths(
     const links = resolveLinks(app, file, cache ?? {});
     const candidate: NoteCandidate = {
       file,
+      links,
       pluginOwned: false,
       assets: [],
       assetClaims: new Set(
@@ -615,10 +741,17 @@ export async function migrateDatePaths(
     candidate.pluginOwned = true;
     result.scanned++;
 
-    const uid = readRequiredString(cache?.frontmatter, 'uid');
+    let uid = readRequiredString(cache?.frontmatter, 'uid');
+    if (!uid && typeof cache?.frontmatter?.uid === 'number') {
+      uid = await readLegacyNumericUid(app, file);
+    }
     const created = readRequiredString(cache?.frontmatter, 'created');
     const noteType = readRequiredString(cache?.frontmatter, 'note_type');
+    const modified = typeof cache?.frontmatter?.modified === 'string'
+      ? cache.frontmatter.modified.trim()
+      : undefined;
     if (uid) candidate.uid = uid;
+    candidate.modified = modified;
 
     if (!uid || !created || !noteType) {
       skipCandidate(
@@ -632,10 +765,12 @@ export async function migrateDatePaths(
     }
 
     try {
-      const category = existingCategoryDir(file.path, root, created, uid, context)
-        ?? getCategoryDir(noteType);
+      const category = context.rebuildCategories
+        ? getCategoryDir(noteType)
+        : existingCategoryDir(file.path, root, created, uid, context)
+          ?? getCategoryDir(noteType);
+      candidate.category = category;
       candidate.targetPath = desiredNotePath(file, root, created, category, target);
-      nextCategoryOrigins[uid] = { path: file.path, category };
     } catch (error) {
       skipCandidate(
         candidate,
@@ -647,11 +782,31 @@ export async function migrateDatePaths(
       continue;
     }
 
-    planCandidateAssets(app, candidate, links, result, context.assetMoveEvidence);
+    planCandidateAssets(app, root, candidate, links, result, context.assetMoveEvidence);
   }
 
-  preflightPlans(app, candidates, result);
-  preflightInboundLinks(app, allMarkdownFiles, candidates, result);
+  await resolveDuplicateUids(app, root, candidates, result, context);
+  for (const candidate of candidates) {
+    if (candidate.pluginOwned && !candidate.skipped && candidate.uid && candidate.category) {
+      nextCategoryOrigins[candidate.uid] = { path: candidate.file.path, category: candidate.category };
+    }
+  }
+  preflightPlans(app, candidates, result, context);
+  const unclaimedAssets = context.rebuildCategories
+    ? unclaimedAssetPlans(app, root, candidates, result)
+    : [];
+  result.planned = candidates.filter(candidate => (
+    candidate.pluginOwned
+    && !candidate.skipped
+    && !candidate.blocked
+    && Boolean(candidate.uid)
+    && Boolean(candidate.targetPath)
+    && (candidate.file.path !== candidate.targetPath
+      || candidate.assets.some(asset => asset.sourcePath !== asset.targetPath))
+  )).length;
+
+  if (context.dryRun) return result;
+
   const nextAssetMoveEvidence = { ...context.assetMoveEvidence };
   for (const candidate of candidates) {
     if (!candidate.pluginOwned || candidate.skipped || candidate.blocked || !candidate.uid) continue;
@@ -678,6 +833,12 @@ export async function migrateDatePaths(
         result,
       );
     }
+  }
+  for (const asset of unclaimedAssets) {
+    await executeUnclaimedAssetPlan(app, asset, result);
+  }
+  if (context.rebuildCategories && result.failed === 0) {
+    await removeEmptySubfolders(app, root);
   }
   return result;
 }

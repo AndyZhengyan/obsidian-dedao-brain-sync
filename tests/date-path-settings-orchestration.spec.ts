@@ -24,6 +24,31 @@ function makePlugin(): GetNoteSyncPlugin {
 describe('date-path settings orchestration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(migrateDatePaths).mockReset();
+  });
+
+  it('returns a non-mutating preflight summary before the user confirms a migration', async () => {
+    const plugin = makePlugin();
+    const save = vi.spyOn(plugin, 'saveSettings').mockResolvedValue();
+    vi.mocked(migrateDatePaths).mockResolvedValueOnce({
+      scanned: 4, moved: 0, unchanged: 1, skipped: 2, failed: 0, planned: 1,
+      issues: [
+        { code: 'target-conflict', path: 'conflict.md', message: 'Target exists' },
+        { code: 'invalid-metadata', path: 'legacy.md', message: 'Legacy UID is numeric' },
+      ],
+    });
+
+    const result = await plugin.previewDatePathSettings({ enabled: true, format: 'YYYY/MM' });
+
+    expect(result).toMatchObject({ scanned: 4, planned: 1, skipped: 2 });
+    expect(save).not.toHaveBeenCalled();
+    expect(plugin.settings.datePathEnabled).toBe(false);
+    expect(migrateDatePaths).toHaveBeenCalledWith(
+      plugin.app,
+      '得到大脑',
+      { enabled: true, format: 'YYYY/MM' },
+      expect.objectContaining({ dryRun: true }),
+    );
   });
 
   it('persists desired settings and category origins before executing file moves', async () => {
@@ -74,9 +99,14 @@ describe('date-path settings orchestration', () => {
         targetPath: '得到大脑/2026/07/项目/asset/图.png',
       },
     });
-    expect(save).toHaveBeenCalledOnce();
-    expect(order).toEqual(['plan', 'save', 'execute']);
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(order).toEqual(['plan', 'save', 'execute', 'save']);
     expect(result.skipped).toBe(1);
+    expect(plugin.syncHistory.at(-1)).toMatchObject({
+      mode: 'date-path',
+      result: expect.objectContaining({ skipped: 1 }),
+    });
+    expect(plugin.lastSyncResult).toBeNull();
   });
 
   it('restores in-memory settings and executes no file moves when the initial save fails', async () => {
@@ -139,7 +169,7 @@ describe('date-path settings orchestration', () => {
     expect(sync).not.toHaveBeenCalled();
     finish({ scanned: 0, moved: 0, unchanged: 0, skipped: 0, failed: 0, issues: [] });
     await first;
-    expect(save).toHaveBeenCalledOnce();
+    expect(save).toHaveBeenCalledTimes(2);
   });
 
   it('refuses migration while sync is active', async () => {

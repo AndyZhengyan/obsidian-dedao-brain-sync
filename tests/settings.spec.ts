@@ -36,10 +36,19 @@ function renderSettings(
   openLocalUpload = vi.fn(),
   options: {
     isSyncing?: boolean;
-    syncProgress?: { message: string; count: string; percent: number };
+    syncProgress?: { message: string; count: string; percent?: number; phase?: 'active' | 'success' | 'failed' | 'cancelled' };
     startSubscribedKnowledgeSync?: () => void;
     initialKnowledgeBaseCache?: { entries: Array<{ topicId: string; name: string }>; cacheUpdatedAt?: number };
     app?: App;
+    previewDatePathSettings?: (target: { enabled: boolean; format: string }) => Promise<{
+      scanned: number;
+      planned?: number;
+      moved: number;
+      unchanged: number;
+      skipped: number;
+      failed: number;
+      issues: Array<{ code: string; path: string; message: string }>;
+    }>;
     applyDatePathSettings?: (target: { enabled: boolean; format: string }) => Promise<{
       scanned: number;
       moved: number;
@@ -53,6 +62,9 @@ function renderSettings(
       current: { enabled: boolean; format: string };
       target: { enabled: boolean; format: string };
     }) => Promise<boolean>;
+    desktopWebAuthAvailable?: boolean;
+    startDesktopWebAuth?: () => Promise<string>;
+    clearDesktopWebAuth?: () => Promise<void>;
   } = {}
 ) {
   const container = document.createElement('div');
@@ -73,7 +85,11 @@ function renderSettings(
       syncProgress: options.syncProgress,
       initialKnowledgeBaseCache: options.initialKnowledgeBaseCache,
       applyDatePathSettings: options.applyDatePathSettings,
+      previewDatePathSettings: options.previewDatePathSettings,
       confirmDatePathMigration: options.confirmDatePathMigration,
+      desktopWebAuthAvailable: options.desktopWebAuthAvailable,
+      startDesktopWebAuth: options.startDesktopWebAuth,
+      clearDesktopWebAuth: options.clearDesktopWebAuth,
     }),
     container
   );
@@ -159,6 +175,255 @@ afterEach(() => {
   delete (window as Window & { require?: unknown }).require;
 });
 
+describe('SettingsComponent information architecture (#257)', () => {
+  it('labels scheduled sync as one-way and manual sync as two-way', () => {
+    const { container } = renderSettings(makeSettings());
+
+    expect(container.textContent).toContain('定时自动同步（单向：得到 → OB）');
+    expect(container.textContent).toContain('手动同步（双向：得到 ↔ OB）');
+  });
+
+  it('groups automatic sync, manual sync, and history before the final advanced settings section', async () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'token',
+      openApiClientId: 'client-id',
+      scheduledSync: {
+        ...DEFAULT_SETTINGS.scheduledSync,
+        enabled: true,
+        intervalMinutes: 30,
+        syncOnStart: true,
+      },
+    }));
+
+    const status = container.querySelector<HTMLElement>('[data-settings-status]');
+    expect(status).toBeTruthy();
+    expect(status!.textContent).toContain('OpenAPI');
+    expect(status!.textContent).toContain('当前状态');
+    expect(status!.textContent).not.toContain('按时间同步');
+
+    const sections = Array.from(container.querySelectorAll<HTMLElement>('[data-settings-section]'))
+      .map(section => section.dataset.settingsSection);
+    expect(sections).toEqual(['sync', 'advanced']);
+
+    const syncSection = container.querySelector('[data-settings-section="sync"]')!;
+    const syncDisclosure = container.querySelector<HTMLButtonElement>('[data-sync-disclosure]')!;
+    const syncDetails = container.querySelector<HTMLElement>('[data-sync-settings]')!;
+    const scheduled = container.querySelector('[data-scheduled-settings]')!;
+    const advanced = container.querySelector('[data-settings-section="advanced"]')!;
+    expect(syncSection.contains(scheduled)).toBe(true);
+    expect(syncDisclosure.getAttribute('aria-expanded')).toBe('true');
+    expect(syncDisclosure.getAttribute('aria-controls')).toBe(syncDetails.id);
+    expect(syncDetails.classList.contains('getnote-hidden')).toBe(false);
+    expect(syncSection.textContent!.indexOf('目标文件夹')).toBeLessThan(syncSection.textContent!.indexOf('定时自动同步'));
+    expect(syncSection.textContent).toContain('手动同步');
+    expect(syncSection.textContent).toContain('同步日志');
+    expect(syncSection.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await act(() => {
+      syncDisclosure.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(syncDisclosure.getAttribute('aria-expanded')).toBe('false');
+    expect(syncDetails.classList.contains('getnote-hidden')).toBe(true);
+  });
+
+  it('keeps low-frequency settings behind one accessible advanced disclosure', async () => {
+    const { container } = renderSettings(makeSettings({
+      lastSyncEndTimestamp: '2026-06-12T15:30:00Z',
+    }));
+    const disclosure = container.querySelector<HTMLButtonElement>('[data-advanced-disclosure]');
+    const details = container.querySelector<HTMLElement>('[data-advanced-settings]');
+
+    expect(disclosure).toBeTruthy();
+    expect(details).toBeTruthy();
+    expect(disclosure!.getAttribute('aria-controls')).toBe(details!.id);
+    expect(disclosure!.getAttribute('aria-expanded')).toBe('false');
+    expect(details!.classList.contains('getnote-hidden')).toBe(true);
+    expect(details!.textContent).toContain('文件名前缀');
+    expect(details!.textContent).toContain('按创建日期整理路径');
+    expect(details!.textContent).toContain('模板文件路径');
+    expect(details!.textContent).toContain('侧栏入口');
+    expect(details!.textContent).not.toContain('上次同步断点');
+    expect(details!.textContent).toContain('附件下载配置');
+    expect(details!.querySelector('[data-attachment-settings]')).toBeTruthy();
+
+    await act(() => {
+      disclosure!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(disclosure!.getAttribute('aria-expanded')).toBe('true');
+    expect(details!.classList.contains('getnote-hidden')).toBe(false);
+  });
+
+  it('turns the advanced-settings caret upward when the section expands', async () => {
+    const { container } = renderSettings(makeSettings());
+    const disclosure = container.querySelector<HTMLButtonElement>('[data-advanced-disclosure]')!;
+    const caret = disclosure.querySelector<HTMLElement>('.getnote-disclosure-caret')!;
+
+    expect(caret.classList.contains('is-open')).toBe(false);
+    expect(caret.textContent).toBe('');
+
+    await act(() => {
+      disclosure.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(disclosure.getAttribute('aria-expanded')).toBe('true');
+    expect(caret.classList.contains('is-open')).toBe(true);
+  });
+
+  it('keeps the initial sync date inside expandable scheduled details while scheduled sync is disabled', async () => {
+    const { container, updateSetting } = renderSettings(makeSettings({
+      syncStartDate: '2026-01-01',
+      lastSyncEndTimestamp: '',
+    }));
+    const scheduledDetails = container.querySelector<HTMLElement>('#getnote-scheduled-details');
+    const checkpoint = container.querySelector<HTMLElement>('[data-scheduled-checkpoint]');
+    const disclosure = container.querySelector<HTMLButtonElement>('.getnote-scheduled-master-row .getnote-inline-disclosure');
+
+    expect(scheduledDetails?.classList.contains('getnote-hidden')).toBe(true);
+    expect(checkpoint).toBeTruthy();
+    expect(scheduledDetails?.contains(checkpoint!)).toBe(true);
+    expect(disclosure).toBeTruthy();
+
+    await act(() => disclosure!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+
+    const dateInput = checkpoint?.querySelector<HTMLInputElement>('input[type="date"]');
+    expect(scheduledDetails?.classList.contains('getnote-hidden')).toBe(false);
+    expect(checkpoint?.textContent).toContain('同步起始日期');
+    expect(dateInput?.value).toBe('2026-01-01');
+
+    await act(() => {
+      dateInput!.value = '2025-08-01';
+      dateInput!.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('syncStartDate', '2025-08-01');
+  });
+
+  it('keeps the last sync checkpoint in the scheduled-sync section', () => {
+    const { container } = renderSettings(makeSettings({
+      lastSyncEndTimestamp: '2026-06-12T15:30:00Z',
+    }));
+
+    const syncSection = container.querySelector<HTMLElement>('[data-settings-section="sync"]');
+    const scheduledDetails = container.querySelector<HTMLElement>('#getnote-scheduled-details');
+    const advancedDetails = container.querySelector<HTMLElement>('[data-advanced-settings]');
+    const checkpoint = container.querySelector<HTMLElement>('[data-scheduled-checkpoint]');
+
+    expect(syncSection?.contains(checkpoint!)).toBe(true);
+    expect(checkpoint?.textContent).toContain('上次同步断点');
+    expect(scheduledDetails?.contains(checkpoint!)).toBe(true);
+    expect(advancedDetails?.textContent).not.toContain('上次同步断点');
+  });
+
+  it('keeps connection-test feedback visible while credentials stay collapsed', async () => {
+    vi.mocked(fetchNotes).mockResolvedValue({ notes: [], hasMore: false });
+    const { container } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'token',
+      openApiClientId: 'client-id',
+    }));
+
+    await act(async () => {
+      getTestConnectionButton(container).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(container.querySelector('[data-credential-details]')?.classList.contains('getnote-hidden')).toBe(true);
+    expect(container.querySelector('[data-settings-status]')?.textContent).toContain('连接成功');
+  });
+
+  it('keeps the scheduled disclosure available when scheduled sync is disabled', async () => {
+    const { container } = renderSettings(makeSettings({
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
+    }));
+    const disclosure = container.querySelector<HTMLButtonElement>('.getnote-scheduled-master-row .getnote-inline-disclosure')!;
+    const details = container.querySelector<HTMLElement>('#getnote-scheduled-details')!;
+
+    await act(() => disclosure.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(details.classList.contains('getnote-hidden')).toBe(false);
+
+    const enabledToggle = container.querySelector<HTMLInputElement>('input[aria-label="启用定时同步"]')!;
+    await act(() => enabledToggle.closest('.checkbox-container')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true })));
+
+    const retainedDisclosure = container.querySelector<HTMLButtonElement>('.getnote-scheduled-master-row .getnote-inline-disclosure');
+    expect(container.querySelector('#getnote-scheduled-details')?.classList.contains('getnote-hidden')).toBe(true);
+    expect(retainedDisclosure).not.toBeNull();
+
+    await act(() => retainedDisclosure!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(container.querySelector('#getnote-scheduled-details')?.classList.contains('getnote-hidden')).toBe(false);
+  });
+
+  it('shows collapsed summaries and accessible names for setting toggles', () => {
+    const { container } = renderSettings(makeSettings({
+      scheduledSync: {
+        ...DEFAULT_SETTINGS.scheduledSync,
+        enabled: true,
+        intervalMinutes: 30,
+        syncOnStart: true,
+      },
+      attachmentImport: { image: true, audio: true, video: true, document: true },
+    }));
+
+    const scheduled = container.querySelector<HTMLElement>('[data-scheduled-settings]');
+    const attachments = container.querySelector<HTMLElement>('[data-attachment-settings]');
+    expect(scheduled?.textContent).toContain('每 30 分钟');
+    expect(scheduled?.textContent).toContain('启动时');
+    expect(scheduled?.textContent).toContain('全部笔记');
+    expect(attachments?.textContent).toContain('全部附件');
+
+    expect(scheduled?.querySelector<HTMLInputElement>('input[type="checkbox"]')?.getAttribute('aria-label'))
+      .toBe('启用定时同步');
+    expect(attachments?.querySelector<HTMLInputElement>('input[type="checkbox"]')?.getAttribute('aria-label'))
+      .toBe('下载附件');
+  });
+
+  it('collapses configured credentials and reveals them through the status actions', async () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'token',
+      openApiClientId: 'client-id',
+    }));
+    const details = container.querySelector<HTMLElement>('[data-credential-details]');
+    const changeButton = container.querySelector<HTMLButtonElement>('[data-change-credentials]');
+
+    expect(details).toBeTruthy();
+    expect(changeButton).toBeTruthy();
+    expect(details!.classList.contains('getnote-hidden')).toBe(true);
+    expect(changeButton!.getAttribute('aria-expanded')).toBe('false');
+    expect(changeButton!.getAttribute('aria-controls')).toBe(details!.id);
+    expect(changeButton!.textContent).toBe('更改凭证');
+
+    const status = container.querySelector('[data-settings-status]')!;
+    const sync = container.querySelector('[data-settings-section="sync"]')!;
+    expect(status.compareDocumentPosition(details!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(details!.compareDocumentPosition(sync) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await act(() => {
+      changeButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(details!.classList.contains('getnote-hidden')).toBe(false);
+    expect(changeButton!.getAttribute('aria-expanded')).toBe('true');
+    expect(changeButton!.textContent).toBe('收起凭证');
+  });
+
+  it('opens credential guidance by default before credentials are configured', () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: '',
+      openApiClientId: '',
+      apiToken: '',
+      clientId: '',
+    }));
+
+    expect(container.querySelector('[data-credential-details]')?.classList.contains('getnote-hidden')).toBe(false);
+    expect(container.querySelector('[data-credential-guidance]')?.textContent).toContain('请先选择认证方式');
+  });
+});
+
 describe('created-date path settings', () => {
   function settingItem(container: HTMLElement, label: string): HTMLElement {
     const item = Array.from(container.querySelectorAll<HTMLElement>('.setting-item'))
@@ -198,9 +463,13 @@ describe('created-date path settings', () => {
   it('cancels an enable confirmation without saving or migrating', async () => {
     const updateSetting = vi.fn();
     const applyDatePathSettings = vi.fn();
+    const previewDatePathSettings = vi.fn().mockResolvedValue({
+      scanned: 3, planned: 2, moved: 0, unchanged: 1, skipped: 0, failed: 0, issues: [],
+    });
     const confirmDatePathMigration = vi.fn().mockResolvedValue(false);
     const { container } = renderSettings(makeSettings(), updateSetting, vi.fn(), {
       applyDatePathSettings,
+      previewDatePathSettings,
       confirmDatePathMigration,
     });
     const dateItem = settingItem(container, '按创建日期整理路径');
@@ -220,6 +489,7 @@ describe('created-date path settings', () => {
       mode: 'apply',
       current: { enabled: false, format: 'YYYY/MM' },
       target: { enabled: true, format: 'YYYY/MM' },
+      preview: expect.objectContaining({ scanned: 3, planned: 2 }),
     });
     expect(container.querySelector('[role="dialog"]')).toBeNull();
     expect(applyDatePathSettings).not.toHaveBeenCalled();
@@ -227,6 +497,9 @@ describe('created-date path settings', () => {
   });
 
   it('confirms a format change, reports the result, and supports an unchanged reconcile', async () => {
+    const previewDatePathSettings = vi.fn().mockResolvedValue({
+      scanned: 5, planned: 2, moved: 0, unchanged: 1, skipped: 1, failed: 1, issues: [],
+    });
     const applyDatePathSettings = vi.fn().mockResolvedValue({
       scanned: 5,
       moved: 2,
@@ -239,7 +512,7 @@ describe('created-date path settings', () => {
     const { container } = renderSettings(makeSettings({
       datePathEnabled: true,
       datePathFormat: 'YYYY/MM',
-    }), vi.fn(), vi.fn(), { applyDatePathSettings, confirmDatePathMigration });
+    }), vi.fn(), vi.fn(), { applyDatePathSettings, previewDatePathSettings, confirmDatePathMigration });
     const dateItem = settingItem(container, '按创建日期整理路径');
     await act(() => inputValue(dateItem.querySelector<HTMLInputElement>('input[type="text"]')!, 'YYYY/MM/DD'));
 
@@ -253,17 +526,19 @@ describe('created-date path settings', () => {
       mode: 'apply',
       current: { enabled: true, format: 'YYYY/MM' },
       target: { enabled: true, format: 'YYYY/MM/DD' },
+      preview: expect.objectContaining({ scanned: 5, planned: 2 }),
     });
-    expect(applyDatePathSettings).toHaveBeenLastCalledWith({ enabled: true, format: 'YYYY/MM/DD' });
+    expect(applyDatePathSettings).toHaveBeenLastCalledWith({ enabled: true, format: 'YYYY/MM/DD' }, undefined);
     const result = dateItem.querySelector<HTMLElement>('[data-date-path-result]');
     expect(result?.textContent).toContain('扫描 5');
     expect(result?.textContent).toContain('移动 2');
     expect(result?.textContent).toContain('未变化 1');
     expect(result?.textContent).toContain('跳过 1');
     expect(result?.textContent).toContain('失败 1');
-    expect(result?.textContent).toContain('得到大脑/2026/07/纯文本/a.md');
     expect(result?.textContent).toContain('目标路径已存在');
     expect(result?.textContent).not.toContain('Target exists');
+    expect(result?.textContent).toContain('查看日志');
+    expect(result?.textContent).not.toContain('得到大脑/2026/07/纯文本/a.md');
 
     await act(async () => {
       clickButton(dateItem, '重新整理现有文件');
@@ -274,11 +549,15 @@ describe('created-date path settings', () => {
       mode: 'reconcile',
       current: { enabled: true, format: 'YYYY/MM/DD' },
       target: { enabled: true, format: 'YYYY/MM/DD' },
+      preview: expect.objectContaining({ scanned: 5, planned: 2 }),
     });
-    expect(applyDatePathSettings).toHaveBeenLastCalledWith({ enabled: true, format: 'YYYY/MM/DD' });
+    expect(applyDatePathSettings).toHaveBeenLastCalledWith(
+      { enabled: true, format: 'YYYY/MM/DD' },
+      { rebuildCategories: true },
+    );
   });
 
-  it('localizes migration failures and limits issue details to the first 20', async () => {
+  it('localizes migration failures and keeps detailed issue paths out of the settings page', async () => {
     const rawIssues = Array.from({ length: 22 }, (_, index) => ({
       code: 'invalid-metadata',
       path: `得到大脑/纯文本/${index}.md`,
@@ -292,6 +571,9 @@ describe('created-date path settings', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { container } = renderSettings(makeSettings(), vi.fn(), vi.fn(), {
       applyDatePathSettings,
+      previewDatePathSettings: vi.fn().mockResolvedValue({
+        scanned: 22, planned: 0, moved: 0, unchanged: 0, skipped: 22, failed: 0, issues: rawIssues,
+      }),
       confirmDatePathMigration: vi.fn().mockResolvedValue(true),
     });
     const dateItem = settingItem(container, '按创建日期整理路径');
@@ -318,9 +600,8 @@ describe('created-date path settings', () => {
     const result = dateItem.querySelector<HTMLElement>('[data-date-path-result]')!;
     expect(result.textContent).toContain('缺少有效的笔记元数据');
     expect(result.textContent).not.toContain('raw error 0');
-    expect(result.textContent).toContain('另有 2 条问题未展开');
-    expect(result.textContent).toContain('19.md');
-    expect(result.textContent).not.toContain('20.md');
+    expect(result.textContent).toContain('查看日志');
+    expect(result.textContent).not.toContain('19.md');
   });
 });
 
@@ -487,14 +768,18 @@ describe('SettingsComponent auth credentials', () => {
     expect(rendered.updateSetting).toHaveBeenCalledWith('templateFilePath', 'Templates/reading-note');
   });
 
-  it('hides knowledge-base sync in Web API mode', () => {
+  it('keeps knowledge-base sync visible but unavailable in Web API mode', () => {
     const { container } = renderSettings(makeSettings({
       authMode: 'web',
       webApiToken: 'web-token',
       apiToken: 'web-token',
     }));
 
-    expect(container.textContent).not.toContain('按知识库同步');
+    const button = Array.from(container.querySelectorAll('button'))
+      .find((item): item is HTMLButtonElement => item.textContent === '按知识库同步');
+    expect(button).toBeTruthy();
+    expect(button!.disabled).toBe(true);
+    expect(container.textContent).toContain('需 OpenAPI 鉴权（会员）');
   });
 
   it('does not render a separate upload permission switch', () => {
@@ -599,6 +884,31 @@ describe('SettingsComponent auth credentials', () => {
     } finally {
       Element.prototype.scrollIntoView = originalScrollIntoView;
     }
+  });
+
+  it('shows an indeterminate progress track while the download total is unknown', () => {
+    const { container } = renderSettings(makeSettings(), vi.fn(), vi.fn(), {
+      isSyncing: true,
+      syncProgress: { message: '正在获取第 3 页...', count: '', percent: undefined, phase: 'active' },
+    });
+
+    const track = container.querySelector<HTMLElement>('[data-sync-progress-track]');
+    expect(track?.classList.contains('is-indeterminate')).toBe(true);
+    expect(container.textContent).not.toContain('0%');
+  });
+
+  it('keeps a completed sync result visible after active syncing ends', () => {
+    const { container } = renderSettings(makeSettings(), vi.fn(), vi.fn(), {
+      isSyncing: false,
+      syncProgress: { message: '同步完成', count: '已处理 62 / 100', percent: 100, phase: 'success' },
+    });
+
+    const status = container.querySelector<HTMLElement>('[data-sync-progress]');
+    expect(status).toBeTruthy();
+    expect(status?.dataset.syncProgressPhase).toBe('success');
+    expect(status?.textContent).toContain('同步完成');
+    expect(status?.textContent).toContain('100%');
+    expect(status?.querySelector('button')).toBeNull();
   });
 
   it('writes the visible mode token back when switching auth modes', async () => {
@@ -728,6 +1038,85 @@ describe('SettingsComponent auth credentials', () => {
       sinceId: '0',
       limit: 1,
     }));
+  });
+
+  it('automatically saves a validated desktop Web token without requiring DevTools', async () => {
+    const startDesktopWebAuth = vi.fn().mockResolvedValue('Bearer desktop-token');
+    const { container, updateSetting } = renderSettings(makeSettings({
+      authMode: 'web',
+      webApiToken: 'Bearer old-token',
+    }), vi.fn(), vi.fn(), {
+      desktopWebAuthAvailable: true,
+      startDesktopWebAuth,
+    });
+
+    const loginButton = Array.from(container.querySelectorAll('button'))
+      .find((button): button is HTMLButtonElement => button.textContent === '网页登录并自动获取 Token');
+    expect(loginButton).toBeTruthy();
+
+    await act(async () => {
+      loginButton!.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(startDesktopWebAuth).toHaveBeenCalledOnce();
+    expect(updateSetting).toHaveBeenCalledWith('webApiToken', 'Bearer desktop-token');
+    expect(updateSetting).toHaveBeenCalledWith('apiToken', 'Bearer desktop-token');
+    expect((container.querySelector('input[type="password"]') as HTMLInputElement).value).toBe('Bearer desktop-token');
+  });
+
+  it('keeps the manual Web Token flow unchanged when desktop auth is unavailable', () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'web',
+      webApiToken: '',
+    }), vi.fn(), vi.fn(), {
+      desktopWebAuthAvailable: false,
+    });
+
+    expect(container.querySelector('input[placeholder*="Authorization header"]')).not.toBeNull();
+    expect(container.textContent).not.toContain('网页登录并自动获取 Token');
+  });
+
+  it('clears the saved token even when clearing the desktop login session fails', async () => {
+    const clearDesktopWebAuth = vi.fn().mockRejectedValue(new Error('session cleanup failed'));
+    const { container, updateSetting } = renderSettings(makeSettings({
+      authMode: 'web',
+      apiToken: 'Bearer saved-token',
+      webApiToken: 'Bearer saved-token',
+    }), vi.fn(), vi.fn(), {
+      desktopWebAuthAvailable: true,
+      clearDesktopWebAuth,
+    });
+
+    const logoutButton = Array.from(container.querySelectorAll('button'))
+      .find((button): button is HTMLButtonElement => button.textContent === '退出并清除登录');
+    expect(logoutButton).toBeTruthy();
+
+    await act(async () => {
+      logoutButton!.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(updateSetting).toHaveBeenCalledWith('webApiToken', '');
+    expect(updateSetting).toHaveBeenCalledWith('apiToken', '');
+    expect(clearDesktopWebAuth).toHaveBeenCalledOnce();
+  });
+
+  it('allows clearing an isolated desktop session even when no token was captured', () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'web',
+      apiToken: '',
+      webApiToken: '',
+    }), vi.fn(), vi.fn(), {
+      desktopWebAuthAvailable: true,
+      clearDesktopWebAuth: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const logoutButton = Array.from(container.querySelectorAll('button'))
+      .find(button => button.textContent === '退出并清除登录');
+    expect(logoutButton).toBeTruthy();
   });
 
   it('shows concise temporary-auth guidance in Web auth mode', () => {
@@ -1255,6 +1644,16 @@ describe('SettingsComponent auth credentials', () => {
     expect(button).toBeTruthy();
     expect(button!.classList.contains('getnote-view-history-btn')).toBe(true);
   });
+
+  it('keeps sync history as a lightweight entry without repeating the top status summary', () => {
+    const { container } = renderSettings(makeSettings());
+    const history = container.querySelector<HTMLElement>('.getnote-sync-log-section');
+
+    expect(history?.textContent).toContain('查看日志');
+    expect(history?.textContent).not.toContain('上次同步');
+    expect(history?.textContent).not.toContain('当前状态');
+    expect(container.textContent).toContain('保留最近 30 天同步记录');
+  });
 });
 
 describe('SettingsComponent — tag cache lazy seed (#238)', () => {
@@ -1346,7 +1745,7 @@ describe('SettingsComponent — tag cache lazy seed (#238)', () => {
 describe('SettingsComponent scheduled sync toggles (#136)', () => {
   function findScheduledEnabledRow(container: HTMLElement): HTMLElement {
     const rows = container.querySelectorAll('.getnote-scheduled-row');
-    const row = Array.from(rows).find((el) => el.textContent === '启用定时同步');
+    const row = Array.from(rows).find((el) => el.textContent?.includes('启用定时同步'));
     expect(row).toBeTruthy();
     return row!;
   }

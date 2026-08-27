@@ -977,7 +977,9 @@ export class SyncEngine {
       for await (const notes of fetchAllNotes(credentials.token, credentials.clientId, controller.signal, null, credentials.authMode)) {
         if (this.cancelled || modal?.isCancelled()) throw new SyncCancelledError();
         pageCount++;
-        this.onProgress?.({ page: pageCount, percent: 0 });
+        // The API is cursor-paginated and does not reveal a total page count.
+        // Leave percent undefined so the settings UI uses an indeterminate bar.
+        this.onProgress?.({ page: pageCount });
 
         const recentNotes = this.filterRecentNotes(notes);
         const filtered = this.filterNotesByDateRangeOrMissingLocal(recentNotes, uidIndex, previouslySyncedNoteIds);
@@ -1080,7 +1082,6 @@ export class SyncEngine {
             updated: result.updated,
             skipped: result.skipped,
             failed: result.failed,
-            percent: 0,
           });
         }
       }
