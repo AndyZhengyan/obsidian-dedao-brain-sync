@@ -254,6 +254,12 @@ export default class GetNoteSyncPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: 'sync-all-subscribed-knowledge',
+      name: t('command.syncAllSubscribedKnowledge'),
+      callback: () => this.syncAllSubscribedKnowledge(),
+    });
+
+    this.addCommand({
       id: 'upload-local-notes',
       name: t('command.uploadLocal'),
       callback: () => this.openLocalUploadModal(),
@@ -891,6 +897,11 @@ export default class GetNoteSyncPlugin extends Plugin {
       : selection;
     void this.runSubscribedKnowledgeSync(syncOptions);
   }
+
+  syncAllSubscribedKnowledge(): void {
+    void this.runSubscribedKnowledgeSync({ syncAll: true });
+  }
+
 
   private async runSubscribedKnowledgeSync(syncOptions?: TopicPickerSelection): Promise<void> {
     if (this.isSyncing || this.isDatePathMigrationRunning) return;
