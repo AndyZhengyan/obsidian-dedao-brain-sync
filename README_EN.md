@@ -1,4 +1,4 @@
-# Dedao Brain Sync
+# ⭐ Officially Recommended | Dedao Brain / GetNote 🔄 Obsidian Sync
 
 [中文](./README.md) | [English](./README_EN.md)
 
@@ -8,9 +8,9 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/AndyZhengyan/obsidian-dedao-brain-sync/ci.yml?branch=main&style=flat-square)](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/actions)
 [![License](https://img.shields.io/github/license/AndyZhengyan/obsidian-dedao-brain-sync?style=flat-square)](LICENSE)
 
-Bidirectionally sync your notes, highlights, links, recordings, and AI summaries from Dedao Brain (得到大脑, formerly GetNote / Get笔记) into Obsidian as local Markdown files you can organize, search, and link over the long term.
+Sync your notes, highlights, links, recordings, and AI summaries between **Dedao Brain (得到大脑, formerly GetNote / Get笔记)** and Obsidian, turning them into local Markdown you can organize, search, link, and keep for the long term.
 
-For the project background and origin story, see this Chinese article: [Project background](https://mp.weixin.qq.com/s/0-d_jLOGr3OhanruPR52vg).
+For the story behind the project, see this Chinese article: [我做的得到大脑OB插件，上架官网了😃](https://mp.weixin.qq.com/s/0-d_jLOGr3OhanruPR52vg).
 
 * * *
 
@@ -26,157 +26,160 @@ The README keeps only the current release highlights. See [GitHub Releases](http
 
 * * *
 
-## Why it works
+## ✨ Why use it
 
-- **True bidirectional sync**: Pull notes from Dedao Brain into Obsidian, and manually upload selected local Markdown files back to Dedao Brain.
-- **Not a one-shot export**: The official export is offline HTML. This plugin syncs each note into its own Markdown file and keeps updating it over time.
-- **Stable, resumable sync**: Supports incremental sync, sync by date, sync by note, sync by knowledge base, scheduled sync, startup sync, and checkpoints.
-- **Richer filters**: Control each run by updated time, start date, max days, note types, tags, manually selected notes, or selected knowledge bases.
-- **Two auth modes**: PRO users can use long-term OpenAPI auth; Temporary Auth reuses the signed-in web session for quick trials.
-- **Detailed sync logs**: Keep recent runs with method, parameters, filters, duration, status, and per-note created / updated / skipped / failed details.
-- **Readable files**: Notes are organized by type, named by title first, with optional date/time prefixes and frontmatter metadata.
-- **Recording-friendly**: When the API returns audio and transcripts, both are saved.
-- **Mobile-compatible**: Network calls use Obsidian `requestUrl`, which works on both desktop and mobile Obsidian.
+- 🔄 **True two-way workflow**: continuously sync Dedao Brain → Obsidian, and manually create selected local Markdown notes back in Dedao Brain.
+- 🧠 **More than a one-shot export**: each note becomes a local Markdown file that stays part of your long-term knowledge base.
+- ⚡ **Stable, resumable sync**: supports incremental sync, checkpoints, last-N-days scopes, start dates, selected notes, and knowledge-base scopes.
+- 🔎 **Search Dedao Brain inside Obsidian**: full-text search from the sidebar, with one-click open for local hits or sync for remote-only hits.
+- 🖱️ **Search from selected text**: select text in the editor and launch a Dedao Brain search directly from the context menu.
+- 📚 **Better knowledge-base sync**: sync a specific knowledge base, or run a command to sync all subscribed knowledge bases.
+- 🗂️ **Control your local structure**: type-based folders, filename prefixes, created-date paths, plus migration and rollback for existing notes.
+- 🏷️ **Richer filters**: scope sync by updated time, start date, note type, tags, or knowledge base.
+- ⏱️ **Automatic sync**: scheduled sync and startup sync reduce manual work.
+- 📜 **Traceable history**: keeps the most recent 30 days of sync history, including scope, duration, status, and per-note results.
+- 📱 **Desktop + mobile**: the plugin is not desktop-only; OpenAPI mode works well across desktop and mobile Obsidian.
 
-## Features
+## 🧰 Feature overview
 
 | Feature | Description |
 | --- | --- |
-| Incremental sync | Notes missing locally are created; existing local notes are skipped by default and never overwritten. |
-| Search sidebar | OpenAPI-powered full-text search of Dedao Brain from an Obsidian sidebar; one-click "Open local note" or "Sync to local" from each hit. |
-| Sync by date | Pull notes from Dedao Brain by start date or "last N days". |
-| Sync by note | Pick specific notes from the remote list. |
-| Sync by knowledge base | Manually choose a subscribed knowledge base and sync its content locally. |
-| Scheduled sync | Pull at a configurable interval with optional knowledge-base, note-type, and tag scopes. |
-| Startup sync | Run a download sync once when Obsidian starts. |
-| Local upload | Choose a vault folder and one or more Markdown files to manually create in Dedao Brain. |
-| Two auth modes | Supports OpenAPI auth and Temporary Web auth for long-term use and quick trials. |
-| Rich filters | Supports time range, last N days, checkpoints, note types, tags, selected notes, and knowledge-base scope. |
-| Type-based filing | Text, link, recording, local audio, and others are filed into separate folders. |
-| Sync logs | Shows each run's method, parameters, filters, processed counts, duration, and per-note results. |
+| 🔄 Incremental sync | Detect remote additions and updates without re-downloading everything |
+| 🔎 Search sidebar | Full-text search of Dedao Brain from inside Obsidian |
+| 🖱️ Search selected text | Select text in the editor and search Dedao Brain from the context menu |
+| ⏳ Sync by date | Sync from a start date or within the last N days |
+| ☑️ Sync by note | Pick specific remote notes to sync |
+| 📚 Sync by knowledge base | Sync a selected knowledge base |
+| 🌐 Sync all subscriptions | Run a command to sync all subscribed knowledge bases |
+| 🕒 Scheduled sync | Sync on an interval with optional note-type, tag, and knowledge-base scopes |
+| 🚀 Startup sync | Run a sync when Obsidian starts, when scheduled sync is enabled |
+| ⬆️ Local upload | Manually create selected local Markdown files in Dedao Brain |
+| 🏷️ Tag filters | Restrict sync using a tag whitelist |
+| 📎 Attachment downloads | Independently control image / audio / video / document downloads |
+| 🗂️ Date-based paths | Organize by created date and migrate / roll back existing files |
+| 📜 Sync history | Keep the most recent 30 days of run history and per-note results |
+| 🎛️ Ribbon shortcuts | Show or hide sync and search Ribbon actions |
 
-## Screenshots
+## 🖼️ Screenshots
 
-Settings overview: choose an auth mode, configure the target folder and scheduled sync, then run download, upload, and log actions from one place.
+### ⚙️ Settings
+
+Configure authentication, target folders, sync behavior, attachments, scheduled sync, and sync history from one place.
 
 <img src="docs/screenshots/settings-overview.png" alt="Settings overview" width="720">
 
-OpenAPI search sidebar: search Dedao Brain notes from the Obsidian sidebar and open or sync a hit to local in one click.
+### 🔎 Search sidebar
+
+Search Dedao Brain from Obsidian, then open a local hit or sync a remote hit with one click.
 
 <img src="docs/screenshots/search-sidebar.png" alt="Dedao Brain search sidebar" width="720">
 
-## Installation
+## 📦 Installation
 
-### From the Obsidian Community Plugins
+### 💜 Install from Obsidian Community Plugins
 
 [![Available on Obsidian](https://img.shields.io/badge/Obsidian-Community%20Plugin-7c3aed?style=flat-square&logo=obsidian)](https://community.obsidian.md/plugins/dedao-brain-sync)
 
-1. Open `Settings -> Third-party plugin -> Browse`.
-2. Search for `Dedao Brain Sync`, `得到大脑`, or the legacy name `GetNote` / `Get笔记`.
+1. Open `Settings → Community plugins → Browse`.
+2. Search for `Dedao Brain Sync`, `得到大脑`, `GetNote`, or `Get笔记`.
 3. Install and enable the plugin.
 
-### Manual installation
+### 🛠️ Manual installation
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases/latest).
 2. Put them in:
 
 ```text
-<your-vault>/.obsidian/plugins/dedao-brain-sync/
+<your-vault>/.obsidian/plugins/getnote-importer/
 ```
 
 3. Restart Obsidian and enable `Dedao Brain Sync`.
 
-> The plugin folder name is `getnote-importer` (matching the `id` in `manifest.json` for backward compatibility with the existing listing); the repository itself has been renamed to `obsidian-dedao-brain-sync`. Legacy GetNote Importer `data.json` is migrated automatically on first startup.
+> The plugin ID remains `getnote-importer` for compatibility with the existing Obsidian Community listing and legacy data. The display name is `Dedao Brain Sync`.
 
-## Getting API credentials
+## 🔑 Authentication
 
-> **Note**: The Dedao Brain (得到大脑, formerly GetNote) OpenAPI requires a **Dedao Brain PRO** membership. The OpenAPI has significant operational cost, so the Dedao Brain team confirmed it is currently available to paid members only. If you are on the free tier, the OpenAPI endpoints will not return data.
+> ⚠️ Dedao Brain OpenAPI currently requires a **Dedao Brain PRO** membership. Free-tier users cannot retrieve full data through OpenAPI and can try Web mode on desktop instead.
 
-Credentials are stored only in your local Obsidian plugin data, and are used to access the auth mode you select.
+Credentials are stored only in your local Obsidian plugin data.
 
-### OpenAPI mode (recommended for long-term use)
+### 🟢 OpenAPI mode — recommended for long-term use
 
-1. Open the Dedao Brain app.
-2. Go to `Settings -> Open Platform`.
-3. Create an application, then copy the `Token` and `Client ID`.
-4. In `Settings -> Dedao Brain Sync`, choose `OpenAPI auth (members)` and paste both values.
-5. You can also use the OAuth button on the settings page to fetch credentials automatically.
+1. Open Dedao Brain.
+2. Go to `Settings → Open Platform`.
+3. Create an application and obtain the `Token` and `Client ID`.
+4. In `Settings → Dedao Brain Sync`, choose OpenAPI authentication and enter both values.
+5. Test the connection.
 
-### Web mode (manual token)
+### 🟡 Web mode — quick desktop setup
 
-If your account cannot use OpenAPI, choose `Temporary auth`. This mode reuses your existing Dedao Brain web session in the browser and does not require a `Client ID`.
+On desktop Obsidian, the plugin can use its built-in Web login flow to capture a session token and attempt automatic refresh when the session expires. Manual token entry is still supported as a fallback.
 
-Step-by-step English guide: [Web Mode Manual Token Guide](docs/web-mode-manual-token.md).
+See the step-by-step guide: [Web Mode Manual Token Guide](docs/web-mode-manual-token.md).
 
-To copy the token:
+> Web tokens are browser-session credentials and can expire. If you see `401`, `403`, or a session-expired message, sign in again or refresh the token. Automatic Web login / token renewal depends on the desktop environment; mobile users should prefer OpenAPI.
 
-1. Open `https://www.biji.com/note` in Chrome or Edge and sign in.
-2. Open browser DevTools: `F12` or `Ctrl + Shift + I` on Windows / Linux; `Command + Option + I` on Mac.
-3. Switch to the `Network` panel and filter by `Fetch/XHR`.
-4. Reload the web app, or open the note list / any note, to trigger API requests.
-5. In the request list, open one whose name looks like `notes?...` or `list?...`; the `Host` in the right-hand Headers is usually `get-notes.luojilab.com`.
-6. Under `Request Headers`, copy the full `Authorization` value.
-7. Paste it into the Token field under `Settings -> Dedao Brain Sync -> Temporary auth`.
-8. Click `Test connection`, then run `Sync by date` or `Sync by note` once it succeeds.
+## 🔄 Usage
 
-The value usually starts with `Bearer eyJ...`. The plugin accepts a full `Bearer ...` string, or just the JWT token. Do not paste an OpenAPI `gk_...` token into Temporary auth. A Web token is a browser session credential and can expire; if you see `401`, `403`, or `Web Token expired`, refresh the web app and re-copy the `Authorization` header.
+### ⬇️ Sync from Dedao Brain to Obsidian
 
-## Usage
-
-### Sync from Dedao Brain to Obsidian
-
-Click `Sync by date` on the settings page, or run the command:
+Start a sync from the settings page, or run:
 
 ```text
 Dedao Brain Sync: Sync notes
 ```
 
-Download sync uses a conservative default: if the same note already exists locally, the plugin skips it and does not overwrite your Obsidian content. To pull a remote note again, delete the corresponding local file and run sync again; as long as the remote note still exists, the plugin recreates it as a locally missing note.
+You can then choose a date-based, note-based, or knowledge-base sync scope.
 
-### Pick specific remote notes
+### 🌐 Sync all subscribed knowledge bases
 
-Click `Sync by note` and pick the notes you want from the remote list. Useful for topic cleanup, project reorganization, or one-off backfills.
+A dedicated command syncs all subscribed knowledge bases in one run. Subscription lists are paginated so the plugin does not stop at the first page of results.
 
-### Sync by knowledge base
+### 🔎 Search Dedao Brain
 
-Click `Sync by knowledge base`, choose a concrete knowledge base, and sync the content under it. This is a manual entry and does not expand into scheduled sync.
+- Click the search Ribbon action to open the sidebar search.
+- If a result already exists locally, open it directly.
+- If it is remote-only, sync it to the vault with one click.
+- Select text in the editor and use the context menu to search that phrase.
 
-### Scheduled sync
+### 🕒 Scheduled sync
 
-When scheduled sync is enabled, the plugin pulls from Dedao Brain at the configured interval. Scheduled sync only downloads remote changes and never uploads local notes.
+When scheduled sync is enabled, the plugin pulls remote changes at the configured interval and can also sync on startup.
 
-### Upload from Obsidian to Dedao Brain
+Scheduled sync only downloads remote changes; it never uploads local notes automatically.
 
-In the `Upload from Obsidian to Dedao Brain` area of the settings page, click `Upload by note`, pick a local folder, and select one or more Markdown files.
+### ⬆️ Create Dedao Brain notes from Obsidian
 
-Upload is **create-only sync**:
+Open local upload from the settings page or command palette and select one or more Markdown files.
 
-- Notes with empty bodies are skipped.
-- Notes that already have a `uid` and are confirmed to exist remotely are skipped, to avoid duplicates.
-- Existing content in Dedao Brain is never overwritten.
-- Upload is never triggered automatically by scheduled sync.
+Reverse sync is currently **manual, selection-based, and create-only**:
 
-## Output layout
+- It mainly supports `plain_text` and `link` note types.
+- Notes with a `uid` that are confirmed to still exist remotely are skipped to avoid duplicates.
+- Existing Dedao Brain notes are not automatically overwritten.
+- Scheduled sync never triggers uploads.
+- Uploaded tags are deduplicated and capped.
 
-By default, notes are written into the target folder.
+## 📁 Output layout
+
+The default target folder is `得到大脑`. The actual layout depends on note type, knowledge base, and date-path settings.
 
 ```text
 vault/
 └── 得到大脑/
-    ├── 纯文本/
-    │   └── Meeting Notes.md
-    ├── 链接笔记/
-    │   └── 2026-04-30_Article Highlights.md
-    ├── 录音长录/
-    │   ├── Recording Summary.md
-    │   └── asset/
-    │       ├── Recording Summary.mp3
-    │       └── Recording Summary.md
-    └── 其他/
-        └── Unrecognized type.md
+    ├── 2026/
+    │   └── 08/
+    │       ├── 纯文本/
+    │       │   └── Meeting Notes.md
+    │       ├── 链接笔记/
+    │       │   └── Article.md
+    │       └── 知识库/
+    │           └── My Knowledge Base/
+    │               └── Topic Note.md
+    └── ...
 ```
 
-Each Markdown file is written with frontmatter; subsequent syncs use the `uid` field to recognize the same remote note.
+Each synced Markdown file contains frontmatter used to identify the corresponding remote note on later runs.
 
 ```yaml
 ---
@@ -190,113 +193,73 @@ tags: ["work"]
 ---
 ```
 
-## Filename rules
+## 🏷️ Filenames and created-date paths
 
-| Case | Example |
-| --- | --- |
-| Has a title | `Meeting Notes.md` |
-| No title | `This is the first paragraph.md` |
-| With date prefix | `2026-04-30_Meeting Notes.md` |
-| Same name, different notes | `Meeting Notes-2.md` |
+### ✏️ Filename prefixes
 
-Illegal characters (`\ / : * ? " < > |`) are stripped automatically.
-
-## Filename prefix
-
-You can prepend a date/time pattern to every filename. Available placeholders:
+Supported date/time placeholders:
 
 | Placeholder | Meaning | Example |
 | --- | --- | --- |
-| `YYYY` | 4-digit year | `2026` |
-| `MM` | 2-digit month | `04` |
-| `DD` | 2-digit day | `30` |
-| `HH` | 2-digit hour (24h) | `14` |
-| `mm` | 2-digit minute | `30` |
-| `ss` | 2-digit second | `05` |
+| `YYYY` | Year | `2026` |
+| `MM` | Month | `08` |
+| `DD` | Day | `30` |
+| `HH` | Hour | `14` |
+| `mm` | Minute | `30` |
+| `ss` | Second | `05` |
 
-Examples:
+Example: `YYYY-MM-DD` → `2026-08-30_Meeting Notes.md`
 
-| Prefix | Generated filename |
+### 📅 Organize paths by created date
+
+Enable a rule such as `YYYY/MM` to produce paths like:
+
+```text
+得到大脑/2026/08/纯文本/Meeting Notes.md
+```
+
+The folder date comes from the note's creation time, not its update time. When you change or disable the date-path setting, the plugin runs a preflight before migrating or rolling back historical files and their related attachments.
+
+Migration is safe to re-run. When there is a target conflict, invalid metadata, shared attachment, or a move that could break path-qualified links, the plugin prefers to skip the affected note rather than overwrite files.
+
+## ⚙️ Main settings
+
+| Setting | Default / behavior |
 | --- | --- |
-| `YYYY-MM-DD` | `2026-04-30_Meeting Notes.md` |
-| `YYYYMMDD_HHmm` | `20260430_1430_Meeting Notes.md` |
-| `YYYY-MM-DD` | `2026-04-30_.md` (uses body text when no title) |
+| 🔐 Authentication | OpenAPI |
+| 📁 Target folder | `得到大脑` |
+| 🏷️ Filename prefix | Empty |
+| 📅 Date-based paths | Off, default format `YYYY/MM` |
+| ⏳ Manual sync range | Last 30 days |
+| 🕒 Scheduled sync | Off |
+| ⏱️ Sync interval | 30 minutes |
+| 🚀 Startup sync | On by default once scheduled sync is enabled |
+| 📎 Download attachments | On |
+| 🖼️ Image / 🎵 audio / 🎬 video / 📄 document | All enabled by default |
+| 🔎 Search Ribbon | Visible |
+| 🔄 Sync Ribbon | Visible |
+| 📜 Sync history | Keeps the most recent 30 days |
 
-The plugin substitutes placeholders with the note's `created_at` timestamp. Placeholders are case-sensitive: `mm` is minutes, `MM` is month.
+## 🔒 Privacy
 
-## Organize paths by created date
+- 🔐 API credentials stay in local Obsidian plugin data.
+- 🏠 The plugin does not depend on an extra third-party relay backend.
+- ⬇️ Downloaded content goes directly from Dedao Brain into your vault.
+- ⬆️ Only Markdown files you explicitly choose to upload are sent to Dedao Brain.
+- 📎 Attachments are downloaded only from URLs returned by Dedao Brain APIs.
+- 🛡️ Local path migration prefers skipping unsafe conflicts rather than overwriting files.
 
-The **Organize paths by created date** toggle sits with **Filename prefix** in the file-organization settings. When enabled, its format accepts `YYYY`, `MM`, `DD`, and separators; the default is `YYYY/MM`. The note's `created` / `created_at` value is authoritative. Updating an old note never moves it to an update-date folder.
+## ⚠️ Known limitations
 
-The canonical path keeps the existing category hierarchy after the date:
+- OpenAPI depends on Dedao Brain's Open Platform and requires PRO access.
+- Web mode depends on Dedao Brain's web APIs and browser session; API changes or expired tokens can break it.
+- Automatic Web login / token refresh is primarily a desktop feature.
+- Reverse sync is currently create-only and does not automatically overwrite existing remote notes.
+- Reverse sync mainly supports plain-text and link note types.
+- Some attachment features depend on the detail API returning a valid attachment URL.
+- If Dedao Brain changes its response fields, some note types may require plugin updates.
 
-- Normal note: `得到大脑/2026/07/纯文本/Note.md`
-- Knowledge-base note: `得到大脑/2026/07/知识库/Knowledge Base Name/Note.md`
-
-Enabling, disabling, or changing the format from A to B requires **Apply** and a confirmation. Confirmation saves the target setting first, then immediately migrates local historical notes and only the adjacent attachments actually referenced by those notes. Disabling immediately rolls them back to the original category paths. If the setting cannot be saved, migration never starts. If migration is interrupted, the saved target remains so **Apply** or **Reorganize existing files** can resume safely. This is a local-only operation: it does not contact Dedao Brain, run a full sync, or change sync checkpoints.
-
-Migration is idempotent and resumable. **Reorganize existing files** checks the current layout again, while files already at their target path remain unchanged. The complete existing category or custom directory after the date layer is preserved for each note. Target conflicts, invalid metadata, missing or shared attachments, and external path-qualified links that would break after a move skip the whole note: existing files are never overwritten, duplicate names are never manufactured, and other notes are not rewritten. A failed note move attempts to roll back its completed renames. Remote sync only chooses the configured path for new notes; it does not migrate historical files or change the existing local overwrite/skip contract.
-
-## Settings
-
-| Setting | Description | Default |
-| --- | --- | --- |
-| API Token | Dedao Brain Open Platform token | empty |
-| Client ID | Dedao Brain Open Platform client ID | empty |
-| Target folder | Sync target folder inside the vault | `得到大脑` |
-| Filename prefix | Date/time prefix format, e.g. `YYYY-MM-DD` | empty |
-| Organize paths by created date | Add a `YYYY` / `MM` / `DD` layer before the existing category hierarchy, with immediate local migration/rollback | off (format `YYYY/MM`) |
-| Auto sync range | Scheduled sync only pulls notes updated within the last N days; `0` means unlimited | `30` |
-| Sync start date | Absolute start date for manual sync | empty |
-| Scheduled sync | Background automatic sync toggle | off |
-| Sync interval | Scheduled sync interval in minutes | `30` |
-| Startup sync | Run a sync once when Obsidian starts | on |
-| Note types to sync | Restrict which note types this sync method handles | all types |
-| Sync tags | Tag whitelist; empty means sync all tags; multi-select dropdown, unmatched values can be added inline | empty |
-| Scheduled sync knowledge bases | Restrict scheduled sync to selected knowledge bases; empty means no filter | empty |
-| Download attachments | Master switch; disabling skips all attachment downloads | on |
-| Attachment categories | Independently toggle image / audio / video / document downloads | all on |
-| Reset sync checkpoint | On the scheduled sync row, reset `lastSyncEndTimestamp` so the next run starts from the configured start date | — |
-
-## Sync model
-
-The default download direction treats Dedao Brain as the source of truth:
-
-1. Scan the target folder and build a `uid -> file` index from frontmatter.
-2. Fetch the note list from the OpenAPI or Web API.
-3. Filter by updated time, start date, max days, checkpoint, note type, selected notes, or knowledge-base scope.
-4. Create files for new notes.
-5. Update files when `updated_at` changes.
-6. Rename files when the displayed title changes.
-7. Record every note's result in the sync log.
-8. Scheduled sync saves the last-processed note's timestamp as the next checkpoint.
-
-The upload direction is manual, selective, and create-only:
-
-1. The user picks a local folder and Markdown files.
-2. The plugin parses the title, body, and frontmatter.
-3. Empty bodies, notes already confirmed to exist remotely, and unsupported types are skipped.
-4. Eligible content is created as a new note in Dedao Brain.
-5. Upload results are added to the sync log.
-
-## Privacy
-
-- The plugin does not depend on any extra backend service.
-- API credentials are stored in your local Obsidian plugin data.
-- On download, note data is fetched from Dedao Brain and written directly to your vault.
-- On manual upload, only the Markdown files you selected are sent to Dedao Brain.
-- Audio attachments are only downloaded from the HTTPS URLs returned by the API.
-
-## Known limitations
-
-- The plugin depends on the availability and response format of the Dedao Brain OpenAPI / Web API.
-- OpenAPI requires a PRO membership; Temporary auth relies on a browser session and can expire.
-- Audio downloads only work when the detail endpoint returns a valid HTTPS audio attachment.
-- Download sync does not overwrite the same note when it already exists locally. To pull remote content again, delete the corresponding local file first, then sync.
-- Upload sync is currently create-only: it does not overwrite remote content, and it never runs automatically.
-- The "Sync tags" dropdown reads from a local cache. The first time you open settings, the plugin seeds that cache from the first 20 notes; running a sync once replaces it with the full set of observed tags.
-
-## Development
+## 👨‍💻 Development
 
 ```bash
 npm install
@@ -306,30 +269,32 @@ npm test
 npm run build
 ```
 
-Build artifacts are produced in the repository root:
+Release validation checks types, lint, tests, build output, and version consistency.
+
+Release artifacts:
 
 - `main.js`
 - `manifest.json`
 - `styles.css`
 
-The GitHub release workflow verifies typecheck, lint, tests, build, and tag / manifest version consistency before uploading artifacts.
+## 💬 Support & feedback
 
-## Support
+- 🐛 Bugs: [GitHub Issues](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/issues)
+- 💡 Feature requests: [GitHub Issues](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/issues/new/choose)
+- 📝 User feedback form: [Dedao Brain Sync feedback form](https://ku3yh6njf4.feishu.cn/share/base/form/shrcnShw4NxSTbVx7P7bjTxqvPe)
 
-- Bug reports: [GitHub Issues](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/issues)
-- Feature requests: [GitHub Issues](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/issues/new/choose)
-- User feedback survey: [Dedao-Brain-Sync 需求问题收集问卷](https://ku3yh6njf4.feishu.cn/share/base/form/shrcnShw4NxSTbVx7P7bjTxqvPe)
+<img src="docs/screenshots/feedback-qr.png" alt="Feedback form QR code" width="180">
 
-  <img src="docs/screenshots/feedback-qr.png" alt="Feedback survey QR code" width="180">
+If this plugin helps you, a ⭐ Star is always appreciated.
 
-- If this plugin helps you, a star is appreciated
+## 👋 About the author
 
-## About the author
+Enterprise AI practitioner, independent AI blogger, AGI believer, and longtime AI enthusiast.
 
-Enterprise AI practitioner, independent AI writer, AGI believer, and AI enthusiast. Issues and feedback are welcome.
+Feel free to reach out through GitHub Issues, the feedback form, or the author's public account.
 
-<img src="docs/screenshots/wechat-qr.jpg" alt="WeChat official account QR code" width="160">
+<img src="docs/screenshots/wechat-qr.jpg" alt="WeChat public account QR code" width="160">
 
-## License
+## 📄 License
 
 [MIT](LICENSE)
