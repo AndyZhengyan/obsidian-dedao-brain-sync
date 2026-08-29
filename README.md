@@ -1,4 +1,4 @@
-# 最好用的 【得到大脑 🔄 Obsidian】 插件
+# ⭐ 得到大脑官方推荐｜很好用的【得到大脑 / Get笔记 🔄 Obsidian】双向同步插件
 
 [中文](./README.md) | [English](./README_EN.md)
 
