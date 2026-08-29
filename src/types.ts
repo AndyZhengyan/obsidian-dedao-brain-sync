@@ -23,6 +23,7 @@ export interface GetNoteNote {
   prime_id?: string;          // Web API detail identifier
   topic_id?: string;          // Knowledge-base topic identifier
   fetch_error?: string;       // Internal: per-note knowledge detail failure
+  asset_error?: string;       // Internal: vault artifact conflict during enrichment
 }
 
 export interface LinkOriginal {

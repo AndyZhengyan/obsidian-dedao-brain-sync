@@ -8,6 +8,12 @@ updates:
       time: "09:00"
       timezone: Asia/Shanghai
     open-pull-requests-limit: 5
+    # typescript-eslint does not yet support TypeScript 7; keep 7.x updates
+    # out of the grouped tooling PR until that upstream support exists.
+    ignore:
+      - dependency-name: typescript
+        versions:
+          - "^7.0.0"
     groups:
       test-and-build-tools:
         patterns:
