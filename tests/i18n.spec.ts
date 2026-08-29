@@ -287,8 +287,10 @@ describe('t() - New settings keys', () => {
     expect(i18n.t('settings.lastSync.never')).toBe('暂未同步');
   });
 
-  it('settings.onboarding', () => {
-    expect(i18n.t('settings.onboarding')).toBe('👋 欢迎使用！请先选择认证方式并填写凭证，然后点击同步。');
+  it('settings onboarding states', () => {
+    expect(i18n.t('settings.onboarding.firstRun')).toBe('👋 首次使用：选好认证方式并填写凭证后就能开始同步。');
+    expect(i18n.t('settings.onboarding.needsCredentials')).toBe('🔑 还差一步：填好凭证才能同步。详细步骤见下方「凭证设置」。');
+    expect(i18n.t('settings.onboarding.ready')).toBe('✅ 凭证已就绪。点「按笔记同步」或「按知识库同步」即可开始。');
   });
 
   it('settings.lastSync.result with vars', () => {
@@ -304,7 +306,9 @@ describe('t() - New settings keys', () => {
     expect(i18n.t('settings.noteTypes.label')).toBe('Note Types');
     expect(i18n.t('settings.interval.hint')).toBe('Minimum 5 minutes');
     expect(i18n.t('settings.lastSync.never')).toBe('Never synced');
-    expect(i18n.t('settings.onboarding')).toBe('👋 Welcome! Choose an authentication mode and enter credentials first.');
+    expect(i18n.t('settings.onboarding.firstRun')).toBe('👋 First time here? Pick an auth mode and fill in credentials to get started.');
+    expect(i18n.t('settings.onboarding.needsCredentials')).toBe('🔑 One more step: add credentials before syncing. See "Credentials" below.');
+    expect(i18n.t('settings.onboarding.ready')).toBe('✅ Credentials are set. Click "Sync by Notes" or "Sync by Knowledge Base" to begin.');
   });
 });
 

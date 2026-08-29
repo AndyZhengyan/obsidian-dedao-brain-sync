@@ -76,6 +76,16 @@ function getTemplateFileSuggestions(app: App, query: string): string[] {
     .slice(0, 50);
 }
 
+export type OnboardingState = 'first-run' | 'needs-credentials' | 'ready' | 'configured';
+
+export function computeOnboardingState(settings: Settings): OnboardingState {
+  const hasHistory = settings.syncHistory.length > 0;
+  const hasCredentials = getAuthCredentials(settings).token !== '';
+  if (hasHistory && hasCredentials) return 'configured';
+  if (hasHistory) return 'needs-credentials';
+  return hasCredentials ? 'ready' : 'first-run';
+}
+
 interface SettingsComponentProps {
   settings: Settings;
   updateSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
@@ -153,7 +163,6 @@ export function SettingsComponent({
   const [scheduledNoteTypes, setScheduledNoteTypes] = useState<string[] | undefined>(settings.scheduledSync.enabledNoteTypes);
   const [syncTags, setSyncTags] = useState<string[]>(settings.syncTags ?? []);
   const [scheduledKnowledgeBases, setScheduledKnowledgeBases] = useState<string[]>(settings.scheduledSync.syncKnowledgeBases ?? []);
-  const [attachmentDetailsOpen, setAttachmentDetailsOpen] = useState(false);
   const [credentialsDetailsOpen, setCredentialsDetailsOpen] = useState(!initiallyHasCredentials);
   const [syncDetailsOpen, setSyncDetailsOpen] = useState(true);
   const [advancedDetailsOpen, setAdvancedDetailsOpen] = useState(false);
@@ -166,6 +175,15 @@ export function SettingsComponent({
   const connectionStatusTimeoutRef = useRef<number | null>(null);
   const [intervalWarning, setIntervalWarning] = useState(false);
   const credentials = getAuthCredentials({ ...settings, authMode, openApiToken: apiTokenOpenapi, openApiClientId: clientIdOpenapi, webApiToken: apiTokenWeb });
+  const currentSyncHistory = syncHistory.length > 0 ? syncHistory : settings.syncHistory;
+  const onboardingState = computeOnboardingState({
+    ...settings,
+    authMode,
+    openApiToken: apiTokenOpenapi,
+    openApiClientId: clientIdOpenapi,
+    webApiToken: apiTokenWeb,
+    syncHistory: currentSyncHistory,
+  });
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [pendingStartDate, setPendingStartDate] = useState(settings.syncStartDate);
 
@@ -179,20 +197,24 @@ export function SettingsComponent({
   // the user's click on the first tap. A single source of truth
   // (settings.attachmentImport) keeps master and children consistent.
   const attachmentImport = settings.attachmentImport ?? {};
-  const attachmentKinds = ['image', 'audio', 'video', 'document'] as const;
+  const attachmentKinds = ['image', 'audio', 'audioTranscript', 'video', 'document'] as const;
   const allAttachmentsOn = attachmentKinds.every(
+    k => attachmentImport[k] !== false,
+  );
+  const anyAttachmentsOn = attachmentKinds.some(
     k => attachmentImport[k] !== false,
   );
   const handleMasterAttachmentChange = (value: boolean) => {
     updateSetting('attachmentImport', {
       image: value,
       audio: value,
+      audioTranscript: value,
       video: value,
       document: value,
     });
   };
-  const handleChildAttachmentChange = (kind: 'image' | 'audio' | 'video' | 'document', value: boolean) => {
-    if (!allAttachmentsOn) return; // disabled when master is off
+  const handleChildAttachmentChange = (kind: typeof attachmentKinds[number], value: boolean) => {
+    if (!anyAttachmentsOn) return;
     updateSetting('attachmentImport', {
       ...attachmentImport,
       [kind]: value,
@@ -598,10 +620,8 @@ export function SettingsComponent({
     ? Boolean(apiTokenWeb.trim())
     : Boolean(apiTokenOpenapi.trim() && clientIdOpenapi.trim());
   const { scheduledSync } = settings;
-  const currentSyncHistory = syncHistory.length > 0 ? syncHistory : settings.syncHistory;
   const credentialDetailsId = 'getnote-credential-details';
   const scheduledDetailsId = 'getnote-scheduled-details';
-  const attachmentDetailsId = 'getnote-attachment-details';
   const syncDetailsId = 'getnote-sync-settings';
   const advancedDetailsId = 'getnote-advanced-settings';
 
@@ -739,16 +759,20 @@ export function SettingsComponent({
         </div>
       )}
 
+      {onboardingState !== 'configured' && (
+        <div
+          className={`getnote-onboarding getnote-onboarding--${onboardingState}`}
+          data-credential-guidance
+        >
+          {t(`settings.onboarding.${onboardingState === 'first-run' ? 'firstRun' : onboardingState === 'needs-credentials' ? 'needsCredentials' : 'ready'}`)}
+        </div>
+      )}
+
       <div
         id={credentialDetailsId}
         data-credential-details
         className={`getnote-credential-panel${credentialsDetailsOpen ? '' : ' getnote-hidden'}`}
       >
-
-      {!hasCredentials && (
-        <div className="getnote-onboarding" data-credential-guidance>{t('settings.onboarding')}</div>
-      )}
-
       {/* 凭证设置 */}
       <SettingItem
         name={t('settings.credentials.label')}
@@ -1060,26 +1084,17 @@ export function SettingsComponent({
               </span>
               <span className="getnote-scheduled-row-control">
                 <Toggle ariaLabel={t('settings.attachment.master')} value={allAttachmentsOn} onChange={handleMasterAttachmentChange} />
-                <button
-                  type="button"
-                  className="getnote-inline-disclosure"
-                  aria-expanded={attachmentDetailsOpen}
-                  aria-controls={attachmentDetailsId}
-                  onClick={() => setAttachmentDetailsOpen(prev => !prev)}
-                >
-                  {attachmentDetailsOpen ? t('settings.collapse') : t('settings.expand')}
-                </button>
               </span>
             </div>
-            <div id={attachmentDetailsId} className={`getnote-scheduled-options-detail getnote-attachment-options${attachmentDetailsOpen ? '' : ' getnote-hidden'}`}>
+            <div className="getnote-attachment-options">
               {attachmentKinds.map(kind => (
-                <div className="getnote-scheduled-row getnote-nested-row getnote-attachment-option" key={kind}>
+                <div className="getnote-scheduled-row getnote-attachment-option" key={kind}>
                   <span className="getnote-scheduled-row-label">{t(`settings.attachment.${kind}`)}</span>
                   <span className="getnote-scheduled-row-control">
                     <Toggle
                       ariaLabel={t(`settings.attachment.${kind}`)}
-                      value={allAttachmentsOn ? attachmentImport[kind] !== false : false}
-                      disabled={!allAttachmentsOn}
+                      value={anyAttachmentsOn ? attachmentImport[kind] !== false : false}
+                      disabled={!anyAttachmentsOn}
                       onChange={(value) => handleChildAttachmentChange(kind, value)}
                     />
                   </span>

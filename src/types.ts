@@ -95,6 +95,7 @@ export type AttachmentKind = 'image' | 'audio' | 'video' | 'document' | 'other';
 export interface AttachmentImportSettings {
   image: boolean;
   audio: boolean;
+  audioTranscript?: boolean;
   video: boolean;
   document: boolean;
 }
@@ -102,6 +103,7 @@ export interface AttachmentImportSettings {
 export const DEFAULT_ATTACHMENT_IMPORT: AttachmentImportSettings = {
   image: true,
   audio: true,
+  audioTranscript: true,
   video: true,
   document: true,
 };

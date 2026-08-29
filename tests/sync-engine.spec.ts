@@ -2472,6 +2472,67 @@ describe('SyncEngine — audio note sync', () => {
     }
   });
 
+  it('关闭音频文件但开启音频口水稿时只写入口水稿', async () => {
+    const createdFiles: string[] = [];
+    const fetchedUrls: string[] = [];
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: unknown) => {
+      const urlStr = typeof url === 'string' ? url : (url as Request).url;
+      fetchedUrls.push(urlStr);
+      if (urlStr.includes('/resource/note/list')) {
+        return Promise.resolve(mockFetchResponse({
+          data: { notes: [audioNote], has_more: false, next_cursor: '' },
+        }) as Response);
+      }
+      if (urlStr.includes('/resource/note/detail')) {
+        return Promise.resolve(mockFetchResponse({
+          success: true,
+          data: {
+            note: {
+              ...audioNote,
+              attachments: [{ type: 'audio', url: 'https://mediacdn.umiwi.com/test.mp3', title: '', duration: 883920 }],
+              audio: '完整录音口水稿',
+            },
+          },
+        }) as Response);
+      }
+      throw new Error(`Unexpected request: ${urlStr}`);
+    });
+
+    const mockApp = makeMockApp();
+    mockApp.vault.create = vi.fn().mockImplementation(async (path: string, content?: string) => {
+      createdFiles.push(path);
+      if (content) createdFiles.push(content);
+      return { path };
+    });
+    mockApp.vault.createBinary = vi.fn().mockImplementation(async (path: string) => {
+      createdFiles.push(path);
+      return { path };
+    });
+
+    try {
+      const engine = new SyncEngine(mockApp, makeSettings({
+        maxDays: 0,
+        attachmentImport: {
+          image: true,
+          audio: false,
+          audioTranscript: true,
+          video: true,
+          document: true,
+        } as Settings['attachmentImport'],
+      }));
+      const result = await engine.sync();
+
+      expect(result.failed).toBe(0);
+      expect(createdFiles).toContain('得到大脑/录音笔记/asset/我的录音笔记_1908723638246504120_transcript.md');
+      expect(createdFiles.join('\n')).toContain('完整录音口水稿');
+      expect(createdFiles.some(path => path.endsWith('_audio.mp3'))).toBe(false);
+      expect(fetchedUrls).not.toContain('https://mediacdn.umiwi.com/test.mp3');
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+
   it('图片笔记从详情接口下载图片附件并写入 md 引用', async () => {
     const imageNote = makeNote({
       note_id: '1911137317526242616',

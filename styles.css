@@ -309,6 +309,18 @@
   border-left: 3px solid var(--interactive-accent);
 }
 
+.getnote-onboarding--first-run {
+  border-left-color: var(--interactive-accent);
+}
+
+.getnote-onboarding--needs-credentials {
+  border-left-color: var(--color-orange);
+}
+
+.getnote-onboarding--ready {
+  border-left-color: var(--color-green);
+}
+
 .getnote-test-connection {
   display: flex;
   align-items: center;

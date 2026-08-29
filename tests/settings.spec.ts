@@ -5,6 +5,7 @@ import { App } from 'obsidian';
 import { abstractInputSuggestInstances, TFile, TFolder } from './mocks/obsidian';
 import { fetchNotes } from '../src/api';
 import { initI18n } from '../src/i18n';
+import * as SettingsModule from '../src/settings';
 import { SettingsComponent } from '../src/settings';
 import { DEFAULT_SETTINGS, type Settings } from '../src/types';
 
@@ -22,6 +23,29 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
     ...overrides,
   };
 }
+
+describe('computeOnboardingState (#242)', () => {
+  const computeOnboardingState = (SettingsModule as unknown as {
+    computeOnboardingState?: (settings: Settings) => string;
+  }).computeOnboardingState;
+
+  it('exposes the state computation contract', () => {
+    expect(computeOnboardingState).toBeTypeOf('function');
+  });
+
+  it('distinguishes first-run, missing credentials, ready, and configured', () => {
+    expect(computeOnboardingState?.(makeSettings())).toBe('first-run');
+    expect(computeOnboardingState?.(makeSettings({
+      syncHistory: [{ timestamp: 1, status: 'success', source: 'manual', total: 1, created: 1, updated: 0, skipped: 0, failed: 0 }],
+    }))).toBe('needs-credentials');
+    expect(computeOnboardingState?.(makeSettings({ apiToken: 'token', clientId: 'client' }))).toBe('ready');
+    expect(computeOnboardingState?.(makeSettings({
+      apiToken: 'token',
+      clientId: 'client',
+      syncHistory: [{ timestamp: 1, status: 'success', source: 'manual', total: 1, created: 1, updated: 0, skipped: 0, failed: 0 }],
+    }))).toBe('configured');
+  });
+});
 
 function makeFolder(path: string): TFolder {
   const folder = new TFolder();
@@ -420,7 +444,7 @@ describe('SettingsComponent information architecture (#257)', () => {
     }));
 
     expect(container.querySelector('[data-credential-details]')?.classList.contains('getnote-hidden')).toBe(false);
-    expect(container.querySelector('[data-credential-guidance]')?.textContent).toContain('请先选择认证方式');
+    expect(container.querySelector('[data-credential-guidance]')?.textContent).toContain('首次使用');
   });
 });
 
@@ -1383,7 +1407,7 @@ describe('SettingsComponent auth credentials', () => {
     expect(dateInput.value).toBe('2026-06-27');
   });
 
-  it('renders the attachment download section with a master toggle and four child toggles', async () => {
+  it('renders the attachment controls flat in the clarified order', async () => {
     const settings = makeSettings();
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -1407,30 +1431,21 @@ describe('SettingsComponent auth credentials', () => {
     });
     await new Promise(r => setTimeout(r, 50));
 
-    expect(container.textContent).toContain('附件下载配置');
-
-    const toggleEls = container.querySelectorAll('.setting-item .checkbox-container');
-    // 5 toggles total: 1 master + image + audio + video + document
-    expect(toggleEls.length).toBeGreaterThanOrEqual(5);
+    const labels = Array.from(container.querySelectorAll('[data-attachment-settings] .getnote-scheduled-row-label'))
+      .map(node => node.firstChild?.textContent?.trim() || node.textContent?.trim());
+    expect(labels).toEqual([
+      '下载附件',
+      '图片文件',
+      '音频文件',
+      '音频口水稿',
+      '视频文件',
+      '文档文件',
+    ]);
+    expect(container.querySelector('[data-attachment-settings] .getnote-inline-disclosure')).toBeNull();
+    expect(container.querySelector('[data-attachment-settings] .getnote-hidden')).toBeNull();
   });
 
-  it('keeps attachment child toggles collapsed behind a compact disclosure', async () => {
-    const { container } = renderSettings(makeSettings());
-    await new Promise(r => setTimeout(r, 50));
-
-    const detail = container.querySelector('.getnote-scheduled-options-detail');
-    expect(detail).toBeTruthy();
-    const disclosure = container.querySelector('.getnote-attachment-master-row .getnote-inline-disclosure') as HTMLButtonElement;
-    expect(disclosure).toBeTruthy();
-    expect(detail!.classList.contains('getnote-hidden')).toBe(true);
-    await act(() => {
-      disclosure.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    expect(detail!.classList.contains('getnote-hidden')).toBe(false);
-    expect(detail!.querySelectorAll('.getnote-nested-row').length).toBe(4);
-  });
-
-  it('flips all four child toggles when the master attachment toggle is clicked', async () => {
+  it('flips all five child toggles when the master attachment toggle is clicked', async () => {
     const { container, updateSetting } = renderStatefulSettings(makeSettings({
       attachmentImport: { image: true, audio: true, video: true, document: true },
     }));
@@ -1450,6 +1465,7 @@ describe('SettingsComponent auth credentials', () => {
     expect(updateSetting).toHaveBeenCalledWith('attachmentImport', {
       image: false,
       audio: false,
+      audioTranscript: false,
       video: false,
       document: false,
     });
@@ -1474,6 +1490,7 @@ describe('SettingsComponent auth credentials', () => {
     expect(updateSetting).toHaveBeenCalledWith('attachmentImport', {
       image: true,
       audio: true,
+      audioTranscript: true,
       video: true,
       document: true,
     });
@@ -1484,7 +1501,7 @@ describe('SettingsComponent auth credentials', () => {
   it('disables child attachment toggles when the master is off', async () => {
     const updateSetting = vi.fn();
     const settings = makeSettings({
-      attachmentImport: { image: true, audio: false, video: true, document: false },
+      attachmentImport: { image: false, audio: false, audioTranscript: false, video: false, document: false },
     });
     const container = document.createElement('div');
     document.body.appendChild(container);
