@@ -7,6 +7,7 @@ import type GetNoteSyncPlugin from './main';
 import { confirmDatePathMigration } from './ui/date-path-confirm-modal';
 import type {
   DatePathMigrationResult,
+  DatePathMigrationOptions,
   DatePathMigrationTarget,
 } from './date-path-migration';
 import type { DatePathConfirmationRequest } from './ui/date-path-confirm-modal';
@@ -30,13 +31,15 @@ function MountedSettings({
   updateSetting,
   runtimeUpdates,
   applyDatePathSettings,
+  previewDatePathSettings,
   confirmDatePathMigration: confirmDatePathMigrationProp,
 }: {
   app: App;
   plugin: GetNoteSyncPlugin;
   updateSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
   runtimeUpdates: SettingsRuntimeUpdates;
-  applyDatePathSettings?: (target: DatePathMigrationTarget) => Promise<DatePathMigrationResult>;
+  applyDatePathSettings?: (target: DatePathMigrationTarget, options?: DatePathMigrationOptions) => Promise<DatePathMigrationResult>;
+  previewDatePathSettings?: (target: DatePathMigrationTarget, options?: DatePathMigrationOptions) => Promise<DatePathMigrationResult>;
   confirmDatePathMigration?: (request: DatePathConfirmationRequest) => Promise<boolean>;
 }) {
   const [, setRevision] = useState(0);
@@ -62,6 +65,7 @@ function MountedSettings({
       lastSyncTime={plugin.lastSyncResult?.timestamp}
       syncHistory={plugin.syncHistory}
       applyDatePathSettings={applyDatePathSettings}
+      previewDatePathSettings={previewDatePathSettings}
       confirmDatePathMigration={confirmDatePathMigrationProp}
       desktopWebAuthAvailable={plugin.isDesktopWebAuthAvailable()}
       startDesktopWebAuth={() => plugin.captureDesktopWebToken()}
@@ -94,7 +98,8 @@ export class GetNoteSettingsTab extends PluginSettingTab {
         plugin={this.plugin}
         updateSetting={this.updateSetting}
         runtimeUpdates={this.runtimeUpdates}
-        applyDatePathSettings={(target) => this.plugin.applyDatePathSettings(target)}
+        applyDatePathSettings={(target, options) => this.plugin.applyDatePathSettings(target, options)}
+        previewDatePathSettings={(target, options) => this.plugin.previewDatePathSettings(target, options)}
         confirmDatePathMigration={(request) => confirmDatePathMigration(this.app, request)}
       />,
       this.containerEl

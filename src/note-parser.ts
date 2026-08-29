@@ -1,4 +1,5 @@
 import type { GetNoteNote } from './types';
+import { createSourceHash, renderSourceBody } from './source-body';
 
 /**
  * 解析 ISO 时间字符串为 Obsidian 格式
@@ -41,6 +42,8 @@ const PLUGIN_FRONTMATTER_KEYS = new Set([
   'is_child_note',
   'children_count',
   'children_ids',
+  'dedao_sync_schema',
+  'dedao_source_hash',
 ]);
 
 /**
@@ -90,17 +93,22 @@ export function formatTimestampPrefix(format: string, isoDate: string): string {
 /**
  * 生成 frontmatter
  */
-function buildFrontmatter(note: GetNoteNote, extraLines: string[] = []): string {
-  const tags = note.tags
+function frontmatterTags(note: GetNoteNote): string[] {
+  return note.tags
     .map(t => sanitizeObsidianTag(t.name))
-    .filter(Boolean)
-    .map(tag => `"${escapeYamlDoubleQuoted(tag)}"`)
-    .join(', ');
+    .filter(Boolean);
+}
+
+function frontmatterTitle(note: GetNoteNote): string {
+  return escapeYamlDoubleQuoted(sanitizeTitle(note.title) || sanitizeTitle(note.content || ''));
+}
+
+function buildFrontmatter(note: GetNoteNote, extraLines: string[] = [], sourceBody: string = note.content || ''): string {
+  const normalizedTags = frontmatterTags(note);
+  const tags = normalizedTags.map(tag => `"${escapeYamlDoubleQuoted(tag)}"`).join(', ');
   const tagBlock = tags ? `[${tags}]` : '[]';
   const childrenIds = note.children_ids?.map(id => `"${escapeYamlDoubleQuoted(id)}"`).join(', ');
-
-  const title = sanitizeTitle(note.title) ||
-    escapeYamlDoubleQuoted(sanitizeTitle(note.content || ''));
+  const title = frontmatterTitle(note);
 
   const lines = [
     '---',
@@ -112,6 +120,8 @@ function buildFrontmatter(note: GetNoteNote, extraLines: string[] = []): string 
     `source: 得到大脑`,
     `note_type: ${note.note_type}`,
     `tags: ${tagBlock}`,
+    'dedao_sync_schema: 1',
+    `dedao_source_hash: "${createSourceHash(title, normalizedTags, sourceBody)}"`,
   ];
 
   if (note.parent_id) {
@@ -317,11 +327,9 @@ function mergeTags(noteTags: GetNoteNote['tags'], templateTags: string[]): GetNo
   return merged;
 }
 
-function applyTemplatePlaceholders(value: string, note: GetNoteNote, body: string): string {
+function applyTemplateTitle(value: string, note: GetNoteNote): string {
   const title = generateDisplayTitle(note) || note.title || '';
-  return value
-    .replace(/\{\{title\}\}/g, title)
-    .replace(/\{\{content\}\}/g, body);
+  return value.replace(/\{\{title\}\}/g, title);
 }
 
 function appendBody(templateBody: string, body: string): string {
@@ -340,7 +348,8 @@ function buildLinkOriginalBlock(note: GetNoteNote): string {
 }
 
 function buildBody(note: GetNoteNote, assetFileName?: string, parentFileName?: string, childFileNames?: string[]): string {
-  let body = note.content || '';
+  let prefix = '';
+  let suffix = '';
 
   const hasAudioAttachment = note.assetPaths?.some(path => /_audio\.mp3$/i.test(path));
   const hasTranscript = Boolean(note.audio);
@@ -354,28 +363,28 @@ function buildBody(note: GetNoteNote, assetFileName?: string, parentFileName?: s
       `> ![[${filename}_audio.mp3]]\n` +
       transcriptLine +
       `---\n`;
-    body = audioBlock + body;
+    prefix = audioBlock;
     if (hasTranscript) {
       const transcriptHeader = '\n### 原始录音转写\n\n';
-      body = body + transcriptHeader + note.audio;
+      suffix += transcriptHeader + note.audio;
     }
   }
 
   if (note.assetPaths?.length) {
-    body += '\n' + buildAssetBlock(note.assetPaths);
+    suffix += '\n' + buildAssetBlock(note.assetPaths);
   } else if ((note.attachments ?? []).some(a => a.type !== 'audio')) {
-    body += '\n> 📎 附件\n> _(附件将在下次完整同步时显示)_\n';
+    suffix += '\n> 📎 附件\n> _(附件将在下次完整同步时显示)_\n';
   }
 
-  body += buildRelationLinks(note, parentFileName, childFileNames);
-  return body;
+  suffix += buildRelationLinks(note, parentFileName, childFileNames);
+  return prefix + renderSourceBody(note.content || '') + suffix;
 }
 
 /**
  * 将 GetNoteNote 渲染为完整的 Markdown 字符串
  */
 export function renderNote(note: GetNoteNote, assetFileName?: string, parentFileName?: string, childFileNames?: string[]): string {
-  const frontmatter = buildFrontmatter(note);
+  const frontmatter = buildFrontmatter(note, [], note.content || '');
   return frontmatter + buildLinkOriginalBlock(note) + buildBody(note, assetFileName, parentFileName, childFileNames);
 }
 
@@ -388,18 +397,25 @@ export function renderNoteWithTemplate(
 ): string {
   const parts = splitTemplate(template);
   const cleaned = cleanTemplateFrontmatter(parts.frontmatterLines);
+  if (parts.frontmatterLines.some(line => line.includes('{{content}}'))) {
+    throw new Error('Template frontmatter cannot contain a content placeholder');
+  }
+  const contentPlaceholderCount = (parts.body.match(/\{\{content\}\}/g) ?? []).length;
+  if (contentPlaceholderCount > 1) {
+    throw new Error('Template can contain at most one content placeholder');
+  }
   const noteWithMergedTags = {
     ...note,
     tags: mergeTags(note.tags, cleaned.tags),
   };
   const body = buildBody(note, assetFileName, parentFileName, childFileNames);
-  const templateBody = applyTemplatePlaceholders(parts.body, noteWithMergedTags, body);
+  const templateBody = applyTemplateTitle(parts.body, noteWithMergedTags);
   const renderedBody = buildLinkOriginalBlock(note) + (parts.body.includes('{{content}}')
-    ? templateBody
+    ? templateBody.replace('{{content}}', body)
     : appendBody(templateBody, body));
-  const extraLines = cleaned.lines.map(line => applyTemplatePlaceholders(line, noteWithMergedTags, body));
+  const extraLines = cleaned.lines.map(line => applyTemplateTitle(line, noteWithMergedTags));
 
-  return buildFrontmatter(noteWithMergedTags, extraLines) + renderedBody;
+  return buildFrontmatter(noteWithMergedTags, extraLines, note.content || '') + renderedBody;
 }
 
 /**

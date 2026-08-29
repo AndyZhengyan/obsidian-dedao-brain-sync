@@ -16,7 +16,7 @@ Use the footer's existing left-side utility position:
 
 ## Interaction
 
-Clicking the link closes the manual sync modal and opens the Dedao Brain Sync settings tab. It does not trigger sync and does not preserve the modal's temporary filters.
+Clicking the link closes the manual sync modal and opens the Dedao Brain Sync1 settings tab. It does not trigger sync and does not preserve the modal's temporary filters.
 
 ## Accessibility
 

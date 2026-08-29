@@ -80,6 +80,8 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
 
     const syncPromise = plugin['runSync']('full', { maxDays: 0, syncStartDate: '' });
     expect(updateRuntimeState).toHaveBeenCalledTimes(1);
+    expect(plugin.syncProgress.percent).toBeUndefined();
+    expect(plugin.syncProgress.phase).toBe('active');
 
     resolveSync({ created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] });
     await syncPromise;
@@ -168,7 +170,8 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     expect(plugin.syncProgress.message).toContain('已取消');
   });
 
-  it('manual sync success clears syncing state immediately', async () => {
+  it('keeps a successful manual sync result visible for three seconds', async () => {
+    vi.useFakeTimers();
     vi.spyOn(SyncEngine.prototype, 'sync').mockResolvedValue({
       created: 1,
       updated: 0,
@@ -183,7 +186,10 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
 
     expect(plugin.isSyncing).toBe(false);
     expect(plugin.currentSyncEngine).toBe(null);
-    expect(plugin.syncProgress).toEqual({ message: '', count: '', percent: 0 });
+    expect(plugin.syncProgress).toMatchObject({ percent: 100, phase: 'success' });
+
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(plugin.syncProgress).toEqual({ message: '', count: '', percent: undefined, phase: 'active' });
   });
 
   it('records knowledge-base sync mode and selected count', async () => {
@@ -211,6 +217,17 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
         selectedIds: ['blogger_old_post'],
       },
     });
+  });
+
+  it('starts an all-subscription sync without narrowing it to selected topics or notes', async () => {
+    const syncSpy = vi.spyOn(SyncEngine.prototype, 'syncSubscribedKnowledge').mockResolvedValue({
+      created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [],
+    });
+    const plugin = makePlugin();
+    const runAll = (plugin as unknown as { syncAllSubscribedKnowledge: () => void }).syncAllSubscribedKnowledge;
+
+    runAll.call(plugin);
+    await vi.waitFor(() => expect(syncSpy).toHaveBeenCalledWith(undefined, { syncAll: true }));
   });
 
   it('records a completed knowledge-base sync with failed items as partial', async () => {
@@ -668,6 +685,7 @@ describe('GetNoteSyncPlugin history normalization', () => {
 
   it('preserves a persisted partial status during plugin load', async () => {
     vi.useFakeTimers();
+    vi.setSystemTime(3000);
     const plugin = new GetNoteSyncPlugin(new App());
     Object.assign(plugin.app.vault.adapter, {
       exists: vi.fn().mockResolvedValue(false),
@@ -692,8 +710,43 @@ describe('GetNoteSyncPlugin history normalization', () => {
     expect(plugin.syncHistory[0]?.status).toBe('partial');
   });
 
+  it('drops persisted history older than 30 days during plugin load', async () => {
+    vi.useFakeTimers();
+    const now = new Date('2026-08-22T12:00:00Z').getTime();
+    vi.setSystemTime(now);
+    const plugin = new GetNoteSyncPlugin(new App());
+    Object.assign(plugin.app.vault.adapter, {
+      exists: vi.fn().mockResolvedValue(false),
+      mkdir: vi.fn(),
+      copy: vi.fn(),
+    });
+    vi.spyOn(plugin, 'loadData').mockResolvedValue({
+      syncHistory: [
+        {
+          id: 'expired', startedAt: now - 31 * 24 * 60 * 60 * 1000,
+          finishedAt: now - 31 * 24 * 60 * 60 * 1000,
+          durationMs: 0, timestamp: now - 31 * 24 * 60 * 60 * 1000,
+          result: { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] },
+          type: 'full', status: 'success',
+        },
+        {
+          id: 'recent', startedAt: now - 29 * 24 * 60 * 60 * 1000,
+          finishedAt: now - 29 * 24 * 60 * 60 * 1000,
+          durationMs: 0, timestamp: now - 29 * 24 * 60 * 60 * 1000,
+          result: { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] },
+          type: 'full', status: 'success',
+        },
+      ],
+    });
+
+    await plugin.onload();
+
+    expect(plugin.syncHistory.map(entry => entry.id)).toEqual(['recent']);
+  });
+
   it('migrates a persisted success with failed items to partial during plugin load', async () => {
     vi.useFakeTimers();
+    vi.setSystemTime(3000);
     const plugin = new GetNoteSyncPlugin(new App());
     Object.assign(plugin.app.vault.adapter, {
       exists: vi.fn().mockResolvedValue(false),
@@ -720,6 +773,7 @@ describe('GetNoteSyncPlugin history normalization', () => {
 
   it('preserves a persisted failed status even when failed items are present', async () => {
     vi.useFakeTimers();
+    vi.setSystemTime(3000);
     const plugin = new GetNoteSyncPlugin(new App());
     Object.assign(plugin.app.vault.adapter, {
       exists: vi.fn().mockResolvedValue(false),

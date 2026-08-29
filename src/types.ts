@@ -259,7 +259,7 @@ export interface SyncHistoryEntry {
   timestamp: number;
   result: SyncResult;
   type: 'full' | 'selective' | 'auto' | 'upload';
-  mode?: 'time' | 'selected' | 'knowledge-base' | 'auto' | 'local-upload';
+  mode?: 'time' | 'selected' | 'knowledge-base' | 'auto' | 'local-upload' | 'date-path';
   scope?: SyncHistoryScope;
   status: 'success' | 'partial' | 'failed' | 'cancelled';
   error?: string;
@@ -268,7 +268,9 @@ export interface SyncHistoryEntry {
 export interface SyncProgressDetail {
   message: string;
   count: string;
-  percent: number;
+  /** Undefined while the remote service has not reported a total yet. */
+  percent?: number;
+  phase?: 'active' | 'success' | 'failed' | 'cancelled';
 }
 
 export interface SyncResult {

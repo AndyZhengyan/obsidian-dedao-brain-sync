@@ -14,11 +14,13 @@
 
 * * *
 
-## 🎉 1.4.4 最新更新
+## 🎉 1.5.7 最新更新
 
-- **🧭 完整设置入口更准确**：只有从左侧栏“同步得到大脑”打开按时间同步面板时，才显示“打开完整设置”；从设置页或命令面板进入时不再出现重复入口。
+- **🧠 核心同步能力回归**：桌面端 Web 登录与静默续期、源正文保真回传、日期路径与附件迁移、设置层级与同步进度体验已恢复。
+- **🛡️ 更稳妥地管理本地知识库**：回传只使用受保护的远端正文；异常标记会安全跳过，迁移过程保留诊断与回滚边界。
+- **✨ 名称恢复**：Obsidian、安装说明与包信息统一使用 `Dedao Brain Sync`。
 
-1.4.3 及更早版本的核心改进仍在生效（按创建日期整理、部分失败状态、知识库同步和安全写入等）。
+这是一次功能恢复版本。升级后可继续沿用现有配置与本地数据；执行日期路径迁移前，建议先阅读确认弹窗中的预检结果。
 
 README 仅保留当前版本的核心亮点；完整版本历史请查看 [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases)。
 
@@ -97,16 +99,16 @@ OpenAPI 搜索侧边栏：在 Obsidian 侧边栏直接搜索得到大脑笔记�
 1. 打开得到大脑应用。
 2. 进入 `设置 -> 开放平台`。
 3. 创建应用，复制 `Token` 和 `Client ID`。
-4. 在 `设置 -> 得到大脑（原Get笔记）Sync` 中选择 `OpenAPI鉴权（会员）`，粘贴两个值。
+4. 在 `设置 -> Dedao Brain Sync` 中选择 `OpenAPI鉴权（会员）`，粘贴两个值。
 5. 也可以使用设置页的 OAuth 按钮自动获取凭证。
 
-### Web 模式（桌面端自动登录，移动端手动 Token）
+### Web 模式（手动 Token）
 
-如果你的账号无法使用 OpenAPI，可以选择 `临时鉴权`，不需要 `Client ID`。
+如果你的账号无法使用 OpenAPI，可以选择 `临时鉴权`。这个模式复用浏览器里已经登录的得到大脑网页版会话，不需要 `Client ID`。
 
-桌面版 Obsidian 点击 `网页登录并自动获取 Token`，在插件打开的独立登录窗口中完成登录即可。插件只监听得到大脑 Web API 请求中的 `Authorization`，验证成功后自动保存 Token；登录会话保存在专用隔离分区，后续可直接刷新。点击 `退出并清除登录` 会同时删除已保存 Token 和该隔离登录会话。
+独立图文步骤见：[Web 模式手动 Token 指南](docs/web-mode-manual-token_zh.md)。
 
-移动端继续手动粘贴 Token。独立图文步骤见：[Web 模式 Token 指南](docs/web-mode-manual-token_zh.md)。手动复制步骤：
+复制 Token 的步骤：
 
 1. 用 Chrome 或 Edge 打开 `https://www.biji.com/note` 并登录。
 2. 打开浏览器开发者工具：Windows/Linux 按 `F12` 或 `Ctrl + Shift + I`；Mac 按 `Command + Option + I`。
@@ -114,7 +116,7 @@ OpenAPI 搜索侧边栏：在 Obsidian 侧边栏直接搜索得到大脑笔记�
 4. 刷新网页版，或打开笔记列表 / 任意一篇笔记，让页面发起接口请求。
 5. 在请求列表里点开名称类似 `notes?...` 或 `list?...` 的请求；右侧 Headers 里的 `Host` 通常是 `get-notes.luojilab.com`。
 6. 在 `Request Headers` 下复制完整的 `Authorization` 值。
-7. 粘贴到 `设置 -> 得到大脑（原Get笔记）Sync -> 临时鉴权` 的 Token 输入框。
+7. 粘贴到 `设置 -> Dedao Brain Sync -> 临时鉴权` 的 Token 输入框。
 8. 点击 `测试连接`，成功后再执行 `按时间同步` 或 `按笔记同步`。
 
 这个值通常以 `Bearer eyJ...` 开头；插件支持粘贴完整 `Bearer ...`，也支持只粘贴 JWT token。不要把 OpenAPI 的 `gk_...` Token 粘贴到临时鉴权里。Web Token 是浏览器会话凭证，可能过期；如果返回 `401`、`403` 或 `Web Token 已过期`，请刷新网页版并重新复制 `Authorization` header。

@@ -96,9 +96,9 @@ describe('renderNote', () => {
     expect(result).toContain('children_ids: ["1909246675068292528"]');
   });
 
-  it('正文为空时只输出 frontmatter', () => {
+  it('正文为空时仍写入空的来源正文边界', () => {
     const result = renderNote(makeNote({ content: '' }));
-    expect(result.endsWith('---\n')).toBe(true);
+    expect(result).toContain('<!-- dedao-brain-sync:source-body:start -->\n\n<!-- dedao-brain-sync:source-body:end -->');
   });
 });
 
@@ -310,7 +310,7 @@ describe('renderNote — image note', () => {
     const result = renderNote(note);
 
     expect(result).toContain(
-      '图片笔记正文\n---\n> 📷 图片\n> ![](asset/测试笔记_image.png)\n> ![](asset/测试笔记_image_2.jpg)\n---\n'
+      '图片笔记正文\n<!-- dedao-brain-sync:source-body:end -->\n---\n> 📷 图片\n> ![](asset/测试笔记_image.png)\n> ![](asset/测试笔记_image_2.jpg)\n---\n'
     );
   });
 

@@ -14,11 +14,13 @@ For the project background and origin story, see this Chinese article: [Project 
 
 * * *
 
-## 🎉 1.4.4 — Latest Update
+## 🎉 1.5.7 — Latest Update
 
-- **🧭 Context-aware full-settings link**: The full-settings shortcut appears only when the time-based sync panel is opened from the left ribbon. It stays hidden when the same panel is opened from Settings or the command palette.
+- **🧠 Core sync capabilities restored**: desktop Web login with silent renewal, source-body-preserving reverse sync, date-path and attachment migration, plus the refined settings and sync-progress experience are back.
+- **🛡️ Safer local knowledge management**: reverse sync uses only protected remote source bodies; malformed markers are safely skipped, while migration retains diagnostic and rollback boundaries.
+- **✨ Display name restored**: Obsidian, installation guides, and package metadata consistently use `Dedao Brain Sync`.
 
-Core improvements from 1.4.3 and earlier remain live, including created-date organization, partial-failure status, knowledge-base sync, and safer file writes.
+This is a feature-restoration release. Existing configuration and local data remain supported; review the preflight result in the confirmation dialog before running date-path migration.
 
 The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 
@@ -100,13 +102,13 @@ Credentials are stored only in your local Obsidian plugin data, and are used to 
 4. In `Settings -> Dedao Brain Sync`, choose `OpenAPI auth (members)` and paste both values.
 5. You can also use the OAuth button on the settings page to fetch credentials automatically.
 
-### Web mode (automatic on desktop, manual token on mobile)
+### Web mode (manual token)
 
-If your account cannot use OpenAPI, choose `Temporary auth`. It does not require a `Client ID`.
+If your account cannot use OpenAPI, choose `Temporary auth`. This mode reuses your existing Dedao Brain web session in the browser and does not require a `Client ID`.
 
-On Obsidian Desktop, click `Sign in on the web and get Token automatically`, then finish signing in inside the dedicated window opened by the plugin. The plugin only observes `Authorization` on Dedao Brain Web API requests and saves the token after validation. The sign-in state uses a dedicated persistent partition, so it can be reused later. `Sign out and clear login` removes both the saved token and that isolated session.
+Step-by-step English guide: [Web Mode Manual Token Guide](docs/web-mode-manual-token.md).
 
-Mobile remains manual. See the [Web Mode Token Guide](docs/web-mode-manual-token.md). To copy the token manually:
+To copy the token:
 
 1. Open `https://www.biji.com/note` in Chrome or Edge and sign in.
 2. Open browser DevTools: `F12` or `Ctrl + Shift + I` on Windows / Linux; `Command + Option + I` on Mac.
