@@ -150,6 +150,13 @@ export class SyncCancelledError extends Error {
   }
 }
 
+class VaultArtifactConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'VaultArtifactConflictError';
+  }
+}
+
 export interface SyncProgressCallback {
   (info: { page?: number; processed?: number; total?: number; created?: number; updated?: number; skipped?: number; failed?: number; percent?: number }): void;
 }
@@ -411,12 +418,14 @@ export class SyncEngine {
       const existing = this.app.vault.getAbstractFileByPath(targetPath);
       if (existing instanceof TFile) return targetPath;
       if (existing) {
-        console.warn(`[DedaoBrain] Link original target path is a folder, not a file: ${targetPath}`);
-        return null;
+        throw new VaultArtifactConflictError(
+          `Link original target path is a folder, not a file: ${targetPath}`,
+        );
       }
       await this.app.vault.create(targetPath, content);
       return targetPath;
     } catch (err) {
+      if (err instanceof VaultArtifactConflictError) throw err;
       console.error('[DedaoBrain] Link original write error:', err);
       return null;
     }
@@ -485,8 +494,9 @@ export class SyncEngine {
       return null;
     }
     if (!(templateFile instanceof TFile)) {
-      console.warn(`[DedaoBrain] Template path is a folder, not a file: ${templatePath}`);
-      return null;
+      throw new VaultArtifactConflictError(
+        `Template path is a folder, not a file: ${templatePath}`,
+      );
     }
 
     try {
@@ -518,6 +528,9 @@ export class SyncEngine {
     categoryOverride?: string
   ): Promise<WriteNoteResult> {
     try {
+      if (note.asset_error) {
+        return { status: 'failed', error: note.asset_error };
+      }
       const existingByUid = uidIndex.get(note.note_id);
       if (existingByUid) {
         return { status: 'skipped', file: existingByUid };
@@ -569,7 +582,11 @@ export class SyncEngine {
         }
       }
     } catch (err) {
-      console.error(`[DedaoBrain] Write failed [${generateDisplayTitle(note) || note.note_id}]:`, err);
+      if (err instanceof VaultArtifactConflictError) {
+        console.warn(`[DedaoBrain] ${err.message}`);
+      } else {
+        console.error(`[DedaoBrain] Write failed [${generateDisplayTitle(note) || note.note_id}]:`, err);
+      }
       return {
         status: 'failed',
         file: undefined,
@@ -766,6 +783,10 @@ export class SyncEngine {
 
       return enrichedNote;
     } catch (err) {
+      if (err instanceof VaultArtifactConflictError) {
+        console.warn(`[DedaoBrain] ${err.message}`);
+        return { ...note, asset_error: err.message };
+      }
       console.warn(`[DedaoBrain] Failed to enrich note ${note.note_id}:`, err);
       return note;
     }

@@ -485,7 +485,7 @@ describe('SyncEngine — TFile narrowing for vault writes (#220)', () => {
     vi.restoreAllMocks();
   });
 
-  it('writeLinkOriginalAsset does not call vault.modify or vault.create when the asset path is a folder', async () => {
+  it('marks the note failed without writing when the link-original path is a folder', async () => {
     mockLinkOriginalFetch(linkNote);
 
     const app = makeMockApp();
@@ -498,7 +498,13 @@ describe('SyncEngine — TFile narrowing for vault writes (#220)', () => {
       const engine = new SyncEngine(app, makeSettings({ maxDays: 0 }));
       const result = await engine.sync();
 
-      expect(result.created).toBe(1);
+      expect(result.created).toBe(0);
+      expect(result.failed).toBe(1);
+      expect(result.items).toContainEqual(expect.objectContaining({
+        noteId: 'link_220',
+        status: 'failed',
+        error: expect.stringContaining('folder'),
+      }));
       const modifyCalls = vi.mocked(app.vault.modify).mock.calls
         .map(call => String((call[0] as { path: string }).path));
       expect(modifyCalls.some(p => p === '得到大脑/链接笔记/asset/链接标题_link_220_original.md')).toBe(false);
@@ -535,7 +541,7 @@ describe('SyncEngine — TFile narrowing for vault writes (#220)', () => {
     }
   });
 
-  it('readTemplateFile returns null and warns when the template path is a folder', async () => {
+  it('marks the note failed without reading or falling back when the template path is a folder', async () => {
     mockLinkOriginalFetch(linkNote);
 
     const app = makeMockApp();
@@ -549,7 +555,13 @@ describe('SyncEngine — TFile narrowing for vault writes (#220)', () => {
       }));
       const result = await engine.sync();
 
-      expect(result.created).toBe(1);
+      expect(result.created).toBe(0);
+      expect(result.failed).toBe(1);
+      expect(result.items).toContainEqual(expect.objectContaining({
+        noteId: 'link_220',
+        status: 'failed',
+        error: expect.stringContaining('folder'),
+      }));
       const readCalls = vi.mocked(app.vault.read).mock.calls
         .map(call => String((call[0] as { path: string }).path));
       expect(readCalls).not.toContain('templates/note-template.md');
