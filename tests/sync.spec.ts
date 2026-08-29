@@ -219,6 +219,17 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     });
   });
 
+  it('starts an all-subscription sync without narrowing it to selected topics or notes', async () => {
+    const syncSpy = vi.spyOn(SyncEngine.prototype, 'syncSubscribedKnowledge').mockResolvedValue({
+      created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [],
+    });
+    const plugin = makePlugin();
+    const runAll = (plugin as unknown as { syncAllSubscribedKnowledge: () => void }).syncAllSubscribedKnowledge;
+
+    runAll.call(plugin);
+    await vi.waitFor(() => expect(syncSpy).toHaveBeenCalledWith(undefined, { syncAll: true }));
+  });
+
   it('records a completed knowledge-base sync with failed items as partial', async () => {
     vi.spyOn(SyncEngine.prototype, 'syncSubscribedKnowledge').mockResolvedValue({
       created: 1,

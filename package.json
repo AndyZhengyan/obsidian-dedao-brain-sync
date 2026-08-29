@@ -1,6 +1,6 @@
 {
   "name": "obsidian-dedao-brain-sync",
-  "version": "1.5.6",
+  "version": "1.5.7",
   "description": "Dedao Brain Sync for Obsidian",
   "main": "main.js",
   "scripts": {
@@ -25,9 +25,9 @@
     "eslint": "^10.9.0",
     "happy-dom": "^20.11.6",
     "obsidian": "^1.13.1",
-    "typescript": "^7.0.2",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.67.0",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.10"
   },
   "dependencies": {
     "preact": "^10.29.8",

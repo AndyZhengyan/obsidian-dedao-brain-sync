@@ -395,6 +395,7 @@ export const translations: Record<string, Record<string, string>> = {
 
     // === Command / Ribbon ===
     'command.sync': '同步笔记',
+    'command.syncAllSubscribedKnowledge': '同步全部订阅知识',
     'command.reverseSync': '写回得到大脑',
     'command.uploadLocal': '上传本地笔记到得到大脑',
     'command.search': '打开得到大脑搜索',
@@ -798,6 +799,7 @@ export const translations: Record<string, Record<string, string>> = {
 
     // === Command / Ribbon ===
     'command.sync': 'Sync Notes',
+    'command.syncAllSubscribedKnowledge': 'Sync All Subscribed Knowledge',
     'command.reverseSync': 'Write Back to Dedao Brain',
     'command.uploadLocal': 'Upload Local Notes to Dedao Brain',
     'command.search': 'Open Dedao Brain Search',
