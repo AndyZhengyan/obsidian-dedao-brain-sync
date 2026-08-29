@@ -1,4 +1,4 @@
-import { App, Modal, Notice, Plugin, getLanguage, type DataAdapter, type Editor, type Menu, type TFile } from 'obsidian';
+import { App, Modal, Notice, Platform, Plugin, getLanguage, type DataAdapter, type Editor, type Menu, type TFile } from 'obsidian';
 import ReactDOM from 'react-dom';
 import { DEFAULT_SETTINGS, getAuthCredentials, migrateEnabledNoteTypes, type RecallSearchResult, type Settings, type SyncHistoryScope, type SyncProgressDetail, type SyncHistoryEntry, type SyncResult, type SyncScopeOptions } from './types';
 import { GetNoteSettingsTab } from './settings-tab';
@@ -12,17 +12,21 @@ import { initI18n, t } from './i18n';
 import { ReverseSyncEngine, type ReverseSyncResult } from './reverse-sync';
 import { migrateSyncedNoteTags } from './tag-migration';
 import { getLastQuotaState, resetQuotaState } from './api-clients/openapi-client';
-import { fetchRecallSearch } from './api';
+import { fetchNotes, fetchRecallSearch, setWebTokenRefreshHandler } from './api';
 import { mergeTagCache } from './utils/tag-aggregator';
 import { SearchPanel, findSyncedNoteFile } from './ui/search-view';
 import {
   migrateDatePaths,
+  type DatePathMigrationOptions,
   type DatePathMigrationResult,
   type DatePathMigrationTarget,
 } from './date-path-migration';
 import { validateDatePathFormat } from './date-paths';
+import { createDesktopWebAuthManager, type DesktopWebAuthManager } from './desktop-web-auth';
+import { WebTokenRefreshCoordinator } from './web-token-refresh';
 
-const MAX_SYNC_HISTORY = 20;
+const SYNC_HISTORY_RETENTION_DAYS = 30;
+const SYNC_HISTORY_RETENTION_MS = SYNC_HISTORY_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 const TAG_MIGRATION_VERSION = 2;
 const LEGACY_PLUGIN_IDS = ['obsidian-getnote-importer', 'getnote-importer'] as const;
 const PLUGIN_DATA_FILE = 'data.json';
@@ -75,6 +79,11 @@ function emptySyncResult(): SyncResult {
   return { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
 }
 
+function retainRecentSyncHistory(entries: SyncHistoryEntry[], now = Date.now()): SyncHistoryEntry[] {
+  const cutoff = now - SYNC_HISTORY_RETENTION_MS;
+  return entries.filter(entry => entry.timestamp >= cutoff);
+}
+
 function normalizeSyncHistory(value: unknown): SyncHistoryEntry[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -91,7 +100,7 @@ function normalizeSyncHistory(value: unknown): SyncHistoryEntry[] {
       const type: SyncHistoryEntry['type'] =
         entry.type === 'selective' || entry.type === 'auto' || entry.type === 'upload' ? entry.type : 'full';
       const mode: SyncHistoryEntry['mode'] =
-        entry.mode === 'selected' || entry.mode === 'knowledge-base' || entry.mode === 'auto' || entry.mode === 'time' || entry.mode === 'local-upload'
+        entry.mode === 'selected' || entry.mode === 'knowledge-base' || entry.mode === 'auto' || entry.mode === 'time' || entry.mode === 'local-upload' || entry.mode === 'date-path'
           ? entry.mode
           : type === 'upload'
             ? 'local-upload'
@@ -100,7 +109,11 @@ function normalizeSyncHistory(value: unknown): SyncHistoryEntry[] {
             : type === 'auto'
               ? 'auto'
               : 'time';
-      const status: SyncHistoryEntry['status'] = entry.status === 'failed' || entry.status === 'cancelled' ? entry.status : 'success';
+      const status: SyncHistoryEntry['status'] = entry.status === 'partial' || entry.status === 'failed' || entry.status === 'cancelled'
+        ? entry.status
+        : (result.failed ?? 0) > 0
+          ? 'partial'
+          : 'success';
       const maybeScope = entry.scope;
       return {
         id: typeof entry.id === 'string' ? entry.id : `${timestamp}-${index}`,
@@ -133,14 +146,14 @@ function normalizeSyncHistory(value: unknown): SyncHistoryEntry[] {
         error: typeof entry.error === 'string' ? entry.error : undefined,
       };
     })
-    .slice(-MAX_SYNC_HISTORY);
+    .filter(entry => entry.timestamp >= Date.now() - SYNC_HISTORY_RETENTION_MS);
 }
 
 export default class GetNoteSyncPlugin extends Plugin {
   declare settings: Settings;
   isSyncing = false;
   isDatePathMigrationRunning = false;
-  syncProgress: SyncProgressDetail = { message: '', count: '', percent: 0 };
+  syncProgress: SyncProgressDetail = { message: '', count: '', percent: undefined, phase: 'active' };
   syncHistory: SyncHistoryEntry[] = [];
   lastSyncResult: SyncHistoryEntry | null = null;
   private currentSyncEngine: { cancel(): void } | null = null;
@@ -150,7 +163,10 @@ export default class GetNoteSyncPlugin extends Plugin {
   private syncRibbonEl?: HTMLElement;
   private searchRibbonEl?: HTMLElement;
   private lastProgressUpdate = 0;
+  private syncProgressResultTimer: ReturnType<typeof setTimeout> | null = null;
   private autoSyncFailCount = 0;
+  private desktopWebAuthManager: DesktopWebAuthManager | null = null;
+  private webTokenRefreshCoordinator: WebTokenRefreshCoordinator | null = null;
 
   async onload(): Promise<void> {
     initI18n(getLanguage());
@@ -189,7 +205,40 @@ export default class GetNoteSyncPlugin extends Plugin {
       syncHistory: normalizeSyncHistory(loaded?.syncHistory),
     };
     this.syncHistory = this.settings.syncHistory;
-    this.lastSyncResult = this.syncHistory.at(-1) ?? null;
+    this.lastSyncResult = this.syncHistory.filter(entry => entry.mode !== 'date-path').at(-1) ?? null;
+    this.desktopWebAuthManager = createDesktopWebAuthManager({
+      isDesktopApp: Platform.isDesktopApp,
+    });
+    if (this.desktopWebAuthManager) {
+      const coordinator = new WebTokenRefreshCoordinator({
+        captureToken: (validate, options) => this.desktopWebAuthManager!.captureToken(validate, options),
+        validate: async token => {
+          await fetchNotes({
+            token,
+            clientId: '',
+            authMode: 'web',
+            sinceId: '0',
+            limit: 1,
+            skipWebTokenRefresh: true,
+          });
+        },
+        persist: async token => {
+          this.settings.webApiToken = token;
+          if (this.settings.authMode === 'web') this.settings.apiToken = token;
+          await this.saveSettings();
+          this.updateSettingsRuntimeState();
+        },
+        notifyFailure: () => showError(t('error.webApiSessionExpired'), 10000),
+      });
+      this.webTokenRefreshCoordinator = coordinator;
+      setWebTokenRefreshHandler({
+        getToken: () => {
+          const credentials = getAuthCredentials(this.settings);
+          return credentials.authMode === 'web' ? credentials.token : '';
+        },
+        refresh: () => coordinator.refresh(),
+      });
+    }
 
     this.app.workspace.onLayoutReady(() => {
       void this.migrateExistingTags();
@@ -202,6 +251,12 @@ export default class GetNoteSyncPlugin extends Plugin {
       id: 'sync-notes',
       name: t('command.sync'),
       callback: () => this.openManualSyncModal(),
+    });
+
+    this.addCommand({
+      id: 'sync-all-subscribed-knowledge',
+      name: t('command.syncAllSubscribedKnowledge'),
+      callback: () => this.syncAllSubscribedKnowledge(),
     });
 
     this.addCommand({
@@ -249,10 +304,36 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   onunload(): void {
     this.stopAutoSync();
+    if (this.syncProgressResultTimer) clearTimeout(this.syncProgressResultTimer);
+    setWebTokenRefreshHandler(null);
+    this.webTokenRefreshCoordinator = null;
+    this.desktopWebAuthManager?.dispose();
+  }
+
+  isDesktopWebAuthAvailable(): boolean {
+    return this.desktopWebAuthManager !== null;
+  }
+
+  async captureDesktopWebToken(): Promise<string> {
+    if (!this.desktopWebAuthManager) throw new Error(t('settings.webAuth.desktopOnly'));
+    return this.desktopWebAuthManager.captureToken(async token => {
+      await fetchNotes({
+        token,
+        clientId: '',
+        authMode: 'web',
+        sinceId: '0',
+        limit: 1,
+        skipWebTokenRefresh: true,
+      });
+    });
+  }
+
+  async clearDesktopWebAuthSession(): Promise<void> {
+    await this.desktopWebAuthManager?.clearSession();
   }
 
   private registerRibbonActions(): void {
-    this.syncRibbonEl = this.addRibbonIcon('book-lock', t('ribbon.tooltip'), () => this.openManualSyncModal());
+    this.syncRibbonEl = this.addRibbonIcon('book-lock', t('ribbon.tooltip'), () => this.openManualSyncModal(true));
     this.searchRibbonEl = this.addRibbonIcon('brain-circuit', t('ribbon.searchTooltip'), () => void this.openSearchView());
     this.refreshRibbonActions();
   }
@@ -266,7 +347,10 @@ export default class GetNoteSyncPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
-  async applyDatePathSettings(target: DatePathMigrationTarget): Promise<DatePathMigrationResult> {
+  async applyDatePathSettings(
+    target: DatePathMigrationTarget,
+    options: DatePathMigrationOptions = {},
+  ): Promise<DatePathMigrationResult> {
     if (this.isSyncing) throw new Error('Cannot reorganize date paths while sync is running');
     if (this.isDatePathMigrationRunning) throw new Error('Date-path migration is already running');
     const format = target.format.trim();
@@ -284,7 +368,8 @@ export default class GetNoteSyncPlugin extends Plugin {
       this.settings.datePathEnabled = target.enabled;
       this.settings.datePathFormat = format;
       try {
-        return await migrateDatePaths(
+        const startedAt = Date.now();
+        const result = await migrateDatePaths(
           this.app,
           this.settings.folderName,
           { enabled: target.enabled, format },
@@ -292,6 +377,7 @@ export default class GetNoteSyncPlugin extends Plugin {
             source: { enabled: previous.enabled, format: previous.format },
             categoryOrigins: previous.categoryOrigins,
             assetMoveEvidence: previous.assetMoveEvidence,
+            rebuildCategories: options.rebuildCategories,
             beforeExecute: async (categoryOrigins, assetMoveEvidence) => {
               this.settings.datePathCategoryOrigins = categoryOrigins;
               this.settings.datePathAssetMoveEvidence = assetMoveEvidence;
@@ -300,6 +386,8 @@ export default class GetNoteSyncPlugin extends Plugin {
             },
           },
         );
+        await this.recordDatePathMigrationHistory(result, startedAt);
+        return result;
       } catch (error) {
         if (!targetPersisted) {
           this.settings.datePathEnabled = previous.enabled;
@@ -312,6 +400,33 @@ export default class GetNoteSyncPlugin extends Plugin {
     } finally {
       this.isDatePathMigrationRunning = false;
     }
+  }
+
+  async previewDatePathSettings(
+    target: DatePathMigrationTarget,
+    options: DatePathMigrationOptions = {},
+  ): Promise<DatePathMigrationResult> {
+    if (this.isSyncing) throw new Error('Cannot reorganize date paths while sync is running');
+    if (this.isDatePathMigrationRunning) throw new Error('Date-path migration is already running');
+    const format = target.format.trim();
+    if (!validateDatePathFormat(format)) throw new Error('Invalid date path format');
+
+    return migrateDatePaths(
+      this.app,
+      this.settings.folderName,
+      { enabled: target.enabled, format },
+      {
+        source: {
+          enabled: this.settings.datePathEnabled,
+          format: this.settings.datePathFormat,
+        },
+        categoryOrigins: this.settings.datePathCategoryOrigins,
+        assetMoveEvidence: this.settings.datePathAssetMoveEvidence,
+        rebuildCategories: options.rebuildCategories,
+        dryRun: true,
+        beforeExecute: async () => {},
+      },
+    );
   }
 
   /**
@@ -396,7 +511,8 @@ export default class GetNoteSyncPlugin extends Plugin {
     scope: SyncHistoryScope,
     status: SyncHistoryEntry['status'] = 'success',
     error?: string,
-    mode?: SyncHistoryEntry['mode']
+    mode?: SyncHistoryEntry['mode'],
+    updateLastSyncResult = true,
   ): Promise<void> {
     const finishedAt = Date.now();
     const entry: SyncHistoryEntry = {
@@ -413,7 +529,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       error,
     };
     this.syncHistory.push(entry);
-    this.syncHistory = this.syncHistory.slice(-MAX_SYNC_HISTORY);
+    this.syncHistory = retainRecentSyncHistory(this.syncHistory);
     this.settings.syncHistory = this.syncHistory;
 
     // Incrementally merge newly observed tag names into the local cache.
@@ -431,12 +547,46 @@ export default class GetNoteSyncPlugin extends Plugin {
 
     // lastSyncEndTimestamp only belongs to auto sync
     // Ordinary partial failures may still advance; retryable knowledge-base failures keep the old checkpoint.
-    if (type === 'auto' && status === 'success' && !result.checkpointBlocked) {
+    if (type === 'auto' && (status === 'success' || status === 'partial') && !result.checkpointBlocked) {
       this.settings.lastSyncEndTimestamp = result.lastNoteTimestamp ?? new Date(finishedAt).toISOString();
     }
 
-    this.lastSyncResult = entry;
+    if (updateLastSyncResult) this.lastSyncResult = entry;
     await this.saveSettings();
+  }
+
+  private async recordDatePathMigrationHistory(
+    result: DatePathMigrationResult,
+    startedAt: number,
+  ): Promise<void> {
+    const items = result.issues.map(migrationIssue => ({
+      noteId: migrationIssue.uid ?? migrationIssue.path,
+      title: migrationIssue.path,
+      noteType: 'plain_text',
+      updatedAt: new Date().toISOString(),
+      status: migrationIssue.code === 'rename-failed' || migrationIssue.code === 'rollback-failed'
+        ? 'failed' as const
+        : 'skipped' as const,
+      error: migrationIssue.message,
+    }));
+    await this.recordSyncHistory(
+      {
+        created: result.moved,
+        updated: 0,
+        skipped: result.skipped,
+        failed: result.failed,
+        total: result.scanned,
+        items,
+      },
+      'full',
+      startedAt,
+      { maxDays: 0, syncStartDate: '' },
+      result.failed > 0 ? 'partial' : 'success',
+      undefined,
+      'date-path',
+      false,
+    );
+    this.updateSettingsRuntimeState();
   }
 
   private async runSync(
@@ -464,7 +614,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       selectedIds,
     };
     this.isSyncing = true;
-    this.syncProgress = { message: t('sync.fetching', { page: 1 }), count: '', percent: 0 };
+    this.syncProgress = { message: t('sync.fetching', { page: 1 }), count: '', percent: undefined, phase: 'active' };
     this.currentSyncEngine = null;
     this.updateSettingsRuntimeState();
     showNotice(t('sync.started'));
@@ -479,7 +629,8 @@ export default class GetNoteSyncPlugin extends Plugin {
         ? await engine.syncNoteIds(selectedIds)
         : await engine.sync();
 
-      await this.recordSyncHistory(result, type, startedAt, resolvedScope);
+      const status: SyncHistoryEntry['status'] = result.failed > 0 ? 'partial' : 'success';
+      await this.recordSyncHistory(result, type, startedAt, resolvedScope, status);
 
         // Clear exhausted quota state on successful sync
         if (credentials.authMode === 'openapi' && this.settings.lastQuotaState?.exhausted) {
@@ -489,25 +640,71 @@ export default class GetNoteSyncPlugin extends Plugin {
         }
 
       if (type === 'auto') {
-        this.autoSyncFailCount = 0;
-        if (result.created > 0 || result.updated > 0 || result.skipped > 0) {
+        if (status === 'partial') {
+          this.autoSyncFailCount++;
+          if (this.autoSyncFailCount === 3) {
+            showError(t('notice.autoSyncPartialThreshold'));
+          }
+        } else {
+          this.autoSyncFailCount = 0;
+        }
+        if (status === 'success' && (result.created > 0 || result.updated > 0 || result.skipped > 0)) {
           showNotice(t('notice.autoSynced', { created: result.created, updated: result.updated, skipped: result.skipped }));
         }
       } else {
-        showSuccess(t('notice.syncComplete', { created: result.created, updated: result.updated, skipped: result.skipped, failed: result.failed > 0 ? ` · ${t('modal.failed', { failed: result.failed })}` : '' }), 8000);
-        this.syncProgress = { message: '', count: '', percent: 0 };
-        this.isSyncing = false;
-        this.currentSyncEngine = null;
-        this.updateSettingsRuntimeState();
+        if (status === 'partial') {
+          showError(t('notice.syncPartial', {
+            created: result.created,
+            updated: result.updated,
+            skipped: result.skipped,
+            failed: result.failed,
+          }), 15000);
+        } else {
+          showSuccess(t('notice.syncComplete', {
+            created: result.created,
+            updated: result.updated,
+            skipped: result.skipped,
+            failed: '',
+          }), 8000);
+        }
+        this.finishSyncProgress(
+          status === 'partial' ? 'failed' : 'success',
+          status === 'partial'
+            ? t('notice.syncPartial', {
+              created: result.created,
+              updated: result.updated,
+              skipped: result.skipped,
+              failed: result.failed,
+            })
+            : t('notice.syncComplete', {
+              created: result.created,
+              updated: result.updated,
+              skipped: result.skipped,
+              failed: '',
+            }),
+        );
         return;
       }
+      this.finishSyncProgress(
+        status === 'partial' ? 'failed' : 'success',
+        status === 'partial' ? t('notice.syncPartial', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: result.failed,
+        }) : t('notice.syncComplete', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: '',
+        }),
+      );
+      shouldResetSyncState = false;
     } catch (err) {
       if (err instanceof SyncCancelledError) {
         await this.recordSyncHistory(emptySyncResult(), type, startedAt, resolvedScope, 'cancelled');
-        if (type !== 'auto') {
-          this.syncProgress = { message: t('modal.cancelled'), count: '', percent: 0 };
-          shouldResetSyncState = true;
-        }
+        this.finishSyncProgress('cancelled', t('modal.cancelled'));
+        shouldResetSyncState = false;
       } else {
         const error = err instanceof Error ? err.message : String(err);
         await this.recordSyncHistory(emptySyncResult(), type, startedAt, resolvedScope, 'failed', error);
@@ -530,10 +727,12 @@ export default class GetNoteSyncPlugin extends Plugin {
           } else {
             showError(t('notice.autoSyncFailedWithMsg', { msg: error }));
           }
+          this.finishSyncProgress('failed', t('notice.syncFailed', { msg: error }));
+          shouldResetSyncState = false;
         } else {
-          this.syncProgress = { message: t('notice.syncFailed', { msg: error }), count: '', percent: 0 };
+          this.finishSyncProgress('failed', t('notice.syncFailed', { msg: error }));
           console.error(t('console.syncError'), err);
-          shouldResetSyncState = true;
+          shouldResetSyncState = false;
         }
       }
     } finally {
@@ -541,7 +740,7 @@ export default class GetNoteSyncPlugin extends Plugin {
         this.isSyncing = false;
         this.currentSyncEngine = null;
         if (type === 'auto') {
-          this.syncProgress = { message: '', count: '', percent: 0 };
+          this.syncProgress = { message: '', count: '', percent: undefined, phase: 'active' };
         }
         this.updateSettingsRuntimeState();
       }
@@ -588,7 +787,8 @@ export default class GetNoteSyncPlugin extends Plugin {
       count: info.processed && info.total
         ? t('sync.processingCount', { current: info.processed, total: info.total })
         : '',
-      percent: info.percent ?? 0,
+      percent: info.percent,
+      phase: 'active',
     };
     const now = Date.now();
     if (now - this.lastProgressUpdate > 300) {
@@ -597,10 +797,29 @@ export default class GetNoteSyncPlugin extends Plugin {
     }
   }
 
-  openManualSyncModal(): void {
+  private finishSyncProgress(phase: 'success' | 'failed' | 'cancelled', message: string): void {
+    this.isSyncing = false;
+    this.currentSyncEngine = null;
+    this.syncProgress = {
+      message,
+      count: '',
+      percent: phase === 'success' ? 100 : undefined,
+      phase,
+    };
+    this.updateSettingsRuntimeState();
+    if (this.syncProgressResultTimer) clearTimeout(this.syncProgressResultTimer);
+    this.syncProgressResultTimer = setTimeout(() => {
+      if (this.syncProgress.phase !== phase || this.syncProgress.message !== message) return;
+      this.syncProgress = { message: '', count: '', percent: undefined, phase: 'active' };
+      this.syncProgressResultTimer = null;
+      this.updateSettingsRuntimeState();
+    }, 3000);
+  }
+
+  openManualSyncModal(showOpenSettings = false): void {
     if (this.isDatePathMigrationRunning) return;
     closeFloatingSelects();
-    const wrapper = new ManualSyncModalWrapper(this.app, this);
+    const wrapper = new ManualSyncModalWrapper(this.app, this, showOpenSettings);
     wrapper.open();
   }
 
@@ -679,6 +898,11 @@ export default class GetNoteSyncPlugin extends Plugin {
     void this.runSubscribedKnowledgeSync(syncOptions);
   }
 
+  syncAllSubscribedKnowledge(): void {
+    void this.runSubscribedKnowledgeSync({ syncAll: true });
+  }
+
+
   private async runSubscribedKnowledgeSync(syncOptions?: TopicPickerSelection): Promise<void> {
     if (this.isSyncing || this.isDatePathMigrationRunning) return;
     const credentials = getAuthCredentials(this.settings);
@@ -689,7 +913,7 @@ export default class GetNoteSyncPlugin extends Plugin {
 
     const startedAt = Date.now();
     this.isSyncing = true;
-    this.syncProgress = { message: t('sync.subscribedKnowledge.fetching'), count: '', percent: 0 };
+    this.syncProgress = { message: t('sync.subscribedKnowledge.fetching'), count: '', percent: undefined, phase: 'active' };
     this.currentSyncEngine = null;
     this.updateSettingsRuntimeState();
     showNotice(t('sync.subscribedKnowledge.started'));
@@ -700,6 +924,7 @@ export default class GetNoteSyncPlugin extends Plugin {
     this.currentSyncEngine = engine;
     engine.setOnCancel(() => this.cancelSync());
 
+    let progressFinished = false;
     try {
       const result = await engine.syncSubscribedKnowledge(undefined, syncOptions);
       await this.recordSyncHistory(result, 'full', startedAt, {
@@ -707,13 +932,37 @@ export default class GetNoteSyncPlugin extends Plugin {
         syncStartDate: '',
         selectedCount: syncOptions?.selectedNoteIds?.length,
         selectedIds: syncOptions?.selectedNoteIds,
-      }, 'success', undefined, 'knowledge-base');
-      showSuccess(t('notice.syncComplete', {
-        created: result.created,
-        updated: result.updated,
-        skipped: result.skipped,
-        failed: result.failed > 0 ? ` · ${t('modal.failed', { failed: result.failed })}` : '',
-      }), 8000);
+      }, result.failed > 0 ? 'partial' : 'success', undefined, 'knowledge-base');
+      if (result.failed > 0) {
+        showError(t('notice.syncPartial', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: result.failed,
+        }), 15000);
+      } else {
+        showSuccess(t('notice.syncComplete', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: '',
+        }), 8000);
+      }
+      this.finishSyncProgress(
+        result.failed > 0 ? 'failed' : 'success',
+        result.failed > 0 ? t('notice.syncPartial', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: result.failed,
+        }) : t('notice.syncComplete', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: '',
+        }),
+      );
+      progressFinished = true;
     } catch (err) {
       if (err instanceof SyncCancelledError) {
         await this.recordSyncHistory(emptySyncResult(), 'full', startedAt, {
@@ -722,7 +971,8 @@ export default class GetNoteSyncPlugin extends Plugin {
           selectedCount: syncOptions?.selectedNoteIds?.length,
           selectedIds: syncOptions?.selectedNoteIds,
         }, 'cancelled', undefined, 'knowledge-base');
-        this.syncProgress = { message: t('modal.cancelled'), count: '', percent: 0 };
+        this.finishSyncProgress('cancelled', t('modal.cancelled'));
+        progressFinished = true;
         return;
       }
       const error = err instanceof Error ? err.message : String(err);
@@ -732,14 +982,17 @@ export default class GetNoteSyncPlugin extends Plugin {
         selectedCount: syncOptions?.selectedNoteIds?.length,
         selectedIds: syncOptions?.selectedNoteIds,
       }, 'failed', error, 'knowledge-base');
-      this.syncProgress = { message: t('notice.syncFailed', { msg: error }), count: '', percent: 0 };
+      this.finishSyncProgress('failed', t('notice.syncFailed', { msg: error }));
+      progressFinished = true;
       console.error(t('console.syncError'), err);
       showError(t('notice.syncFailed', { msg: error }));
     } finally {
-      this.isSyncing = false;
-      this.currentSyncEngine = null;
-      this.syncProgress = { message: '', count: '', percent: 0 };
-      this.updateSettingsRuntimeState();
+      if (!progressFinished) {
+        this.isSyncing = false;
+        this.currentSyncEngine = null;
+        this.syncProgress = { message: '', count: '', percent: undefined, phase: 'active' };
+        this.updateSettingsRuntimeState();
+      }
     }
   }
 
@@ -763,27 +1016,52 @@ export default class GetNoteSyncPlugin extends Plugin {
     if (this.isSyncing || this.isDatePathMigrationRunning) return;
     const startedAt = Date.now();
     this.isSyncing = true;
-    this.syncProgress = { message: t('reverseSync.running'), count: '', percent: 0 };
+    this.syncProgress = { message: t('reverseSync.running'), count: '', percent: undefined, phase: 'active' };
     this.updateSettingsRuntimeState();
 
+    let progressFinished = false;
     try {
       const engine = new ReverseSyncEngine(this.app, this.settings, (progress) => {
-        const percent = progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0;
+        const percent = progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : undefined;
         this.syncProgress = {
           message: t('reverseSync.running'),
           count: `${t('modal.countProgress', { processed: progress.processed })} ${progress.title}`,
           percent,
+          phase: 'active',
         };
         this.updateSettingsRuntimeState();
       });
       this.currentSyncEngine = engine;
       const result = files ? await engine.syncFiles(files) : await engine.syncBack();
       await this.recordUploadHistory(result, startedAt, files?.map(file => file.path));
-      showSuccess(t('reverseSync.complete', {
-        created: result.created,
-        skipped: result.skipped,
-        failed: result.failed,
-      }), 8000);
+      if (result.failed > 0) {
+        showError(t('notice.syncPartial', {
+          created: result.created,
+          updated: 0,
+          skipped: result.skipped,
+          failed: result.failed,
+        }), 15000);
+      } else {
+        showSuccess(t('reverseSync.complete', {
+          created: result.created,
+          skipped: result.skipped,
+          failed: result.failed,
+        }), 8000);
+      }
+      this.finishSyncProgress(
+        result.failed > 0 ? 'failed' : 'success',
+        result.failed > 0 ? t('notice.syncPartial', {
+          created: result.created,
+          updated: 0,
+          skipped: result.skipped,
+          failed: result.failed,
+        }) : t('reverseSync.complete', {
+          created: result.created,
+          skipped: result.skipped,
+          failed: result.failed,
+        }),
+      );
+      progressFinished = true;
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         await this.recordUploadHistory({
@@ -793,7 +1071,8 @@ export default class GetNoteSyncPlugin extends Plugin {
           total: files?.length ?? 0,
           items: [],
         }, startedAt, files?.map(file => file.path), t('modal.cancelled'), 'cancelled');
-        this.syncProgress = { message: t('modal.cancelled'), count: '', percent: 0 };
+        this.finishSyncProgress('cancelled', t('modal.cancelled'));
+        progressFinished = true;
         return;
       }
       const message = err instanceof Error ? err.message : String(err);
@@ -811,14 +1090,17 @@ export default class GetNoteSyncPlugin extends Plugin {
           error: message,
         })),
       }, startedAt, files?.map(file => file.path), message);
-      this.syncProgress = { message: t('reverseSync.failed', { msg: message }), count: '', percent: 0 };
+      this.finishSyncProgress('failed', t('reverseSync.failed', { msg: message }));
+      progressFinished = true;
       showError(t('reverseSync.failed', { msg: message }));
       return;
     } finally {
-      this.isSyncing = false;
-      this.currentSyncEngine = null;
-      this.syncProgress = { message: '', count: '', percent: 0 };
-      this.updateSettingsRuntimeState();
+      if (!progressFinished) {
+        this.isSyncing = false;
+        this.currentSyncEngine = null;
+        this.syncProgress = { message: '', count: '', percent: undefined, phase: 'active' };
+        this.updateSettingsRuntimeState();
+      }
     }
   }
 
@@ -847,7 +1129,7 @@ export default class GetNoteSyncPlugin extends Plugin {
         selectedCount: selectedIds?.length,
         selectedIds,
       },
-      status ?? (error || result.failed > 0 ? 'failed' : 'success'),
+      status ?? (error ? 'failed' : result.failed > 0 ? 'partial' : 'success'),
       error ?? (result.failed > 0 ? t('reverseSync.failedCount', { failed: result.failed }) : undefined)
     );
   }
@@ -883,7 +1165,11 @@ class GetNoteSearchModal extends Modal {
 }
 
 class ManualSyncModalWrapper extends Modal {
-  constructor(app: App, private plugin: GetNoteSyncPlugin) {
+  constructor(
+    app: App,
+    private plugin: GetNoteSyncPlugin,
+    private showOpenSettings: boolean,
+  ) {
     super(app);
     this.titleEl.setText(t('manualSync.title'));
   }
@@ -897,10 +1183,12 @@ class ManualSyncModalWrapper extends Modal {
           syncTags: this.plugin.settings.syncTags,
         }}
         tagOptions={this.plugin.settings.tagCache?.tags ?? []}
-        onOpenSettings={() => {
-          this.close();
-          this.plugin.openSettingsTab();
-        }}
+        {...(this.showOpenSettings ? {
+          onOpenSettings: () => {
+            this.close();
+            this.plugin.openSettingsTab();
+          },
+        } : {})}
         onConfirm={(options) => {
           this.close();
           this.plugin.startSync(options);

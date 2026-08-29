@@ -47,6 +47,7 @@ export function formatHistoryFilter(entry: SyncHistoryEntry): string {
 }
 
 export function formatHistoryMode(entry: SyncHistoryEntry): string {
+  if (entry.mode === 'date-path') return t('syncHistory.mode.datePath');
   if (entry.mode === 'local-upload' || entry.type === 'upload') return t('syncHistory.mode.upload');
   if (entry.mode === 'auto' || entry.type === 'auto') return t('syncHistory.mode.auto');
   if (entry.mode === 'knowledge-base') return t('syncHistory.mode.knowledgeBase');
@@ -110,6 +111,7 @@ class SyncHistoryModal extends Modal {
       };
 
       const formatStatus = (status: SyncHistoryEntry['status']): string => {
+        if (status === 'partial') return t('syncHistory.status.partial');
         if (status === 'failed') return t('syncHistory.status.failed');
         if (status === 'cancelled') return t('syncHistory.status.cancelled');
         return t('syncHistory.status.success');
@@ -193,13 +195,25 @@ class SyncHistoryModal extends Modal {
       const totalPages = Math.max(1, Math.ceil(sortedHistory.length / this.pageSize));
       const paginationEl = contentEl.createDiv('getnote-history-pagination');
 
-      const renderEntry = (entry: SyncHistoryEntry, index: number): void => {
-        const entryEl = listEl.createEl('details', { cls: 'getnote-history-entry' });
-        entryEl.open = index === 0;
+      const renderEntry = (entry: SyncHistoryEntry, isNewest: boolean): void => {
+        const entryEl = listEl.createEl('details', { cls: `getnote-history-entry is-${entry.status}` });
+        const isWarningStatus = entry.status === 'partial' || entry.status === 'failed';
+        entryEl.open = isNewest || isWarningStatus;
         const headerEl = entryEl
           .createEl('summary', { cls: 'getnote-history-header' });
         const countsText = formatItemCounts(entry);
-        headerEl.setText(`${formatTime(entry.finishedAt)} · ${formatHistoryMode(entry)} · ${formatStatus(entry.status)}`);
+        if (isWarningStatus) {
+          const warningIcon = headerEl.createSpan({ cls: 'getnote-history-warning-icon', text: '⚠' });
+          warningIcon.setAttribute('aria-hidden', 'true');
+        }
+        headerEl.createSpan({
+          cls: 'getnote-history-header-context',
+          text: `${formatTime(entry.finishedAt)} · ${formatHistoryMode(entry)} · `,
+        });
+        headerEl.createSpan({
+          cls: `getnote-history-status-text is-${entry.status}`,
+          text: formatStatus(entry.status),
+        });
         headerEl.setAttribute('data-counts', countsText);
 
         const detailEl = entryEl.createDiv('getnote-history-entry-body');
@@ -272,7 +286,7 @@ class SyncHistoryModal extends Modal {
         const start = (this.currentPage - 1) * this.pageSize;
         sortedHistory
           .slice(start, start + this.pageSize)
-          .forEach((entry, index) => renderEntry(entry, index));
+          .forEach((entry, index) => renderEntry(entry, start + index === 0));
         renderPagination();
       };
 

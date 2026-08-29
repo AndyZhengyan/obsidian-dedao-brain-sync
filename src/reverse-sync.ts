@@ -1,6 +1,7 @@
 import type { App, TFile } from 'obsidian';
 import { createNote, fetchNoteDetail, type CreateNoteResult } from './api';
 import { t } from './i18n';
+import { parseSourceBody } from './source-body';
 import { getAuthCredentials, type AuthCredentials, type Settings, type SyncResultItem } from './types';
 
 export interface ReverseSyncResult {
@@ -203,7 +204,7 @@ export class ReverseSyncEngine {
     const cache = this.app.metadataCache.getFileCache(file);
     const parsed = parseFrontmatterBlock(content);
     const frontmatter = { ...(cache?.frontmatter ?? {}), ...(parsed?.frontmatter ?? {}) };
-    const body = parsed?.body ?? content;
+    const legacyBody = parsed?.body ?? content;
     const noteType = readString(frontmatter, 'note_type') || 'plain_text';
     const title = readString(frontmatter, 'title') || fileBasename(file);
     if (!SUPPORTED_NOTE_TYPES.has(noteType)) {
@@ -215,6 +216,17 @@ export class ReverseSyncEngine {
         }),
       };
     }
+    const sourceBody = parseSourceBody(legacyBody);
+    if (sourceBody.kind === 'invalid') {
+      return {
+        skippedItem: this.createLocalItem(file, 'skipped', {
+          title,
+          noteType,
+          error: t('reverseSync.skip.invalidSourceBody', { reason: sourceBody.reason }),
+        }),
+      };
+    }
+    const body = sourceBody.kind === 'valid' ? sourceBody.body : legacyBody;
     if (!body.trim()) {
       return {
         skippedItem: this.createLocalItem(file, 'skipped', {

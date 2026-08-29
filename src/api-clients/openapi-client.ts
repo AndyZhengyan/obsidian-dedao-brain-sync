@@ -287,7 +287,7 @@ function readArray(value: Record<string, unknown>, keys: string[]): unknown[] {
 }
 
 function readHasMore(value: Record<string, unknown>): boolean {
-  return Boolean(value.has_more ?? value.hasMore);
+  return Boolean(value.has_more ?? value.hasMore ?? value.has_next ?? value.hasNext);
 }
 
 function normalizeData(value: unknown): Record<string, unknown> {

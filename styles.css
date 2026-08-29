@@ -10,6 +10,106 @@
   --getnote-nested-setting-gap: 12px;
 }
 
+.getnote-settings-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+}
+
+.getnote-settings-status-copy,
+.getnote-settings-status-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.getnote-settings-status-copy span {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.getnote-settings-status-actions {
+  justify-content: flex-end;
+}
+
+.getnote-settings-status-bar.is-credentials-open {
+  margin-bottom: 0;
+  border-radius: var(--radius-m) var(--radius-m) 0 0;
+}
+
+.getnote-credential-panel {
+  margin: 0 0 20px;
+  padding: 14px;
+  border: 1px solid var(--background-modifier-border);
+  border-top: 0;
+  border-radius: 0 0 var(--radius-m) var(--radius-m);
+  background: var(--background-secondary);
+}
+
+.getnote-credential-panel .setting-item {
+  margin-bottom: 0;
+}
+
+.getnote-settings-section {
+  width: 100%;
+}
+
+.getnote-settings-section > h3 {
+  margin: 8px 0 14px;
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+}
+
+.getnote-settings-advanced {
+  margin: 8px 0 16px;
+  border-top: 1px solid var(--background-modifier-border);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.getnote-settings-sync .getnote-section-disclosure,
+.getnote-settings-advanced .getnote-section-disclosure {
+  min-height: 58px;
+  padding: 10px 12px;
+  border-left: 0;
+}
+
+.getnote-section-disclosure-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.getnote-section-disclosure-copy strong {
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+}
+
+.getnote-section-disclosure-copy small,
+.getnote-setting-summary {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: 400;
+}
+
+.getnote-setting-summary {
+  display: block;
+  margin-top: 3px;
+}
+
+.getnote-checkpoint-control {
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .setting-item {
   display: flex;
   align-items: flex-start;
@@ -414,20 +514,57 @@
 }
 
 .getnote-settings-progress-line {
-  font-family: monospace;
-  font-size: 14px;
-  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 6px;
 }
 
+.getnote-settings-progress-track {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--background-modifier-border);
+}
+
+.getnote-settings-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--interactive-accent);
+  transition: width 160ms ease-out;
+}
+
+.getnote-settings-progress-track.is-indeterminate::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 36%;
+  border-radius: inherit;
+  background: var(--interactive-accent);
+  content: '';
+  animation: getnote-sync-progress-indeterminate 1.1s ease-in-out infinite;
+}
+
+@keyframes getnote-sync-progress-indeterminate {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(340%); }
+}
+
 .getnote-settings-progress-percent {
-  margin-left: 8px;
   font-weight: bold;
 }
 
 .getnote-settings-progress-count {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.getnote-action-requirement {
+  align-self: center;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .getnote-mono-text {
@@ -734,6 +871,22 @@
   .getnote-actions-row,
   .getnote-credentials-actions {
     justify-content: flex-start;
+  }
+
+  .getnote-settings-status-bar,
+  .getnote-settings-status-copy {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .getnote-settings-status-actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .getnote-scheduled-master-row,
+  .getnote-attachment-master-row {
+    align-items: flex-start;
   }
 }
 
@@ -1735,11 +1888,37 @@ button.getnote-settings-link:focus-visible {
   overflow: hidden;
 }
 
+.getnote-history-entry.is-partial {
+  border-color: var(--text-warning);
+}
+
+.getnote-history-entry.is-failed {
+  border-color: var(--text-error);
+}
+
 .getnote-history-header {
   font-weight: 500;
   padding: 12px 14px;
   cursor: pointer;
   background: var(--background-secondary);
+}
+
+.getnote-history-warning-icon {
+  margin-right: 4px;
+  color: var(--text-error);
+  font-weight: 700;
+}
+
+.getnote-history-status-text.is-success {
+  color: var(--text-success);
+}
+
+.getnote-history-status-text.is-partial {
+  color: var(--text-warning);
+}
+
+.getnote-history-status-text.is-failed {
+  color: var(--text-error);
 }
 
 .getnote-history-entry-body {

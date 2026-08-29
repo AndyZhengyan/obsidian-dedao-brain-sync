@@ -1,6 +1,6 @@
 {
   "name": "obsidian-dedao-brain-sync",
-  "version": "1.4.2",
+  "version": "1.5.7",
   "description": "Dedao Brain Sync for Obsidian",
   "main": "main.js",
   "scripts": {
@@ -30,7 +30,7 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "preact": "^10.29.7",
+    "preact": "^10.29.8",
     "react": "npm:@preact/compat",
     "react-dom": "npm:@preact/compat"
   }

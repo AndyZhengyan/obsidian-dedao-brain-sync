@@ -88,6 +88,15 @@ export class App {
   metadataCache = new MetadataCache();
 }
 
+export const Platform = {
+  isDesktop: true,
+  isMobile: false,
+  isDesktopApp: false,
+  isMobileApp: false,
+  isIosApp: false,
+  isAndroidApp: false,
+};
+
 // ---- Plugin ----
 export class Plugin {
   app: App;

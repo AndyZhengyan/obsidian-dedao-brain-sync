@@ -1,11 +1,12 @@
 import { App, Modal } from 'obsidian';
-import type { DatePathMigrationTarget } from '../date-path-migration';
+import type { DatePathMigrationResult, DatePathMigrationTarget } from '../date-path-migration';
 import { t } from '../i18n';
 
 export interface DatePathConfirmationRequest {
   mode: 'apply' | 'reconcile';
   current: DatePathMigrationTarget;
   target: DatePathMigrationTarget;
+  preview?: DatePathMigrationResult;
 }
 
 function confirmationSummary(request: DatePathConfirmationRequest): string {
@@ -44,6 +45,18 @@ export class DatePathConfirmModal extends Modal {
     const details = document.createElement('p');
     details.textContent = t('settings.datePath.confirm.details');
     this.contentEl.appendChild(details);
+
+    if (this.request.preview) {
+      const preview = document.createElement('p');
+      preview.className = 'getnote-date-path-preflight';
+      preview.textContent = t('settings.datePath.confirm.preflight', {
+        scanned: this.request.preview.scanned,
+        planned: this.request.preview.planned ?? 0,
+        skipped: this.request.preview.skipped,
+        failed: this.request.preview.failed,
+      });
+      this.contentEl.appendChild(preview);
+    }
 
     const actions = document.createElement('div');
     actions.className = 'getnote-date-path-modal-actions';

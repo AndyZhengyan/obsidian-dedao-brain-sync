@@ -14,14 +14,13 @@ For the project background and origin story, see this Chinese article: [Project 
 
 * * *
 
-## 🎉 1.4.2 — Latest Update
+## 🎉 1.5.7 — Latest Update
 
-- **🧩 Consistent picker timestamps**: Note and knowledge-base pickers now share one relative-time formatter, while missing timestamps remain blank.
-- **🎨 Better theme compatibility**: More specific checkbox and sidebar-button selectors preserve the current layout without unnecessarily overriding Obsidian themes.
-- **🧹 Code and style cleanup**: Static-analysis findings in the parser, settings, and search view are resolved while preserving existing behavior and reducing unnecessary style overrides.
-- **⚙️ Runtime and toolchain refresh**: Compatible Preact, TypeScript, and ESLint updates land alongside broader sync-boundary test coverage.
+- **🧠 Core sync capabilities restored**: desktop Web login with silent renewal, source-body-preserving reverse sync, date-path and attachment migration, plus the refined settings and sync-progress experience are back.
+- **🛡️ Safer local knowledge management**: reverse sync uses only protected remote source bodies; malformed markers are safely skipped, while migration retains diagnostic and rollback boundaries.
+- **✨ Display name restored**: Obsidian, installation guides, and package metadata consistently use `Dedao Brain Sync`.
 
-1.4.1 improvements remain live (cleaner note card previews, knowledge-base refreshes, tag normalization, and settings timer cleanup).
+This is a feature-restoration release. Existing configuration and local data remain supported; review the preflight result in the confirmation dialog before running date-path migration.
 
 The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 
