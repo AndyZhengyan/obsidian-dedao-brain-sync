@@ -80,4 +80,15 @@ describe('settings layout CSS', () => {
     expect(ruleFor('.getnote-knowledge-base-select-menu')).toContain('position: fixed');
     expect(ruleFor('.getnote-tag-select-menu')).toContain('position: fixed');
   });
+
+  it('lets connection health colors override the generic muted status copy', () => {
+    expect(ruleFor('.getnote-settings-status-copy .getnote-connection-health--unverified'))
+      .toContain('color: var(--text-muted)');
+    expect(ruleFor('.getnote-settings-status-copy .getnote-connection-health--healthy'))
+      .toContain('color: var(--color-green)');
+    expect(ruleFor('.getnote-settings-status-copy .getnote-connection-health--error'))
+      .toContain('color: var(--text-error)');
+    expect(ruleFor('.getnote-settings-status-copy .getnote-connection-health-dot'))
+      .toContain('color: inherit');
+  });
 });

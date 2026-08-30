@@ -479,16 +479,20 @@
   background: currentColor;
 }
 
-.getnote-connection-health--unverified {
+.getnote-settings-status-copy .getnote-connection-health--unverified {
   color: var(--text-muted);
 }
 
-.getnote-connection-health--healthy {
+.getnote-settings-status-copy .getnote-connection-health--healthy {
   color: var(--color-green);
 }
 
-.getnote-connection-health--error {
+.getnote-settings-status-copy .getnote-connection-health--error {
   color: var(--text-error);
+}
+
+.getnote-settings-status-copy .getnote-connection-health-dot {
+  color: inherit;
 }
 
 .getnote-actions-row {
