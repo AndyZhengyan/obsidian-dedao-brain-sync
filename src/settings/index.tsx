@@ -7,7 +7,7 @@ import { NoteTypeSelect } from '../ui/note-type-select';
 import { TagSelect } from '../ui/tag-select';
 import { KnowledgeBaseSelect } from '../ui/knowledge-base-select';
 import { Toggle } from './toggle';
-import { getAuthCredentials, type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressDetail } from '../types';
+import { getAuthCredentials, type AttachmentImportSettings, type AuthMode, type Settings, type SyncHistoryEntry, type SyncProgressDetail } from '../types';
 import { App, AbstractInputSuggest } from 'obsidian';
 import { fetchNotes } from '../api';
 import { t } from '../i18n';
@@ -225,14 +225,17 @@ export function SettingsComponent({
     }
   }, []);
 
-  // Attachment toggles are now driven by declarative Preact state (no more
-  // imperative useRef + ToggleComponent.useEffect plumbing). The previous
-  // version had two competing useEffects (master + reactive sync) calling
-  // setValue on the same imperative toggle, which intermittently reverted
-  // the user's click on the first tap. A single source of truth
-  // (settings.attachmentImport) keeps master and children consistent.
-  const attachmentImport = settings.attachmentImport ?? {};
   const attachmentKinds = ['image', 'audio', 'audioTranscript', 'video', 'document'] as const;
+  // updateSetting persists by mutating plugin.settings, but does not rerender
+  // this component. Keep an immediate UI copy so the master toggle can update
+  // every child without waiting for the settings page to be reopened.
+  const [attachmentImport, setAttachmentImport] = useState<AttachmentImportSettings>(() => ({
+    image: settings.attachmentImport?.image !== false,
+    audio: settings.attachmentImport?.audio !== false,
+    audioTranscript: settings.attachmentImport?.audioTranscript !== false,
+    video: settings.attachmentImport?.video !== false,
+    document: settings.attachmentImport?.document !== false,
+  }));
   const allAttachmentsOn = attachmentKinds.every(
     k => attachmentImport[k] !== false,
   );
@@ -240,20 +243,24 @@ export function SettingsComponent({
     k => attachmentImport[k] !== false,
   );
   const handleMasterAttachmentChange = (value: boolean) => {
-    updateSetting('attachmentImport', {
+    const nextAttachmentImport: AttachmentImportSettings = {
       image: value,
       audio: value,
       audioTranscript: value,
       video: value,
       document: value,
-    });
+    };
+    setAttachmentImport(nextAttachmentImport);
+    updateSetting('attachmentImport', nextAttachmentImport);
   };
   const handleChildAttachmentChange = (kind: typeof attachmentKinds[number], value: boolean) => {
     if (!anyAttachmentsOn) return;
-    updateSetting('attachmentImport', {
+    const nextAttachmentImport: AttachmentImportSettings = {
       ...attachmentImport,
       [kind]: value,
-    });
+    };
+    setAttachmentImport(nextAttachmentImport);
+    updateSetting('attachmentImport', nextAttachmentImport);
   };
 
   useEffect(() => {
