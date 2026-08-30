@@ -88,7 +88,10 @@ function getLatestAutomaticSync(syncHistory: SyncHistoryEntry[]): SyncHistoryEnt
 }
 
 export function inferConnectionHealth(syncHistory: SyncHistoryEntry[]): ConnectionHealth {
-  return getLatestAutomaticSync(syncHistory)?.status === 'success' ? 'healthy' : 'unverified';
+  const latestAutomaticSync = getLatestAutomaticSync(syncHistory);
+  if (latestAutomaticSync?.status === 'success') return 'healthy';
+  if (latestAutomaticSync?.status === 'failed') return 'error';
+  return 'unverified';
 }
 
 export function computeOnboardingState(settings: Settings): OnboardingState {
@@ -192,6 +195,12 @@ export function SettingsComponent({
   const credentials = getAuthCredentials({ ...settings, authMode, openApiToken: apiTokenOpenapi, openApiClientId: clientIdOpenapi, webApiToken: apiTokenWeb });
   const currentSyncHistory = syncHistory.length > 0 ? syncHistory : settings.syncHistory;
   const connectionHealth = connectionHealthOverride ?? inferConnectionHealth(currentSyncHistory);
+  const latestSync = currentSyncHistory[currentSyncHistory.length - 1];
+  const syncStatusLabel = isSyncing
+    ? t('syncHistory.status.syncing')
+    : latestSync?.status === 'failed'
+      ? t('settings.syncStatus.lastFailed')
+      : t('syncHistory.status.idle');
   const onboardingState = computeOnboardingState({
     ...settings,
     authMode,
@@ -750,7 +759,7 @@ export function SettingsComponent({
           ) : (
             <span>{t('settings.credentials.notConfigured')}</span>
           )}
-          <span>{t('settings.syncStatus')}: {isSyncing ? t('syncHistory.status.syncing') : t('syncHistory.status.idle')}</span>
+          <span>{t('settings.syncStatus')}: {syncStatusLabel}</span>
           <span>{t('settings.lastSync')}: {formatLastSync(lastSyncTime)}</span>
         </div>
         <div className="getnote-settings-status-actions">

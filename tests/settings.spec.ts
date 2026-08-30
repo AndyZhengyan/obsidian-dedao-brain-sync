@@ -439,7 +439,21 @@ describe('SettingsComponent information architecture (#257)', () => {
       ...credentials,
       syncHistory: [makeSyncHistoryEntry('auto', 'success', 2), makeSyncHistoryEntry('auto', 'failed', 3)],
     })).container.querySelector<HTMLElement>('[data-connection-health]');
-    expect(latestFailed?.dataset.connectionHealth).toBe('unverified');
+    expect(latestFailed?.dataset.connectionHealth).toBe('error');
+    expect(latestFailed?.textContent).toContain('连接异常');
+  });
+
+  it('shows the latest sync failure instead of idle when no sync is running', () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'token',
+      openApiClientId: 'client-id',
+      syncHistory: [makeSyncHistoryEntry('auto', 'failed')],
+    }));
+
+    const status = container.querySelector<HTMLElement>('[data-settings-status]');
+    expect(status?.textContent).toContain('当前状态: 上次同步失败');
+    expect(status?.textContent).not.toContain('当前状态: 空闲');
   });
 
   it('turns the indicator green and collapses open credentials after a successful test', async () => {
