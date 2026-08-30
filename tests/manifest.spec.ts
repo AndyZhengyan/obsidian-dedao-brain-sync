@@ -2,11 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import manifest from '../manifest.json';
 import packageJson from '../package.json';
+import packageLock from '../package-lock.json';
+import versions from '../versions.json';
 
 const NEW_REPO = 'obsidian-dedao-brain-sync';
 const OLD_REPO = 'obsidian-getnote-importer';
 
 describe('plugin manifest', () => {
+  it('keeps every release version surface aligned', () => {
+    expect(packageJson.version).toBe(manifest.version);
+    expect(packageLock.version).toBe(manifest.version);
+    expect(packageLock.packages[''].version).toBe(manifest.version);
+    expect(versions[manifest.version as keyof typeof versions]).toBe(manifest.minAppVersion);
+  });
+
   it('uses sync wording for the bidirectional plugin name', () => {
     expect(manifest.name).toBe('Dedao Brain Sync');
     expect(manifest.name).not.toContain('Importer');
