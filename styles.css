@@ -464,6 +464,37 @@
   color: var(--text-error);
 }
 
+.getnote-connection-health {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.getnote-connection-health-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.getnote-settings-status-copy .getnote-connection-health--unverified {
+  color: var(--text-muted);
+}
+
+.getnote-settings-status-copy .getnote-connection-health--healthy {
+  color: var(--color-green);
+}
+
+.getnote-settings-status-copy .getnote-connection-health--error {
+  color: var(--text-error);
+}
+
+.getnote-settings-status-copy .getnote-connection-health-dot {
+  color: inherit;
+}
+
 .getnote-actions-row {
   display: flex;
   flex-wrap: wrap;
