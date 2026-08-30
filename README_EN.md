@@ -14,13 +14,14 @@ For the story behind the project, see this Chinese article: [我做的得到大�
 
 * * *
 
-## 🎉 1.5.7 — Latest Update
+## 🎉 1.5.8 — Latest Update
 
-- **🧠 Core sync capabilities restored**: desktop Web login with silent renewal, source-body-preserving reverse sync, date-path and attachment migration, plus the refined settings and sync-progress experience are back.
-- **🛡️ Safer local knowledge management**: reverse sync uses only protected remote source bodies; malformed markers are safely skipped, while migration retains diagnostic and rollback boundaries.
-- **✨ Display name restored**: Obsidian, installation guides, and package metadata consistently use `Dedao Brain Sync`.
+- **🟢 Connection health at a glance**: the settings page now uses gray, green, and red indicators for unverified, healthy, and failed connections, while retaining a visible “Last sync failed” state after automatic-sync failures.
+- **⏱️ Automatic sync as the primary path**: first-run guidance now leads users through scheduled automatic sync, and the latest automatic run determines connection health.
+- **📎 More reliable attachment controls**: the master attachment switch works again, while audio files and audio transcripts can be controlled independently so transcripts remain available without downloading audio.
+- **🛡️ Safer, more complete syncs**: subscribed-knowledge pagination is complete, and vault path conflicts are recorded as failures instead of being silently missed.
 
-This is a feature-restoration release. Existing configuration and local data remain supported; review the preflight result in the confirmation dialog before running date-path migration.
+This release improves stability and settings clarity. Existing configuration and local data require no migration; after upgrading, open settings to review connection health and automatic-sync status.
 
 The README keeps only the current release highlights. See [GitHub Releases](https://github.com/AndyZhengyan/obsidian-dedao-brain-sync/releases) for the complete version history.
 
