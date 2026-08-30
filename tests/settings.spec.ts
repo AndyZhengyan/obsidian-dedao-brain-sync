@@ -33,17 +33,48 @@ describe('computeOnboardingState (#242)', () => {
     expect(computeOnboardingState).toBeTypeOf('function');
   });
 
-  it('distinguishes first-run, missing credentials, ready, and configured', () => {
+  const makeHistoryEntry = (type: 'full' | 'auto'): Settings['syncHistory'][number] => ({
+    id: `${type}-1`,
+    startedAt: 1,
+    finishedAt: 2,
+    durationMs: 1,
+    timestamp: 2,
+    result: { created: 1, updated: 0, skipped: 0, failed: 0, total: 1, items: [] },
+    type,
+    mode: type === 'auto' ? 'auto' : 'time',
+    status: 'success',
+  });
+
+  it('guides users from credentials to scheduled auto sync', () => {
     expect(computeOnboardingState?.(makeSettings())).toBe('first-run');
     expect(computeOnboardingState?.(makeSettings({
-      syncHistory: [{ timestamp: 1, status: 'success', source: 'manual', total: 1, created: 1, updated: 0, skipped: 0, failed: 0 }],
+      syncHistory: [makeHistoryEntry('full')],
     }))).toBe('needs-credentials');
-    expect(computeOnboardingState?.(makeSettings({ apiToken: 'token', clientId: 'client' }))).toBe('ready');
+    expect(computeOnboardingState?.(makeSettings({ apiToken: 'token', clientId: 'client' }))).toBe('needs-auto-sync');
     expect(computeOnboardingState?.(makeSettings({
       apiToken: 'token',
       clientId: 'client',
-      syncHistory: [{ timestamp: 1, status: 'success', source: 'manual', total: 1, created: 1, updated: 0, skipped: 0, failed: 0 }],
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
+    }))).toBe('ready');
+  });
+
+  it('only completes onboarding after an automatic sync and reopens it when auto sync is disabled', () => {
+    const credentials = { apiToken: 'token', clientId: 'client' };
+    expect(computeOnboardingState?.(makeSettings({
+      ...credentials,
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
+      syncHistory: [makeHistoryEntry('full')],
+    }))).toBe('ready');
+    expect(computeOnboardingState?.(makeSettings({
+      ...credentials,
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
+      syncHistory: [makeHistoryEntry('auto')],
     }))).toBe('configured');
+    expect(computeOnboardingState?.(makeSettings({
+      ...credentials,
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: false },
+      syncHistory: [makeHistoryEntry('auto')],
+    }))).toBe('needs-auto-sync');
   });
 });
 
@@ -445,6 +476,47 @@ describe('SettingsComponent information architecture (#257)', () => {
 
     expect(container.querySelector('[data-credential-details]')?.classList.contains('getnote-hidden')).toBe(false);
     expect(container.querySelector('[data-credential-guidance]')?.textContent).toContain('首次使用');
+  });
+
+  it('uses scheduled auto sync as the primary onboarding path', () => {
+    const credentials = { apiToken: 'token', clientId: 'client' };
+    const disabled = renderSettings(makeSettings(credentials)).container
+      .querySelector<HTMLElement>('[data-credential-guidance]');
+    expect(disabled?.textContent).toContain('开启「定时自动同步」');
+    expect(disabled?.classList.contains('getnote-onboarding--needs-auto-sync')).toBe(true);
+
+    const enabled = renderSettings(makeSettings({
+      ...credentials,
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true, intervalMinutes: 30 },
+    })).container.querySelector<HTMLElement>('[data-credential-guidance]');
+    expect(enabled?.textContent).toContain('每 30 分钟');
+    expect(enabled?.classList.contains('getnote-onboarding--ready')).toBe(true);
+  });
+
+  it('keeps manual sync secondary and hides onboarding only after automatic sync', () => {
+    const credentials = { apiToken: 'token', clientId: 'client' };
+    const scheduledSync = { ...DEFAULT_SETTINGS.scheduledSync, enabled: true };
+    const manualHistory = renderSettings(makeSettings({
+      ...credentials,
+      scheduledSync,
+      syncHistory: [{
+        id: 'manual-1', startedAt: 1, finishedAt: 2, durationMs: 1, timestamp: 2,
+        result: { created: 1, updated: 0, skipped: 0, failed: 0, total: 1, items: [] },
+        type: 'full', mode: 'time', status: 'success',
+      }],
+    })).container;
+    expect(manualHistory.querySelector('[data-credential-guidance]')?.textContent).toContain('自动同步已开启');
+
+    const autoHistory = renderSettings(makeSettings({
+      ...credentials,
+      scheduledSync,
+      syncHistory: [{
+        id: 'auto-1', startedAt: 1, finishedAt: 2, durationMs: 1, timestamp: 2,
+        result: { created: 1, updated: 0, skipped: 0, failed: 0, total: 1, items: [] },
+        type: 'auto', mode: 'auto', status: 'success',
+      }],
+    })).container;
+    expect(autoHistory.querySelector('[data-credential-guidance]')).toBeNull();
   });
 });
 

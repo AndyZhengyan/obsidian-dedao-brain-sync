@@ -317,6 +317,10 @@
   border-left-color: var(--color-orange);
 }
 
+.getnote-onboarding--needs-auto-sync {
+  border-left-color: var(--color-orange);
+}
+
 .getnote-onboarding--ready {
   border-left-color: var(--color-green);
 }

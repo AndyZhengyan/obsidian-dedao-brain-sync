@@ -76,14 +76,15 @@ function getTemplateFileSuggestions(app: App, query: string): string[] {
     .slice(0, 50);
 }
 
-export type OnboardingState = 'first-run' | 'needs-credentials' | 'ready' | 'configured';
+export type OnboardingState = 'first-run' | 'needs-credentials' | 'needs-auto-sync' | 'ready' | 'configured';
 
 export function computeOnboardingState(settings: Settings): OnboardingState {
   const hasHistory = settings.syncHistory.length > 0;
+  const hasAutoSyncHistory = settings.syncHistory.some(entry => entry.type === 'auto' || entry.mode === 'auto');
   const hasCredentials = getAuthCredentials(settings).token !== '';
-  if (hasHistory && hasCredentials) return 'configured';
-  if (hasHistory) return 'needs-credentials';
-  return hasCredentials ? 'ready' : 'first-run';
+  if (!hasCredentials) return hasHistory ? 'needs-credentials' : 'first-run';
+  if (!settings.scheduledSync.enabled) return 'needs-auto-sync';
+  return hasAutoSyncHistory ? 'configured' : 'ready';
 }
 
 interface SettingsComponentProps {
@@ -182,8 +183,16 @@ export function SettingsComponent({
     openApiToken: apiTokenOpenapi,
     openApiClientId: clientIdOpenapi,
     webApiToken: apiTokenWeb,
+    scheduledSync: { ...settings.scheduledSync, enabled: scheduledEnabled },
     syncHistory: currentSyncHistory,
   });
+  const onboardingMessageKey = onboardingState === 'first-run'
+    ? 'settings.onboarding.firstRun'
+    : onboardingState === 'needs-credentials'
+      ? 'settings.onboarding.needsCredentials'
+      : onboardingState === 'needs-auto-sync'
+        ? 'settings.onboarding.needsAutoSync'
+        : 'settings.onboarding.ready';
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [pendingStartDate, setPendingStartDate] = useState(settings.syncStartDate);
 
@@ -764,7 +773,7 @@ export function SettingsComponent({
           className={`getnote-onboarding getnote-onboarding--${onboardingState}`}
           data-credential-guidance
         >
-          {t(`settings.onboarding.${onboardingState === 'first-run' ? 'firstRun' : onboardingState === 'needs-credentials' ? 'needsCredentials' : 'ready'}`)}
+          {t(onboardingMessageKey, { minutes: settings.scheduledSync.intervalMinutes })}
         </div>
       )}
 
