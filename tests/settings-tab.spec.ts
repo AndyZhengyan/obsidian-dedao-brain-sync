@@ -102,12 +102,10 @@ describe('GetNoteSettingsTab runtime updates', () => {
     const scheduledDisclosure = tab.containerEl.querySelector(
       '.getnote-scheduled-master-row .getnote-inline-disclosure',
     ) as HTMLButtonElement;
-    const attachmentDisclosure = tab.containerEl.querySelector(
-      '.getnote-attachment-master-row .getnote-inline-disclosure',
-    ) as HTMLButtonElement;
+    const audioTranscriptRow = Array.from(tab.containerEl.querySelectorAll('.getnote-attachment-option'))
+      .find(row => row.textContent?.includes('音频口水稿'))!;
     await act(() => {
       click(scheduledDisclosure);
-      click(attachmentDisclosure);
     });
 
     const folderInput = tab.containerEl.querySelector(
@@ -160,7 +158,8 @@ describe('GetNoteSettingsTab runtime updates', () => {
 
     expect(tab.containerEl.scrollTop).toBe(420);
     expect(scheduledDisclosure.getAttribute('aria-expanded')).toBe('true');
-    expect(attachmentDisclosure.getAttribute('aria-expanded')).toBe('true');
+    expect(Array.from(tab.containerEl.querySelectorAll('.getnote-attachment-option'))
+      .find(row => row.textContent?.includes('音频口水稿'))).toBe(audioTranscriptRow);
     expect(tab.containerEl.querySelector('input[placeholder="得到大脑"]')).toBe(folderInput);
     expect(folderInput.value).toBe('尚未保存的本地输入');
     expect(document.activeElement).toBe(folderInput);

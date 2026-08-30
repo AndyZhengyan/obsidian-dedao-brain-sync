@@ -5,6 +5,7 @@ import { App } from 'obsidian';
 import { abstractInputSuggestInstances, TFile, TFolder } from './mocks/obsidian';
 import { fetchNotes } from '../src/api';
 import { initI18n } from '../src/i18n';
+import * as SettingsModule from '../src/settings';
 import { SettingsComponent } from '../src/settings';
 import { DEFAULT_SETTINGS, type Settings } from '../src/types';
 
@@ -22,6 +23,60 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
     ...overrides,
   };
 }
+
+describe('computeOnboardingState (#242)', () => {
+  const computeOnboardingState = (SettingsModule as unknown as {
+    computeOnboardingState?: (settings: Settings) => string;
+  }).computeOnboardingState;
+
+  it('exposes the state computation contract', () => {
+    expect(computeOnboardingState).toBeTypeOf('function');
+  });
+
+  const makeHistoryEntry = (type: 'full' | 'auto'): Settings['syncHistory'][number] => ({
+    id: `${type}-1`,
+    startedAt: 1,
+    finishedAt: 2,
+    durationMs: 1,
+    timestamp: 2,
+    result: { created: 1, updated: 0, skipped: 0, failed: 0, total: 1, items: [] },
+    type,
+    mode: type === 'auto' ? 'auto' : 'time',
+    status: 'success',
+  });
+
+  it('guides users from credentials to scheduled auto sync', () => {
+    expect(computeOnboardingState?.(makeSettings())).toBe('first-run');
+    expect(computeOnboardingState?.(makeSettings({
+      syncHistory: [makeHistoryEntry('full')],
+    }))).toBe('needs-credentials');
+    expect(computeOnboardingState?.(makeSettings({ apiToken: 'token', clientId: 'client' }))).toBe('needs-auto-sync');
+    expect(computeOnboardingState?.(makeSettings({
+      apiToken: 'token',
+      clientId: 'client',
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
+    }))).toBe('ready');
+  });
+
+  it('only completes onboarding after an automatic sync and reopens it when auto sync is disabled', () => {
+    const credentials = { apiToken: 'token', clientId: 'client' };
+    expect(computeOnboardingState?.(makeSettings({
+      ...credentials,
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
+      syncHistory: [makeHistoryEntry('full')],
+    }))).toBe('ready');
+    expect(computeOnboardingState?.(makeSettings({
+      ...credentials,
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true },
+      syncHistory: [makeHistoryEntry('auto')],
+    }))).toBe('configured');
+    expect(computeOnboardingState?.(makeSettings({
+      ...credentials,
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: false },
+      syncHistory: [makeHistoryEntry('auto')],
+    }))).toBe('needs-auto-sync');
+  });
+});
 
 function makeFolder(path: string): TFolder {
   const folder = new TFolder();
@@ -420,7 +475,48 @@ describe('SettingsComponent information architecture (#257)', () => {
     }));
 
     expect(container.querySelector('[data-credential-details]')?.classList.contains('getnote-hidden')).toBe(false);
-    expect(container.querySelector('[data-credential-guidance]')?.textContent).toContain('请先选择认证方式');
+    expect(container.querySelector('[data-credential-guidance]')?.textContent).toContain('首次使用');
+  });
+
+  it('uses scheduled auto sync as the primary onboarding path', () => {
+    const credentials = { apiToken: 'token', clientId: 'client' };
+    const disabled = renderSettings(makeSettings(credentials)).container
+      .querySelector<HTMLElement>('[data-credential-guidance]');
+    expect(disabled?.textContent).toContain('开启「定时自动同步」');
+    expect(disabled?.classList.contains('getnote-onboarding--needs-auto-sync')).toBe(true);
+
+    const enabled = renderSettings(makeSettings({
+      ...credentials,
+      scheduledSync: { ...DEFAULT_SETTINGS.scheduledSync, enabled: true, intervalMinutes: 30 },
+    })).container.querySelector<HTMLElement>('[data-credential-guidance]');
+    expect(enabled?.textContent).toContain('每 30 分钟');
+    expect(enabled?.classList.contains('getnote-onboarding--ready')).toBe(true);
+  });
+
+  it('keeps manual sync secondary and hides onboarding only after automatic sync', () => {
+    const credentials = { apiToken: 'token', clientId: 'client' };
+    const scheduledSync = { ...DEFAULT_SETTINGS.scheduledSync, enabled: true };
+    const manualHistory = renderSettings(makeSettings({
+      ...credentials,
+      scheduledSync,
+      syncHistory: [{
+        id: 'manual-1', startedAt: 1, finishedAt: 2, durationMs: 1, timestamp: 2,
+        result: { created: 1, updated: 0, skipped: 0, failed: 0, total: 1, items: [] },
+        type: 'full', mode: 'time', status: 'success',
+      }],
+    })).container;
+    expect(manualHistory.querySelector('[data-credential-guidance]')?.textContent).toContain('自动同步已开启');
+
+    const autoHistory = renderSettings(makeSettings({
+      ...credentials,
+      scheduledSync,
+      syncHistory: [{
+        id: 'auto-1', startedAt: 1, finishedAt: 2, durationMs: 1, timestamp: 2,
+        result: { created: 1, updated: 0, skipped: 0, failed: 0, total: 1, items: [] },
+        type: 'auto', mode: 'auto', status: 'success',
+      }],
+    })).container;
+    expect(autoHistory.querySelector('[data-credential-guidance]')).toBeNull();
   });
 });
 
@@ -1383,7 +1479,7 @@ describe('SettingsComponent auth credentials', () => {
     expect(dateInput.value).toBe('2026-06-27');
   });
 
-  it('renders the attachment download section with a master toggle and four child toggles', async () => {
+  it('renders the attachment controls flat in the clarified order', async () => {
     const settings = makeSettings();
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -1407,30 +1503,21 @@ describe('SettingsComponent auth credentials', () => {
     });
     await new Promise(r => setTimeout(r, 50));
 
-    expect(container.textContent).toContain('附件下载配置');
-
-    const toggleEls = container.querySelectorAll('.setting-item .checkbox-container');
-    // 5 toggles total: 1 master + image + audio + video + document
-    expect(toggleEls.length).toBeGreaterThanOrEqual(5);
+    const labels = Array.from(container.querySelectorAll('[data-attachment-settings] .getnote-scheduled-row-label'))
+      .map(node => node.firstChild?.textContent?.trim() || node.textContent?.trim());
+    expect(labels).toEqual([
+      '下载附件',
+      '图片文件',
+      '音频文件',
+      '音频口水稿',
+      '视频文件',
+      '文档文件',
+    ]);
+    expect(container.querySelector('[data-attachment-settings] .getnote-inline-disclosure')).toBeNull();
+    expect(container.querySelector('[data-attachment-settings] .getnote-hidden')).toBeNull();
   });
 
-  it('keeps attachment child toggles collapsed behind a compact disclosure', async () => {
-    const { container } = renderSettings(makeSettings());
-    await new Promise(r => setTimeout(r, 50));
-
-    const detail = container.querySelector('.getnote-scheduled-options-detail');
-    expect(detail).toBeTruthy();
-    const disclosure = container.querySelector('.getnote-attachment-master-row .getnote-inline-disclosure') as HTMLButtonElement;
-    expect(disclosure).toBeTruthy();
-    expect(detail!.classList.contains('getnote-hidden')).toBe(true);
-    await act(() => {
-      disclosure.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    expect(detail!.classList.contains('getnote-hidden')).toBe(false);
-    expect(detail!.querySelectorAll('.getnote-nested-row').length).toBe(4);
-  });
-
-  it('flips all four child toggles when the master attachment toggle is clicked', async () => {
+  it('flips all five child toggles when the master attachment toggle is clicked', async () => {
     const { container, updateSetting } = renderStatefulSettings(makeSettings({
       attachmentImport: { image: true, audio: true, video: true, document: true },
     }));
@@ -1450,6 +1537,7 @@ describe('SettingsComponent auth credentials', () => {
     expect(updateSetting).toHaveBeenCalledWith('attachmentImport', {
       image: false,
       audio: false,
+      audioTranscript: false,
       video: false,
       document: false,
     });
@@ -1474,6 +1562,7 @@ describe('SettingsComponent auth credentials', () => {
     expect(updateSetting).toHaveBeenCalledWith('attachmentImport', {
       image: true,
       audio: true,
+      audioTranscript: true,
       video: true,
       document: true,
     });
@@ -1484,7 +1573,7 @@ describe('SettingsComponent auth credentials', () => {
   it('disables child attachment toggles when the master is off', async () => {
     const updateSetting = vi.fn();
     const settings = makeSettings({
-      attachmentImport: { image: true, audio: false, video: true, document: false },
+      attachmentImport: { image: false, audio: false, audioTranscript: false, video: false, document: false },
     });
     const container = document.createElement('div');
     document.body.appendChild(container);

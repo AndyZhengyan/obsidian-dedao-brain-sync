@@ -732,23 +732,32 @@ export class SyncEngine {
       if (needsAudioDetail && !isAttachmentTypeEnabled(this.settings.attachmentImport, 'audio')) {
         enrichedNote = {
           ...enrichedNote,
-          audio: undefined,
           attachments: enrichedNote.attachments?.filter(attachment => attachment.type !== 'audio'),
         };
       }
+      const audioTranscriptEnabled = this.settings.attachmentImport?.audioTranscript !== false;
+      if (needsAudioDetail && !audioTranscriptEnabled) {
+        enrichedNote = { ...enrichedNote, audio: undefined };
+      }
       const assetPaths: string[] = [];
 
-      if (needsAudioDetail && isAttachmentTypeEnabled(this.settings.attachmentImport, 'audio')) {
-        const audioAttachment = enrichedNote.attachments?.find(a => a.type === 'audio');
-        if (audioAttachment) {
-          const audioPath = await this.downloadAudioAsset(enrichedNote, audioAttachment, categoryOverride);
-          if (audioPath) assetPaths.push(audioPath);
-        } else {
-          console.warn(`[DedaoBrain] No audio attachment found in note detail [${note.note_id}]`);
+      if (needsAudioDetail) {
+        if (isAttachmentTypeEnabled(this.settings.attachmentImport, 'audio')) {
+          const audioAttachment = enrichedNote.attachments?.find(a => a.type === 'audio');
+          if (audioAttachment) {
+            const audioPath = await this.downloadAudioAsset(enrichedNote, audioAttachment, categoryOverride);
+            if (audioPath) assetPaths.push(audioPath);
+          } else {
+            console.warn(`[DedaoBrain] No audio attachment found in note detail [${note.note_id}]`);
+          }
         }
-        const transcriptPath = await this.writeAudioTranscriptAsset(enrichedNote, categoryOverride);
-        if (transcriptPath) assetPaths.push(transcriptPath);
-        enrichedNote.assetFileName = this.getAudioAssetBaseName(enrichedNote);
+        if (audioTranscriptEnabled) {
+          const transcriptPath = await this.writeAudioTranscriptAsset(enrichedNote, categoryOverride);
+          if (transcriptPath) assetPaths.push(transcriptPath);
+        }
+        if (assetPaths.length > 0) {
+          enrichedNote.assetFileName = this.getAudioAssetBaseName(enrichedNote);
+        }
       }
 
       // Image attachments keep their dedicated downloader (legacy naming scheme).
