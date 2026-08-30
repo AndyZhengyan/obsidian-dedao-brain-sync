@@ -24,6 +24,24 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
   };
 }
 
+function makeSyncHistoryEntry(
+  type: 'full' | 'auto',
+  status: Settings['syncHistory'][number]['status'] = 'success',
+  timestamp = 2
+): Settings['syncHistory'][number] {
+  return {
+    id: `${type}-${timestamp}`,
+    startedAt: timestamp - 1,
+    finishedAt: timestamp,
+    durationMs: 1,
+    timestamp,
+    result: { created: 1, updated: 0, skipped: 0, failed: status === 'failed' ? 1 : 0, total: 1, items: [] },
+    type,
+    mode: type === 'auto' ? 'auto' : 'time',
+    status,
+  };
+}
+
 describe('computeOnboardingState (#242)', () => {
   const computeOnboardingState = (SettingsModule as unknown as {
     computeOnboardingState?: (settings: Settings) => string;
@@ -387,6 +405,102 @@ describe('SettingsComponent information architecture (#257)', () => {
 
     expect(container.querySelector('[data-credential-details]')?.classList.contains('getnote-hidden')).toBe(true);
     expect(container.querySelector('[data-settings-status]')?.textContent).toContain('连接成功');
+  });
+
+  it('replaces configured copy with an unverified connection indicator', () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'token',
+      openApiClientId: 'client-id',
+    }));
+
+    const indicator = container.querySelector<HTMLElement>('[data-connection-health]');
+    expect(indicator?.dataset.connectionHealth).toBe('unverified');
+    expect(indicator?.textContent).toContain('未验证');
+    expect(container.querySelector('[data-settings-status]')?.textContent).not.toContain('已配置');
+  });
+
+  it('restores a healthy connection only from the latest successful automatic sync', () => {
+    const credentials = { authMode: 'openapi' as const, openApiToken: 'token', openApiClientId: 'client-id' };
+    const manual = renderSettings(makeSettings({
+      ...credentials,
+      syncHistory: [makeSyncHistoryEntry('full')],
+    })).container.querySelector<HTMLElement>('[data-connection-health]');
+    expect(manual?.dataset.connectionHealth).toBe('unverified');
+
+    const automatic = renderSettings(makeSettings({
+      ...credentials,
+      syncHistory: [makeSyncHistoryEntry('auto')],
+    })).container.querySelector<HTMLElement>('[data-connection-health]');
+    expect(automatic?.dataset.connectionHealth).toBe('healthy');
+    expect(automatic?.textContent).toContain('连接正常');
+
+    const latestFailed = renderSettings(makeSettings({
+      ...credentials,
+      syncHistory: [makeSyncHistoryEntry('auto', 'success', 2), makeSyncHistoryEntry('auto', 'failed', 3)],
+    })).container.querySelector<HTMLElement>('[data-connection-health]');
+    expect(latestFailed?.dataset.connectionHealth).toBe('unverified');
+  });
+
+  it('turns the indicator green and collapses open credentials after a successful test', async () => {
+    vi.mocked(fetchNotes).mockResolvedValue({ notes: [], hasMore: false });
+    const { container } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'token',
+      openApiClientId: 'client-id',
+    }));
+    const details = container.querySelector<HTMLElement>('[data-credential-details]')!;
+    const changeButton = container.querySelector<HTMLButtonElement>('[data-change-credentials]')!;
+    await act(() => changeButton.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(details.classList.contains('getnote-hidden')).toBe(false);
+
+    await act(async () => {
+      getTestConnectionButton(container).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(container.querySelector<HTMLElement>('[data-connection-health]')?.dataset.connectionHealth).toBe('healthy');
+    expect(details.classList.contains('getnote-hidden')).toBe(true);
+  });
+
+  it('turns the indicator red and keeps credentials open after a failed test', async () => {
+    vi.mocked(fetchNotes).mockRejectedValue(new Error('Unauthorized'));
+    const { container } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'token',
+      openApiClientId: 'client-id',
+      tagCache: { tags: ['existing'], lastUpdated: 1 },
+    }));
+    const details = container.querySelector<HTMLElement>('[data-credential-details]')!;
+    const changeButton = container.querySelector<HTMLButtonElement>('[data-change-credentials]')!;
+    await act(() => changeButton.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+
+    await act(async () => {
+      getTestConnectionButton(container).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    const indicator = container.querySelector<HTMLElement>('[data-connection-health]');
+    expect(indicator?.dataset.connectionHealth).toBe('error');
+    expect(indicator?.textContent).toContain('连接异常');
+    expect(details.classList.contains('getnote-hidden')).toBe(false);
+  });
+
+  it('resets a healthy indicator when credentials change', async () => {
+    const { container } = renderSettings(makeSettings({
+      authMode: 'openapi',
+      openApiToken: 'token',
+      openApiClientId: 'client-id',
+      syncHistory: [makeSyncHistoryEntry('auto')],
+    }));
+    const changeButton = container.querySelector<HTMLButtonElement>('[data-change-credentials]')!;
+    await act(() => changeButton.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    const tokenInput = container.querySelector<HTMLInputElement>('[data-credential-details] input[type="password"]')!;
+
+    await act(() => inputValue(tokenInput, 'replacement-token'));
+
+    expect(container.querySelector<HTMLElement>('[data-connection-health]')?.dataset.connectionHealth).toBe('unverified');
+    expect(container.querySelector('[data-credential-details]')?.classList.contains('getnote-hidden')).toBe(false);
   });
 
   it('keeps the scheduled disclosure available when scheduled sync is disabled', async () => {

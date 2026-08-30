@@ -77,6 +77,19 @@ function getTemplateFileSuggestions(app: App, query: string): string[] {
 }
 
 export type OnboardingState = 'first-run' | 'needs-credentials' | 'needs-auto-sync' | 'ready' | 'configured';
+export type ConnectionHealth = 'unverified' | 'healthy' | 'error';
+
+function getLatestAutomaticSync(syncHistory: SyncHistoryEntry[]): SyncHistoryEntry | undefined {
+  for (let index = syncHistory.length - 1; index >= 0; index -= 1) {
+    const entry = syncHistory[index];
+    if (entry.type === 'auto' || entry.mode === 'auto') return entry;
+  }
+  return undefined;
+}
+
+export function inferConnectionHealth(syncHistory: SyncHistoryEntry[]): ConnectionHealth {
+  return getLatestAutomaticSync(syncHistory)?.status === 'success' ? 'healthy' : 'unverified';
+}
 
 export function computeOnboardingState(settings: Settings): OnboardingState {
   const hasHistory = settings.syncHistory.length > 0;
@@ -170,6 +183,7 @@ export function SettingsComponent({
   const [testingConnection, setTestingConnection] = useState(false);
   const [desktopWebAuthBusy, setDesktopWebAuthBusy] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [connectionHealthOverride, setConnectionHealthOverride] = useState<ConnectionHealth | null>(null);
   const [connectionErrorMsg, setConnectionErrorMsg] = useState('');
   const [connectionExpiryMin, setConnectionExpiryMin] = useState<number | null>(null);
   const intervalWarningTimeoutRef = useRef<number | null>(null);
@@ -177,6 +191,7 @@ export function SettingsComponent({
   const [intervalWarning, setIntervalWarning] = useState(false);
   const credentials = getAuthCredentials({ ...settings, authMode, openApiToken: apiTokenOpenapi, openApiClientId: clientIdOpenapi, webApiToken: apiTokenWeb });
   const currentSyncHistory = syncHistory.length > 0 ? syncHistory : settings.syncHistory;
+  const connectionHealth = connectionHealthOverride ?? inferConnectionHealth(currentSyncHistory);
   const onboardingState = computeOnboardingState({
     ...settings,
     authMode,
@@ -198,6 +213,17 @@ export function SettingsComponent({
 
   const folderInputRef = useRef<HTMLInputElement>(null);
   const templateFileInputRef = useRef<HTMLInputElement>(null);
+
+  const resetConnectionVerification = useCallback(() => {
+    setConnectionHealthOverride('unverified');
+    setConnectionStatus('idle');
+    setConnectionErrorMsg('');
+    setConnectionExpiryMin(null);
+    if (connectionStatusTimeoutRef.current !== null) {
+      window.clearTimeout(connectionStatusTimeoutRef.current);
+      connectionStatusTimeoutRef.current = null;
+    }
+  }, []);
 
   // Attachment toggles are now driven by declarative Preact state (no more
   // imperative useRef + ToggleComponent.useEffect plumbing). The previous
@@ -300,8 +326,9 @@ export function SettingsComponent({
       updateSetting('authMode', value);
       updateSetting('apiToken', (value === 'web' ? apiTokenWebRef.current : apiTokenOpenapiRef.current).trim());
       if (value === 'openapi') updateSetting('clientId', clientIdOpenapi.trim());
+      resetConnectionVerification();
     },
-    [clientIdOpenapi, updateSetting]
+    [clientIdOpenapi, resetConnectionVerification, updateSetting]
   );
 
   const handleApiTokenOpenapiChange = useCallback(
@@ -310,8 +337,9 @@ export function SettingsComponent({
       setApiTokenOpenapi(value);
       updateSetting('openApiToken', value.trim());
       if (authMode === 'openapi') updateSetting('apiToken', value.trim());
+      resetConnectionVerification();
     },
-    [authMode, updateSetting]
+    [authMode, resetConnectionVerification, updateSetting]
   );
 
   const handleClientIdOpenapiChange = useCallback(
@@ -319,8 +347,9 @@ export function SettingsComponent({
       setClientIdOpenapi(value);
       updateSetting('openApiClientId', value.trim());
       updateSetting('clientId', value.trim());
+      resetConnectionVerification();
     },
-    [updateSetting]
+    [resetConnectionVerification, updateSetting]
   );
 
   const handleApiTokenWebChange = useCallback(
@@ -329,8 +358,9 @@ export function SettingsComponent({
       setApiTokenWeb(value);
       updateSetting('webApiToken', value.trim());
       if (authMode === 'web') updateSetting('apiToken', value.trim());
+      resetConnectionVerification();
     },
-    [authMode, updateSetting]
+    [authMode, resetConnectionVerification, updateSetting]
   );
 
   const handleFolderChange = useCallback(
@@ -560,6 +590,8 @@ export function SettingsComponent({
         } catch { /* ignore */ }
       }
       setConnectionStatus('success');
+      setConnectionHealthOverride('healthy');
+      setCredentialsDetailsOpen(false);
       connectionStatusTimeoutRef.current = window.setTimeout(() => {
         setConnectionStatus('idle');
         setConnectionExpiryMin(null);
@@ -567,6 +599,8 @@ export function SettingsComponent({
       }, 4000);
     } catch (err) {
       setConnectionStatus('error');
+      setConnectionHealthOverride('error');
+      setCredentialsDetailsOpen(true);
       setConnectionErrorMsg(err instanceof Error ? err.message : String(err));
       connectionStatusTimeoutRef.current = window.setTimeout(() => {
         setConnectionStatus('idle');
@@ -587,8 +621,12 @@ export function SettingsComponent({
       const token = await startDesktopWebAuth();
       handleApiTokenWebChange(token);
       setConnectionStatus('success');
+      setConnectionHealthOverride('healthy');
+      setCredentialsDetailsOpen(false);
     } catch (error) {
       setConnectionStatus('error');
+      setConnectionHealthOverride('error');
+      setCredentialsDetailsOpen(true);
       setConnectionErrorMsg(error instanceof Error ? error.message : String(error));
     } finally {
       setDesktopWebAuthBusy(false);
@@ -628,6 +666,7 @@ export function SettingsComponent({
   const hasCredentials = authMode === 'web'
     ? Boolean(apiTokenWeb.trim())
     : Boolean(apiTokenOpenapi.trim() && clientIdOpenapi.trim());
+
   const { scheduledSync } = settings;
   const credentialDetailsId = 'getnote-credential-details';
   const scheduledDetailsId = 'getnote-scheduled-details';
@@ -692,7 +731,18 @@ export function SettingsComponent({
       <div className={`getnote-settings-status-bar${credentialsDetailsOpen ? ' is-credentials-open' : ''}`} data-settings-status>
         <div className="getnote-settings-status-copy">
           <strong>{t(`settings.authMode.${authMode}`)}</strong>
-          <span>{hasCredentials ? t('settings.credentials.connected') : t('settings.credentials.notConfigured')}</span>
+          {hasCredentials ? (
+            <span
+              className={`getnote-connection-health getnote-connection-health--${connectionHealth}`}
+              data-connection-health={connectionHealth}
+              role="status"
+            >
+              <span className="getnote-connection-health-dot" aria-hidden="true" />
+              {t(`settings.connectionHealth.${connectionHealth}`)}
+            </span>
+          ) : (
+            <span>{t('settings.credentials.notConfigured')}</span>
+          )}
           <span>{t('settings.syncStatus')}: {isSyncing ? t('syncHistory.status.syncing') : t('syncHistory.status.idle')}</span>
           <span>{t('settings.lastSync')}: {formatLastSync(lastSyncTime)}</span>
         </div>
@@ -871,6 +921,7 @@ export function SettingsComponent({
             {authMode !== 'web' && (
               <OAuthButton
                 onAuthorize={(token, cid) => {
+                  resetConnectionVerification();
                   setApiTokenOpenapi(token);
                   setClientIdOpenapi(cid);
                   apiTokenOpenapiRef.current = token;
@@ -882,8 +933,12 @@ export function SettingsComponent({
                 onTestConnection={async (token, cid) => {
                   try {
                     await fetchNotes({ token, clientId: cid, authMode: 'openapi', sinceId: '0', limit: 1 });
+                    setConnectionHealthOverride('healthy');
+                    setCredentialsDetailsOpen(false);
                     return { isMemberError: false, message: '' };
                   } catch (err) {
+                    setConnectionHealthOverride('error');
+                    setCredentialsDetailsOpen(true);
                     const msg = err instanceof Error ? err.message : String(err);
                     const isMemberError = msg.includes('10201') || msg.includes('仅对会员开放') || msg.includes('not_member');
                     return { isMemberError, message: isMemberError ? t('settings.connectionErrorMemberHint') : msg };

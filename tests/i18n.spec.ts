@@ -263,6 +263,12 @@ describe('t() - New settings keys', () => {
     expect(i18n.t('settings.connectionError')).toBe('连接失败');
   });
 
+  it('settings connection health states', () => {
+    expect(i18n.t('settings.connectionHealth.unverified')).toBe('未验证');
+    expect(i18n.t('settings.connectionHealth.healthy')).toBe('连接正常');
+    expect(i18n.t('settings.connectionHealth.error')).toBe('连接异常');
+  });
+
   it('settings.maxDays.hint', () => {
     expect(i18n.t('settings.maxDays.hint')).toBe('0 = 不限制');
   });
@@ -303,6 +309,9 @@ describe('t() - New settings keys', () => {
     i18n.initI18n('en');
     expect(i18n.t('settings.testConnection')).toBe('Test Connection');
     expect(i18n.t('settings.connectionSuccess')).toBe('Connection successful');
+    expect(i18n.t('settings.connectionHealth.unverified')).toBe('Not verified');
+    expect(i18n.t('settings.connectionHealth.healthy')).toBe('Connection healthy');
+    expect(i18n.t('settings.connectionHealth.error')).toBe('Connection issue');
     expect(i18n.t('settings.maxDays.hint')).toBe('0 = no limit');
     expect(i18n.t('settings.noteTypes.label')).toBe('Note Types');
     expect(i18n.t('settings.interval.hint')).toBe('Minimum 5 minutes');
