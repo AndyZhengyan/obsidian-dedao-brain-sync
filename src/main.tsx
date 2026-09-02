@@ -648,8 +648,11 @@ export default class GetNoteSyncPlugin extends Plugin {
         } else {
           this.autoSyncFailCount = 0;
         }
-        if (status === 'success' && (result.created > 0 || result.updated > 0 || result.skipped > 0)) {
-          showNotice(t('notice.autoSynced', { created: result.created, updated: result.updated, skipped: result.skipped }));
+        if (status === 'success') {
+          const hasSyncedNotes = result.created > 0 || result.updated > 0 || result.skipped > 0;
+          showNotice(hasSyncedNotes
+            ? t('notice.autoSynced', { created: result.created, updated: result.updated, skipped: result.skipped })
+            : t('notice.autoSyncEmpty'));
         }
       } else {
         if (status === 'partial') {
@@ -660,12 +663,13 @@ export default class GetNoteSyncPlugin extends Plugin {
             failed: result.failed,
           }), 15000);
         } else {
-          showSuccess(t('notice.syncComplete', {
+          const hasSyncedNotes = result.created > 0 || result.updated > 0 || result.skipped > 0;
+          showSuccess(hasSyncedNotes ? t('notice.syncComplete', {
             created: result.created,
             updated: result.updated,
             skipped: result.skipped,
             failed: '',
-          }), 8000);
+          }) : t('notice.syncEmpty'), 8000);
         }
         this.finishSyncProgress(
           status === 'partial' ? 'failed' : 'success',

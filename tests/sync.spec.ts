@@ -149,6 +149,25 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     });
   });
 
+  it('shows a non-error completion notice when a manual sync has no notes to sync', async () => {
+    vi.spyOn(SyncEngine.prototype, 'sync').mockResolvedValue({
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+      total: 0,
+      items: [],
+    });
+    const plugin = makePlugin();
+
+    await plugin['runSync']('full', { maxDays: 0, syncStartDate: '' });
+
+    expect(issuedNotices.at(-1)).toEqual({
+      message: '✅ [得到大脑] 同步完成：没有发现需要同步的笔记。',
+      timeout: 8000,
+    });
+  });
+
   it('manual sync failure clears syncing state', async () => {
     vi.spyOn(SyncEngine.prototype, 'sync').mockRejectedValue(new Error('boom'));
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -510,6 +529,25 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     });
     await plugin['runSync']('auto');
     expect(plugin['autoSyncFailCount']).toBe(0);
+  });
+
+  it('shows a non-error completion notice when an automatic sync has no notes to sync', async () => {
+    vi.spyOn(SyncEngine.prototype, 'sync').mockResolvedValue({
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+      total: 0,
+      items: [],
+    });
+    const plugin = makePlugin();
+
+    await plugin['runSync']('auto');
+
+    expect(issuedNotices.at(-1)).toEqual({
+      message: '[得到大脑] 自动同步完成：没有发现需要同步的笔记。',
+      timeout: 5000,
+    });
   });
 
   it('selected sync records the note type filter from the picker scope', async () => {
