@@ -1,5 +1,23 @@
 export const translations: Record<string, Record<string, string>> = {
   zh: {
+    "bidirectional.title": "双向同步",
+    "bidirectional.description": "开启后，同步「{folder}」内已关联文字笔记的标题、标签和原文区域；保留本地附注和路径，不联动删除。手动同步处理冲突，自动同步保留并报告冲突。本地新笔记请使用上传入口。",
+    "bidirectional.uploadFolder": "上传目录（留空跟随同步目录）",
+    "bidirectional.uploadWarning": "若上传目录位于同步目录之外，它只作为上传来源。笔记后续下载到「{folder}」，不会更新此处原笔记。需要双向同步时，请在同步目录中编辑。",
+    "bidirectional.openApiOnly": "双向修改目前需要 OpenAPI 认证；临时鉴权尚无已验证的更新接口。请切换认证方式或关闭双向同步。",
+    "bidirectional.unsupported": "此内容暂不支持双向修改（仅支持已关联文字笔记）。",
+    "bidirectional.invalid": "笔记关联、元数据或原文标记无效，已保留两端内容。",
+    "bidirectional.duplicate": "同步目录内存在重复笔记关联，请先处理副本。",
+    "bidirectional.changed": "同步期间内容发生变化，已停止覆盖，请重试。",
+    "bidirectional.unconfirmed": "未能确认远端更新结果，已保留本地内容和旧同步基准。",
+    "bidirectional.conflict": "两端内容冲突；请手动同步并选择保留的版本。",
+    "bidirectional.conflictTitle": "同步冲突：选择此次使用的内容",
+    "bidirectional.local": "本地内容",
+    "bidirectional.remote": "得到大脑内容",
+    "bidirectional.choose.skip": "保留两端，稍后处理",
+    "bidirectional.choose.upload": "以本地覆盖远端",
+    "bidirectional.choose.download": "以远端更新本地",
+
     // === Settings ===
     'settings.title': '🔄 得到大脑（原Get笔记）Sync',
     'settings.desc': '得到大脑（原Get笔记） ↔ Obsidian，双向同步，自动整理，永久免费，',
@@ -411,6 +429,24 @@ export const translations: Record<string, Record<string, string>> = {
   },
 
   en: {
+    "bidirectional.title": "Two-way sync",
+    "bidirectional.description": "Sync linked text notes in \"{folder}\": title, tags and the marked source body. Preserve local additions and paths; never propagate deletions. Manual sync resolves conflicts; automatic sync retains and reports them. Upload new local notes using the upload action.",
+    "bidirectional.uploadFolder": "Upload folder (empty uses sync folder)",
+    "bidirectional.uploadWarning": "An upload folder outside the sync folder is an upload source only. Downloads go to \"{folder}\" and do not update the originals here. Edit in the sync folder for two-way sync.",
+    "bidirectional.openApiOnly": "Two-way updates currently require OpenAPI authentication. The temporary-auth update API is not verified. Switch authentication or disable two-way sync.",
+    "bidirectional.unsupported": "This content does not support two-way updates (linked text notes only).",
+    "bidirectional.invalid": "Invalid note identity, metadata or source markers. Both copies were preserved.",
+    "bidirectional.duplicate": "Duplicate note identity in the sync folder. Resolve the copies first.",
+    "bidirectional.changed": "Content changed during sync. Replacement stopped; retry sync.",
+    "bidirectional.unconfirmed": "Remote update could not be verified. Local content and the previous baseline were retained.",
+    "bidirectional.conflict": "Both copies conflict. Run manual sync to choose a version.",
+    "bidirectional.conflictTitle": "Sync conflict: choose content for this sync",
+    "bidirectional.local": "Local content",
+    "bidirectional.remote": "Remote content",
+    "bidirectional.choose.skip": "Keep both; decide later",
+    "bidirectional.choose.upload": "Replace remote with local",
+    "bidirectional.choose.download": "Update local from remote",
+
     // === Settings ===
     'settings.title': '🔄 得到大脑（原Get笔记）Sync',
     'settings.desc': '得到大脑（原Get笔记） ↔ Obsidian, one-click sync',

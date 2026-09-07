@@ -407,6 +407,17 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(container.querySelector('[data-settings-status]')?.textContent).toContain('连接成功');
   });
 
+  it('persists the two-way toggle and independent upload directory', async () => {
+    const updateSetting = vi.fn();
+    const { container } = renderSettings(makeSettings(), updateSetting);
+    const toggle = container.querySelector<HTMLInputElement>('input[aria-label="双向同步"]')!;
+    await act(() => toggle.closest('.checkbox-container')!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(updateSetting).toHaveBeenCalledWith('reverseSync', expect.objectContaining({ enabled: true }));
+    const folder = container.querySelector<HTMLInputElement>('[data-bidirectional-upload-folder]')!;
+    await act(() => inputValue(folder, 'Inbox'));
+    expect(updateSetting).toHaveBeenLastCalledWith('reverseSync', { enabled: true, uploadFolder: 'Inbox' });
+  });
+
   it('replaces configured copy with an unverified connection indicator', () => {
     const { container } = renderSettings(makeSettings({
       authMode: 'openapi',

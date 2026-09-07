@@ -1,3 +1,5 @@
+import { BidirectionalSyncEngine } from './bidirectional-sync';
+import { resolveSyncConflict } from './ui/sync-conflict-modal';
 import { App, Modal, Notice, Platform, Plugin, getLanguage, type DataAdapter, type Editor, type Menu, type TFile } from 'obsidian';
 import ReactDOM from 'react-dom';
 import { DEFAULT_SETTINGS, getAuthCredentials, migrateEnabledNoteTypes, type RecallSearchResult, type Settings, type SyncHistoryScope, type SyncProgressDetail, type SyncHistoryEntry, type SyncResult, type SyncScopeOptions } from './types';
@@ -625,9 +627,24 @@ export default class GetNoteSyncPlugin extends Plugin {
     let shouldResetSyncState = type === 'auto';
 
     try {
+      const bidirectional = new BidirectionalSyncEngine(this.app, this.settings,
+        type === 'auto' ? undefined : conflict => resolveSyncConflict(this.app, conflict));
+      this.currentSyncEngine = { cancel: () => { bidirectional.cancel(); engine.cancel(); } };
+      let changes: SyncResult;
+      try { changes = this.settings.reverseSync.enabled ? await bidirectional.sync(selectedIds) : emptySyncResult(); }
+      catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') throw new SyncCancelledError();
+        throw error;
+      }
       const result = selectedIds
         ? await engine.syncNoteIds(selectedIds)
         : await engine.sync();
+
+      result.updated += changes.updated;
+      result.skipped += changes.skipped;
+      result.failed += changes.failed;
+      result.total += changes.total;
+      result.items = [...(changes.items ?? []), ...(result.items ?? [])];
 
       const status: SyncHistoryEntry['status'] = result.failed > 0 ? 'partial' : 'success';
       await this.recordSyncHistory(result, type, startedAt, resolvedScope, status);
@@ -1288,7 +1305,8 @@ class LocalUploadModalWrapper extends Modal {
     ReactDOM.render(
       <LocalUploadModal
         files={this.app.vault.getMarkdownFiles()}
-        initialFolder={this.plugin.settings.folderName}
+        initialFolder={this.plugin.settings.reverseSync.uploadFolder || this.plugin.settings.folderName}
+        syncFolder={this.plugin.settings.folderName}
         onConfirm={(files) => {
           this.close();
           this.plugin.uploadSelectedLocalNotes(files);

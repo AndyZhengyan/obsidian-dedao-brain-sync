@@ -150,6 +150,8 @@ export function SettingsComponent({
   startDesktopWebAuth,
   clearDesktopWebAuth,
 }: SettingsComponentProps) {
+  const [bidirectionalEnabled, setBidirectionalEnabled] = useState(settings.reverseSync.enabled);
+  const [uploadFolder, setUploadFolder] = useState(settings.reverseSync.uploadFolder ?? '');
   const [authMode, setAuthMode] = useState<AuthMode>(settings.authMode);
   const initialOpenApiToken = settings.openApiToken || (settings.authMode === 'openapi' ? settings.apiToken : '');
   const initialOpenApiClientId = settings.openApiClientId || settings.clientId;
@@ -1428,6 +1430,22 @@ export function SettingsComponent({
             </div>
           </div>
         </div>
+      </SettingItem>
+
+      <SettingItem name={t('bidirectional.title')} description={t('bidirectional.description', { folder: settings.folderName })}>
+        <Toggle value={bidirectionalEnabled} ariaLabel={t('bidirectional.title')} disabled={isSyncing || (authMode !== 'openapi' && !bidirectionalEnabled)} onChange={(enabled) => {
+          setBidirectionalEnabled(enabled);
+          updateSetting('reverseSync', { ...settings.reverseSync, enabled, uploadFolder });
+        }} />
+        {authMode !== 'openapi' && <p>{t('bidirectional.openApiOnly')}</p>}
+      </SettingItem>
+      <SettingItem name={t('bidirectional.uploadFolder')} description={t('bidirectional.uploadWarning', { folder: settings.folderName })}>
+        <input data-bidirectional-upload-folder type="text" value={uploadFolder} placeholder={settings.folderName} disabled={isSyncing}
+          onInput={(event) => {
+            const folder = event.currentTarget.value;
+            setUploadFolder(folder);
+            updateSetting('reverseSync', { ...settings.reverseSync, enabled: bidirectionalEnabled, uploadFolder: folder });
+          }} />
       </SettingItem>
 
       {/* 顶部状态条已展示本次状态和上次同步，这里只保留历史入口。 */}

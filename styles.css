@@ -2233,3 +2233,5 @@ body .getnote-ribbon-action-hidden {
 .getnote-date-path-confirm-content {
   max-width: 520px;
 }
+
+.getnote-sync-conflict-preview { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 30vh; overflow: auto; }

@@ -89,6 +89,7 @@ export interface ScheduledSyncSettings {
 
 export interface ReverseSyncSettings {
   enabled: boolean;
+  uploadFolder?: string;
 }
 
 export type AttachmentKind = 'image' | 'audio' | 'video' | 'document' | 'other';
