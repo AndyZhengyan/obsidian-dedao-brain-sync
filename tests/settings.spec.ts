@@ -407,6 +407,25 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(container.querySelector('[data-settings-status]')?.textContent).toContain('连接成功');
   });
 
+  it('tests the entered Web Token without substituting or renewing the saved session', async () => {
+    vi.mocked(fetchNotes).mockResolvedValue({ notes: [], hasMore: false });
+    const { container } = renderSettings(makeSettings({
+      authMode: 'web',
+      webApiToken: 'Bearer entered-token',
+    }));
+
+    await act(async () => {
+      getTestConnectionButton(container).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(fetchNotes).toHaveBeenLastCalledWith(expect.objectContaining({
+      token: 'Bearer entered-token',
+      authMode: 'web',
+      skipWebTokenRefresh: true,
+    }));
+    expect(container.querySelector('[data-connection-health]')?.textContent).toContain('认证成功');
+  });
+
   it('replaces configured copy with an unverified connection indicator', () => {
     const { container } = renderSettings(makeSettings({
       authMode: 'openapi',
@@ -433,7 +452,7 @@ describe('SettingsComponent information architecture (#257)', () => {
       syncHistory: [makeSyncHistoryEntry('auto')],
     })).container.querySelector<HTMLElement>('[data-connection-health]');
     expect(automatic?.dataset.connectionHealth).toBe('healthy');
-    expect(automatic?.textContent).toContain('连接正常');
+    expect(automatic?.textContent).toContain('认证成功');
 
     const latestFailed = renderSettings(makeSettings({
       ...credentials,
