@@ -249,10 +249,11 @@ afterEach(() => {
 });
 
 describe('SettingsComponent information architecture (#257)', () => {
-  it('labels scheduled sync as one-way and manual sync as two-way', () => {
+  it('labels scheduled and manual sync clearly', () => {
     const { container } = renderSettings(makeSettings());
 
-    expect(container.textContent).toContain('定时自动同步（单向：得到 → OB）');
+    expect(container.textContent).toContain('定时自动同步');
+    expect(container.textContent).not.toContain('定时自动同步（单向：得到 → OB）');
     expect(container.textContent).toContain('手动同步（双向：得到 ↔ OB）');
   });
 
@@ -410,6 +411,8 @@ describe('SettingsComponent information architecture (#257)', () => {
   it('persists the two-way toggle and independent upload directory', async () => {
     const updateSetting = vi.fn();
     const { container } = renderSettings(makeSettings(), updateSetting);
+    const disclosure = container.querySelector<HTMLButtonElement>('.getnote-scheduled-master-row .getnote-inline-disclosure')!;
+    await act(() => disclosure.click());
     const toggle = container.querySelector<HTMLInputElement>('input[aria-label="双向同步"]')!;
     await act(() => toggle.closest('.checkbox-container')!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     expect(updateSetting).toHaveBeenCalledWith('reverseSync', expect.objectContaining({ enabled: true }));

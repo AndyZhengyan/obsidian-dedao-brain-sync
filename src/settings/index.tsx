@@ -76,6 +76,12 @@ function getTemplateFileSuggestions(app: App, query: string): string[] {
     .slice(0, 50);
 }
 
+function isIndependentUploadFolder(uploadFolder: string, syncFolder: string): boolean {
+  const upload = uploadFolder.trim().replace(/^\/+|\/+$/g, '');
+  const sync = syncFolder.trim().replace(/^\/+|\/+$/g, '');
+  return Boolean(upload && upload !== sync && !upload.startsWith(`${sync}/`));
+}
+
 export type OnboardingState = 'first-run' | 'needs-credentials' | 'needs-auto-sync' | 'ready' | 'configured';
 export type ConnectionHealth = 'unverified' | 'healthy' | 'error';
 
@@ -197,6 +203,7 @@ export function SettingsComponent({
   const credentials = getAuthCredentials({ ...settings, authMode, openApiToken: apiTokenOpenapi, openApiClientId: clientIdOpenapi, webApiToken: apiTokenWeb });
   const currentSyncHistory = syncHistory.length > 0 ? syncHistory : settings.syncHistory;
   const connectionHealth = connectionHealthOverride ?? inferConnectionHealth(currentSyncHistory);
+  const independentUploadFolder = isIndependentUploadFolder(uploadFolder, folderName);
   const latestSync = currentSyncHistory[currentSyncHistory.length - 1];
   const syncStatusLabel = isSyncing
     ? t('syncHistory.status.syncing')
@@ -1322,6 +1329,45 @@ export function SettingsComponent({
               </span>
             </div>
             <div className="getnote-input-hint">{t('settings.scheduled.syncKnowledgeBases.hint')}</div>
+            <div className="getnote-scheduled-row getnote-bidirectional-row">
+              <span className="getnote-scheduled-row-label">{t('bidirectional.title')}</span>
+              <span className="getnote-scheduled-row-control">
+                <Toggle
+                  value={bidirectionalEnabled}
+                  ariaLabel={t('bidirectional.title')}
+                  disabled={isSyncing || (authMode !== 'openapi' && !bidirectionalEnabled)}
+                  onChange={(enabled) => {
+                    setBidirectionalEnabled(enabled);
+                    updateSetting('reverseSync', { ...settings.reverseSync, enabled, uploadFolder });
+                  }}
+                />
+              </span>
+            </div>
+            <div className="getnote-input-hint getnote-bidirectional-hint">
+              {t('bidirectional.description', { folder: folderName })}
+              {authMode !== 'openapi' && <span className="getnote-input-hint-error"> {t('bidirectional.openApiOnly')}</span>}
+            </div>
+            <div className="getnote-scheduled-row getnote-bidirectional-row">
+              <span className="getnote-scheduled-row-label">{t('bidirectional.uploadFolder')}</span>
+              <span className="getnote-scheduled-row-control getnote-upload-folder-control">
+                <input
+                  data-bidirectional-upload-folder
+                  type="text"
+                  value={uploadFolder}
+                  placeholder={folderName}
+                  disabled={isSyncing}
+                  onInput={(event) => {
+                    const folder = event.currentTarget.value;
+                    setUploadFolder(folder);
+                    updateSetting('reverseSync', { ...settings.reverseSync, enabled: bidirectionalEnabled, uploadFolder: folder });
+                  }}
+                />
+              </span>
+            </div>
+            <div className="getnote-input-hint getnote-bidirectional-hint">
+              {t('bidirectional.uploadFolderHint', { folder: folderName })}
+              {independentUploadFolder && <span className="getnote-input-hint-warning"> {t('bidirectional.uploadFolderWarning')}</span>}
+            </div>
           <div className="getnote-scheduled-checkpoint" data-scheduled-checkpoint>
             <div className="getnote-scheduled-row getnote-scheduled-date-row">
               <span className="getnote-scheduled-row-label">
@@ -1430,22 +1476,6 @@ export function SettingsComponent({
             </div>
           </div>
         </div>
-      </SettingItem>
-
-      <SettingItem name={t('bidirectional.title')} description={t('bidirectional.description', { folder: settings.folderName })}>
-        <Toggle value={bidirectionalEnabled} ariaLabel={t('bidirectional.title')} disabled={isSyncing || (authMode !== 'openapi' && !bidirectionalEnabled)} onChange={(enabled) => {
-          setBidirectionalEnabled(enabled);
-          updateSetting('reverseSync', { ...settings.reverseSync, enabled, uploadFolder });
-        }} />
-        {authMode !== 'openapi' && <p>{t('bidirectional.openApiOnly')}</p>}
-      </SettingItem>
-      <SettingItem name={t('bidirectional.uploadFolder')} description={t('bidirectional.uploadWarning', { folder: settings.folderName })}>
-        <input data-bidirectional-upload-folder type="text" value={uploadFolder} placeholder={settings.folderName} disabled={isSyncing}
-          onInput={(event) => {
-            const folder = event.currentTarget.value;
-            setUploadFolder(folder);
-            updateSetting('reverseSync', { ...settings.reverseSync, enabled: bidirectionalEnabled, uploadFolder: folder });
-          }} />
       </SettingItem>
 
       {/* 顶部状态条已展示本次状态和上次同步，这里只保留历史入口。 */}

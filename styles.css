@@ -720,6 +720,33 @@
   text-align: right;
 }
 
+.getnote-bidirectional-row {
+  border-top: 1px solid var(--background-modifier-border);
+  margin-top: 4px;
+  padding-top: 10px;
+}
+
+.getnote-bidirectional-hint {
+  max-width: 100%;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.getnote-input-hint-warning {
+  color: var(--text-warning);
+}
+
+.getnote-upload-folder-control input {
+  width: 100%;
+  max-width: var(--getnote-primary-input-width);
+  min-width: var(--getnote-primary-input-min-width);
+}
+
+.getnote-scheduled-row-control.getnote-upload-folder-control {
+  flex: 1 1 var(--getnote-primary-input-width);
+  min-width: var(--getnote-primary-input-min-width);
+}
+
 .getnote-scheduled-row input[type="number"] {
   width: var(--getnote-secondary-input-width);
 }
