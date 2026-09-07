@@ -2,7 +2,7 @@ export const translations: Record<string, Record<string, string>> = {
   zh: {
     "bidirectional.title": "双向同步",
     "bidirectional.description": "同步目录「{folder}」内的已关联文字笔记支持回源；冲突在手动同步时选择，删除不联动。",
-    "bidirectional.uploadFolder": "本地上传目录",
+    "bidirectional.uploadFolder": "自定义上传目录",
     "bidirectional.uploadFolderHint": "留空使用同步目录；下载始终回到「{folder}」。",
     "bidirectional.uploadFolderWarning": "此目录只用于上传，原笔记不会随远端更新。",
     "bidirectional.uploadWarning": "若上传目录位于同步目录之外，它只作为上传来源。笔记后续下载到「{folder}」，不会更新此处原笔记。需要双向同步时，请在同步目录中编辑。",
@@ -433,7 +433,7 @@ export const translations: Record<string, Record<string, string>> = {
   en: {
     "bidirectional.title": "Two-way sync",
     "bidirectional.description": "Linked text notes in \"{folder}\" can write local edits back; choose conflicts during manual sync and never propagate deletions.",
-    "bidirectional.uploadFolder": "Local upload folder",
+    "bidirectional.uploadFolder": "Custom upload folder",
     "bidirectional.uploadFolderHint": "Leave empty to use the sync folder; downloads always return to \"{folder}\".",
     "bidirectional.uploadFolderWarning": "Upload only: originals here will not follow remote updates.",
     "bidirectional.uploadWarning": "An upload folder outside the sync folder is an upload source only. Downloads go to \"{folder}\" and do not update the originals here. Edit in the sync folder for two-way sync.",
