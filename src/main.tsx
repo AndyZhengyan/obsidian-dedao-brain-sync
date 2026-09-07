@@ -937,35 +937,26 @@ export default class GetNoteSyncPlugin extends Plugin {
         selectedCount: syncOptions?.selectedNoteIds?.length,
         selectedIds: syncOptions?.selectedNoteIds,
       }, result.failed > 0 ? 'partial' : 'success', undefined, 'knowledge-base');
+      const hasSyncedNotes = result.created > 0 || result.updated > 0 || result.skipped > 0;
+      const resultMessage = result.failed > 0
+        ? t('notice.syncPartial', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: result.failed,
+        })
+        : hasSyncedNotes ? t('notice.syncComplete', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: '',
+        }) : t('notice.syncEmpty');
       if (result.failed > 0) {
-        showError(t('notice.syncPartial', {
-          created: result.created,
-          updated: result.updated,
-          skipped: result.skipped,
-          failed: result.failed,
-        }), 15000);
+        showError(resultMessage, 15000);
       } else {
-        showSuccess(t('notice.syncComplete', {
-          created: result.created,
-          updated: result.updated,
-          skipped: result.skipped,
-          failed: '',
-        }), 8000);
+        showSuccess(resultMessage, 8000);
       }
-      this.finishSyncProgress(
-        result.failed > 0 ? 'failed' : 'success',
-        result.failed > 0 ? t('notice.syncPartial', {
-          created: result.created,
-          updated: result.updated,
-          skipped: result.skipped,
-          failed: result.failed,
-        }) : t('notice.syncComplete', {
-          created: result.created,
-          updated: result.updated,
-          skipped: result.skipped,
-          failed: '',
-        }),
-      );
+      this.finishSyncProgress(result.failed > 0 ? 'failed' : 'success', resultMessage);
       progressFinished = true;
     } catch (err) {
       if (err instanceof SyncCancelledError) {

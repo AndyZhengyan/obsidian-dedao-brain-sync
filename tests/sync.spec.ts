@@ -211,6 +211,24 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
     expect(plugin.syncProgress).toEqual({ message: '', count: '', percent: undefined, phase: 'active' });
   });
 
+  it.each([{}, { syncAll: true }, { selectedNoteIds: ['note-1'] }])(
+    'shows an empty completion for knowledge-base scope %j', async scope => {
+      vi.spyOn(SyncEngine.prototype, 'syncSubscribedKnowledge').mockResolvedValue({
+        created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [],
+      });
+      const plugin = makePlugin();
+
+      await plugin['runSubscribedKnowledgeSync'](scope);
+
+      expect(issuedNotices.at(-1)).toEqual({
+        message: '✅ [得到大脑] 同步完成：没有发现需要同步的笔记。',
+        timeout: 8000,
+      });
+      expect(plugin.syncProgress.message).toBe('同步完成：没有发现需要同步的笔记。');
+      expect(plugin.syncHistory.at(-1)?.status).toBe('success');
+    },
+  );
+
   it('records knowledge-base sync mode and selected count', async () => {
     vi.spyOn(SyncEngine.prototype, 'syncSubscribedKnowledge').mockResolvedValue({
       created: 1,
