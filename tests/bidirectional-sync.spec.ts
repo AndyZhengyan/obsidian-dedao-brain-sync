@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { App, TFile } from 'obsidian';
 import { BidirectionalSyncEngine, syncDirection, insideSyncFolder, readSyncNote, replaceSyncContent } from '../src/bidirectional-sync';
-import { fetchNoteDetail } from '../src/api';
+import { createNote, fetchNoteDetail } from '../src/api';
 import { updateNote } from '../src/api-clients/openapi-client';
 import { renderNote } from '../src/note-parser';
 import { DEFAULT_SETTINGS, type GetNoteNote } from '../src/types';
 
-vi.mock('../src/api', () => ({ fetchNoteDetail: vi.fn() }));
+vi.mock('../src/api', () => ({ fetchNoteDetail: vi.fn(), createNote: vi.fn() }));
 vi.mock('../src/api-clients/openapi-client', () => ({ updateNote: vi.fn() }));
 vi.mock('obsidian', async importOriginal => ({
   ...await importOriginal<typeof import('obsidian')>(),
@@ -31,6 +31,10 @@ function fixture(body = renderNote(remote)) {
   app.vault.process = vi.fn(async (f, transform) => {
     const next = transform(contents.get(f.path)!); contents.set(f.path, next); return next;
   });
+  app.vault.createFolder = vi.fn(async () => undefined);
+  app.fileManager = { renameFile: vi.fn(async (f: TFile, path: string) => {
+    const oldPath = f.path; contents.set(path, contents.get(oldPath)!); contents.delete(oldPath); f.path = path;
+  }) } as never;
   const settings = { ...DEFAULT_SETTINGS, folderName: 'Sync', authMode: 'openapi' as const,
     openApiToken: 'test', openApiClientId: 'test', reverseSync: { enabled: true } };
   vi.mocked(fetchNoteDetail).mockResolvedValue(remote);
@@ -61,6 +65,19 @@ describe('bidirectional content decisions', () => {
   });
 });
 describe('bidirectional engine', () => {
+  it('creates a local draft remotely, records its uid and archives it', async () => {
+    const f = fixture('本地新笔记');
+    f.contents.set('Sync/Inbox/本地新笔记.md', f.contents.get(f.file.path)!);
+    f.contents.delete(f.file.path);
+    f.file.path = 'Sync/Inbox/本地新笔记.md';
+    vi.mocked(createNote).mockResolvedValue({ noteId: '12345678901234567890' });
+    const result = await new BidirectionalSyncEngine(f.app, f.settings).sync();
+    expect(result.created).toBe(1);
+    expect(createNote).toHaveBeenCalledWith(expect.objectContaining({ title: '笔记', content: '本地新笔记', noteType: 'plain_text' }));
+    expect(f.file.path).toMatch(/^Sync\/纯文本\/笔记\.md$/);
+    expect(f.contents.get(f.file.path)).toContain('uid: "12345678901234567890"');
+    expect(fetchNoteDetail).not.toHaveBeenCalled();
+  });
   it('uploads to the original string ID and verifies the result', async () => {
     const f = fixture(renderNote(remote).replace('\n原文\n', '\n本地修改\n'));
     vi.mocked(fetchNoteDetail).mockResolvedValueOnce(remote).mockResolvedValueOnce(remote)
