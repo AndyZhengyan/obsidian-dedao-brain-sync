@@ -631,6 +631,7 @@ export default class GetNoteSyncPlugin extends Plugin {
 
       const status: SyncHistoryEntry['status'] = result.failed > 0 ? 'partial' : 'success';
       await this.recordSyncHistory(result, type, startedAt, resolvedScope, status);
+      const hasSyncedNotes = result.created > 0 || result.updated > 0 || result.skipped > 0;
 
         // Clear exhausted quota state on successful sync
         if (credentials.authMode === 'openapi' && this.settings.lastQuotaState?.exhausted) {
@@ -649,7 +650,6 @@ export default class GetNoteSyncPlugin extends Plugin {
           this.autoSyncFailCount = 0;
         }
         if (status === 'success') {
-          const hasSyncedNotes = result.created > 0 || result.updated > 0 || result.skipped > 0;
           showNotice(hasSyncedNotes
             ? t('notice.autoSynced', { created: result.created, updated: result.updated, skipped: result.skipped })
             : t('notice.autoSyncEmpty'));
@@ -663,7 +663,6 @@ export default class GetNoteSyncPlugin extends Plugin {
             failed: result.failed,
           }), 15000);
         } else {
-          const hasSyncedNotes = result.created > 0 || result.updated > 0 || result.skipped > 0;
           showSuccess(hasSyncedNotes ? t('notice.syncComplete', {
             created: result.created,
             updated: result.updated,
@@ -680,12 +679,12 @@ export default class GetNoteSyncPlugin extends Plugin {
               skipped: result.skipped,
               failed: result.failed,
             })
-            : t('notice.syncComplete', {
+            : hasSyncedNotes ? t('notice.syncComplete', {
               created: result.created,
               updated: result.updated,
               skipped: result.skipped,
               failed: '',
-            }),
+            }) : t('notice.syncEmpty'),
         );
         return;
       }

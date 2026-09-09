@@ -166,6 +166,7 @@ describe('GetNoteSyncPlugin runSync cleanup', () => {
       message: '✅ [得到大脑] 同步完成：没有发现需要同步的笔记。',
       timeout: 8000,
     });
+    expect(plugin.syncProgress.message).toBe('同步完成：没有发现需要同步的笔记。');
   });
 
   it('manual sync failure clears syncing state', async () => {
