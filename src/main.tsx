@@ -631,6 +631,7 @@ export default class GetNoteSyncPlugin extends Plugin {
 
       const status: SyncHistoryEntry['status'] = result.failed > 0 ? 'partial' : 'success';
       await this.recordSyncHistory(result, type, startedAt, resolvedScope, status);
+      const hasSyncedNotes = result.created > 0 || result.updated > 0 || result.skipped > 0;
 
         // Clear exhausted quota state on successful sync
         if (credentials.authMode === 'openapi' && this.settings.lastQuotaState?.exhausted) {
@@ -648,8 +649,10 @@ export default class GetNoteSyncPlugin extends Plugin {
         } else {
           this.autoSyncFailCount = 0;
         }
-        if (status === 'success' && (result.created > 0 || result.updated > 0 || result.skipped > 0)) {
-          showNotice(t('notice.autoSynced', { created: result.created, updated: result.updated, skipped: result.skipped }));
+        if (status === 'success') {
+          showNotice(hasSyncedNotes
+            ? t('notice.autoSynced', { created: result.created, updated: result.updated, skipped: result.skipped })
+            : t('notice.autoSyncEmpty'));
         }
       } else {
         if (status === 'partial') {
@@ -660,12 +663,12 @@ export default class GetNoteSyncPlugin extends Plugin {
             failed: result.failed,
           }), 15000);
         } else {
-          showSuccess(t('notice.syncComplete', {
+          showSuccess(hasSyncedNotes ? t('notice.syncComplete', {
             created: result.created,
             updated: result.updated,
             skipped: result.skipped,
             failed: '',
-          }), 8000);
+          }) : t('notice.syncEmpty'), 8000);
         }
         this.finishSyncProgress(
           status === 'partial' ? 'failed' : 'success',
@@ -676,12 +679,12 @@ export default class GetNoteSyncPlugin extends Plugin {
               skipped: result.skipped,
               failed: result.failed,
             })
-            : t('notice.syncComplete', {
+            : hasSyncedNotes ? t('notice.syncComplete', {
               created: result.created,
               updated: result.updated,
               skipped: result.skipped,
               failed: '',
-            }),
+            }) : t('notice.syncEmpty'),
         );
         return;
       }
@@ -933,35 +936,26 @@ export default class GetNoteSyncPlugin extends Plugin {
         selectedCount: syncOptions?.selectedNoteIds?.length,
         selectedIds: syncOptions?.selectedNoteIds,
       }, result.failed > 0 ? 'partial' : 'success', undefined, 'knowledge-base');
+      const hasSyncedNotes = result.created > 0 || result.updated > 0 || result.skipped > 0;
+      const resultMessage = result.failed > 0
+        ? t('notice.syncPartial', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: result.failed,
+        })
+        : hasSyncedNotes ? t('notice.syncComplete', {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+          failed: '',
+        }) : t('notice.syncEmpty');
       if (result.failed > 0) {
-        showError(t('notice.syncPartial', {
-          created: result.created,
-          updated: result.updated,
-          skipped: result.skipped,
-          failed: result.failed,
-        }), 15000);
+        showError(resultMessage, 15000);
       } else {
-        showSuccess(t('notice.syncComplete', {
-          created: result.created,
-          updated: result.updated,
-          skipped: result.skipped,
-          failed: '',
-        }), 8000);
+        showSuccess(resultMessage, 8000);
       }
-      this.finishSyncProgress(
-        result.failed > 0 ? 'failed' : 'success',
-        result.failed > 0 ? t('notice.syncPartial', {
-          created: result.created,
-          updated: result.updated,
-          skipped: result.skipped,
-          failed: result.failed,
-        }) : t('notice.syncComplete', {
-          created: result.created,
-          updated: result.updated,
-          skipped: result.skipped,
-          failed: '',
-        }),
-      );
+      this.finishSyncProgress(result.failed > 0 ? 'failed' : 'success', resultMessage);
       progressFinished = true;
     } catch (err) {
       if (err instanceof SyncCancelledError) {
