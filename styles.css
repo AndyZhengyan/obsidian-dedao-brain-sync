@@ -730,7 +730,7 @@
   color: var(--text-warning);
 }
 
-.getnote-upload-folder-control input {
+.getnote-upload-folder-control input[type="text"] {
   width: var(--getnote-secondary-input-width);
   max-width: var(--getnote-secondary-input-width);
   min-width: var(--getnote-secondary-input-min-width);
