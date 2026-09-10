@@ -1,7 +1,9 @@
 export const translations: Record<string, Record<string, string>> = {
   zh: {
     "bidirectional.title": "双向同步",
-    "bidirectional.description": "同步目录「{folder}」内的已关联文字笔记支持回源；冲突在手动同步时选择，删除不联动。",
+    "bidirectional.description": "同步目录「{folder}」内的新文字笔记会自动上传并归档；已关联笔记的修改会回源。冲突在手动同步时选择，删除不联动。",
+    "bidirectional.uploadUncertain": "上传结果或笔记身份待核对，已停止自动重传。请在得到大脑确认是否已创建；若已创建，请填写对应 uid，若确认未创建，再移除 dedao_upload_state 后重试。",
+    "bidirectional.uploadSaveFailed": "远端笔记 {uid} 已创建，但本地关联保存失败。请将该 ID 填入笔记 uid 后重试，勿重复上传。",
     "bidirectional.uploadFolder": "自定义上传目录",
     "bidirectional.uploadFolderHint": "留空使用同步目录；下载始终回到「{folder}」。",
     "bidirectional.uploadFolderWarning": "此目录只用于上传，原笔记不会随远端更新。",
@@ -13,6 +15,7 @@ export const translations: Record<string, Record<string, string>> = {
     "bidirectional.changed": "同步期间内容发生变化，已停止覆盖，请重试。",
     "bidirectional.unconfirmed": "未能确认远端更新结果，已保留本地内容和旧同步基准。",
     "bidirectional.conflict": "两端内容冲突；请手动同步并选择保留的版本。",
+    "bidirectional.baselineMissing": "本地笔记缺少同步基线，无法判断是否改动；已跳过，不会覆盖内容。下次同步会继续检查。",
     "bidirectional.conflictTitle": "同步冲突：选择此次使用的内容",
     "bidirectional.local": "本地内容",
     "bidirectional.remote": "得到大脑内容",
@@ -432,7 +435,9 @@ export const translations: Record<string, Record<string, string>> = {
 
   en: {
     "bidirectional.title": "Two-way sync",
-    "bidirectional.description": "Linked text notes in \"{folder}\" can write local edits back; choose conflicts during manual sync and never propagate deletions.",
+    "bidirectional.description": "New text notes in \"{folder}\" are uploaded and archived automatically. Linked edits sync back; resolve conflicts during manual sync. Deletions never propagate.",
+    "bidirectional.uploadUncertain": "Upload outcome or identity needs verification; automatic retry is blocked. Check Dedao Brain: enter the existing note UID, or remove dedao_upload_state only after confirming that no note was created.",
+    "bidirectional.uploadSaveFailed": "Remote note {uid} was created, but saving its local identity failed. Enter this ID as uid before retrying; do not upload again.",
     "bidirectional.uploadFolder": "Custom upload folder",
     "bidirectional.uploadFolderHint": "Leave empty to use the sync folder; downloads always return to \"{folder}\".",
     "bidirectional.uploadFolderWarning": "Upload only: originals here will not follow remote updates.",
@@ -444,6 +449,7 @@ export const translations: Record<string, Record<string, string>> = {
     "bidirectional.changed": "Content changed during sync. Replacement stopped; retry sync.",
     "bidirectional.unconfirmed": "Remote update could not be verified. Local content and the previous baseline were retained.",
     "bidirectional.conflict": "Both copies conflict. Run manual sync to choose a version.",
+    "bidirectional.baselineMissing": "This local note has no sync baseline, so changes cannot be determined safely. It was skipped without overwriting content.",
     "bidirectional.conflictTitle": "Sync conflict: choose content for this sync",
     "bidirectional.local": "Local content",
     "bidirectional.remote": "Remote content",

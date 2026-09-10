@@ -640,6 +640,7 @@ export default class GetNoteSyncPlugin extends Plugin {
         ? await engine.syncNoteIds(selectedIds)
         : await engine.sync();
 
+      result.created += changes.created;
       result.updated += changes.updated;
       result.skipped += changes.skipped;
       result.failed += changes.failed;

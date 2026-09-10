@@ -65,6 +65,68 @@ describe('bidirectional content decisions', () => {
   });
 });
 describe('bidirectional engine', () => {
+  it.each(['', '   ', '---\nuid: 123\n---\ntext', '---\nnote_type: "link"\n---\ntext'])('does not create invalid drafts (%s)', async raw => {
+    const f = fixture(raw);
+    await new BidirectionalSyncEngine(f.app, f.settings).sync();
+    expect(createNote).not.toHaveBeenCalled();
+  });
+  it('does not upload unselected new notes', async () => {
+    const f = fixture('new note');
+    await new BidirectionalSyncEngine(f.app, f.settings).sync([remote.note_id]);
+    expect(createNote).not.toHaveBeenCalled();
+  });
+  it('blocks a second POST after an uncertain network outcome across engine instances', async () => {
+    const f = fixture('new note');
+    vi.mocked(createNote).mockRejectedValue(new Error('Connection lost'));
+    expect((await new BidirectionalSyncEngine(f.app, f.settings).sync()).failed).toBe(1);
+    await new BidirectionalSyncEngine(f.app, f.settings).sync();
+    expect(createNote).toHaveBeenCalledTimes(1);
+    expect(f.contents.get(f.file.path)).toContain('dedao_upload_state: "pending"');
+  });
+  it('saves returned identity even when cancelled and preserves edits during creation', async () => {
+    const f = fixture('new note');
+    const engine = new BidirectionalSyncEngine(f.app, f.settings);
+    vi.mocked(createNote).mockImplementation(async () => {
+      f.contents.set(f.file.path, f.contents.get(f.file.path)!.replace('new note', 'newer local edit'));
+      engine.cancel();
+      return { noteId: remote.note_id };
+    });
+    await expect(engine.sync()).rejects.toThrow('Aborted');
+    expect(f.contents.get(f.file.path)).toContain(`uid: "${remote.note_id}"`);
+    expect(f.contents.get(f.file.path)).toContain('newer local edit');
+    expect(f.contents.get(f.file.path)).toContain('dedao_upload_state: "archive"');
+    await new BidirectionalSyncEngine(f.app, f.settings).sync();
+    expect(createNote).toHaveBeenCalledTimes(1);
+    expect(f.contents.get(f.file.path)).toContain('dedao_upload_state: "complete"');
+  });
+  it('blocks creation when the archive target already exists', async () => {
+    const f = fixture('new note');
+    f.app.vault.getAbstractFileByPath = () => new TFile('Sync/纯文本/笔记.md');
+    expect((await new BidirectionalSyncEngine(f.app, f.settings).sync()).failed).toBe(1);
+    expect(createNote).not.toHaveBeenCalled();
+  });
+  it('keeps the UID and retries only archiving after a move failure', async () => {
+    const f = fixture('new note');
+    f.settings.filenamePrefix = 'archived';
+    vi.mocked(createNote).mockResolvedValue({ noteId: remote.note_id });
+    vi.mocked(f.app.fileManager.renameFile).mockRejectedValueOnce(new Error('Move failed'));
+    expect((await new BidirectionalSyncEngine(f.app, f.settings).sync()).failed).toBe(1);
+    expect(f.contents.get(f.file.path)).toContain(`uid: "${remote.note_id}"`);
+    await new BidirectionalSyncEngine(f.app, f.settings).sync();
+    expect(createNote).toHaveBeenCalledTimes(1);
+    expect(f.file.path).toBe('Sync/纯文本/archived_笔记.md');
+  });
+  it('keeps pending state if saving the returned ID fails and reports the ID', async () => {
+    const f = fixture('new note');
+    vi.mocked(createNote).mockImplementation(async () => {
+      vi.mocked(f.app.vault.process).mockRejectedValueOnce(new Error('Disk full'));
+      return { noteId: remote.note_id };
+    });
+    const result = await new BidirectionalSyncEngine(f.app, f.settings).sync();
+    expect(result.items?.[0].error).toContain(remote.note_id);
+    await new BidirectionalSyncEngine(f.app, f.settings).sync();
+    expect(createNote).toHaveBeenCalledTimes(1);
+  });
   it('creates a local draft remotely, records its uid and archives it', async () => {
     const f = fixture('本地新笔记');
     f.contents.set('Sync/Inbox/本地新笔记.md', f.contents.get(f.file.path)!);
@@ -158,9 +220,9 @@ describe('bidirectional engine', () => {
   it('handles an uploaded local note without importer markers after manual reconciliation', async () => {
     const f = fixture('---\nuid: "90071992547409999"\ntitle: "标题"\ntags: ["工作"]\n---\n本地新笔记');
     const result = await new BidirectionalSyncEngine(f.app, f.settings, async () => 'download').sync();
-    expect(result.updated).toBe(1);
-    expect(readSyncNote(f.contents.get(f.file.path)!)?.body).toBe('原文');
-    expect(readSyncNote(f.contents.get(f.file.path)!)?.baseline).toBeTruthy();
+    expect(result.skipped).toBe(1);
+    expect(readSyncNote(f.contents.get(f.file.path)!)?.body).toBe('本地新笔记');
+    expect(readSyncNote(f.contents.get(f.file.path)!)?.baseline).toBeUndefined();
   });
   it('does not upload if an edit occurs during the second remote check', async () => {
     const f = fixture(renderNote(remote).replace('\n原文\n', '\n本地修改\n'));
