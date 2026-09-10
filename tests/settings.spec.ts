@@ -254,7 +254,8 @@ describe('SettingsComponent information architecture (#257)', () => {
 
     expect(container.textContent).toContain('定时自动同步');
     expect(container.textContent).not.toContain('定时自动同步（单向：得到 → OB）');
-    expect(container.textContent).toContain('手动同步（双向：得到 ↔ OB）');
+    expect(container.textContent).toContain('手动同步');
+    expect(container.textContent).not.toContain('手动同步（双向：得到 ↔ OB）');
   });
 
   it('groups automatic sync, manual sync, and history before the final advanced settings section', async () => {
