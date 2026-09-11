@@ -191,7 +191,7 @@ describe('bidirectional engine', () => {
   });
   it('does not create a replacement when the remote note was deleted', async () => {
     const f = fixture(); vi.mocked(fetchNoteDetail).mockRejectedValue(new Error('404'));
-    expect((await new BidirectionalSyncEngine(f.app, f.settings).sync()).failed).toBe(1);
+    expect((await new BidirectionalSyncEngine(f.app, f.settings).sync()).skipped).toBe(1);
     expect(updateNote).not.toHaveBeenCalled(); expect(f.app.vault.process).not.toHaveBeenCalled();
   });
   it('never requests remote deletion for a missing local note', async () => {
@@ -220,9 +220,36 @@ describe('bidirectional engine', () => {
   it('handles an uploaded local note without importer markers after manual reconciliation', async () => {
     const f = fixture('---\nuid: "90071992547409999"\ntitle: "标题"\ntags: ["工作"]\n---\n本地新笔记');
     const result = await new BidirectionalSyncEngine(f.app, f.settings, async () => 'download').sync();
-    expect(result.skipped).toBe(1);
-    expect(readSyncNote(f.contents.get(f.file.path)!)?.body).toBe('本地新笔记');
-    expect(readSyncNote(f.contents.get(f.file.path)!)?.baseline).toBeUndefined();
+    expect(result.updated).toBe(1);
+    expect(readSyncNote(f.contents.get(f.file.path)!)?.body).toBe('原文');
+    expect(readSyncNote(f.contents.get(f.file.path)!)?.baseline).toBeTruthy();
+  });
+  it('bootstraps an unchanged legacy body without uploading its generated relation links', async () => {
+    const f = fixture(`---\nuid: "${remote.note_id}"\ntitle: "标题"\ntags: ["工作"]\nsource: 得到大脑\ncreated: 2026-01-01\n---\n原文\n\n> ⬆️ 主笔记: [[主笔记]]\n`);
+    const engine = new BidirectionalSyncEngine(f.app, f.settings);
+    expect((await engine.sync()).failed).toBe(0);
+    expect(readSyncNote(f.contents.get(f.file.path)!)?.body).toBe('原文');
+    expect(f.contents.get(f.file.path)).toContain('> ⬆️ 主笔记: [[主笔记]]');
+    expect((await new BidirectionalSyncEngine(f.app, f.settings).sync()).failed).toBe(0);
+    expect(updateNote).not.toHaveBeenCalled();
+  });
+  it('does not bootstrap substantive legacy edits or report them as proven conflicts in automatic sync', async () => {
+    const f = fixture(`---\nuid: "${remote.note_id}"\ntitle: "标题"\ntags: ["工作"]\n---\n本地修改`);
+    const before = f.contents.get(f.file.path);
+    const result = await new BidirectionalSyncEngine(f.app, f.settings).sync();
+    expect(result.failed).toBe(0);
+    expect(result.items?.[0].error).toContain('同步基线');
+    expect(f.contents.get(f.file.path)).toBe(before);
+    expect(updateNote).not.toHaveBeenCalled();
+  });
+  it('keeps separate local and remote baselines for upload transformations', async () => {
+    const f = fixture('![image](https://example.com/a.png)');
+    vi.mocked(createNote).mockResolvedValue({ noteId: remote.note_id });
+    await new BidirectionalSyncEngine(f.app, f.settings).sync();
+    vi.mocked(fetchNoteDetail).mockResolvedValue({ ...remote, title: '笔记', tags: [], content: '[image](https://example.com/a.png)' });
+    expect((await new BidirectionalSyncEngine(f.app, f.settings).sync()).failed).toBe(0);
+    expect(updateNote).not.toHaveBeenCalled();
+    expect(f.contents.get(f.file.path)).toContain('![image]');
   });
   it('does not upload if an edit occurs during the second remote check', async () => {
     const f = fixture(renderNote(remote).replace('\n原文\n', '\n本地修改\n'));
