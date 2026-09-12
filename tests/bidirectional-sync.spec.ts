@@ -282,3 +282,80 @@ describe('bidirectional engine', () => {
     expect(updateNote).not.toHaveBeenCalled();
   });
 });
+
+describe('independent sync directions', () => {
+  it('explicit download bypasses the legacy toggle but never uploads local drafts or edits', async () => {
+    for (const raw of ['new draft', renderNote(remote).replace('\n原文\n', '\n本地修改\n')]) {
+      const f = fixture(raw);
+      f.settings.reverseSync.enabled = false;
+      await new BidirectionalSyncEngine(f.app, f.settings).sync(undefined, { direction: 'download' });
+      expect(f.contents.get(f.file.path)).toBe(raw);
+    }
+    expect(createNote).not.toHaveBeenCalled(); expect(updateNote).not.toHaveBeenCalled();
+  });
+  it('download uses the Web API prime ID and preserves remote identity', async () => {
+    const f = fixture(renderNote(remote).replace('uid:', 'prime_id: "detail-id"\nuid:'));
+    f.settings = { ...f.settings, authMode: 'web' } as never;
+    vi.mocked(fetchNoteDetail).mockResolvedValue({ ...remote, content: '远端修改' });
+    const result = await new BidirectionalSyncEngine(f.app, f.settings).sync(undefined, { direction: 'download' });
+    expect(result.updated).toBe(1);
+    expect(fetchNoteDetail).toHaveBeenCalledWith('detail-id', expect.any(String), expect.any(String), expect.any(AbortSignal), 'web');
+    expect(readSyncNote(f.contents.get(f.file.path)!)?.uid).toBe(remote.note_id);
+  });
+  it('upload does not fetch or download changes when local content is unchanged', async () => {
+    const f = fixture();
+    vi.mocked(fetchNoteDetail).mockResolvedValue({ ...remote, content: '远端修改' });
+    await new BidirectionalSyncEngine(f.app, f.settings).sync(undefined, { direction: 'upload' });
+    expect(fetchNoteDetail).not.toHaveBeenCalled(); expect(f.app.vault.process).not.toHaveBeenCalled();
+  });
+  it.each(['upload', 'download'] as const)('rejects a conflict choice in the opposite direction to %s', async mode => {
+    const raw = renderNote(remote).replace('\n原文\n', '\n本地修改\n');
+    const f = fixture(raw);
+    vi.mocked(fetchNoteDetail).mockResolvedValue({ ...remote, content: '远端修改' });
+    const resolve = vi.fn(async () => mode === 'upload' ? 'download' as const : 'upload' as const);
+    await new BidirectionalSyncEngine(f.app, f.settings, resolve).sync(undefined, { direction: mode });
+    expect(resolve).toHaveBeenCalled(); expect(updateNote).not.toHaveBeenCalled();
+    expect(f.contents.get(f.file.path)).toBe(raw);
+  });
+  it('uploads new files from another selected folder in place and never repeats their POST', async () => {
+    const f = fixture('draft');
+    f.file.path = 'Work/new.md'; f.contents.set(f.file.path, 'draft');
+    f.settings.reverseSync.enabled = false;
+    vi.mocked(createNote).mockResolvedValue({ noteId: remote.note_id });
+    const options = { direction: 'upload' as const, folder: 'Work', paths: ['Work/new.md'] };
+    expect((await new BidirectionalSyncEngine(f.app, f.settings).sync(undefined, options)).created).toBe(1);
+    await new BidirectionalSyncEngine(f.app, f.settings).sync(undefined, options);
+    expect(f.file.path).toBe('Work/new.md'); expect(f.app.fileManager.renameFile).not.toHaveBeenCalled();
+    expect(createNote).toHaveBeenCalledTimes(1); expect(fetchNoteDetail).not.toHaveBeenCalled();
+  });
+  it('ignores events outside the exact selected path list and folder boundary', async () => {
+    const f = fixture('draft');
+    await new BidirectionalSyncEngine(f.app, f.settings).sync(undefined, { direction: 'upload', folder: 'Sync', paths: ['Sync/other.md'] });
+    await new BidirectionalSyncEngine(f.app, f.settings).sync(undefined, { direction: 'upload', folder: 'Syn' });
+    expect(createNote).not.toHaveBeenCalled();
+  });
+  it.each(['unknown-id', 'ambiguous-name', 'read-only'])('blocks unsafe knowledge-base mapping: %s', async scenario => {
+    const f = fixture(scenario === 'unknown-id' ? '---\ntopic_id: "unknown"\n---\ndraft' : 'draft');
+    f.file.path = 'Sync/知识库/KB/new.md'; f.contents.set(f.file.path, f.contents.values().next().value!);
+    f.settings.knowledgeBaseCache = { updatedAt: 1, entries: scenario === 'ambiguous-name'
+      ? [{ topicId: 'a', name: 'KB', source: 'created' }, { topicId: 'b', name: 'KB', source: 'created' }]
+      : [{ topicId: 'a', name: 'KB', source: scenario === 'read-only' ? 'subscribed' : 'created' }] };
+    expect((await new BidirectionalSyncEngine(f.app, f.settings).sync(undefined, { direction: 'upload' })).failed).toBe(1);
+    expect(createNote).not.toHaveBeenCalled();
+  });
+  it('download leaves pending attachment untouched; upload retries attachment without repeating creation', async () => {
+    const f = fixture('draft');
+    f.file.path = 'Sync/知识库/KB/new.md'; f.contents.set(f.file.path, 'draft');
+    f.settings.knowledgeBaseCache = { updatedAt: 1, entries: [{ topicId: 'kb', name: 'KB', source: 'created' }] };
+    vi.mocked(createNote).mockResolvedValue({ noteId: remote.note_id });
+    vi.mocked(addNotesToKnowledgeBase).mockRejectedValueOnce(new Error('temporary failure')).mockResolvedValue(undefined);
+    await new BidirectionalSyncEngine(f.app, f.settings).sync(undefined, { direction: 'upload' });
+    const pending = f.contents.get(f.file.path)!;
+    expect(pending).toContain('dedao_upload_state: "attach"');
+    await new BidirectionalSyncEngine(f.app, f.settings).sync(undefined, { direction: 'download' });
+    expect(addNotesToKnowledgeBase).toHaveBeenCalledTimes(1);
+    await new BidirectionalSyncEngine(f.app, f.settings).sync(undefined, { direction: 'upload' });
+    expect(addNotesToKnowledgeBase).toHaveBeenCalledTimes(2); expect(createNote).toHaveBeenCalledTimes(1);
+    expect(f.contents.get(f.file.path)).toContain('dedao_upload_state: "complete"');
+  });
+});

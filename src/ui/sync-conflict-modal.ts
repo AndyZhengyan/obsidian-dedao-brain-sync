@@ -4,7 +4,8 @@ import { t } from '../i18n';
 
 export class SyncConflictModal extends Modal {
   private settled = false;
-  constructor(app: App, private conflict: SyncConflict, private finish: (choice: ConflictChoice) => void) { super(app); }
+  constructor(app: App, private conflict: SyncConflict, private finish: (choice: ConflictChoice) => void,
+    private direction: 'upload' | 'download' | 'both' = 'both') { super(app); }
   onOpen(): void {
     this.contentEl.replaceChildren();
     const title = document.createElement('h2'); title.textContent = t('bidirectional.conflictTitle');
@@ -18,6 +19,7 @@ export class SyncConflictModal extends Modal {
       details.append(summary, content); this.contentEl.appendChild(details);
     }
     for (const choice of ['skip', 'upload', 'download'] as const) {
+      if (choice !== 'skip' && this.direction !== 'both' && choice !== this.direction) continue;
       const button = document.createElement('button'); button.textContent = t(`bidirectional.choose.${choice}`);
       button.addEventListener('click', () => { this.settled = true; this.finish(choice); this.close(); });
       this.contentEl.appendChild(button);
@@ -26,6 +28,6 @@ export class SyncConflictModal extends Modal {
   onClose(): void { if (!this.settled) this.finish('skip'); this.contentEl.replaceChildren(); }
 }
 
-export function resolveSyncConflict(app: App, conflict: SyncConflict): Promise<ConflictChoice> {
-  return new Promise(resolve => new SyncConflictModal(app, conflict, resolve).open());
+export function resolveSyncConflict(app: App, conflict: SyncConflict, direction: 'upload' | 'download' | 'both' = 'both'): Promise<ConflictChoice> {
+  return new Promise(resolve => new SyncConflictModal(app, conflict, resolve, direction).open());
 }

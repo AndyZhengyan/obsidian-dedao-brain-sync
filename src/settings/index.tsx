@@ -156,7 +156,15 @@ export function SettingsComponent({
   startDesktopWebAuth,
   clearDesktopWebAuth,
 }: SettingsComponentProps) {
-  const [bidirectionalEnabled, setBidirectionalEnabled] = useState(settings.reverseSync.enabled);
+  type AutoUploadState = { enabled: boolean; mode: 'realtime' | 'interval'; intervalMinutes: number };
+  const defaultAutoUpload: AutoUploadState = { enabled: false, mode: 'realtime', intervalMinutes: 5 };
+  const [autoUpload, setAutoUpload] = useState<AutoUploadState>({ ...defaultAutoUpload, ...settings.reverseSync.autoUpload });
+  const [uploadDetailsOpen, setUploadDetailsOpen] = useState(false);
+  const [uploadIntervalWarning, setUploadIntervalWarning] = useState(false);
+  const updateAutoUpload = (next: AutoUploadState) => {
+    setAutoUpload(next);
+    updateSetting('reverseSync', { ...settings.reverseSync, uploadFolder, autoUpload: next });
+  };
   const [uploadFolder, setUploadFolder] = useState(settings.reverseSync.uploadFolder ?? '');
   const [authMode, setAuthMode] = useState<AuthMode>(settings.authMode);
   const initialOpenApiToken = settings.openApiToken || (settings.authMode === 'openapi' ? settings.apiToken : '');
@@ -1329,45 +1337,6 @@ export function SettingsComponent({
               </span>
             </div>
             <div className="getnote-input-hint">{t('settings.scheduled.syncKnowledgeBases.hint')}</div>
-            <div className="getnote-scheduled-row getnote-bidirectional-row">
-              <span className="getnote-scheduled-row-label">{t('bidirectional.title')}</span>
-              <span className="getnote-scheduled-row-control">
-                <Toggle
-                  value={bidirectionalEnabled}
-                  ariaLabel={t('bidirectional.title')}
-                  disabled={isSyncing || (authMode !== 'openapi' && !bidirectionalEnabled)}
-                  onChange={(enabled) => {
-                    setBidirectionalEnabled(enabled);
-                    updateSetting('reverseSync', { ...settings.reverseSync, enabled, uploadFolder });
-                  }}
-                />
-              </span>
-            </div>
-            <div className="getnote-input-hint getnote-bidirectional-hint">
-              {t('bidirectional.description', { folder: folderName })}
-              {authMode !== 'openapi' && <span className="getnote-input-hint-error"> {t('bidirectional.openApiOnly')}</span>}
-            </div>
-            <div className="getnote-scheduled-row getnote-bidirectional-row">
-              <span className="getnote-scheduled-row-label">{t('bidirectional.uploadFolder')}</span>
-              <span className="getnote-scheduled-row-control getnote-upload-folder-control">
-                <input
-                  data-bidirectional-upload-folder
-                  type="text"
-                  value={uploadFolder}
-                  placeholder={folderName}
-                  disabled={isSyncing}
-                  onInput={(event) => {
-                    const folder = event.currentTarget.value;
-                    setUploadFolder(folder);
-                    updateSetting('reverseSync', { ...settings.reverseSync, enabled: bidirectionalEnabled, uploadFolder: folder });
-                  }}
-                />
-              </span>
-            </div>
-            <div className="getnote-input-hint getnote-bidirectional-hint">
-              {t('bidirectional.uploadFolderHint', { folder: folderName })}
-              {independentUploadFolder && <span className="getnote-input-hint-warning"> {t('bidirectional.uploadFolderWarning')}</span>}
-            </div>
           <div className="getnote-scheduled-checkpoint" data-scheduled-checkpoint>
             <div className="getnote-scheduled-row getnote-scheduled-date-row">
               <span className="getnote-scheduled-row-label">
@@ -1429,6 +1398,83 @@ export function SettingsComponent({
               </div>
             </div>
           )}
+        </div>
+      </SettingItem>
+      </div>
+
+      <div data-auto-upload-settings>
+      <SettingItem name={t('settings.autoUpload.label')} description={t('settings.autoUpload.desc')}>
+        <div className="getnote-scheduled-control">
+          <div className="getnote-scheduled-row getnote-scheduled-master-row">
+            <span className="getnote-scheduled-row-label">{t('settings.autoUpload.enabled')}</span>
+            <span className="getnote-scheduled-row-control">
+              <Toggle
+                value={autoUpload.enabled}
+                ariaLabel={t('settings.autoUpload.enabled')}
+                disabled={isSyncing || (authMode !== 'openapi' && !autoUpload.enabled)}
+                onChange={(enabled) => {
+                  updateAutoUpload({ ...autoUpload, enabled });
+                  if (enabled) setUploadDetailsOpen(true);
+                }}
+              />
+              <button type="button" className="getnote-inline-disclosure"
+                aria-expanded={uploadDetailsOpen} aria-controls="getnote-auto-upload-details"
+                onClick={() => setUploadDetailsOpen(prev => !prev)}>
+                {uploadDetailsOpen ? t('settings.collapse') : t('settings.expand')}
+              </button>
+            </span>
+          </div>
+          <small className="getnote-setting-summary">
+            {t(autoUpload.enabled ? 'settings.autoUpload.summary' : 'settings.autoUpload.off', {
+              mode: autoUpload.mode === 'realtime' ? t('settings.autoUpload.realtime') : t('settings.autoUpload.every', { minutes: autoUpload.intervalMinutes }),
+              folder: uploadFolder.trim() || folderName,
+            })}
+          </small>
+          {authMode !== 'openapi' && <div className="getnote-input-hint getnote-input-hint-error">{t('bidirectional.openApiOnly')}</div>}
+          <div id="getnote-auto-upload-details" className={`getnote-scheduled-rows${uploadDetailsOpen ? '' : ' getnote-hidden'}`}>
+            <div className="getnote-scheduled-row">
+              <label className="getnote-scheduled-row-label" htmlFor="getnote-auto-upload-mode">{t('settings.autoUpload.mode')}</label>
+              <span className="getnote-scheduled-row-control">
+                <select id="getnote-auto-upload-mode" value={autoUpload.mode} disabled={isSyncing}
+                  onChange={(event) => updateAutoUpload({ ...autoUpload, mode: event.currentTarget.value as 'realtime' | 'interval' })}>
+                  <option value="realtime">{t('settings.autoUpload.realtime')}</option>
+                  <option value="interval">{t('settings.autoUpload.interval')}</option>
+                </select>
+              </span>
+            </div>
+            {autoUpload.mode === 'interval' && <>
+              <div className="getnote-scheduled-row">
+                <label className="getnote-scheduled-row-label" htmlFor="getnote-auto-upload-interval">{t('settings.autoUpload.intervalMinutes')}</label>
+                <span className="getnote-scheduled-row-control">
+                  <input id="getnote-auto-upload-interval" type="number" min="1" step="1" value={autoUpload.intervalMinutes} disabled={isSyncing}
+                    onInput={(event) => {
+                      const value = Number(event.currentTarget.value);
+                      const valid = Number.isInteger(value) && value >= 1;
+                      setUploadIntervalWarning(!valid);
+                      if (valid) updateAutoUpload({ ...autoUpload, intervalMinutes: value });
+                    }} />
+                </span>
+              </div>
+              {uploadIntervalWarning && <div className="getnote-input-hint getnote-input-hint-error">{t('settings.autoUpload.intervalWarning')}</div>}
+            </>}
+            <div className="getnote-input-hint">{t(autoUpload.mode === 'realtime' ? 'settings.autoUpload.realtimeHint' : 'settings.autoUpload.intervalHint')}</div>
+            <div className="getnote-scheduled-row">
+              <label className="getnote-scheduled-row-label" htmlFor="getnote-upload-folder">{t('bidirectional.uploadFolder')}</label>
+              <span className="getnote-scheduled-row-control getnote-upload-folder-control">
+                <input id="getnote-upload-folder" data-bidirectional-upload-folder type="text" value={uploadFolder} placeholder={folderName} disabled={isSyncing}
+                  onInput={(event) => {
+                    const folder = event.currentTarget.value;
+                    setUploadFolder(folder);
+                    updateSetting('reverseSync', { ...settings.reverseSync, autoUpload, uploadFolder: folder });
+                  }} />
+              </span>
+            </div>
+            <div className="getnote-input-hint">
+              {t('bidirectional.uploadFolderHint', { folder: folderName })}
+              {independentUploadFolder && <span className="getnote-input-hint-warning"> {t('bidirectional.uploadFolderWarning')}</span>}
+            </div>
+            <div className="getnote-input-hint">{t('settings.autoUpload.safety')}</div>
+          </div>
         </div>
       </SettingItem>
       </div>

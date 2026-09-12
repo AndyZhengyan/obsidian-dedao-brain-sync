@@ -328,7 +328,7 @@ export class ReverseSyncEngine {
       try {
         if (credentials.authMode === 'openapi' && note.noteType === 'plain_text'
           && isInsideFolder(file, this.settings.folderName)
-          && (!note.uid || readString(note.frontmatter, 'dedao_upload_state') === 'archive')) {
+          && (!note.uid || ['archive', 'attach'].includes(readString(note.frontmatter, 'dedao_upload_state')))) {
           const item = await this.uploadEngine.uploadNewFile(file, {
             raw: note.content, title: note.title, body: prepareUploadContent(note.body), tags: prepareUploadTags(note.tags),
           });

@@ -88,8 +88,14 @@ export interface ScheduledSyncSettings {
 }
 
 export interface ReverseSyncSettings {
+  /** Legacy two-way toggle; automatic upload now has its own opt-in. */
   enabled: boolean;
   uploadFolder?: string;
+  autoUpload?: {
+    enabled: boolean;
+    mode: 'realtime' | 'interval';
+    intervalMinutes: number;
+  };
 }
 
 export type AttachmentKind = 'image' | 'audio' | 'video' | 'document' | 'other';
@@ -223,6 +229,7 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   reverseSync: {
     enabled: false,
+    autoUpload: { enabled: false, mode: 'realtime', intervalMinutes: 5 },
   },
   attachmentImport: { ...DEFAULT_ATTACHMENT_IMPORT },
   ribbonActions: {

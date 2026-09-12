@@ -10,7 +10,7 @@ import { getFileName } from './sync-paths';
 
 export interface EditableContent { title: string; body: string; tags: string[] }
 export interface LocalSyncNote extends EditableContent {
-  uid: string; baseline?: string; remoteBaseline?: string; raw: string; frontmatterEnd: number;
+  uid: string; primeId?: string; baseline?: string; remoteBaseline?: string; raw: string; frontmatterEnd: number;
 }
 interface LocalDraft extends EditableContent { raw: string; frontmatterEnd: number; topicId?: string }
 function parseDraftFields(text: string): Record<string, unknown> {
@@ -20,6 +20,7 @@ function parseDraftFields(text: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 export type SyncDirection = 'equal' | 'upload' | 'download' | 'conflict';
+export interface SyncOptions { direction?: 'upload' | 'download' | 'both'; paths?: string[]; folder?: string }
 export type ConflictChoice = 'upload' | 'download' | 'skip';
 export interface SyncConflict { path: string; local: EditableContent; remote: EditableContent }
 export type ResolveSyncConflict = (conflict: SyncConflict) => Promise<ConflictChoice>;
@@ -55,7 +56,7 @@ export function readSyncNote(raw: string, fallbackTitle = ''): LocalSyncNote | n
   const source = parseSourceBody(raw.slice(block[0].length));
   if (source.kind === 'invalid' || (source.kind === 'absent' && fields.dedao_sync_schema !== undefined)) throw new Error(t('bidirectional.invalid'));
   return {
-    uid: fields.uid, title, tags: tags as string[], body: source.kind === 'valid' ? source.body : raw.slice(block[0].length),
+    uid: fields.uid, primeId: typeof fields.prime_id === 'string' ? fields.prime_id : undefined, title, tags: tags as string[], body: source.kind === 'valid' ? source.body : raw.slice(block[0].length),
     baseline: typeof fields.dedao_bidirectional_hash === 'string' ? fields.dedao_bidirectional_hash
       : typeof fields.dedao_source_hash === 'string' ? fields.dedao_source_hash : undefined,
     remoteBaseline: typeof fields.dedao_remote_hash === 'string' ? fields.dedao_remote_hash : undefined,
@@ -185,16 +186,19 @@ export class BidirectionalSyncEngine {
     const explicit = typeof fields.topic_id === 'string' && fields.topic_id.trim() ? fields.topic_id.trim() : undefined;
     const entries = this.settings.knowledgeBaseCache?.entries ?? [];
     const byId = explicit ? entries.find(entry => entry.topicId === explicit) : undefined;
+    if (explicit && !byId) throw new Error(t('bidirectional.knowledgeBaseMissing'));
     if (byId) return { topicId: byId.topicId, writable: byId.source !== 'subscribed', categoryDir: `知识库/${byId.name.replace(/[\\/:*?"<>|]/g, '_').trim()}` };
     const parts = file.path.split('/');
     const index = parts.indexOf('知识库');
     if (index < 0 || !parts[index + 1]) return undefined;
     const name = parts[index + 1];
-    const entry = entries.find(item => item.name.replace(/[\\/:*?"<>|]/g, '_').trim() === name);
+    const matches = entries.filter(item => item.name.replace(/[\\/:*?"<>|]/g, '_').trim() === name);
+    if (matches.length > 1) throw new Error(t('bidirectional.knowledgeBaseMissing'));
+    const entry = matches[0];
     return entry ? { topicId: entry.topicId, writable: entry.source !== 'subscribed', categoryDir: `知识库/${name}` } : { topicId: '', writable: false, categoryDir: `知识库/${name}` };
   }
   private async archive(file: TFile, targetPath: string): Promise<void> {
-    if (!insideSyncFolder(targetPath, this.settings.folderName) || targetPath.split('/').some(part => !part || part === '.' || part === '..')
+    if ((!insideSyncFolder(targetPath, this.settings.folderName) && targetPath !== file.path) || targetPath.split('/').some(part => !part || part === '.' || part === '..')
       || targetPath.includes('\\') || !targetPath.endsWith('.md')) throw new Error(t('bidirectional.invalid'));
     if (targetPath !== file.path) {
       if (this.app.vault.getAbstractFileByPath(targetPath)) throw new Error(t('settings.datePath.issue.targetConflict'));
@@ -204,18 +208,21 @@ export class BidirectionalSyncEngine {
     }
     await this.app.vault.process(file, raw => uploadFields(raw, { dedao_upload_state: 'complete' }));
   }
-  async uploadNewFile(file: TFile, prepared?: EditableContent & { raw: string }): Promise<SyncResultItem> {
+  async uploadNewFile(file: TFile, prepared?: EditableContent & { raw: string }, options?: { folder?: string }): Promise<SyncResultItem> {
     const auth = getAuthCredentials(this.settings);
     if (auth.authMode !== 'openapi') throw new Error(t('bidirectional.openApiOnly'));
     const raw = await this.app.vault.read(file);
-    if (!insideSyncFolder(file.path, this.settings.folderName)) throw new Error(t('bidirectional.invalid'));
+    if (!insideSyncFolder(file.path, options?.folder ?? this.settings.folderName)) throw new Error(t('bidirectional.invalid'));
     if (prepared && prepared.raw !== raw) throw new Error(t('bidirectional.changed'));
     const block = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(raw);
     const fields = block ? parseDraftFields(block[1]) : {};
     if ((fields?.dedao_upload_state === 'archive' || fields?.dedao_upload_state === 'attach')
       && typeof fields.uid === 'string' && typeof fields.dedao_upload_target === 'string') {
-      if (fields.dedao_upload_state === 'attach' && typeof fields.topic_id === 'string') {
-        await addNotesToKnowledgeBase({ token: auth.token, clientId: auth.clientId, topicId: fields.topic_id,
+      if (fields.dedao_upload_state === 'attach') {
+        const knowledgeBase = this.knowledgeBaseForFile(file, fields);
+        if (!knowledgeBase?.topicId) throw new Error(t('bidirectional.knowledgeBaseMissing'));
+        if (!knowledgeBase.writable) throw new Error(t('bidirectional.knowledgeBaseReadOnly'));
+        await addNotesToKnowledgeBase({ token: auth.token, clientId: auth.clientId, topicId: knowledgeBase.topicId,
           noteIds: [fields.uid], authMode: auth.authMode, signal: this.controller.signal });
         await this.app.vault.process(file, current => uploadFields(current, { dedao_upload_state: 'archive' }));
       }
@@ -228,7 +235,8 @@ export class BidirectionalSyncEngine {
     if (knowledgeBase && !knowledgeBase.writable) throw new Error(t('bidirectional.knowledgeBaseReadOnly'));
     const submitted: EditableContent = prepared ?? { ...draft, tags: [...new Set(draft.tags.map(tag => tag.trim()).filter(Boolean))].slice(0, 10),
       body: draft.body.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match, alt: string, target: string) => `[${alt.trim() || target.trim()}](${target.trim()})`) };
-    const targetPath = this.uploadTarget(draft, knowledgeBase?.categoryDir).replace(/^\//, '');
+    const targetPath = insideSyncFolder(file.path, this.settings.folderName)
+      ? this.uploadTarget(draft, knowledgeBase?.categoryDir).replace(/^\//, '') : file.path;
     const existing = this.app.vault.getAbstractFileByPath(targetPath);
     if (existing && existing !== file) throw new Error(t('settings.datePath.issue.targetConflict'));
     const hash = contentHash(draft);
@@ -265,12 +273,15 @@ export class BidirectionalSyncEngine {
     await this.archive(file, targetPath);
     return { noteId: created.noteId, title: draft.title, noteType: 'plain_text', updatedAt: '', status: 'created' };
   }
-  async sync(selectedIds?: string[]): Promise<SyncResult> {
+  async sync(selectedIds?: string[], options: SyncOptions = {}): Promise<SyncResult> {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, total: 0, items: [] };
-    if (!this.settings.reverseSync.enabled) return result;
+    if (!options.direction && !this.settings.reverseSync.enabled) return result;
+    const mode = options.direction ?? 'both';
+    const folder = options.folder ?? this.settings.folderName;
+    const inScope = (file: TFile) => insideSyncFolder(file.path, folder);
     const auth = getAuthCredentials(this.settings);
-    if (auth.authMode !== 'openapi') throw new Error(t('bidirectional.openApiOnly'));
-    const files = this.app.vault.getMarkdownFiles().filter(file => insideSyncFolder(file.path, this.settings.folderName));
+    if (mode !== 'download' && auth.authMode !== 'openapi') throw new Error(t('bidirectional.openApiOnly'));
+    const files = this.app.vault.getMarkdownFiles().filter(file => inScope(file) && (!options.paths || options.paths.includes(file.path)));
     const entries: Array<{ file: TFile; local: LocalSyncNote }> = [];
     const drafts: TFile[] = [];
     const counts = new Map<string, number>();
@@ -283,11 +294,11 @@ export class BidirectionalSyncEngine {
         if (selectedIds && (typeof metadata.uid !== 'string' || !selectedIds.includes(metadata.uid))) continue;
         if (metadata.note_type !== undefined && metadata.note_type !== 'plain_text') continue;
         const local = readSyncNote(raw, file.basename);
-        if (local && (metadata.dedao_upload_state === 'archive' || metadata.dedao_upload_state === 'attach')) {
-          await this.uploadNewFile(file);
+        if (mode !== 'download' && local && (metadata.dedao_upload_state === 'archive' || metadata.dedao_upload_state === 'attach')) {
+          await this.uploadNewFile(file, undefined, { folder });
         }
         if (!local) {
-          if (selectedIds || file.path.split('/').some(part => part === 'asset' || part === 'assets' || part === '_original' || part.startsWith('.'))) continue;
+          if (mode === 'download' || selectedIds || file.path.split('/').some(part => part === 'asset' || part === 'assets' || part === '_original' || part.startsWith('.'))) continue;
           readLocalDraft(raw, file.basename);
           drafts.push(file);
           continue;
@@ -306,7 +317,7 @@ export class BidirectionalSyncEngine {
       result.total++;
       const item = await (async (): Promise<SyncResultItem> => {
         try {
-          return await this.uploadNewFile(file);
+          return await this.uploadNewFile(file, undefined, { folder });
         } catch (error) {
           if (error instanceof DOMException && error.name === 'AbortError') throw error;
           return { noteId: file.path, title: file.basename, noteType: 'plain_text', updatedAt: '', status: 'failed', error: error instanceof Error ? error.message : String(error) };
@@ -323,7 +334,12 @@ export class BidirectionalSyncEngine {
       result.total++;
       try {
         if (counts.get(local.uid) !== 1) throw new Error(t('bidirectional.duplicate'));
-        const getRemote = async () => remoteContent(await fetchNoteDetail(local.uid, auth.token, auth.clientId, this.controller.signal, 'openapi'), local.uid);
+        if (mode === 'upload' && local.baseline === contentHash(local)) {
+          result.skipped++; result.items!.push(item);
+          continue;
+        }
+        if (auth.authMode === 'web' && !local.primeId) throw new Error(t('reverseSync.skip.missingWebDetailId'));
+        const getRemote = async () => remoteContent(await fetchNoteDetail(auth.authMode === 'web' ? local.primeId! : local.uid, auth.token, auth.clientId, this.controller.signal, auth.authMode), local.uid);
         const remote = await getRemote();
         const bootstrapped = bootstrapLegacy(local, remote);
         if (bootstrapped) {
@@ -342,15 +358,19 @@ export class BidirectionalSyncEngine {
         if (direction === 'conflict') direction = this.resolve
           ? await this.resolve({ path: file.path, local, remote }) : 'skip';
         this.checkCancelled();
+        if ((mode === 'download' && direction === 'upload') || (mode === 'upload' && direction === 'download')) {
+          result.skipped++; result.items!.push(item);
+          continue;
+        }
         if (direction === 'skip') {
           item.status = 'failed'; item.error = t('bidirectional.conflict');
         } else {
           // A preview or HTTP request may outlive edits in either side.
-          if (!insideSyncFolder(file.path, this.settings.folderName) || this.app.vault.getAbstractFileByPath(file.path) !== file
+          if (!inScope(file) || this.app.vault.getAbstractFileByPath(file.path) !== file
             || await this.app.vault.read(file) !== local.raw) throw new Error(t('bidirectional.changed'));
           if (direction !== 'equal' && contentHash(await getRemote()) !== contentHash(remote)) throw new Error(t('bidirectional.changed'));
           this.checkCancelled();
-          if (!insideSyncFolder(file.path, this.settings.folderName) || this.app.vault.getAbstractFileByPath(file.path) !== file
+          if (!inScope(file) || this.app.vault.getAbstractFileByPath(file.path) !== file
             || await this.app.vault.read(file) !== local.raw) throw new Error(t('bidirectional.changed'));
           let next: EditableContent = direction === 'download' ? remote : local;
           if (direction === 'upload') {
