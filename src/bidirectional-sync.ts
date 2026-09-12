@@ -1,5 +1,5 @@
 import { parseYaml, type App, type TFile } from 'obsidian';
-import { createNote, fetchNoteDetail } from './api';
+import { addNotesToKnowledgeBase, createNote, fetchNoteDetail } from './api';
 import { updateNote } from './api-clients/openapi-client';
 import { createSourceHash, parseSourceBody, SOURCE_BODY_START, SOURCE_BODY_END } from './source-body';
 import { renderNote } from './note-parser';
@@ -12,7 +12,7 @@ export interface EditableContent { title: string; body: string; tags: string[] }
 export interface LocalSyncNote extends EditableContent {
   uid: string; baseline?: string; remoteBaseline?: string; raw: string; frontmatterEnd: number;
 }
-interface LocalDraft extends EditableContent { raw: string; frontmatterEnd: number }
+interface LocalDraft extends EditableContent { raw: string; frontmatterEnd: number; topicId?: string }
 function parseDraftFields(text: string): Record<string, unknown> {
   const parsed: unknown = parseYaml(text);
   if (parsed === null || parsed === undefined) return {};
@@ -74,6 +74,7 @@ function readLocalDraft(raw: string, fallbackTitle: string, prepared?: EditableC
     || fields.dedao_source_hash !== undefined || fields.dedao_upload_state !== undefined) throw new Error(t('bidirectional.uploadUncertain'));
   if (fields.note_type !== undefined && fields.note_type !== 'plain_text') throw new Error(t('bidirectional.unsupported'));
   const title = typeof fields.title === 'string' && fields.title.trim() ? fields.title : fallbackTitle;
+  const topicId = typeof fields.topic_id === 'string' && fields.topic_id.trim() ? fields.topic_id : undefined;
   const tags = Array.isArray(fields.tags) ? fields.tags : prepared?.tags ?? fields.tags ?? [];
   if (!Array.isArray(tags) || tags.some(tag => typeof tag !== 'string')) throw new Error(t('bidirectional.invalid'));
   const remainder = raw.slice(block[0].length);
@@ -81,7 +82,7 @@ function readLocalDraft(raw: string, fallbackTitle: string, prepared?: EditableC
   if (source.kind === 'invalid') throw new Error(t('bidirectional.invalid'));
   const body = source.kind === 'valid' ? source.body : remainder;
   if (!body.trim()) throw new Error(t('bidirectional.invalid'));
-  return { title, tags: tags as string[], body, raw, frontmatterEnd: block[0].length };
+  return { title, tags: tags as string[], body, raw, frontmatterEnd: block[0].length, topicId };
 }
 
 function uploadFields(raw: string, values: Record<string, unknown>): string {
@@ -170,15 +171,27 @@ export class BidirectionalSyncEngine {
   private checkCancelled(): void {
     if (this.controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
   }
-  private uploadTarget(draft: LocalDraft): string {
+  private uploadTarget(draft: LocalDraft, categoryOverride?: string): string {
     const createdAt = new Date().toISOString();
     const note = { note_id: '', id: '', title: draft.title, content: draft.body, tags: draft.tags.map(name => ({ name })),
       note_type: 'plain_text', source: 'app', created_at: createdAt, updated_at: createdAt } as GetNoteNote;
-    const category = getCategoryDir(note.note_type);
+    const category = categoryOverride ?? getCategoryDir(note.note_type);
     const dir = this.settings.datePathEnabled
       ? buildCanonicalCategoryDir(this.settings.folderName, category, createdAt, this.settings.datePathFormat)
       : `${this.settings.folderName}/${category}`;
     return `${dir}/${getFileName(note, this.settings)}.md`;
+  }
+  private knowledgeBaseForFile(file: TFile, fields: Record<string, unknown>): { topicId: string; writable: boolean; categoryDir: string } | undefined {
+    const explicit = typeof fields.topic_id === 'string' && fields.topic_id.trim() ? fields.topic_id.trim() : undefined;
+    const entries = this.settings.knowledgeBaseCache?.entries ?? [];
+    const byId = explicit ? entries.find(entry => entry.topicId === explicit) : undefined;
+    if (byId) return { topicId: byId.topicId, writable: byId.source !== 'subscribed', categoryDir: `知识库/${byId.name.replace(/[\\/:*?"<>|]/g, '_').trim()}` };
+    const parts = file.path.split('/');
+    const index = parts.indexOf('知识库');
+    if (index < 0 || !parts[index + 1]) return undefined;
+    const name = parts[index + 1];
+    const entry = entries.find(item => item.name.replace(/[\\/:*?"<>|]/g, '_').trim() === name);
+    return entry ? { topicId: entry.topicId, writable: entry.source !== 'subscribed', categoryDir: `知识库/${name}` } : { topicId: '', writable: false, categoryDir: `知识库/${name}` };
   }
   private async archive(file: TFile, targetPath: string): Promise<void> {
     if (!insideSyncFolder(targetPath, this.settings.folderName) || targetPath.split('/').some(part => !part || part === '.' || part === '..')
@@ -199,14 +212,23 @@ export class BidirectionalSyncEngine {
     if (prepared && prepared.raw !== raw) throw new Error(t('bidirectional.changed'));
     const block = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(raw);
     const fields = block ? parseDraftFields(block[1]) : {};
-    if (fields?.dedao_upload_state === 'archive' && typeof fields.uid === 'string' && typeof fields.dedao_upload_target === 'string') {
+    if ((fields?.dedao_upload_state === 'archive' || fields?.dedao_upload_state === 'attach')
+      && typeof fields.uid === 'string' && typeof fields.dedao_upload_target === 'string') {
+      if (fields.dedao_upload_state === 'attach' && typeof fields.topic_id === 'string') {
+        await addNotesToKnowledgeBase({ token: auth.token, clientId: auth.clientId, topicId: fields.topic_id,
+          noteIds: [fields.uid], authMode: auth.authMode, signal: this.controller.signal });
+        await this.app.vault.process(file, current => uploadFields(current, { dedao_upload_state: 'archive' }));
+      }
       await this.archive(file, fields.dedao_upload_target);
       return { noteId: fields.uid, title: file.basename, noteType: 'plain_text', updatedAt: '', status: 'updated' };
     }
     const draft = readLocalDraft(raw, file.basename || file.path.split('/').pop()!.replace(/\.md$/i, ''), prepared);
+    const knowledgeBase = this.knowledgeBaseForFile(file, fields);
+    if (knowledgeBase && !knowledgeBase.topicId) throw new Error(t('bidirectional.knowledgeBaseMissing'));
+    if (knowledgeBase && !knowledgeBase.writable) throw new Error(t('bidirectional.knowledgeBaseReadOnly'));
     const submitted: EditableContent = prepared ?? { ...draft, tags: [...new Set(draft.tags.map(tag => tag.trim()).filter(Boolean))].slice(0, 10),
       body: draft.body.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match, alt: string, target: string) => `[${alt.trim() || target.trim()}](${target.trim()})`) };
-    const targetPath = this.uploadTarget(draft).replace(/^\//, '');
+    const targetPath = this.uploadTarget(draft, knowledgeBase?.categoryDir).replace(/^\//, '');
     const existing = this.app.vault.getAbstractFileByPath(targetPath);
     if (existing && existing !== file) throw new Error(t('settings.datePath.issue.targetConflict'));
     const hash = contentHash(draft);
@@ -214,7 +236,8 @@ export class BidirectionalSyncEngine {
     this.checkCancelled();
     // Persist intent before POST. If its outcome is unknown, never blindly repeat
     // a non-idempotent create request, including after a restart.
-    const pending = uploadFields(raw, { title: draft.title, dedao_upload_state: 'pending', dedao_upload_target: targetPath });
+    const pending = uploadFields(raw, { title: draft.title, ...(knowledgeBase ? { topic_id: knowledgeBase.topicId } : {}),
+      dedao_upload_state: 'pending', dedao_upload_target: targetPath });
     await this.app.vault.process(file, current => {
       if (current !== raw) throw new Error(t('bidirectional.changed'));
       return pending;
@@ -227,10 +250,16 @@ export class BidirectionalSyncEngine {
       await this.app.vault.process(file, current => uploadFields(current, {
         uid: created.noteId, note_type: 'plain_text', dedao_source_hash: hash, dedao_bidirectional_hash: hash,
         dedao_remote_hash: remoteHash,
-        dedao_upload_state: 'archive', dedao_upload_target: targetPath,
+        ...(knowledgeBase ? { topic_id: knowledgeBase.topicId, dedao_upload_state: 'attach' } : { dedao_upload_state: 'archive' }),
+        dedao_upload_target: targetPath,
       }));
     } catch {
       throw new Error(t('bidirectional.uploadSaveFailed', { uid: created.noteId }));
+    }
+    if (knowledgeBase) {
+      await addNotesToKnowledgeBase({ token: auth.token, clientId: auth.clientId, topicId: knowledgeBase.topicId,
+        noteIds: [created.noteId], authMode: auth.authMode, signal: this.controller.signal });
+      await this.app.vault.process(file, current => uploadFields(current, { dedao_upload_state: 'archive' }));
     }
     this.checkCancelled();
     await this.archive(file, targetPath);
@@ -254,7 +283,7 @@ export class BidirectionalSyncEngine {
         if (selectedIds && (typeof metadata.uid !== 'string' || !selectedIds.includes(metadata.uid))) continue;
         if (metadata.note_type !== undefined && metadata.note_type !== 'plain_text') continue;
         const local = readSyncNote(raw, file.basename);
-        if (local && metadata.dedao_upload_state === 'archive') {
+        if (local && (metadata.dedao_upload_state === 'archive' || metadata.dedao_upload_state === 'attach')) {
           await this.uploadNewFile(file);
         }
         if (!local) {

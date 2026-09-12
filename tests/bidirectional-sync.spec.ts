@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { App, TFile } from 'obsidian';
 import { BidirectionalSyncEngine, syncDirection, insideSyncFolder, readSyncNote, replaceSyncContent } from '../src/bidirectional-sync';
-import { createNote, fetchNoteDetail } from '../src/api';
+import { addNotesToKnowledgeBase, createNote, fetchNoteDetail } from '../src/api';
 import { updateNote } from '../src/api-clients/openapi-client';
 import { renderNote } from '../src/note-parser';
 import { DEFAULT_SETTINGS, type GetNoteNote } from '../src/types';
 
-vi.mock('../src/api', () => ({ fetchNoteDetail: vi.fn(), createNote: vi.fn() }));
+vi.mock('../src/api', () => ({ fetchNoteDetail: vi.fn(), createNote: vi.fn(), addNotesToKnowledgeBase: vi.fn() }));
 vi.mock('../src/api-clients/openapi-client', () => ({ updateNote: vi.fn() }));
 vi.mock('obsidian', async importOriginal => ({
   ...await importOriginal<typeof import('obsidian')>(),
@@ -139,6 +139,18 @@ describe('bidirectional engine', () => {
     expect(f.file.path).toMatch(/^Sync\/纯文本\/笔记\.md$/);
     expect(f.contents.get(f.file.path)).toContain('uid: "12345678901234567890"');
     expect(fetchNoteDetail).not.toHaveBeenCalled();
+  });
+  it('creates a local draft in its knowledge base and keeps the local knowledge-base path', async () => {
+    const f = fixture('本地知识库笔记');
+    f.file.path = 'Sync/知识库/我的知识库/本地知识库笔记.md';
+    f.file.basename = '本地知识库笔记';
+    f.contents.clear(); f.contents.set(f.file.path, '本地知识库笔记');
+    f.settings.knowledgeBaseCache = { entries: [{ topicId: 'kb-1', name: '我的知识库', source: 'created' }], updatedAt: Date.now() };
+    vi.mocked(createNote).mockResolvedValue({ noteId: 'kb-note-1' });
+    const result = await new BidirectionalSyncEngine(f.app, f.settings).sync();
+    expect(result.created).toBe(1);
+    expect(addNotesToKnowledgeBase).toHaveBeenCalledWith(expect.objectContaining({ topicId: 'kb-1', noteIds: ['kb-note-1'] }));
+    expect(f.file.path).toBe('Sync/知识库/我的知识库/本地知识库笔记.md');
   });
   it('uploads to the original string ID and verifies the result', async () => {
     const f = fixture(renderNote(remote).replace('\n原文\n', '\n本地修改\n'));

@@ -195,6 +195,10 @@ export interface CreateNoteOptions {
   signal?: AbortSignal;
 }
 
+export interface AddNotesToKnowledgeBaseOptions {
+  token: string; clientId: string; topicId: string; noteIds: string[]; signal?: AbortSignal;
+}
+
 export interface Blogger {
   follow_id: string;
   name?: string;
@@ -701,6 +705,21 @@ export async function createNote(options: CreateNoteOptions): Promise<{ noteId: 
   const noteId = extractCreatedNoteId(data);
   if (!noteId) throw new Error(t('error.createNoteFailed'));
   return { noteId };
+}
+
+export async function addNotesToKnowledgeBase(options: AddNotesToKnowledgeBaseOptions): Promise<void> {
+  if (!options.topicId.trim() || options.noteIds.length === 0) throw new Error('Invalid knowledge-base assignment');
+  const data = await apiRequest<Record<string, unknown>>(
+    'https://openapi.biji.com/open/api/v1/resource/knowledge/note/batch-add',
+    {
+      method: 'POST',
+      headers: { ...buildHeaders(options.token, options.clientId), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic_id: options.topicId, note_ids: options.noteIds.map(String) }),
+    },
+    1,
+    options.signal,
+  );
+  if (data.success === false) throw new Error(t('error.addKnowledgeBaseNoteFailed'));
 }
 
 export interface UpdateNoteOptions {
