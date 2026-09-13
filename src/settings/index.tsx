@@ -150,15 +150,7 @@ export function SettingsComponent({
   startDesktopWebAuth,
   clearDesktopWebAuth,
 }: SettingsComponentProps) {
-  type AutoUploadState = { enabled: boolean; mode: 'realtime' | 'interval'; intervalMinutes: number };
-  const defaultAutoUpload: AutoUploadState = { enabled: false, mode: 'interval', intervalMinutes: 5 };
-  const [autoUpload, setAutoUpload] = useState<AutoUploadState>({ ...defaultAutoUpload, ...settings.reverseSync.autoUpload });
-  const [uploadDetailsOpen, setUploadDetailsOpen] = useState(false);
-  const [uploadIntervalWarning, setUploadIntervalWarning] = useState(false);
-  const updateAutoUpload = (next: AutoUploadState) => {
-    setAutoUpload(next);
-    updateSetting('reverseSync', { ...settings.reverseSync, autoUpload: next });
-  };
+  const [bidirectional, setBidirectional] = useState(settings.reverseSync.enabled);
   const [authMode, setAuthMode] = useState<AuthMode>(settings.authMode);
   const initialOpenApiToken = settings.openApiToken || (settings.authMode === 'openapi' ? settings.apiToken : '');
   const initialOpenApiClientId = settings.openApiClientId || settings.clientId;
@@ -1255,6 +1247,19 @@ export function SettingsComponent({
               </button>
             </span>
           </div>
+          <div className="getnote-scheduled-row">
+            <label htmlFor="getnote-sync-direction">{t('settings.syncDirection')}</label>
+            <select id="getnote-sync-direction" value={bidirectional ? 'both' : 'download'} disabled={isSyncing}
+              onChange={event => {
+                const enabled = event.currentTarget.value === 'both';
+                setBidirectional(enabled);
+                updateSetting('reverseSync', { ...settings.reverseSync, enabled, autoUpload: undefined });
+              }}>
+              <option value="download">{t('settings.downloadOnly')}</option>
+              <option value="both" disabled={authMode !== 'openapi'}>{t('settings.bidirectional')}</option>
+            </select>
+          </div>
+          <div className="getnote-input-hint">{t('settings.directionHint')}</div>
           <small className="getnote-setting-summary">{scheduledSummary}</small>
           <div
             id={scheduledDetailsId}
@@ -1390,64 +1395,6 @@ export function SettingsComponent({
               </div>
             </div>
           )}
-        </div>
-      </SettingItem>
-      </div>
-
-      <div data-auto-upload-settings>
-      <SettingItem name={t('settings.autoUpload.label')} description={t('settings.autoUpload.desc')}>
-        <div className="getnote-scheduled-control">
-          <div className="getnote-scheduled-row getnote-scheduled-master-row">
-            <span className="getnote-scheduled-row-label">{t('settings.autoUpload.enabled')}</span>
-            <span className="getnote-scheduled-row-control">
-              <Toggle
-                value={autoUpload.enabled}
-                ariaLabel={t('settings.autoUpload.enabled')}
-                disabled={isSyncing || (authMode !== 'openapi' && !autoUpload.enabled)}
-                onChange={(enabled) => {
-                  updateAutoUpload({ ...autoUpload, enabled });
-                  if (enabled) setUploadDetailsOpen(true);
-                }}
-              />
-              <button type="button" className="getnote-inline-disclosure"
-                aria-expanded={uploadDetailsOpen} aria-controls="getnote-auto-upload-details"
-                onClick={() => setUploadDetailsOpen(prev => !prev)}>
-                {uploadDetailsOpen ? t('settings.collapse') : t('settings.expand')}
-              </button>
-            </span>
-          </div>
-          <small className="getnote-setting-summary">
-            {t(autoUpload.enabled ? 'settings.autoUpload.summary' : 'settings.autoUpload.off', {
-              mode: t('settings.autoUpload.every', { minutes: autoUpload.intervalMinutes }),
-              folder: folderName,
-            })}
-          </small>
-          {authMode !== 'openapi' && <div className="getnote-input-hint getnote-input-hint-error">{t('bidirectional.openApiOnly')}</div>}
-          <div id="getnote-auto-upload-details" className={`getnote-scheduled-rows${uploadDetailsOpen ? '' : ' getnote-hidden'}`}>
-            <div className="getnote-scheduled-row">
-                <label className="getnote-scheduled-row-label" htmlFor="getnote-auto-upload-interval">{t('settings.autoUpload.intervalMinutes')}</label>
-                <span className="getnote-scheduled-row-control">
-                  <input id="getnote-auto-upload-interval" type="number" min="1" step="1" value={autoUpload.intervalMinutes} disabled={isSyncing}
-                    onInput={(event) => {
-                      const value = Number(event.currentTarget.value);
-                      const valid = Number.isInteger(value) && value >= 1;
-                      setUploadIntervalWarning(!valid);
-                      if (valid) updateAutoUpload({ ...autoUpload, intervalMinutes: value });
-                    }} />
-                </span>
-              </div>
-              {uploadIntervalWarning && <div className="getnote-input-hint getnote-input-hint-error">{t('settings.autoUpload.intervalWarning')}</div>}
-            <div className="getnote-input-hint">{t('settings.autoUpload.intervalHint')}</div>
-            <div className="getnote-input-hint">{t('settings.autoUpload.safety')}</div>
-            <div className="getnote-scheduled-row">
-              <label className="getnote-scheduled-row-label" htmlFor="getnote-upload-folder">{t('bidirectional.uploadFolder')}</label>
-              <span className="getnote-scheduled-row-control getnote-upload-folder-control">
-                <input id="getnote-upload-folder" data-bidirectional-upload-folder type="text" value={settings.reverseSync.uploadFolder ?? ''} placeholder={folderName} disabled={isSyncing}
-                  onInput={(event) => updateSetting('reverseSync', { ...settings.reverseSync, autoUpload, uploadFolder: event.currentTarget.value })} />
-              </span>
-            </div>
-            <div className="getnote-input-hint">手动上传时默认从此目录选择；自动上传始终只处理同步目录。</div>
-          </div>
         </div>
       </SettingItem>
       </div>

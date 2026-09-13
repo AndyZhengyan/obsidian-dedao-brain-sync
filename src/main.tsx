@@ -1,5 +1,4 @@
 import { BidirectionalSyncEngine } from './bidirectional-sync';
-import { AutoUploadScheduler } from './auto-upload';
 import { resolveSyncConflict } from './ui/sync-conflict-modal';
 import { App, Modal, Notice, Platform, Plugin, getLanguage, type DataAdapter, type Editor, type Menu, type TFile } from 'obsidian';
 import ReactDOM from 'react-dom';
@@ -168,8 +167,6 @@ export default class GetNoteSyncPlugin extends Plugin {
   private lastProgressUpdate = 0;
   private syncProgressResultTimer: ReturnType<typeof setTimeout> | null = null;
   private autoSyncFailCount = 0;
-  private autoUploadScheduler: AutoUploadScheduler | null = null;
-  private activeUpload: BidirectionalSyncEngine | null = null;
   private desktopWebAuthManager: DesktopWebAuthManager | null = null;
   private webTokenRefreshCoordinator: WebTokenRefreshCoordinator | null = null;
 
@@ -206,12 +203,8 @@ export default class GetNoteSyncPlugin extends Plugin {
           : [],
       },
       reverseSync: { ...DEFAULT_SETTINGS.reverseSync, ...loaded?.reverseSync,
-        autoUpload: {
-          enabled: loaded?.reverseSync?.autoUpload?.enabled === true,
-          mode: 'interval',
-          intervalMinutes: Number.isFinite(loaded?.reverseSync?.autoUpload?.intervalMinutes)
-            ? Math.max(1, Math.min(1440, loaded!.reverseSync!.autoUpload!.intervalMinutes)) : 5,
-        },
+        enabled: loaded?.reverseSync?.enabled === true || loaded?.reverseSync?.autoUpload?.enabled === true,
+        autoUpload: undefined,
       },
       ribbonActions: { ...DEFAULT_SETTINGS.ribbonActions, ...loaded?.ribbonActions },
       syncHistory: normalizeSyncHistory(loaded?.syncHistory),
@@ -305,12 +298,6 @@ export default class GetNoteSyncPlugin extends Plugin {
       this.registerInterval(this.quotaTickIntervalId);
     }
 
-    this.autoUploadScheduler = new AutoUploadScheduler({
-      run: paths => this.runUpload(true, paths),
-      isBusy: () => this.isSyncing || this.isDatePathMigrationRunning,
-      onError: error => console.error('[DedaoBrain] Auto upload:', error),
-    });
-    this.app.workspace.onLayoutReady(() => this.refreshAutoUpload());
 
     if (this.settings.scheduledSync.enabled) {
       if (this.settings.scheduledSync.syncOnStart) {
@@ -323,8 +310,6 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   onunload(): void {
     this.stopAutoSync();
-    this.autoUploadScheduler?.dispose();
-    this.autoUploadScheduler = null;
     this.currentSyncEngine?.cancel();
     if (this.syncProgressResultTimer) clearTimeout(this.syncProgressResultTimer);
     setWebTokenRefreshHandler(null);
@@ -367,19 +352,8 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
-    this.refreshAutoUpload();
   }
 
-  private refreshAutoUpload(): void {
-    const configured = this.settings.reverseSync.autoUpload;
-    const auth = getAuthCredentials(this.settings);
-    const enabled = configured?.enabled === true && auth.authMode === 'openapi' && !!auth.token && !!auth.clientId;
-    if (!enabled) this.activeUpload?.cancel();
-    this.autoUploadScheduler?.configure({
-      enabled, mode: 'interval',
-      intervalMinutes: configured?.intervalMinutes ?? 5,
-    });
-  }
 
   async applyDatePathSettings(
     target: DatePathMigrationTarget,
@@ -687,21 +661,26 @@ export default class GetNoteSyncPlugin extends Plugin {
       const result = selectedIds
         ? await engine.syncNoteIds(selectedIds)
         : await engine.sync();
-      // Preserve the legacy explicit reverse-sync switch for existing users;
-      // the new automatic uploader remains controlled independently below.
-      if (this.settings.reverseSync.enabled) {
-        const legacyEngine = new BidirectionalSyncEngine(this.app, this.settings,
+      if (type === 'auto' && this.settings.reverseSync.enabled && credentials.authMode === 'openapi') {
+        const reconciler = new BidirectionalSyncEngine(this.app, this.settings,
           type === 'auto' ? undefined : conflict => resolveSyncConflict(this.app, conflict, 'both'));
-        this.currentSyncEngine = legacyEngine;
-        const legacyResult = await legacyEngine.sync(undefined, { direction: 'both' });
-        result.created += legacyResult.created;
-        result.updated += legacyResult.updated;
-        result.skipped += legacyResult.skipped;
-        result.failed += legacyResult.failed;
-        result.total += legacyResult.total;
-        (result.items ??= []).push(...(legacyResult.items ?? []));
+        this.currentSyncEngine = reconciler;
+        const changes = await reconciler.sync(undefined, { direction: 'both' });
+        const reconciledIds = new Set((changes.items ?? []).map(item => item.noteId));
+        result.items = (result.items ?? []).filter(item => {
+          if (item.status !== 'skipped' || !reconciledIds.has(item.noteId)) return true;
+          result.skipped--;
+          result.total--;
+          return false;
+        });
+        result.created += changes.created;
+        result.updated += changes.updated;
+        result.skipped += changes.skipped;
+        result.failed += changes.failed;
+        result.total += changes.total;
+        (result.items ??= []).push(...(changes.items ?? []));
       }
-      await this.reconcileDownloadedNotes(result, type === 'auto');
+      else await this.reconcileDownloadedNotes(result, type === 'auto');
 
       const status: SyncHistoryEntry['status'] = result.failed > 0 ? 'partial' : 'success';
       await this.recordSyncHistory(result, type, startedAt, resolvedScope, status);
@@ -1085,44 +1064,6 @@ export default class GetNoteSyncPlugin extends Plugin {
 
   uploadSelectedLocalNotes(files: TFile[]): void {
     void this.reverseSyncToGetNote(files);
-  }
-
-  /** Upload changed synced notes or local drafts for the automatic uploader. */
-  private async runUpload(automatic: boolean, paths?: string[]): Promise<void> {
-    if (this.isSyncing || this.isDatePathMigrationRunning) return;
-    const credentials = getAuthCredentials(this.settings);
-    if (credentials.authMode !== 'openapi' || !credentials.token || !credentials.clientId) {
-      if (!automatic) showError(t('notice.fillCredentials'));
-      return;
-    }
-    const startedAt = Date.now();
-    const engine = new BidirectionalSyncEngine(this.app, this.settings);
-    this.activeUpload = engine;
-    this.currentSyncEngine = engine;
-    this.isSyncing = true;
-    this.updateSettingsRuntimeState();
-    try {
-      const result = await engine.sync(undefined, {
-        direction: 'upload',
-        ...(paths?.length ? { paths } : {}),
-        // Automatic upload is intentionally limited to the canonical sync folder.
-        folder: this.settings.folderName,
-      });
-      await this.recordSyncHistory(result, automatic ? 'auto' : 'upload', startedAt, {
-        maxDays: 0,
-        syncStartDate: '',
-        selectedCount: paths?.length,
-        selectedIds: paths,
-      }, result.failed > 0 ? 'partial' : 'success', undefined, automatic ? 'auto' : 'local-upload');
-      if (!automatic) {
-        showSuccess(t('notice.syncComplete', { created: result.created, updated: result.updated, skipped: result.skipped, failed: result.failed ? String(result.failed) : '' }), 8000);
-      }
-    } finally {
-      if (this.activeUpload === engine) this.activeUpload = null;
-      if (this.currentSyncEngine === engine) this.currentSyncEngine = null;
-      this.isSyncing = false;
-      this.updateSettingsRuntimeState();
-    }
   }
 
   private async reverseSyncToGetNote(files?: TFile[]): Promise<void> {
