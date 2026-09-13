@@ -697,6 +697,7 @@ export function SettingsComponent({
     ? t('settings.scheduled.summary', {
       minutes: scheduledSync.intervalMinutes,
       startup: scheduledSync.syncOnStart ? t('settings.summary.onStart') : t('settings.summary.noOnStart'),
+      mode: bidirectional ? t('settings.scheduled.downloadAndUpload') : t('settings.downloadOnly'),
       noteTypes: noteTypesSummary,
     })
     : t('settings.summary.disabled');
@@ -1247,19 +1248,6 @@ export function SettingsComponent({
               </button>
             </span>
           </div>
-          <div className="getnote-scheduled-row">
-            <label htmlFor="getnote-sync-direction">{t('settings.syncDirection')}</label>
-            <select id="getnote-sync-direction" value={bidirectional ? 'both' : 'download'} disabled={isSyncing}
-              onChange={event => {
-                const enabled = event.currentTarget.value === 'both';
-                setBidirectional(enabled);
-                updateSetting('reverseSync', { ...settings.reverseSync, enabled, autoUpload: undefined });
-              }}>
-              <option value="download">{t('settings.downloadOnly')}</option>
-              <option value="both" disabled={authMode !== 'openapi'}>{t('settings.bidirectional')}</option>
-            </select>
-          </div>
-          <div className="getnote-input-hint">{t('settings.directionHint')}</div>
           <small className="getnote-setting-summary">{scheduledSummary}</small>
           <div
             id={scheduledDetailsId}
@@ -1291,6 +1279,25 @@ export function SettingsComponent({
                 />
               </span>
             </div>
+            <div className="getnote-scheduled-row">
+              <span className="getnote-scheduled-row-label">{t('settings.scheduled.autoUploadLocalChanges')}</span>
+              <span className="getnote-scheduled-row-control">
+                <Toggle
+                  ariaLabel={t('settings.scheduled.autoUploadLocalChanges')}
+                  value={bidirectional}
+                  disabled={isSyncing || authMode !== 'openapi'}
+                  onChange={enabled => {
+                    setBidirectional(enabled);
+                    updateSetting('reverseSync', { ...settings.reverseSync, enabled, autoUpload: undefined });
+                  }}
+                />
+              </span>
+            </div>
+            {bidirectional && (
+              <div className="getnote-input-hint getnote-bidirectional-hint">
+                {t('settings.scheduled.autoUploadLocalChanges.hint')}
+              </div>
+            )}
             <div className="getnote-scheduled-row">
               <span className="getnote-scheduled-row-label">{t('settings.noteTypes.label')}</span>
               <span className="getnote-scheduled-row-control">

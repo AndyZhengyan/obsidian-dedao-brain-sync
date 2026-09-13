@@ -409,22 +409,26 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(container.querySelector('[data-settings-status]')?.textContent).toContain('连接成功');
   });
 
-  it('uses one automatic schedule with explicit download and two-way modes', async () => {
+  it('uses an aligned local-change auto-upload toggle inside automatic sync details', async () => {
     const updateSetting = vi.fn();
     const { container } = renderSettings(makeSettings(), updateSetting);
     expect(container.querySelector('[data-auto-upload-settings]')).toBeNull();
-    const select = container.querySelector<HTMLSelectElement>('#getnote-sync-direction')!;
-    expect(select.value).toBe('download');
+    expect(container.querySelector('#getnote-sync-direction')).toBeNull();
+
+    const details = container.querySelector<HTMLElement>('#getnote-scheduled-details')!;
+    const toggle = details.querySelector<HTMLInputElement>('input[aria-label="本地修改自动上传"]')!;
+    const row = toggle.closest('.getnote-scheduled-row');
+    expect(row?.parentElement).toBe(details);
+    expect(row?.querySelector('.getnote-scheduled-row-label')?.textContent).toBe('本地修改自动上传');
+    expect(row?.querySelector('.getnote-scheduled-row-control')).not.toBeNull();
+    expect(toggle.checked).toBe(false);
+
     await act(() => {
-      select.value = 'both';
-      select.dispatchEvent(new Event('change', { bubbles: true }));
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event('change', { bubbles: true }));
     });
     expect(updateSetting).toHaveBeenCalledWith('reverseSync', expect.objectContaining({ enabled: true, autoUpload: undefined }));
-    await act(() => {
-      select.value = 'download';
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    expect(updateSetting).toHaveBeenCalledWith('reverseSync', expect.objectContaining({ enabled: false }));
+    expect(details.textContent).toContain('仅上传同步目录中新增或修改的文字笔记');
   });
 
   it('replaces configured copy with an unverified connection indicator', () => {
