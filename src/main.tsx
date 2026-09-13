@@ -208,7 +208,7 @@ export default class GetNoteSyncPlugin extends Plugin {
       reverseSync: { ...DEFAULT_SETTINGS.reverseSync, ...loaded?.reverseSync,
         autoUpload: {
           enabled: loaded?.reverseSync?.autoUpload?.enabled === true,
-          mode: loaded?.reverseSync?.autoUpload?.mode === 'interval' ? 'interval' : 'realtime',
+          mode: 'interval',
           intervalMinutes: Number.isFinite(loaded?.reverseSync?.autoUpload?.intervalMinutes)
             ? Math.max(1, Math.min(1440, loaded!.reverseSync!.autoUpload!.intervalMinutes)) : 5,
         },
@@ -310,12 +310,6 @@ export default class GetNoteSyncPlugin extends Plugin {
       isBusy: () => this.isSyncing || this.isDatePathMigrationRunning,
       onError: error => console.error('[DedaoBrain] Auto upload:', error),
     });
-    const queueUpload = (file: { path: string }) => {
-      if (file.path.toLowerCase().endsWith('.md')) this.autoUploadScheduler?.notify(file.path);
-    };
-    this.registerEvent(this.app.vault.on('create', queueUpload));
-    this.registerEvent(this.app.vault.on('modify', queueUpload));
-    this.registerEvent(this.app.vault.on('rename', queueUpload));
     this.app.workspace.onLayoutReady(() => this.refreshAutoUpload());
 
     if (this.settings.scheduledSync.enabled) {
@@ -382,7 +376,7 @@ export default class GetNoteSyncPlugin extends Plugin {
     const enabled = configured?.enabled === true && auth.authMode === 'openapi' && !!auth.token && !!auth.clientId;
     if (!enabled) this.activeUpload?.cancel();
     this.autoUploadScheduler?.configure({
-      enabled, mode: configured?.mode === 'interval' ? 'interval' : 'realtime',
+      enabled, mode: 'interval',
       intervalMinutes: configured?.intervalMinutes ?? 5,
     });
   }
@@ -1111,7 +1105,8 @@ export default class GetNoteSyncPlugin extends Plugin {
       const result = await engine.sync(undefined, {
         direction: 'upload',
         ...(paths?.length ? { paths } : {}),
-        folder: this.settings.reverseSync.uploadFolder?.trim() || this.settings.folderName,
+        // Automatic upload is intentionally limited to the canonical sync folder.
+        folder: this.settings.folderName,
       });
       await this.recordSyncHistory(result, automatic ? 'auto' : 'upload', startedAt, {
         maxDays: 0,

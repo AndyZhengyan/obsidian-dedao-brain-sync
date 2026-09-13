@@ -229,7 +229,7 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   reverseSync: {
     enabled: false,
-    autoUpload: { enabled: false, mode: 'realtime', intervalMinutes: 5 },
+    autoUpload: { enabled: false, mode: 'interval', intervalMinutes: 5 },
   },
   attachmentImport: { ...DEFAULT_ATTACHMENT_IMPORT },
   ribbonActions: {

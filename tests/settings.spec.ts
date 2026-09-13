@@ -423,30 +423,16 @@ describe('SettingsComponent information architecture (#257)', () => {
     expect(updateSetting).toHaveBeenLastCalledWith('reverseSync', expect.objectContaining({ autoUpload: expect.objectContaining({ enabled: true }), uploadFolder: 'Inbox' }));
   });
 
-  it('offers real-time and interval upload with validated independent interval settings', async () => {
+  it('offers interval upload with validated settings', async () => {
     const updateSetting = vi.fn();
     const { container } = renderSettings(makeSettings(), updateSetting);
-    const mode = container.querySelector<HTMLSelectElement>('#getnote-auto-upload-mode')!;
-    expect(mode.value).toBe('realtime');
-    expect(container.querySelector('#getnote-auto-upload-interval')).toBeNull();
-    await act(() => {
-      mode.value = 'interval';
-      mode.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    expect(updateSetting).toHaveBeenCalledWith('reverseSync', expect.objectContaining({ autoUpload: expect.objectContaining({ mode: 'interval', enabled: false }) }));
-    const interval = container.querySelector<HTMLInputElement>('#getnote-auto-upload-interval')!;
     updateSetting.mockClear();
+    const interval = container.querySelector<HTMLInputElement>('#getnote-auto-upload-interval')!;
     await act(() => inputValue(interval, '0'));
-    expect(updateSetting).not.toHaveBeenCalled();
+    expect(updateSetting.mock.calls.some(([key]) => key === 'reverseSync')).toBe(false);
     expect(container.textContent).toContain('请输入大于或等于 1 的整数分钟');
     await act(() => inputValue(interval, '2'));
     expect(updateSetting).toHaveBeenLastCalledWith('reverseSync', expect.objectContaining({ autoUpload: expect.objectContaining({ mode: 'interval', intervalMinutes: 2, enabled: false }) }));
-    await act(() => {
-      mode.value = 'realtime';
-      mode.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    expect(container.querySelector('#getnote-auto-upload-interval')).toBeNull();
-    expect(updateSetting).toHaveBeenLastCalledWith('reverseSync', expect.objectContaining({ autoUpload: expect.objectContaining({ mode: 'realtime', intervalMinutes: 2 }) }));
   });
 
   it('replaces configured copy with an unverified connection indicator', () => {

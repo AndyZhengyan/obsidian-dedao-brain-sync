@@ -76,12 +76,6 @@ function getTemplateFileSuggestions(app: App, query: string): string[] {
     .slice(0, 50);
 }
 
-function isIndependentUploadFolder(uploadFolder: string, syncFolder: string): boolean {
-  const upload = uploadFolder.trim().replace(/^\/+|\/+$/g, '');
-  const sync = syncFolder.trim().replace(/^\/+|\/+$/g, '');
-  return Boolean(upload && upload !== sync && !upload.startsWith(`${sync}/`));
-}
-
 export type OnboardingState = 'first-run' | 'needs-credentials' | 'needs-auto-sync' | 'ready' | 'configured';
 export type ConnectionHealth = 'unverified' | 'healthy' | 'error';
 
@@ -157,15 +151,14 @@ export function SettingsComponent({
   clearDesktopWebAuth,
 }: SettingsComponentProps) {
   type AutoUploadState = { enabled: boolean; mode: 'realtime' | 'interval'; intervalMinutes: number };
-  const defaultAutoUpload: AutoUploadState = { enabled: false, mode: 'realtime', intervalMinutes: 5 };
+  const defaultAutoUpload: AutoUploadState = { enabled: false, mode: 'interval', intervalMinutes: 5 };
   const [autoUpload, setAutoUpload] = useState<AutoUploadState>({ ...defaultAutoUpload, ...settings.reverseSync.autoUpload });
   const [uploadDetailsOpen, setUploadDetailsOpen] = useState(false);
   const [uploadIntervalWarning, setUploadIntervalWarning] = useState(false);
   const updateAutoUpload = (next: AutoUploadState) => {
     setAutoUpload(next);
-    updateSetting('reverseSync', { ...settings.reverseSync, uploadFolder, autoUpload: next });
+    updateSetting('reverseSync', { ...settings.reverseSync, autoUpload: next });
   };
-  const [uploadFolder, setUploadFolder] = useState(settings.reverseSync.uploadFolder ?? '');
   const [authMode, setAuthMode] = useState<AuthMode>(settings.authMode);
   const initialOpenApiToken = settings.openApiToken || (settings.authMode === 'openapi' ? settings.apiToken : '');
   const initialOpenApiClientId = settings.openApiClientId || settings.clientId;
@@ -211,7 +204,6 @@ export function SettingsComponent({
   const credentials = getAuthCredentials({ ...settings, authMode, openApiToken: apiTokenOpenapi, openApiClientId: clientIdOpenapi, webApiToken: apiTokenWeb });
   const currentSyncHistory = syncHistory.length > 0 ? syncHistory : settings.syncHistory;
   const connectionHealth = connectionHealthOverride ?? inferConnectionHealth(currentSyncHistory);
-  const independentUploadFolder = isIndependentUploadFolder(uploadFolder, folderName);
   const latestSync = currentSyncHistory[currentSyncHistory.length - 1];
   const syncStatusLabel = isSyncing
     ? t('syncHistory.status.syncing')
@@ -1426,24 +1418,13 @@ export function SettingsComponent({
           </div>
           <small className="getnote-setting-summary">
             {t(autoUpload.enabled ? 'settings.autoUpload.summary' : 'settings.autoUpload.off', {
-              mode: autoUpload.mode === 'realtime' ? t('settings.autoUpload.realtime') : t('settings.autoUpload.every', { minutes: autoUpload.intervalMinutes }),
-              folder: uploadFolder.trim() || folderName,
+              mode: t('settings.autoUpload.every', { minutes: autoUpload.intervalMinutes }),
+              folder: folderName,
             })}
           </small>
           {authMode !== 'openapi' && <div className="getnote-input-hint getnote-input-hint-error">{t('bidirectional.openApiOnly')}</div>}
           <div id="getnote-auto-upload-details" className={`getnote-scheduled-rows${uploadDetailsOpen ? '' : ' getnote-hidden'}`}>
             <div className="getnote-scheduled-row">
-              <label className="getnote-scheduled-row-label" htmlFor="getnote-auto-upload-mode">{t('settings.autoUpload.mode')}</label>
-              <span className="getnote-scheduled-row-control">
-                <select id="getnote-auto-upload-mode" value={autoUpload.mode} disabled={isSyncing}
-                  onChange={(event) => updateAutoUpload({ ...autoUpload, mode: event.currentTarget.value as 'realtime' | 'interval' })}>
-                  <option value="realtime">{t('settings.autoUpload.realtime')}</option>
-                  <option value="interval">{t('settings.autoUpload.interval')}</option>
-                </select>
-              </span>
-            </div>
-            {autoUpload.mode === 'interval' && <>
-              <div className="getnote-scheduled-row">
                 <label className="getnote-scheduled-row-label" htmlFor="getnote-auto-upload-interval">{t('settings.autoUpload.intervalMinutes')}</label>
                 <span className="getnote-scheduled-row-control">
                   <input id="getnote-auto-upload-interval" type="number" min="1" step="1" value={autoUpload.intervalMinutes} disabled={isSyncing}
@@ -1456,24 +1437,16 @@ export function SettingsComponent({
                 </span>
               </div>
               {uploadIntervalWarning && <div className="getnote-input-hint getnote-input-hint-error">{t('settings.autoUpload.intervalWarning')}</div>}
-            </>}
-            <div className="getnote-input-hint">{t(autoUpload.mode === 'realtime' ? 'settings.autoUpload.realtimeHint' : 'settings.autoUpload.intervalHint')}</div>
+            <div className="getnote-input-hint">{t('settings.autoUpload.intervalHint')}</div>
+            <div className="getnote-input-hint">{t('settings.autoUpload.safety')}</div>
             <div className="getnote-scheduled-row">
               <label className="getnote-scheduled-row-label" htmlFor="getnote-upload-folder">{t('bidirectional.uploadFolder')}</label>
               <span className="getnote-scheduled-row-control getnote-upload-folder-control">
-                <input id="getnote-upload-folder" data-bidirectional-upload-folder type="text" value={uploadFolder} placeholder={folderName} disabled={isSyncing}
-                  onInput={(event) => {
-                    const folder = event.currentTarget.value;
-                    setUploadFolder(folder);
-                    updateSetting('reverseSync', { ...settings.reverseSync, autoUpload, uploadFolder: folder });
-                  }} />
+                <input id="getnote-upload-folder" data-bidirectional-upload-folder type="text" value={settings.reverseSync.uploadFolder ?? ''} placeholder={folderName} disabled={isSyncing}
+                  onInput={(event) => updateSetting('reverseSync', { ...settings.reverseSync, autoUpload, uploadFolder: event.currentTarget.value })} />
               </span>
             </div>
-            <div className="getnote-input-hint">
-              {t('bidirectional.uploadFolderHint', { folder: folderName })}
-              {independentUploadFolder && <span className="getnote-input-hint-warning"> {t('bidirectional.uploadFolderWarning')}</span>}
-            </div>
-            <div className="getnote-input-hint">{t('settings.autoUpload.safety')}</div>
+            <div className="getnote-input-hint">手动上传时默认从此目录选择；自动上传始终只处理同步目录。</div>
           </div>
         </div>
       </SettingItem>
